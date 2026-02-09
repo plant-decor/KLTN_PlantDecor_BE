@@ -2,8 +2,10 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using PlantDecor.DataAccessLayer.Context;
 using Resend;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -73,8 +75,8 @@ namespace PlantDecor.API
     });
             });
 
-            //        builder.Services.AddDbContext<>(options =>
-            //options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddDbContext<PlantDecorContext>(options =>
+ options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             //ADD SCOPED HERE
             // builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
