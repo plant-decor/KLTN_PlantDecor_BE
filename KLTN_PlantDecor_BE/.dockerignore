@@ -1,0 +1,43 @@
+# ===== Git & IDE =====
+.git
+.gitignore
+.vs
+.vscode
+.idea
+*.user
+*.suo
+*.swp
+
+# ===== Node / Frontend =====
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ===== Build output =====
+bin/
+obj/
+**/bin/
+**/obj/
+*.dbmdl
+*.jfm
+*.log
+
+# ===== Docker / Azure =====
+.dockerignore
+docker-compose*
+azds.yaml
+charts/
+.secrets/
+secrets.dev.yaml
+values.dev.yaml
+
+# ===== Misc =====
+LICENSE
+README.md
+*.env
+*.project
+*.settings
+.toolstarget
+
+# ===== Allow git metadata if needed (optional) =====
+!**/.gitignore
