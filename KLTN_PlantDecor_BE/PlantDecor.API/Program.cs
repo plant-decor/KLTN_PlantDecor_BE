@@ -2,11 +2,14 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using PlantDecor.API.Middlewares;
+using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Services;
 using PlantDecor.DataAccessLayer.Context;
+using PlantDecor.DataAccessLayer.UnitOfWork;
 using Resend;
 using System.Globalization;
 using System.Reflection;
@@ -82,7 +85,8 @@ namespace PlantDecor.API
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             //ADD SCOPED HERE
-            // builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
             builder.Services.AddCors(options =>
             {
@@ -113,11 +117,19 @@ namespace PlantDecor.API
                 });
 
                 // 2. Strict: Cho endpoints nhạy cảm (login, register, forgot-password)
-                options.AddFixedWindowLimiter("auth-strict", opt =>
+                options.AddPolicy("auth-strict", context =>
                 {
-                    opt.PermitLimit = 5;              // Chỉ 5 lần
-                    opt.Window = TimeSpan.FromMinutes(3); // trong 3 phút
-                    opt.QueueLimit = 0;
+                    var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                             ?? context.Connection.RemoteIpAddress?.ToString()
+                             ?? "unknown";
+
+                    return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(3),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
                 });
 
                 options.OnRejected = async (context, cancellationToken) =>
@@ -193,7 +205,7 @@ namespace PlantDecor.API
             });
 
             var app = builder.Build();
-            app.UseRateLimiter();
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -209,8 +221,10 @@ namespace PlantDecor.API
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors("AllowAllOrigins");
+            app.UseRateLimiter();
             app.UseAuthentication();
             //        app.UseMiddleware<SecurityStampValidationMiddleware>();
+            app.UseMiddleware<GlobalExceptionMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
             app.MapHealthChecks("/health");
