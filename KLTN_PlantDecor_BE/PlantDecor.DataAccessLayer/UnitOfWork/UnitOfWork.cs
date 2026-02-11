@@ -1,10 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
 using PlantDecor.DataAccessLayer.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using PlantDecor.DataAccessLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Repositories;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
@@ -12,8 +9,19 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
     {
         private readonly PlantDecorContext _context;
         private IDbContextTransaction _transaction;
+        private IUserRepository _userRepository;
 
-        public UnitOfWork() => _context ??= new PlantDecorContext();
+        // Constructor to initialize the context
+        public UnitOfWork(PlantDecorContext context)
+        {
+            _context = context;
+        }
+
+        //Lazy loading of repositories
+        public IUserRepository UserRepository
+        {
+            get { return _userRepository ??= new UserRepository(_context); }
+        }
 
         // Transaction Management
         public async Task BeginTransactionAsync()

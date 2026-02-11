@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
     public interface IUnitOfWork : IAsyncDisposable
     {
         // Repository access
-        
+        IUserRepository UserRepository { get; }
+
         // Transaction management
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();

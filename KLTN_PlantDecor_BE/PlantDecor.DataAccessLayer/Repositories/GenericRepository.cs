@@ -1,18 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlantDecor.DataAccessLayer.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         protected PlantDecorContext _context;
-        public GenericRepository() => _context ??= new PlantDecorContext();
 
         public GenericRepository(PlantDecorContext context) => _context = context;
         public List<T> GetAll()
@@ -59,6 +54,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public virtual async Task<List<T>> GetAllAsync()
         {
             return await _context.Set<T>().ToListAsync();
+        }
+
+        public virtual async Task<PaginatedResult<T>> GetAllAsyncWithPagination(Pagination pagination)
+        {
+            // Get total count
+            var totalCount = await _context.Set<T>().CountAsync();
+
+            // Get paginated items
+            var items = await _context.Set<T>()
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<T>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public virtual async Task<int> CreateAsync(T entity)
