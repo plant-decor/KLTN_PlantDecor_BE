@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class User
 {
@@ -20,6 +17,7 @@ public partial class User
     public string? AvatarUrl { get; set; }
 
     public int? Status { get; set; }
+    public bool IsVerified { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
