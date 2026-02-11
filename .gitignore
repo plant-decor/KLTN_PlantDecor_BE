@@ -61,3 +61,4 @@ nunit-*.xml
 # environment variables
 .env 
 /KLTN_PlantDecor_BE/PlantDecor.API/appsettings.Development.json
+/KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
