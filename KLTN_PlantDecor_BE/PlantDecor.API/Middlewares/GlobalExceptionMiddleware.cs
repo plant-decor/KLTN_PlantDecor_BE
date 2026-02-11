@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using PlantDecor.DataAccessLayer.Exceptions;
+using System.Text.Json;
 
 namespace PlantDecor.API.Middlewares
 {
@@ -35,6 +36,16 @@ namespace PlantDecor.API.Middlewares
                 _logger.LogWarning(ex, "Resource not found: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status404NotFound, ex.Message);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Conflict occurred: {Path}", context.Request.Path);
+                await HandleException(context, StatusCodes.Status409Conflict, ex.Message);
+            }
+            catch (BadHttpRequestException)
+            {
+                _logger.LogWarning("Bad HTTP request: {Path}", context.Request.Path);
+                await HandleException(context, StatusCodes.Status400BadRequest, "Bad Request");
+            }
             catch (ArgumentException ex)
             {
                 _logger.LogWarning(ex, "Bad request: {Path}", context.Request.Path);
@@ -70,12 +81,5 @@ namespace PlantDecor.API.Middlewares
             var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             await context.Response.WriteAsJsonAsync(response, options);
         }
-    }
-
-    // Custom Exceptions
-    public sealed class ForbiddenAccessException : Exception
-    {
-        public ForbiddenAccessException() : base("You do not have permission to access this resource") { }
-        public ForbiddenAccessException(string message) : base(message) { }
     }
 }
