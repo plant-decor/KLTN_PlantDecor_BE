@@ -52,6 +52,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+/KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
 
 
 
