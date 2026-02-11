@@ -2,13 +2,16 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PlantDecor.DataAccessLayer.Context;
 using Resend;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 namespace PlantDecor.API
 {
@@ -89,6 +92,55 @@ namespace PlantDecor.API
                                       .AllowAnyHeader());
             });
 
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // Too Many Requests
+
+
+                // 1. Global: Token Bucket cho toàn bộ API (theo IP)
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                {
+                    var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() // ưu tiên vì trường hợp dùng nginx hay loadbalancer thì sẽ chung 1 ip nên ko dùng kiểu ipAddress đc
+         ?? context.Connection.RemoteIpAddress?.ToString()
+         ?? "unknown";
+                    return RateLimitPartition.GetTokenBucketLimiter(ip, _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 50,
+                        TokensPerPeriod = 10, // Cấp phát 10 token cho mỗi chu kỳ
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(10), // Mỗi 10 giây cấp phát lại token
+                        AutoReplenishment = true // Tự động cấp phát lại token
+                    });
+                });
+
+                // 2. Strict: Cho endpoints nhạy cảm (login, register, forgot-password)
+                options.AddFixedWindowLimiter("auth-strict", opt =>
+                {
+                    opt.PermitLimit = 5;              // Chỉ 5 lần
+                    opt.Window = TimeSpan.FromMinutes(3); // trong 3 phút
+                    opt.QueueLimit = 0;
+                });
+
+                options.OnRejected = async (context, cancellationToken) =>
+                {
+                    if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                    {
+                        context.HttpContext.Response.Headers.RetryAfter =
+                            ((int)retryAfter.TotalSeconds).ToString(NumberFormatInfo.InvariantInfo);
+                    }
+
+                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await context.HttpContext.Response.WriteAsJsonAsync(new
+                    {
+                        success = false,
+                        statusCode = 429,
+                        message = "Too many requests. Please try again later.",
+                        traceId = context.HttpContext.TraceIdentifier
+                    });
+
+                };
+
+            });
+
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                {
@@ -141,7 +193,7 @@ namespace PlantDecor.API
             });
 
             var app = builder.Build();
-
+            app.UseRateLimiter();
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
