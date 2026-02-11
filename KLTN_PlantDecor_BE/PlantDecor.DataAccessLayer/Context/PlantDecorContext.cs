@@ -5,9 +5,6 @@ namespace PlantDecor.DataAccessLayer.Context;
 
 public partial class PlantDecorContext : DbContext
 {
-    public PlantDecorContext()
-    {
-    }
 
     public PlantDecorContext(DbContextOptions<PlantDecorContext> options)
         : base(options)
