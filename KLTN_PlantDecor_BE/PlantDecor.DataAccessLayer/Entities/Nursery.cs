@@ -34,4 +34,6 @@ public partial class Nursery
     public DateTime? CreatedAt { get; set; }
 
     public virtual User? Manager { get; set; }
+
+    public virtual ICollection<PlantInstance> PlantInstances { get; set; } = new List<PlantInstance>();
 }

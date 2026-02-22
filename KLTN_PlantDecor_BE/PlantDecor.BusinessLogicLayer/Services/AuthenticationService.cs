@@ -3,10 +3,10 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
-using PlantDecor.DataAccessLayer.Exceptions;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -101,13 +101,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
             if (user.Status != (int)UserStatusEnum.Active)
             {
-                throw new ForbiddenAccessException("Tài khoản đang bị vô hiệu hóa");
+                throw new ForbiddenException("Tài khoản đang bị vô hiệu hóa");
             }
 
             var roleName = user.Role?.Name;
             if (string.IsNullOrWhiteSpace(roleName))
             {
-                throw new ForbiddenAccessException("Không tìm thấy vai trò của người dùng");
+                throw new ForbiddenException("Không tìm thấy vai trò của người dùng");
             }
 
             var accessToken = GenerateAccessToken(user, roleName);

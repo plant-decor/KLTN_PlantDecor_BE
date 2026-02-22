@@ -7,8 +7,6 @@ public partial class Plant
 {
     public int Id { get; set; }
 
-    public string? PlantCode { get; set; }
-
     public string Name { get; set; } = null!;
 
     public string? SpecificName { get; set; }
@@ -46,8 +44,6 @@ public partial class Plant
     public string? PlantType { get; set; }
 
     public string? CareLevel { get; set; }
-
-    public string? Texture { get; set; }
 
     public bool? IsActive { get; set; }
 

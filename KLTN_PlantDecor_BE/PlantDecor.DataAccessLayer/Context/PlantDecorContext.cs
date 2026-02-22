@@ -214,19 +214,19 @@ public partial class PlantDecorContext : DbContext
 
         modelBuilder.Entity<ChatParticipant>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("ChatParticipant_pkey");
-
             entity.ToTable("ChatParticipant");
+
+            entity.HasKey(cp => new { cp.ChatSessionId, cp.UserId });
 
             entity.Property(e => e.JoinedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.ChatSession).WithMany(p => p.ChatParticipants)
                 .HasForeignKey(d => d.ChatSessionId)
-                .HasConstraintName("ChatParticipant_ChatSessionId_fkey");
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(d => d.User).WithMany(p => p.ChatParticipants)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("ChatParticipant_UserId_fkey");
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ChatSession>(entity =>
@@ -315,8 +315,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
             entity.Property(e => e.Type).HasMaxLength(50);
 
-            entity.HasOne(d => d.Order).WithMany(p => p.Invoices)
-                .HasForeignKey(d => d.OrderId)
+            entity.HasOne(d => d.Order).WithOne(p => p.Invoice)
+                .HasForeignKey<Invoice>(d => d.OrderId)
                 .HasConstraintName("Invoice_OrderId_fkey");
         });
 
@@ -341,7 +341,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("LayoutDesign");
 
-            entity.Property(e => e.AllowedToAll).HasColumnType("jsonb");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.PreviewImageUrl).HasMaxLength(512);
 
@@ -357,13 +356,16 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("Nursery");
 
             entity.Property(e => e.Address).HasMaxLength(255);
+            entity.Property(e => e.Area).HasPrecision(10, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Latitude).HasPrecision(10, 7);
+            entity.Property(e => e.Longitude).HasPrecision(10, 7);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
 
-            entity.HasOne(d => d.Manager).WithMany(p => p.Nurseries)
-                .HasForeignKey(d => d.ManagerId)
+            entity.HasOne(d => d.Manager).WithOne(p => p.Nursery)
+                .HasForeignKey<Nursery>(d => d.ManagerId)
                 .HasConstraintName("Nursery_ManagerId_fkey");
         });
 
@@ -383,12 +385,18 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
             entity.Property(e => e.ReturnReason).HasMaxLength(255);
+            entity.Property(e => e.ShipperNote).HasMaxLength(255);
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Orders)
+            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("Order_UserId_fkey");
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Shipper).WithMany(p => p.ShipperOrders)
+                .HasForeignKey(d => d.ShipperId)
+                .HasConstraintName("Order_ShipperId_fkey")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -447,8 +455,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasIndex(e => e.Name, "IX_Plant_Name");
 
-            entity.HasIndex(e => e.PlantCode, "Plant_PlantCode_key").IsUnique();
-
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.CareLevel).HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -458,12 +464,10 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Origin).HasMaxLength(100);
             entity.Property(e => e.Placement).HasMaxLength(50);
-            entity.Property(e => e.PlantCode).HasMaxLength(50);
             entity.Property(e => e.PlantType).HasMaxLength(50);
             entity.Property(e => e.PotSize).HasMaxLength(50);
             entity.Property(e => e.Size).HasMaxLength(50);
             entity.Property(e => e.SpecificName).HasMaxLength(255);
-            entity.Property(e => e.Texture).HasMaxLength(50);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasMany(d => d.Categories).WithMany(p => p.Plants)
@@ -512,13 +516,16 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.DiscountPercent).HasPrecision(5, 2);
             entity.Property(e => e.FengShuiElement).HasMaxLength(50);
+            entity.Property(e => e.FengShuiPurpose).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.OriginalPrice).HasPrecision(18, 2);
             entity.Property(e => e.PurchaseCount).HasDefaultValue(0);
-            entity.Property(e => e.SalePrice).HasPrecision(18, 2);
+            entity.Property(e => e.ComboPrice).HasPrecision(18, 2);
             entity.Property(e => e.Season).HasMaxLength(50);
             entity.Property(e => e.SuitableRooms).HasColumnType("jsonb");
             entity.Property(e => e.SuitableSpace).HasMaxLength(100);
+            entity.Property(e => e.Tags).HasColumnType("text");
+            entity.Property(e => e.ThemeDescription).HasMaxLength(500);
             entity.Property(e => e.ThemeName).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.ViewCount).HasDefaultValue(0);
@@ -605,6 +612,10 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Plant).WithMany(p => p.PlantImages)
                 .HasForeignKey(d => d.PlantId)
                 .HasConstraintName("PlantImage_PlantId_fkey");
+
+            entity.HasOne(d => d.PlantInstance).WithMany(p => p.PlantImages)
+                .HasForeignKey(d => d.PlantInstanceId)
+                .HasConstraintName("PlantImage_PlantInstance_fkey");
         });
 
         modelBuilder.Entity<PlantInstance>(entity =>
@@ -616,13 +627,20 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.HealthStatus).HasMaxLength(50);
+            entity.Property(e => e.Height).HasPrecision(10, 2);
+            entity.Property(e => e.SKU).HasMaxLength(50);
             entity.Property(e => e.SpecificPrice).HasPrecision(18, 2);
             entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.TrunkDiameter).HasPrecision(10, 2);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.Plant).WithMany(p => p.PlantInstances)
                 .HasForeignKey(d => d.PlantId)
                 .HasConstraintName("PlantInstance_PlantId_fkey");
+
+            entity.HasOne(d => d.CurrentNursery).WithMany(p => p.PlantInstances)
+                .HasForeignKey(d => d.CurrentNurseryId)
+                .HasConstraintName("PlantInstance_NurseryId_fkey");
         });
 
         modelBuilder.Entity<PlantRating>(entity =>
@@ -732,9 +750,13 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.Rating).HasPrecision(2, 1);
 
-            entity.HasOne(d => d.ServiceRegistration).WithMany(p => p.ServiceRatings)
-                .HasForeignKey(d => d.ServiceRegistrationId)
+            entity.HasOne(d => d.ServiceRegistration).WithOne(p => p.ServiceRating)
+                .HasForeignKey<ServiceRating>(d => d.ServiceRegistrationId)
                 .HasConstraintName("ServiceRating_ServiceRegistrationId_fkey");
+
+            entity.HasOne(d => d.User).WithOne(p => p.ServiceRating)
+                .HasForeignKey<ServiceRating>(d => d.UserId)
+                .HasConstraintName("ServiceRating_UserId_fkey");
         });
 
         modelBuilder.Entity<ServiceRegistration>(entity =>
@@ -745,6 +767,8 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.CancelReason).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Address).HasMaxLength(255);
+            entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.Note).HasMaxLength(255);
 
             entity.HasOne(d => d.CurrentCaretaker).WithMany(p => p.ServiceRegistrationCurrentCaretakers)
@@ -846,6 +870,8 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("UserPlant");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CurrentHeight).HasPrecision(10, 2);
+            entity.Property(e => e.CurrentTrunkDiameter).HasPrecision(10, 2);
             entity.Property(e => e.HealthStatus).HasMaxLength(50);
             entity.Property(e => e.Location).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -854,8 +880,8 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.PlantId)
                 .HasConstraintName("UserPlant_PlantId_fkey");
 
-            entity.HasOne(d => d.PlantInstance).WithMany(p => p.UserPlants)
-                .HasForeignKey(d => d.PlantInstanceId)
+            entity.HasOne(d => d.PlantInstance).WithOne(p => p.UserPlant)
+                .HasForeignKey<UserPlant>(d => d.PlantInstanceId)
                 .HasConstraintName("UserPlant_PlantInstanceId_fkey");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserPlants)
@@ -868,6 +894,11 @@ public partial class PlantDecorContext : DbContext
             entity.HasKey(e => e.Id).HasName("UserPreference_pkey");
 
             entity.ToTable("UserPreference");
+
+            entity.Property(e => e.BehaviorScore).HasPrecision(5, 2);
+            entity.Property(e => e.PreferenceScore).HasPrecision(5, 2);
+            entity.Property(e => e.ProfileMatchScore).HasPrecision(5, 2);
+            entity.Property(e => e.PurchaseHistoryScore).HasPrecision(5, 2);
 
             entity.HasOne(d => d.Plant).WithMany(p => p.UserPreferences)
                 .HasForeignKey(d => d.PlantId)
@@ -900,21 +931,21 @@ public partial class PlantDecorContext : DbContext
 
         modelBuilder.Entity<Wishlist>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Wishlist_pkey");
-
             entity.ToTable("Wishlist");
 
+            entity.HasKey(w => new { w.UserId, w.PlantId });
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.Description).HasMaxLength(255);
-            entity.Property(e => e.Status).HasMaxLength(50);
 
             entity.HasOne(d => d.Plant).WithMany(p => p.Wishlists)
                 .HasForeignKey(d => d.PlantId)
-                .HasConstraintName("Wishlist_PlantId_fkey");
+                .HasConstraintName("Wishlist_PlantId_fkey")
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(d => d.User).WithMany(p => p.Wishlists)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("Wishlist_UserId_fkey");
+                .HasConstraintName("Wishlist_UserId_fkey")
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -2,6 +2,11 @@
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
@@ -11,7 +16,13 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IDbContextTransaction _transaction;
         private IUserRepository _userRepository;
 
-        // Constructor to initialize the context
+        // Repository instances
+        private ICategoryRepository? _categoryRepository;
+        private ITagRepository? _tagRepository;
+        private IPlantRepository? _plantRepository;
+        private IPlantInstanceRepository? _plantInstanceRepository;
+        private IInventoryRepository? _inventoryRepository;
+
         public UnitOfWork(PlantDecorContext context)
         {
             _context = context;
@@ -23,6 +34,30 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
             get { return _userRepository ??= new UserRepository(_context); }
         }
 
+        public ICategoryRepository CategoryRepository
+        {
+            get { return _categoryRepository ??= new CategoryRepository(_context); }
+        }
+
+        public ITagRepository TagRepository
+        {
+            get { return _tagRepository ??= new TagRepository(_context); }
+        }
+
+        public IPlantRepository PlantRepository 
+        {
+            get { return _plantRepository ??= new PlantRepository(_context); }
+        }
+
+        public IPlantInstanceRepository PlantInstanceRepository
+        {
+            get { return _plantInstanceRepository ??= new PlantInstanceRepository(_context); }
+        }
+
+        public IInventoryRepository InventoryRepository
+        {
+            get { return _inventoryRepository ??= new InventoryRepository(_context); }
+        }
         // Transaction Management
         public async Task BeginTransactionAsync()
         {

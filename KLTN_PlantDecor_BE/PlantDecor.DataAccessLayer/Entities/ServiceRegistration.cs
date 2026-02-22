@@ -27,6 +27,10 @@ public partial class ServiceRegistration
 
     public DateTime? ApprovedAt { get; set; }
 
+    public string? Address { get; set; }
+
+    public string? Phone { get; set; }
+
     public string? CancelReason { get; set; }
 
     public int? EstimatedDuration { get; set; }
@@ -41,7 +45,7 @@ public partial class ServiceRegistration
 
     public virtual ICollection<ServiceProgress> ServiceProgresses { get; set; } = new List<ServiceProgress>();
 
-    public virtual ICollection<ServiceRating> ServiceRatings { get; set; } = new List<ServiceRating>();
-
     public virtual User? User { get; set; }
+
+    public virtual ServiceRating? ServiceRating { get; set; }
 }

@@ -21,8 +21,6 @@ public partial class CartItem
 
     public decimal? Price { get; set; }
 
-    public string? Note { get; set; }
-
     public DateTime? CreatedAt { get; set; }
 
     public virtual Cart? Cart { get; set; }

@@ -29,7 +29,7 @@ public partial class PlantCombo
 
     public decimal? OriginalPrice { get; set; }
 
-    public decimal? SalePrice { get; set; }
+    public decimal? ComboPrice { get; set; }
 
     public decimal? DiscountPercent { get; set; }
 

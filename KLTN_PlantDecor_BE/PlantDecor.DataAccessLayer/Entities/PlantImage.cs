@@ -7,7 +7,9 @@ public partial class PlantImage
 {
     public int Id { get; set; }
 
-    public int? PlantId { get; set; }
+    public int PlantId { get; set; }
+
+    public int? PlantInstanceId { get; set; }
 
     public string? ImageUrl { get; set; }
 
@@ -15,5 +17,7 @@ public partial class PlantImage
 
     public DateTime? CreatedAt { get; set; }
 
-    public virtual Plant? Plant { get; set; }
+    public virtual Plant Plant { get; set; } = null!;
+
+    public virtual PlantInstance? PlantInstance { get; set; }
 }

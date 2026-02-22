@@ -1,4 +1,4 @@
-﻿using PlantDecor.DataAccessLayer.Exceptions;
+﻿using PlantDecor.BusinessLogicLayer.Exceptions;
 using System.Text.Json;
 
 namespace PlantDecor.API.Middlewares
@@ -21,22 +21,22 @@ namespace PlantDecor.API.Middlewares
             {
                 await _next(context);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedException ex)
             {
                 _logger.LogWarning(ex, "Unauthorized access: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status401Unauthorized, ex.Message);
             }
-            catch (ForbiddenAccessException ex) // Custom exception
+            catch (ForbiddenException ex) // Custom exception
             {
                 _logger.LogWarning(ex, "Forbidden access: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status403Forbidden, ex.Message);
             }
-            catch (KeyNotFoundException ex)
+            catch (NotFoundException ex)
             {
                 _logger.LogWarning(ex, "Resource not found: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status404NotFound, ex.Message);
             }
-            catch (InvalidOperationException ex)
+            catch (ConflictException ex)
             {
                 _logger.LogWarning(ex, "Conflict occurred: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status409Conflict, ex.Message);
@@ -46,7 +46,7 @@ namespace PlantDecor.API.Middlewares
                 _logger.LogWarning("Bad HTTP request: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status400BadRequest, "Bad Request");
             }
-            catch (ArgumentException ex)
+            catch (BadRequestException ex)
             {
                 _logger.LogWarning(ex, "Bad request: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status400BadRequest, ex.Message);

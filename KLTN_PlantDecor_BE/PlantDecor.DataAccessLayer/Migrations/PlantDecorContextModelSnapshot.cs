@@ -219,9 +219,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Status")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -256,9 +253,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("InventoryId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
 
                     b.Property<int?>("PlantComboId")
                         .HasColumnType("integer");
@@ -365,13 +359,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ChatParticipant", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("ChatSessionId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("ChatSessionId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("JoinedAt")
@@ -379,13 +370,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id")
-                        .HasName("ChatParticipant_pkey");
-
-                    b.HasIndex("ChatSessionId");
+                    b.HasKey("ChatSessionId", "UserId");
 
                     b.HasIndex("UserId");
 
@@ -539,7 +524,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasKey("Id")
                         .HasName("Invoice_pkey");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .IsUnique();
 
                     b.ToTable("Invoice", (string)null);
                 });
@@ -586,9 +572,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AllowedToAll")
-                        .HasColumnType("jsonb");
-
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -628,7 +611,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<decimal?>("Area")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -647,13 +631,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<decimal?>("Latitude")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<int?>("LightCondition")
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("Longitude")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<int?>("ManagerId")
                         .HasColumnType("integer");
@@ -672,7 +658,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasKey("Id")
                         .HasName("Nursery_pkey");
 
-                    b.HasIndex("ManagerId");
+                    b.HasIndex("ManagerId")
+                        .IsUnique();
 
                     b.ToTable("Nursery", (string)null);
                 });
@@ -727,8 +714,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int?>("ShipperId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ShipperNote")
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -742,11 +733,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
                         .HasName("Order_pkey");
+
+                    b.HasIndex("ShipperId");
 
                     b.HasIndex("UserId");
 
@@ -910,10 +903,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("PlantCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<string>("PlantType")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -933,10 +922,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("Texture")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<bool?>("Toxicity")
                         .HasColumnType("boolean");
 
@@ -949,9 +934,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasName("Plant_pkey");
 
                     b.HasIndex(new[] { "Name" }, "IX_Plant_Name");
-
-                    b.HasIndex(new[] { "PlantCode" }, "Plant_PlantCode_key")
-                        .IsUnique();
 
                     b.ToTable("Plant", (string)null);
                 });
@@ -971,6 +953,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("ComboName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("ComboPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int?>("ComboType")
                         .HasColumnType("integer");
@@ -992,7 +978,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("FengShuiPurpose")
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<bool?>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -1017,10 +1004,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<decimal?>("SalePrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
                     b.Property<string>("Season")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -1036,7 +1019,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ThemeDescription")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ThemeName")
                         .HasMaxLength(100)
@@ -1191,13 +1175,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<int?>("PlantId")
+                    b.Property<int>("PlantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PlantInstanceId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
                         .HasName("PlantImage_pkey");
 
                     b.HasIndex("PlantId");
+
+                    b.HasIndex("PlantInstanceId");
 
                     b.ToTable("PlantImage", (string)null);
                 });
@@ -1218,6 +1207,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int?>("CurrentNurseryId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1227,10 +1219,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<decimal?>("Height")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<int?>("PlantId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SKU")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal?>("SpecificPrice")
                         .HasPrecision(18, 2)
@@ -1241,7 +1238,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<decimal?>("TrunkDiameter")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -1250,6 +1248,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("PlantInstance_pkey");
+
+                    b.HasIndex("CurrentNurseryId");
 
                     b.HasIndex("PlantId");
 
@@ -1488,10 +1488,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("ServiceRegistrationId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id")
                         .HasName("ServiceRating_pkey");
 
-                    b.HasIndex("ServiceRegistrationId");
+                    b.HasIndex("ServiceRegistrationId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("ServiceRating", (string)null);
                 });
@@ -1503,6 +1510,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp without time zone");
@@ -1531,6 +1542,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("ServiceDate")
                         .HasColumnType("timestamp without time zone");
@@ -1748,10 +1763,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<decimal?>("CurrentHeight")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<decimal?>("CurrentTrunkDiameter")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<string>("HealthStatus")
                         .HasMaxLength(50)
@@ -1792,7 +1809,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasIndex("PlantId");
 
-                    b.HasIndex("PlantInstanceId");
+                    b.HasIndex("PlantInstanceId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -1808,7 +1826,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("BehaviorScore")
-                        .HasColumnType("numeric");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<DateTime?>("LastCalculated")
                         .HasColumnType("timestamp without time zone");
@@ -1817,13 +1836,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("PreferenceScore")
-                        .HasColumnType("numeric");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<decimal?>("ProfileMatchScore")
-                        .HasColumnType("numeric");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<decimal?>("PurchaseHistoryScore")
-                        .HasColumnType("numeric");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("integer");
@@ -1895,37 +1917,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Wishlist", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<int>("PlantId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("PlantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Status")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id")
-                        .HasName("Wishlist_pkey");
+                    b.HasKey("UserId", "PlantId");
 
                     b.HasIndex("PlantId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Wishlist", (string)null);
                 });
@@ -2109,12 +2114,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.ChatSession", "ChatSession")
                         .WithMany("ChatParticipants")
                         .HasForeignKey("ChatSessionId")
-                        .HasConstraintName("ChatParticipant_ChatSessionId_fkey");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("ChatParticipants")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("ChatParticipant_UserId_fkey");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("ChatSession");
 
@@ -2134,8 +2141,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
-                        .WithMany("Invoices")
-                        .HasForeignKey("OrderId")
+                        .WithOne("Invoice")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.Invoice", "OrderId")
                         .HasConstraintName("Invoice_OrderId_fkey");
 
                     b.Navigation("Order");
@@ -2164,8 +2171,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Manager")
-                        .WithMany("Nurseries")
-                        .HasForeignKey("ManagerId")
+                        .WithOne("Nursery")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.Nursery", "ManagerId")
                         .HasConstraintName("Nursery_ManagerId_fkey");
 
                     b.Navigation("Manager");
@@ -2173,12 +2180,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
-                        .WithMany("Orders")
-                        .HasForeignKey("UserId")
-                        .HasConstraintName("Order_UserId_fkey");
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Shipper")
+                        .WithMany("ShipperOrders")
+                        .HasForeignKey("ShipperId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("Order_ShipperId_fkey");
 
-                    b.Navigation("User");
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Customer")
+                        .WithMany("CustomerOrders")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Shipper");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.OrderItem", b =>
@@ -2271,17 +2287,33 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("PlantImages")
                         .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("PlantImage_PlantId_fkey");
 
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
+                        .WithMany("PlantImages")
+                        .HasForeignKey("PlantInstanceId")
+                        .HasConstraintName("PlantImage_PlantInstance_fkey");
+
                     b.Navigation("Plant");
+
+                    b.Navigation("PlantInstance");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInstance", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "CurrentNursery")
+                        .WithMany("PlantInstances")
+                        .HasForeignKey("CurrentNurseryId")
+                        .HasConstraintName("PlantInstance_NurseryId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("PlantInstances")
                         .HasForeignKey("PlantId")
                         .HasConstraintName("PlantInstance_PlantId_fkey");
+
+                    b.Navigation("CurrentNursery");
 
                     b.Navigation("Plant");
                 });
@@ -2367,11 +2399,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ServiceRating", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.ServiceRegistration", "ServiceRegistration")
-                        .WithMany("ServiceRatings")
-                        .HasForeignKey("ServiceRegistrationId")
+                        .WithOne("ServiceRating")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRating", "ServiceRegistrationId")
                         .HasConstraintName("ServiceRating_ServiceRegistrationId_fkey");
 
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
+                        .WithOne("ServiceRating")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRating", "UserId")
+                        .HasConstraintName("ServiceRating_UserId_fkey");
+
                     b.Navigation("ServiceRegistration");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ServiceRegistration", b =>
@@ -2464,8 +2503,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("UserPlant_PlantId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
-                        .WithMany("UserPlants")
-                        .HasForeignKey("PlantInstanceId")
+                        .WithOne("UserPlant")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.UserPlant", "PlantInstanceId")
                         .HasConstraintName("UserPlant_PlantInstanceId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
@@ -2512,11 +2551,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("Wishlists")
                         .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("Wishlist_PlantId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("Wishlists")
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("Wishlist_UserId_fkey");
 
                     b.Navigation("Plant");
@@ -2584,9 +2627,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("RoomImages");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
+                {
+                    b.Navigation("PlantInstances");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
-                    b.Navigation("Invoices");
+                    b.Navigation("Invoice");
 
                     b.Navigation("OrderItems");
 
@@ -2644,9 +2692,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("OrderItems");
 
+                    b.Navigation("PlantImages");
+
                     b.Navigation("PlantRatings");
 
-                    b.Navigation("UserPlants");
+                    b.Navigation("UserPlant");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Role", b =>
@@ -2663,7 +2713,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("ServiceProgresses");
 
-                    b.Navigation("ServiceRatings");
+                    b.Navigation("ServiceRating");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.User", b =>
@@ -2672,11 +2722,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("ChatParticipants");
 
+                    b.Navigation("CustomerOrders");
+
                     b.Navigation("LayoutDesigns");
 
-                    b.Navigation("Nurseries");
-
-                    b.Navigation("Orders");
+                    b.Navigation("Nursery");
 
                     b.Navigation("PlantRatings");
 
@@ -2686,11 +2736,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("ServiceProgresses");
 
+                    b.Navigation("ServiceRating");
+
                     b.Navigation("ServiceRegistrationCurrentCaretakers");
 
                     b.Navigation("ServiceRegistrationMainCaretakers");
 
                     b.Navigation("ServiceRegistrationUsers");
+
+                    b.Navigation("ShipperOrders");
 
                     b.Navigation("UserBehaviorLogs");
 

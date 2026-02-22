@@ -31,9 +31,11 @@ public partial class User
 
     public virtual ICollection<LayoutDesign> LayoutDesigns { get; set; } = new List<LayoutDesign>();
 
-    public virtual ICollection<Nursery> Nurseries { get; set; } = new List<Nursery>();
+    public virtual Nursery? Nursery { get; set; }
 
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    public virtual ICollection<Order> CustomerOrders { get; set; } = new List<Order>();
+
+    public virtual ICollection<Order> ShipperOrders { get; set; } = new List<Order>();
 
     public virtual ICollection<PlantRating> PlantRatings { get; set; } = new List<PlantRating>();
 
@@ -58,6 +60,8 @@ public partial class User
     public virtual ICollection<UserPreference> UserPreferences { get; set; } = new List<UserPreference>();
 
     public virtual UserProfile? UserProfile { get; set; }
+
+    public virtual ServiceRating? ServiceRating { get; set; }
 
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 }

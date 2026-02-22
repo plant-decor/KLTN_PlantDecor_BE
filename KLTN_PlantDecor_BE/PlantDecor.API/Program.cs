@@ -52,7 +52,7 @@ namespace PlantDecor.API
 
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+                //c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 
                 // JWT Authentication in Swagger
                 c.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
@@ -66,20 +66,30 @@ namespace PlantDecor.API
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
                 {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = JwtBearerDefaults.AuthenticationScheme
-                },
-            },
-            new List<string>()
-        }
-    });
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = JwtBearerDefaults.AuthenticationScheme
+                            },
+                        },
+                        new List<string>()
+                    }
+                });
+                        });
+
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                // Lấy chuỗi kết nối từ appsettings.json
+                options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+                options.InstanceName = "PlantDecor_";
             });
+
+            // Redis Service Registration
+            builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
             builder.Services.AddDbContext<PlantDecorContext>(options =>
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -87,6 +97,13 @@ namespace PlantDecor.API
             //ADD SCOPED HERE
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+            // Register Services
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ITagService, TagService>();
+            builder.Services.AddScoped<IPlantService, PlantService>();
+            builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
+            builder.Services.AddScoped<IInventoryService, InventoryService>();
 
             builder.Services.AddCors(options =>
             {

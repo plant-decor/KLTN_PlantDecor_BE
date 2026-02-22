@@ -7,8 +7,8 @@ namespace PlantDecor.API.Responses
         public bool Success { get; set; }
         public int StatusCode { get; set; }
 
-        public string Message { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string Message { get; set; } = string.Empty;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public T? Payload { get; set; }
     }
 }

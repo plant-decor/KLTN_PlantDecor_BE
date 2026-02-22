@@ -13,8 +13,6 @@ public partial class LayoutDesign
 
     public int? ModerationStatus { get; set; }
 
-    public string? AllowedToAll { get; set; }
-
     public bool? IsSaved { get; set; }
 
     public DateTime? CreatedAt { get; set; }

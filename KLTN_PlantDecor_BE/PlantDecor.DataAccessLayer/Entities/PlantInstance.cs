@@ -9,6 +9,10 @@ public partial class PlantInstance
 
     public int? PlantId { get; set; }
 
+    public int? CurrentNurseryId { get; set; }
+
+    public string? SKU { get; set; }
+
     public decimal? SpecificPrice { get; set; }
 
     public decimal? Height { get; set; }
@@ -33,7 +37,11 @@ public partial class PlantInstance
 
     public virtual Plant? Plant { get; set; }
 
+    public virtual Nursery? CurrentNursery { get; set; }
+
+    public virtual ICollection<PlantImage> PlantImages { get; set; } = new List<PlantImage>();
+
     public virtual ICollection<PlantRating> PlantRatings { get; set; } = new List<PlantRating>();
 
-    public virtual ICollection<UserPlant> UserPlants { get; set; } = new List<UserPlant>();
+    public virtual UserPlant? UserPlant { get; set; }
 }
