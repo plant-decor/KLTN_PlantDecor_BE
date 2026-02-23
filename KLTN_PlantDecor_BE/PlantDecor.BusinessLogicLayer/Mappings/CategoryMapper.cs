@@ -17,6 +17,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ParentCategoryId = category.ParentCategoryId,
                 Name = category.Name,
                 IsActive = category.IsActive,
+                CategoryType = category.CategoryType,
                 CreatedAt = category.CreatedAt,
                 UpdatedAt = category.UpdatedAt,
                 ParentCategoryName = category.ParentCategory?.Name
@@ -54,6 +55,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Name = request.Name,
                 ParentCategoryId = request.ParentCategoryId,
                 IsActive = request.IsActive,
+                CategoryType = request.CategoryType,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -65,9 +67,18 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (request == null || category == null) return;
 
-            category.Name = request.Name;
-            category.ParentCategoryId = request.ParentCategoryId;
-            category.IsActive = request.IsActive ?? category.IsActive;
+            if (request.Name != null)
+                category.Name = request.Name;
+
+            if (request.ParentCategoryId.HasValue)
+                category.ParentCategoryId = request.ParentCategoryId;
+
+            if (request.IsActive.HasValue)
+                category.IsActive = request.IsActive;
+
+            if (request.CategoryType.HasValue)
+                category.CategoryType = request.CategoryType.Value;
+
             category.UpdatedAt = DateTime.Now;
         }
         #endregion

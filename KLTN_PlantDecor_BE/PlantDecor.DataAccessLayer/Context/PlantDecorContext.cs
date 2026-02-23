@@ -61,6 +61,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<PlantInstance> PlantInstances { get; set; }
 
+    public virtual DbSet<PlantInventory> PlantInventories { get; set; }
+
     public virtual DbSet<PlantRating> PlantRatings { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -618,6 +620,23 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("PlantImage_PlantInstance_fkey");
         });
 
+        modelBuilder.Entity<PlantInventory>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PlantInventory_pkey");
+
+            entity.ToTable("PlantInventory");
+
+            entity.HasOne(d => d.Plant).WithMany(p => p.PlantInventories)
+                .HasForeignKey(d => d.PlantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("PlantInventory_PlantId_fkey");
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.PlantInventories)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("PlantInventory_NurseryId_fkey");
+        });
+
         modelBuilder.Entity<PlantInstance>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PlantInstance_pkey");
@@ -630,7 +649,6 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Height).HasPrecision(10, 2);
             entity.Property(e => e.SKU).HasMaxLength(50);
             entity.Property(e => e.SpecificPrice).HasPrecision(18, 2);
-            entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.TrunkDiameter).HasPrecision(10, 2);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 

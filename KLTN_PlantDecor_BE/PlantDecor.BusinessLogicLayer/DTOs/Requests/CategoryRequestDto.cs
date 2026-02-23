@@ -11,5 +11,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int? ParentCategoryId { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        [Required(ErrorMessage = "Loại category là bắt buộc")]
+        public int CategoryType { get; set; }
     }
 }

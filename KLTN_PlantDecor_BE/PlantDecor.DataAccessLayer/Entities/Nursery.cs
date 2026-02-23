@@ -36,4 +36,6 @@ public partial class Nursery
     public virtual User? Manager { get; set; }
 
     public virtual ICollection<PlantInstance> PlantInstances { get; set; } = new List<PlantInstance>();
+
+    public virtual ICollection<PlantInventory> PlantInventories { get; set; } = new List<PlantInventory>();
 }

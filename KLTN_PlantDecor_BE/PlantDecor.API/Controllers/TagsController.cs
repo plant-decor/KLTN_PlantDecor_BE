@@ -82,9 +82,9 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Cập nhật tag
+        /// Cập nhật tag (partial update)
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateTag(int id, [FromBody] TagUpdateDto request)
         {
             var tag = await _tagService.UpdateTagAsync(id, request);

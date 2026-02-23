@@ -111,7 +111,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 // Check if category name already exists (excluding current category)
-                if (await _unitOfWork.CategoryRepository.ExistsByNameAsync(request.Name, id))
+                if (request.Name != null && await _unitOfWork.CategoryRepository.ExistsByNameAsync(request.Name, id))
                     throw new BadRequestException($"Category với tên '{request.Name}' đã tồn tại");
 
                 request.ToUpdate(category);

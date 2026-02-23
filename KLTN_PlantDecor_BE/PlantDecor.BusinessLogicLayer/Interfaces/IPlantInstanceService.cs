@@ -12,6 +12,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantInstanceResponseDto> CreateInstanceAsync(PlantInstanceRequestDto request);
         Task<PlantInstanceResponseDto> UpdateInstanceAsync(int id, PlantInstanceUpdateDto request);
         Task<bool> DeleteInstanceAsync(int id);
-        Task<bool> UpdateStatusAsync(int id, string status);
+        Task<bool> UpdateStatusAsync(int id, int status);
     }
 }

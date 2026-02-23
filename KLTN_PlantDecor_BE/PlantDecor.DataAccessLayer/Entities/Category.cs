@@ -13,6 +13,8 @@ public partial class Category
 
     public bool? IsActive { get; set; }
 
+    public int CategoryType { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

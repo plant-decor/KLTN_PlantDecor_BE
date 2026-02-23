@@ -98,9 +98,9 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Cập nhật plant instance
+        /// Cập nhật plant instance (partial update)
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateInstance(int id, [FromBody] PlantInstanceUpdateDto request)
         {
             var instance = await _plantInstanceService.UpdateInstanceAsync(id, request);
@@ -132,9 +132,9 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật trạng thái plant instance
         /// </summary>
         /// <param name="id">ID của instance</param>
-        /// <param name="status">Trạng thái mới: Available, Reserved, Sold, Unavailable</param>
+        /// <param name="status">Trạng thái mới: 1=Available, 2=Sold, 3=Reserved, 4=Damaged, 5=Inavailable</param>
         [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromQuery] string status)
+        public async Task<IActionResult> UpdateStatus(int id, [FromQuery] int status)
         {
             await _plantInstanceService.UpdateStatusAsync(id, status);
             return Ok(new ApiResponse<object>

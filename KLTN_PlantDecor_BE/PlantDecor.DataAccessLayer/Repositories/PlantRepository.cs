@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -69,8 +70,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(p => p.Categories)
                 .Include(p => p.Tags)
                 .Include(p => p.PlantImages)
-                .Include(p => p.PlantInstances.Where(i => i.Status == "Available"))
-                .Where(p => p.PlantInstances.Any(i => i.Status == "Available"))
+                .Include(p => p.PlantInstances.Where(i => i.Status == (int)PlantInstanceStatusEnum.Available))
+                .Where(p => p.PlantInstances.Any(i => i.Status == (int)PlantInstanceStatusEnum.Available))
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
         }

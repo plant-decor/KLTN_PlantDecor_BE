@@ -20,6 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public string? Description { get; set; }
 
-        public string? Status { get; set; }
+        public int? Status { get; set; }
     }
 }

@@ -80,7 +80,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Tag với ID {id} không tồn tại");
 
                 // Check if tag name already exists (excluding current tag)
-                if (await _unitOfWork.TagRepository.ExistsByNameAsync(request.TagName, id))
+                if (request.TagName != null && await _unitOfWork.TagRepository.ExistsByNameAsync(request.TagName, id))
                     throw new BadRequestException($"Tag với tên '{request.TagName}' đã tồn tại");
 
                 request.ToUpdate(tag);

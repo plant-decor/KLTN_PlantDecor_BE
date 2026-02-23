@@ -14,7 +14,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             return new TagResponseDto
             {
                 Id = tag.Id,
-                TagName = tag.TagName
+                TagName = tag.TagName,
+                TagType = tag.TagType
             };
         }
 
@@ -31,7 +32,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             return new Tag
             {
-                TagName = request.TagName
+                TagName = request.TagName,
+                TagType = request.TagType
             };
         }
         #endregion
@@ -41,7 +43,11 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (request == null || tag == null) return;
 
-            tag.TagName = request.TagName;
+            if (request.TagName != null)
+                tag.TagName = request.TagName;
+
+            if (request.TagType.HasValue)
+                tag.TagType = request.TagType.Value;
         }
         #endregion
     }

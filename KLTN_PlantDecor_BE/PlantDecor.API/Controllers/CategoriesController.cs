@@ -116,9 +116,9 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Cập nhật category
+        /// Cập nhật category (partial update)
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryUpdateDto request)
         {
             var category = await _categoryService.UpdateCategoryAsync(id, request);

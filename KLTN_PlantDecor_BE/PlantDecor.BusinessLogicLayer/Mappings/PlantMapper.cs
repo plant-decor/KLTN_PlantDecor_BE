@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -69,7 +70,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     UpdatedAt = i.UpdatedAt
                 }).ToList(),
                 TotalInstances = plant.PlantInstances.Count,
-                AvailableInstances = plant.PlantInstances.Count(i => i.Status == "Available")
+                AvailableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available)
             };
         }
 
@@ -87,7 +88,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
                     ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,
                 TotalInstances = plant.PlantInstances.Count,
-                AvailableInstances = plant.PlantInstances.Count(i => i.Status == "Available"),
+                AvailableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available),
                 CategoryNames = plant.Categories.Select(c => c.Name).ToList(),
                 TagNames = plant.Tags.Select(t => t.TagName).ToList()
             };

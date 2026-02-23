@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.API.Controllers
 {
@@ -82,7 +83,7 @@ namespace PlantDecor.API.Controllers
         {
             var instances = await _plantInstanceService.GetInstancesByPlantIdAsync(plantId);
             // Filter only available instances for shop
-            var availableInstances = instances.Where(i => i.Status == "Available").ToList();
+            var availableInstances = instances.Where(i => i.Status == (int)PlantInstanceStatusEnum.Available).ToList();
             return Ok(new ApiResponse<List<PlantInstanceResponseDto>>
             {
                 Success = true,

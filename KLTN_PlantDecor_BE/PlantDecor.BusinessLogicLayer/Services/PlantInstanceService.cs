@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -140,7 +141,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new BadRequestException("Không thể xóa instance đã có trong đơn hàng. Vui lòng đổi trạng thái thay vì xóa.");
 
                 // Soft delete by setting status to Unavailable
-                instance.Status = "Unavailable";
+                instance.Status = (int)PlantInstanceStatusEnum.Inavailable;
                 instance.UpdatedAt = DateTime.Now;
 
                 _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
@@ -158,16 +159,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<bool> UpdateStatusAsync(int id, string status)
+        public async Task<bool> UpdateStatusAsync(int id, int status)
         {
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(id);
             if (instance == null)
                 throw new NotFoundException($"Plant Instance với ID {id} không tồn tại");
 
-            // Validate status
-            var validStatuses = new[] { "Available", "Reserved", "Sold", "Unavailable" };
-            if (!validStatuses.Contains(status))
-                throw new BadRequestException($"Status không hợp lệ. Các giá trị hợp lệ: {string.Join(", ", validStatuses)}");
+            if (!Enum.IsDefined(typeof(PlantInstanceStatusEnum), status))
+                throw new BadRequestException($"Status không hợp lệ. Các giá trị hợp lệ: {string.Join(", ", Enum.GetNames(typeof(PlantInstanceStatusEnum)))}");
 
             instance.Status = status;
             instance.UpdatedAt = DateTime.Now;

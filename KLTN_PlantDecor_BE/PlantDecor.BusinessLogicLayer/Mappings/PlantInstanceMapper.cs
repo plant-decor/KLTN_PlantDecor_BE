@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -48,7 +49,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 HealthStatus = request.HealthStatus ?? "Good",
                 Age = request.Age,
                 Description = request.Description,
-                Status = request.Status ?? "Available",
+                Status = (int)PlantInstanceStatusEnum.Available,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -60,13 +61,27 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (request == null || instance == null) return;
 
-            instance.SpecificPrice = request.SpecificPrice ?? instance.SpecificPrice;
-            instance.Height = request.Height ?? instance.Height;
-            instance.TrunkDiameter = request.TrunkDiameter ?? instance.TrunkDiameter;
-            instance.HealthStatus = request.HealthStatus ?? instance.HealthStatus;
-            instance.Age = request.Age ?? instance.Age;
-            instance.Description = request.Description ?? instance.Description;
-            instance.Status = request.Status ?? instance.Status;
+            if (request.SpecificPrice.HasValue)
+                instance.SpecificPrice = request.SpecificPrice;
+
+            if (request.Height.HasValue)
+                instance.Height = request.Height;
+
+            if (request.TrunkDiameter.HasValue)
+                instance.TrunkDiameter = request.TrunkDiameter;
+
+            if (request.HealthStatus != null)
+                instance.HealthStatus = request.HealthStatus;
+
+            if (request.Age.HasValue)
+                instance.Age = request.Age;
+
+            if (request.Description != null)
+                instance.Description = request.Description;
+
+            if (request.Status.HasValue)
+                instance.Status = request.Status.Value;
+
             instance.UpdatedAt = DateTime.Now;
         }
         #endregion
