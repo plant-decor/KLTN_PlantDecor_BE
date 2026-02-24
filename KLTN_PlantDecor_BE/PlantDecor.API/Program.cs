@@ -90,6 +90,7 @@ namespace PlantDecor.API
 
             // Redis Service Registration
             builder.Services.AddScoped<ICacheService, RedisCacheService>();
+            builder.Services.AddScoped<ISecurityStampCacheService, SecurityStampCacheService>();
 
             builder.Services.AddDbContext<PlantDecorContext>(options =>
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -104,6 +105,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IPlantService, PlantService>();
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IInventoryService, InventoryService>();
+            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
             builder.Services.AddCors(options =>
             {
@@ -242,7 +244,7 @@ namespace PlantDecor.API
             app.UseCors("AllowAllOrigins");
             app.UseRateLimiter();
             app.UseAuthentication();
-            //        app.UseMiddleware<SecurityStampValidationMiddleware>();
+            //   app.UseMiddleware<SecurityStampValidationMiddleware>();
             app.UseMiddleware<GlobalExceptionMiddleware>();
             app.UseAuthorization();
             app.MapControllers();

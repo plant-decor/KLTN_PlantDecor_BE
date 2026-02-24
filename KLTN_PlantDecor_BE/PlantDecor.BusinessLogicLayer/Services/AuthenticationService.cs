@@ -22,17 +22,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IConfiguration _configuration;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ISecurityStampCacheService _stampCacheService;
         // private readonly IEmailService _emailService;
 
 
         public AuthenticationService(
             IHttpClientFactory httpClientFactory,
             IUnitOfWork unitOfWork,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ISecurityStampCacheService stampCacheService)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _stampCacheService = stampCacheService;
             _secretKey = configuration["JwtSettings:Key"] ?? throw new ArgumentNullException("JWT Key not configured");
             _issuer = configuration["JwtSettings:Issuer"] ?? throw new ArgumentNullException("JWT Issuer not configured");
             _audience = configuration["JwtSettings:Audience"] ?? throw new ArgumentNullException("JWT Audience not configured");
@@ -139,6 +142,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 throw new Exception("Cập nhật RefreshToken thất bại");
             }
+
+            // Sau khi login thành công, trước khi return
+            //  await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
 
             return new AuthenticationResponse
             {

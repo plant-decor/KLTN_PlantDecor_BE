@@ -51,10 +51,15 @@ namespace PlantDecor.API.Middlewares
                 _logger.LogWarning(ex, "Bad request: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status400BadRequest, ex.Message);
             }
+            catch (SecurityStampMismatchException ex)
+            {
+                _logger.LogWarning(ex, "Security stamp mismatch: {Path}", context.Request.Path);
+                await HandleException(context, StatusCodes.Status401Unauthorized, ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled exception: {Path}", context.Request.Path);
-                await HandleException(context, StatusCodes.Status500InternalServerError, "Internal Server Error");
+                await HandleException(context, StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
 
