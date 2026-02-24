@@ -79,7 +79,7 @@ namespace PlantDecor.API
                         new List<string>()
                     }
                 });
-                        });
+            });
 
             builder.Services.AddStackExchangeRedisCache(options =>
             {
@@ -140,10 +140,12 @@ namespace PlantDecor.API
                              ?? context.Connection.RemoteIpAddress?.ToString()
                              ?? "unknown";
 
-                    return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+                    return RateLimitPartition.GetSlidingWindowLimiter(ip, _ => new SlidingWindowRateLimiterOptions
                     {
                         PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(3),
+                        Window = TimeSpan.FromMinutes(3), // Trong 3 phút chỉ cho phép 5 request
+                        SegmentsPerWindow = 6, // Chia cửa sổ thành 6 đoạn (mỗi đoạn 30 giây) để phân phối lại request tốt hơn
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                         AutoReplenishment = true
                     });

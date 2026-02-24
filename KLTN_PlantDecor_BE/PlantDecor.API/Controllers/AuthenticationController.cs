@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
@@ -26,7 +27,7 @@ namespace PlantDecor.API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                throw new ArgumentException("Dữ liệu không hợp lệ");
+                throw new BadRequestException("Dữ liệu không hợp lệ");
             }
 
             var result = await _authenticationService.LoginAsync(request);

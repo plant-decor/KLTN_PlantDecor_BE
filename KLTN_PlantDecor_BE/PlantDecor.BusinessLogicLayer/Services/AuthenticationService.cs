@@ -78,26 +78,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                throw new ArgumentException("Email và mật khẩu không được để trống");
+                throw new BadRequestException("Email và mật khẩu không được để trống");
             }
 
 
             var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                throw new KeyNotFoundException("Người dùng không tồn tại");
+                throw new NotFoundException("Người dùng không tồn tại");
             }
 
             var isVerified = await _unitOfWork.UserRepository.IsVerifiedAsync(user.Id);
             if (!isVerified)
             {
-                throw new UnauthorizedAccessException("Tài khoản chưa được xác thực email");
+                throw new UnauthorizedException("Tài khoản chưa được xác thực email");
             }
 
             var isValidPassword = await _unitOfWork.UserRepository.VerifyPasswordAsync(user, request.Password);
             if (!isValidPassword)
             {
-                throw new ArgumentException("Mật khẩu không đúng");
+                throw new BadRequestException("Mật khẩu không đúng");
             }
             if (user.Status != (int)UserStatusEnum.Active)
             {
