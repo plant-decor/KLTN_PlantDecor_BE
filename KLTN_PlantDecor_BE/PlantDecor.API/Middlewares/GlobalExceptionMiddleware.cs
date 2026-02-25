@@ -41,11 +41,6 @@ namespace PlantDecor.API.Middlewares
                 _logger.LogWarning(ex, "Conflict occurred: {Path}", context.Request.Path);
                 await HandleException(context, StatusCodes.Status409Conflict, ex.Message);
             }
-            catch (BadHttpRequestException)
-            {
-                _logger.LogWarning("Bad HTTP request: {Path}", context.Request.Path);
-                await HandleException(context, StatusCodes.Status400BadRequest, "Bad Request");
-            }
             catch (BadRequestException ex)
             {
                 _logger.LogWarning(ex, "Bad request: {Path}", context.Request.Path);
