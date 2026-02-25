@@ -36,7 +36,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plants thành công",
+                Message = "Get all plants successfully",
                 Payload = plants
             });
         }
@@ -53,7 +53,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plants active thành công",
+                Message = "Get active plants successfully",
                 Payload = plants
             });
         }
@@ -71,14 +71,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Plant với ID {id} không tồn tại"
+                    Message = $"Plant with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<PlantResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy plant thành công",
+                Message = "Get plant successfully",
                 Payload = plant
             });
         }
@@ -94,7 +94,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo plant thành công",
+                Message = "Create plant successfully",
                 Payload = plant
             });
         }
@@ -110,7 +110,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật plant thành công",
+                Message = "Update plant successfully",
                 Payload = plant
             });
         }
@@ -126,7 +126,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa plant thành công"
+                Message = "Delete plant successfully"
             });
         }
 
@@ -141,7 +141,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isActive ? "Plant đã được kích hoạt" : "Plant đã bị vô hiệu hóa",
+                Message = isActive ? "Plant has been activated" : "Plant has been deactivated",
                 Payload = isActive
             });
         }
@@ -161,7 +161,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gắn categories cho plant thành công",
+                Message = "Assign categories to plant successfully",
                 Payload = plant
             });
         }
@@ -177,7 +177,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gắn tags cho plant thành công",
+                Message = "Assign tags to plant successfully",
                 Payload = plant
             });
         }
@@ -193,7 +193,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ category khỏi plant thành công",
+                Message = "Remove category from plant successfully",
                 Payload = plant
             });
         }
@@ -209,7 +209,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ tag khỏi plant thành công",
+                Message = "Remove tag from plant successfully",
                 Payload = plant
             });
         }

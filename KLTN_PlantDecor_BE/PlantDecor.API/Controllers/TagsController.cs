@@ -35,7 +35,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách tags thành công",
+                Message = "Get all tags successfully",
                 Payload = tags
             });
         }
@@ -53,14 +53,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Tag với ID {id} không tồn tại"
+                    Message = $"Tag with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<TagResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy tag thành công",
+                Message = "Get tag successfully",
                 Payload = tag
             });
         }
@@ -76,7 +76,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo tag thành công",
+                Message = "Create tag successfully",
                 Payload = tag
             });
         }
@@ -92,7 +92,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật tag thành công",
+                Message = "Update tag successfully",
                 Payload = tag
             });
         }
@@ -108,7 +108,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa tag thành công"
+                Message = "Delete tag successfully"
             });
         }
     }

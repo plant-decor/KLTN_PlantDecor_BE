@@ -8,7 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.Exceptions
 {
     public class NotFoundException : Exception
     {
-        public NotFoundException() : base("Không tìm thấy tài nguyên!") { }
+        public NotFoundException() : base("Resource not found!") { }
         public NotFoundException(string message) : base(message)
         {
         }

@@ -8,7 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.Exceptions
 {
     public class ConflictException : Exception
     {
-        public ConflictException() : base("Xung đột dữ liệu!") { }
+        public ConflictException() : base("Data conflict!") { }
         public ConflictException(string message) : base(message)
         {
         }

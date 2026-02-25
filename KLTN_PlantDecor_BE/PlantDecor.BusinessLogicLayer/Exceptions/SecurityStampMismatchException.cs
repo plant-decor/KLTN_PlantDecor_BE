@@ -2,7 +2,7 @@
 {
     public class SecurityStampMismatchException : Exception
     {
-        public SecurityStampMismatchException() : base("Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại.") { }
+        public SecurityStampMismatchException() : base("Session has expired. Please log in again.") { }
         public SecurityStampMismatchException(string message) : base(message)
         {
         }

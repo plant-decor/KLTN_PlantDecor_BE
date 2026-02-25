@@ -46,7 +46,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách cây cho shop thành công",
+                Message = "Get plants for shop successfully",
                 Payload = plants
             });
         }
@@ -63,14 +63,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Không tìm thấy cây với ID {id}"
+                    Message = $"Plant with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<PlantResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết cây thành công",
+                Message = "Get plant detail successfully",
                 Payload = plant
             });
         }
@@ -88,7 +88,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách instances có sẵn thành công",
+                Message = "Get available instances successfully",
                 Payload = availableInstances
             });
         }
@@ -108,7 +108,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách sản phẩm phụ kiện thành công",
+                Message = "Get inventory items for shop successfully",
                 Payload = inventories
             });
         }
@@ -125,14 +125,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Không tìm thấy sản phẩm với ID {id}"
+                    Message = $"Inventory item with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<InventoryResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết sản phẩm thành công",
+                Message = "Get inventory item detail successfully",
                 Payload = inventory
             });
         }
@@ -152,7 +152,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách categories thành công",
+                Message = "Get all categories successfully",
                 Payload = categories
             });
         }
@@ -168,7 +168,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách tags thành công",
+                Message = "Get all tags successfully",
                 Payload = tags
             });
         }

@@ -36,7 +36,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách inventories thành công",
+                Message = "Get all inventories successfully",
                 Payload = inventories
             });
         }
@@ -53,7 +53,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách inventories active thành công",
+                Message = "Get active inventories successfully",
                 Payload = inventories
             });
         }
@@ -71,14 +71,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Inventory với ID {id} không tồn tại"
+                    Message = $"Inventory with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<InventoryResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy inventory thành công",
+                Message = "Get inventory successfully",
                 Payload = inventory
             });
         }
@@ -94,7 +94,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo inventory thành công",
+                Message = "Create inventory successfully",
                 Payload = inventory
             });
         }
@@ -110,7 +110,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật inventory thành công",
+                Message = "Update inventory successfully",
                 Payload = inventory
             });
         }
@@ -126,7 +126,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa inventory thành công"
+                Message = "Delete inventory successfully"
             });
         }
 
@@ -141,7 +141,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isActive ? "Inventory đã được kích hoạt" : "Inventory đã bị vô hiệu hóa",
+                Message = isActive ? "Inventory has been activated" : "Inventory has been deactivated",
                 Payload = isActive
             });
         }
@@ -161,7 +161,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gắn categories cho inventory thành công",
+                Message = "Assign categories to inventory successfully",
                 Payload = inventory
             });
         }
@@ -177,7 +177,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gắn tags cho inventory thành công",
+                Message = "Assign tags to inventory successfully",
                 Payload = inventory
             });
         }
@@ -193,7 +193,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ category khỏi inventory thành công",
+                Message = "Remove category from inventory successfully",
                 Payload = inventory
             });
         }
@@ -209,7 +209,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ tag khỏi inventory thành công",
+                Message = "Remove tag from inventory successfully",
                 Payload = inventory
             });
         }
@@ -229,7 +229,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật số lượng tồn kho thành công",
+                Message = "Update stock quantity successfully",
                 Payload = inventory
             });
         }

@@ -34,7 +34,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plant instances thành công",
+                Message = "Get all plant instances successfully",
                 Payload = instances
             });
         }
@@ -51,7 +51,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plant instances theo plant thành công",
+                Message = "Get plant instances by plant successfully",
                 Payload = instances
             });
         }
@@ -69,14 +69,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Plant Instance với ID {id} không tồn tại"
+                    Message = $"Plant instance with ID {id} not found"
                 });
 
             return Ok(new ApiResponse<PlantInstanceResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy plant instance thành công",
+                Message = "Get plant instance successfully",
                 Payload = instance
             });
         }
@@ -92,7 +92,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo plant instance thành công",
+                Message = "Create plant instance successfully",
                 Payload = instance
             });
         }
@@ -108,7 +108,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật plant instance thành công",
+                Message = "Update plant instance successfully",
                 Payload = instance
             });
         }
@@ -124,7 +124,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa plant instance thành công"
+                Message = "Delete plant instance successfully"
             });
         }
 
@@ -141,7 +141,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Cập nhật trạng thái thành '{status}' thành công"
+                Message = $"Update status to '{status}' successfully"
             });
         }
     }

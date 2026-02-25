@@ -8,7 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.Exceptions
 {
     public class ForbiddenException : Exception
     {
-        public ForbiddenException() : base("Bạn không có đủ thẩm quyền để truy cập vào tài nguyên này!") { }
+        public ForbiddenException() : base("You do not have permission to access this resource!") { }
         public ForbiddenException(string message) : base(message)
         {
         }

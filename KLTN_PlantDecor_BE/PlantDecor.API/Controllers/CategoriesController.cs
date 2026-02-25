@@ -35,7 +35,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách categories thành công",
+                Message = "Get all categories successfully!",
                 Payload = categories
             });
         }
@@ -52,7 +52,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy cây categories thành công",
+                Message = "Get category tree Successfully!",
                 Payload = categories
             });
         }
@@ -69,7 +69,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy cây categories thành công",
+                Message = "Get Category Tree Successfully!",
                 Payload = categories
             });
         }
@@ -87,14 +87,14 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Category với ID {id} không tồn tại"
+                    Message = $"Category with ID {id} not exist"
                 });
 
             return Ok(new ApiResponse<CategoryResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy category thành công",
+                Message = "Get Category Successfully",
                 Payload = category
             });
         }
@@ -110,7 +110,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo category thành công",
+                Message = "Create Category Successfully!",
                 Payload = category
             });
         }
@@ -126,7 +126,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật category thành công",
+                Message = "Update Category Successfully!",
                 Payload = category
             });
         }
@@ -142,7 +142,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa category thành công"
+                Message = "Delete Category successfully!"
             });
         }
 
@@ -157,7 +157,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isActive ? "Category đã được kích hoạt" : "Category đã bị vô hiệu hóa",
+                Message = isActive ? "Category has been activated" : "Category has been deactivated",
                 Payload = isActive
             });
         }

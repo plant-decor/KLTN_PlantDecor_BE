@@ -59,7 +59,7 @@ namespace PlantDecor.API.Middlewares
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled exception: {Path}", context.Request.Path);
-                await HandleException(context, StatusCodes.Status500InternalServerError, ex.Message);
+                await HandleException(context, StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later");
             }
         }
 
