@@ -107,6 +107,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IInventoryService, InventoryService>();
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+            builder.Services.AddScoped<IUserService, UserService>();
 
             builder.Services.AddCors(options =>
             {
