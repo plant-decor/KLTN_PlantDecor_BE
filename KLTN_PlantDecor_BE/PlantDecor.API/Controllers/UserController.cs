@@ -21,16 +21,17 @@ namespace PlantDecor.API.Controllers
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateAvatar(IFormFile file)
         {
+            if (file == null || file.Length == 0)
+            {
+                throw new BadRequestException("No file was uploaded");
+            }
+
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
                 throw new UnauthorizedException("Unable to identify user from token");
             }
 
-            if (file == null || file.Length == 0)
-            {
-                throw new BadRequestException("No file was uploaded");
-            }
             // Upload the file to Cloudinary
             var uploadResult = await _userService.UpdateAvatar(userId, file);
             if (!uploadResult)

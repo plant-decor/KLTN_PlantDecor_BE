@@ -30,11 +30,17 @@ namespace PlantDecor.API
 
             builder.Services.AddHealthChecks();
 
+            //Settings for AddControllers
+
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
+
+            // Disable automatic model state validation to return custom error responses
+            //builder.Services.AddControllers().ConfigureApiBehaviorOptions(options => { options.SuppressModelStateInvalidFilter = true; });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -269,7 +275,7 @@ namespace PlantDecor.API
             app.UseRateLimiter();
             app.UseAuthentication();
             // để sau authentication thay vì ở đầu pipeline để tránh việc phải check security stamp cho các request không cần authentication (như swagger, health check, static files...)
-            app.UseMiddleware<SecurityStampValidationMiddleware>();
+            //app.UseMiddleware<SecurityStampValidationMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
             app.MapHealthChecks("/health");
