@@ -2,6 +2,7 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -123,14 +124,19 @@ namespace PlantDecor.API
                 // 1. Global: Token Bucket cho toàn bộ API (theo IP)
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 {
-                    var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() // ưu tiên vì trường hợp dùng nginx hay loadbalancer thì sẽ chung 1 ip nên ko dùng kiểu ipAddress đc
-         ?? context.Connection.RemoteIpAddress?.ToString()
-         ?? "unknown";
+                    // BỎ QUA RATE LIMIT CHO HANGFIRE DASHBOARD VÀ SWAGGER (Bỏ cả swagger vì có thể tốn nhiều request để lấy các file như .js, .css)
+                    var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
+                    if (path.StartsWith("/hangfire") || path.StartsWith("/swagger") || path.StartsWith("/health"))
+                    {
+                        return RateLimitPartition.GetNoLimiter("BypassLimiter");
+                    }
+
+                    var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                     return RateLimitPartition.GetTokenBucketLimiter(ip, _ => new TokenBucketRateLimiterOptions
                     {
-                        TokenLimit = 50,
-                        TokensPerPeriod = 10, // Cấp phát 10 token cho mỗi chu kỳ
-                        ReplenishmentPeriod = TimeSpan.FromSeconds(10), // Mỗi 10 giây cấp phát lại token
+                        TokenLimit = builder.Configuration.GetValue<int>("RateLimiting:Global:TokenLimit", 100),
+                        TokensPerPeriod = builder.Configuration.GetValue<int>("RateLimiting:Global:TokensPerPeriod", 20), // Cấp phát 20 token cho mỗi chu kỳ
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(builder.Configuration.GetValue<int>("RateLimiting:Global:ReplenishmentPeriodSeconds", 10)), // Mỗi 10 giây cấp phát lại token
                         AutoReplenishment = true // Tự động cấp phát lại token
                     });
                 });
@@ -138,15 +144,13 @@ namespace PlantDecor.API
                 // 2. Strict: Cho endpoints nhạy cảm (login, register, forgot-password)
                 options.AddPolicy("auth-strict", context =>
                 {
-                    var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                             ?? context.Connection.RemoteIpAddress?.ToString()
-                             ?? "unknown";
+                    var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                     return RateLimitPartition.GetSlidingWindowLimiter(ip, _ => new SlidingWindowRateLimiterOptions
                     {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(3), // Trong 3 phút chỉ cho phép 5 request
-                        SegmentsPerWindow = 6, // Chia cửa sổ thành 6 đoạn (mỗi đoạn 30 giây) để phân phối lại request tốt hơn
+                        PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthStrict:PermitLimit", 5),
+                        Window = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("RateLimiting:AuthStrict:WindowMinutes", 3)), // Trong 3 phút chỉ cho phép 5 request
+                        SegmentsPerWindow = builder.Configuration.GetValue<int>("RateLimiting:AuthStrict:SegmentsPerWindow", 6), // Chia cửa sổ thành 6 đoạn (mỗi đoạn 30 giây) để phân phối lại request tốt hơn
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                         AutoReplenishment = true
@@ -196,6 +200,21 @@ namespace PlantDecor.API
             builder.Services.AddHttpClient();
             builder.Services.AddOptions();
 
+            // Cấu hình để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor |
+                    ForwardedHeaders.XForwardedProto;
+
+                // Nếu Nginx cùng máy (Docker compose hoặc cùng server) thì không cần thêm
+                // Nếu Nginx ở máy khác, thêm IP của nó:
+                // options.KnownProxies.Add(System.Net.IPAddress.Parse("your-nginx-ip"));
+
+                // Hoặc nếu dùng Docker network:
+                // options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
+                //     System.Net.IPAddress.Parse("172.16.0.0"), 12));
+            });
             builder.Services.AddHttpClient<ResendClient>();
             builder.Services.Configure<ResendClientOptions>(o =>
             {
@@ -221,8 +240,8 @@ namespace PlantDecor.API
             {
                 options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
                 options.WorkerCount = 5; // Number of concurrent job executions
-                options.HeartbeatInterval = TimeSpan.FromSeconds(10);
-                options.ServerTimeout = TimeSpan.FromSeconds(30);
+                options.HeartbeatInterval = TimeSpan.FromSeconds(30); // Kiểm tra tình trạng của worker mỗi 30 giây
+                options.ServerTimeout = TimeSpan.FromMinutes(5); // Nếu worker không phản hồi trong 5 phút, coi như bị treo và sẽ được đánh dấu là failed để có thể retry lại
             });
 
             var app = builder.Build();
@@ -238,14 +257,18 @@ namespace PlantDecor.API
                     DarkModeEnabled = true
                 });
             }
-
+            // dùng để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
+            // nếu không có thì sẽ bị lỗi do tất cả request đều có cùng 1 IP (IP của proxy)
+            app.UseForwardedHeaders();
+            // đặt ở đây vì muốn nó bắt được tất cả exception, kể cả exception do authentication
+            app.UseMiddleware<GlobalExceptionMiddleware>();
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors("AllowAllOrigins");
             app.UseRateLimiter();
             app.UseAuthentication();
-            //   app.UseMiddleware<SecurityStampValidationMiddleware>();
-            app.UseMiddleware<GlobalExceptionMiddleware>();
+            // để sau authentication thay vì ở đầu pipeline để tránh việc phải check security stamp cho các request không cần authentication (như swagger, health check, static files...)
+            app.UseMiddleware<SecurityStampValidationMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
             app.MapHealthChecks("/health");
