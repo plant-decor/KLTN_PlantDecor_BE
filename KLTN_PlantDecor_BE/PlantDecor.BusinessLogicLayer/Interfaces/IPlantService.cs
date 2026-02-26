@@ -1,14 +1,15 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IPlantService
     {
         // CRUD Operations
-        Task<List<PlantListResponseDto>> GetAllPlantsAsync();
-        Task<List<PlantListResponseDto>> GetActivePlantsAsync();
+        Task<PaginatedResult<PlantListResponseDto>> GetAllPlantsAsync(Pagination pagination);
+        Task<PaginatedResult<PlantListResponseDto>> GetActivePlantsAsync(Pagination pagination);
         Task<PlantResponseDto?> GetPlantByIdAsync(int id);
         Task<PlantResponseDto> CreatePlantAsync(PlantRequestDto request);
         Task<PlantResponseDto> UpdatePlantAsync(int id, PlantUpdateDto request);
@@ -22,6 +23,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantResponseDto> RemoveTagFromPlantAsync(int plantId, int tagId);
 
         // Shop Display (with available instances)
-        Task<List<PlantListResponseDto>> GetPlantsForShopAsync();
+        Task<PaginatedResult<PlantListResponseDto>> GetPlantsForShopAsync(Pagination pagination);
     }
 }

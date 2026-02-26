@@ -24,6 +24,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Age = instance.Age,
                 Description = instance.Description,
                 Status = instance.Status,
+                StatusName = ((PlantInstanceStatusEnum)instance.Status).ToString(),
                 CreatedAt = instance.CreatedAt,
                 UpdatedAt = instance.UpdatedAt
             };
@@ -45,6 +46,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PlantId = request.PlantId,
                 SpecificPrice = request.SpecificPrice ?? basePrice,
                 Height = request.Height,
+                CurrentNurseryId = 4,
                 TrunkDiameter = request.TrunkDiameter,
                 HealthStatus = request.HealthStatus ?? "Good",
                 Age = request.Age,

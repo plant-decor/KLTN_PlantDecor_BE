@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -25,16 +26,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _cacheService = cacheService;
         }
 
-        public async Task<List<CategoryResponseDto>> GetAllCategoriesAsync()
+        public async Task<PaginatedResult<CategoryResponseDto>> GetAllCategoriesAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<CategoryResponseDto>>(ALL_CATEGORIES_KEY);
+            var cacheKey = $"{ALL_CATEGORIES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<CategoryResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var allCategories = await _unitOfWork.CategoryRepository.GetAllWithParentAsync();
-            var result = allCategories.ToResponseList();
+            var paginatedEntities = await _unitOfWork.CategoryRepository.GetAllWithParentAsync(pagination);
+            var result = new PaginatedResult<CategoryResponseDto>(
+                paginatedEntities.Items.ToResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_CATEGORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
 
             return result;
         }
@@ -182,7 +189,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync()
         {
-            await _cacheService.RemoveDataAsync(ALL_CATEGORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(ALL_CATEGORIES_KEY);
             await _cacheService.RemoveDataAsync(ROOT_CATEGORIES_KEY);
             await _cacheService.RemoveDataAsync(ROOT_ACTIVE_CATEGORIES_KEY);
         }

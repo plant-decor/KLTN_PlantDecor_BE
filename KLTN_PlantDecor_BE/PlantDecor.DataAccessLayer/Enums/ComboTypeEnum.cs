@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace PlantDecor.DataAccessLayer.Enums
 {
-    public enum TagTypeEnum
+    public enum ComboTypeEnum
     {
-        Plant = 1,
-        Inventory = 2,
-        PlantCombo = 3
+        Space = 1,
+        Fengshui = 2,
+        Theme = 3,
     }
 }

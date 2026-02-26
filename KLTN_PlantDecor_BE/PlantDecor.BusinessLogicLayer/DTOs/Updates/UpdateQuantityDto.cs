@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PlantDecor.DataAccessLayer.Enums
+namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 {
-    public enum TagTypeEnum
+    public class UpdateQuantityDto
     {
-        Plant = 1,
-        Inventory = 2,
-        PlantCombo = 3
+        public int Quantity { get; set; }
     }
 }

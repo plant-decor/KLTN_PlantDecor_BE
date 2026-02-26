@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.API.Controllers
 {
@@ -29,10 +30,10 @@ namespace PlantDecor.API.Controllers
         /// Lấy tất cả plants (Admin)
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllPlants()
+        public async Task<IActionResult> GetAllPlants([FromQuery] Pagination pagination)
         {
-            var plants = await _plantService.GetAllPlantsAsync();
-            return Ok(new ApiResponse<IEnumerable<PlantListResponseDto>>
+            var plants = await _plantService.GetAllPlantsAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -46,10 +47,10 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpGet("active")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActivePlants()
+        public async Task<IActionResult> GetActivePlants([FromQuery] Pagination pagination)
         {
-            var plants = await _plantService.GetActivePlantsAsync();
-            return Ok(new ApiResponse<IEnumerable<PlantListResponseDto>>
+            var plants = await _plantService.GetActivePlantsAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -102,7 +103,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Cập nhật plant
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         public async Task<IActionResult> UpdatePlant(int id, [FromBody] PlantUpdateDto request)
         {
             var plant = await _plantService.UpdatePlantAsync(id, request);

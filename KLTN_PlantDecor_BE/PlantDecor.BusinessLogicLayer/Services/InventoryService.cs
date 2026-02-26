@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -27,29 +28,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region CRUD Operations
 
-        public async Task<List<InventoryListResponseDto>> GetAllInventoriesAsync()
+        public async Task<PaginatedResult<InventoryListResponseDto>> GetAllInventoriesAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(ALL_INVENTORIES_KEY);
+            var cacheKey = $"{ALL_INVENTORIES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<InventoryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetAllWithDetailsAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.InventoryRepository.GetAllWithDetailsAsync(pagination);
+            var result = new PaginatedResult<InventoryListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
-        public async Task<List<InventoryListResponseDto>> GetActiveInventoriesAsync()
+        public async Task<PaginatedResult<InventoryListResponseDto>> GetActiveInventoriesAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(ACTIVE_INVENTORIES_KEY);
+            var cacheKey = $"{ACTIVE_INVENTORIES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<InventoryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetActiveWithDetailsAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.InventoryRepository.GetActiveWithDetailsAsync(pagination);
+            var result = new PaginatedResult<InventoryListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ACTIVE_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -333,16 +346,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Shop Display
 
-        public async Task<List<InventoryListResponseDto>> GetInventoriesForShopAsync()
+        public async Task<PaginatedResult<InventoryListResponseDto>> GetInventoriesForShopAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(SHOP_INVENTORIES_KEY);
+            var cacheKey = $"{SHOP_INVENTORIES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<InventoryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetInventoriesForShopAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.InventoryRepository.GetInventoriesForShopAsync(pagination);
+            var result = new PaginatedResult<InventoryListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(SHOP_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -352,9 +371,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync()
         {
-            await _cacheService.RemoveDataAsync(ALL_INVENTORIES_KEY);
-            await _cacheService.RemoveDataAsync(ACTIVE_INVENTORIES_KEY);
-            await _cacheService.RemoveDataAsync(SHOP_INVENTORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(ALL_INVENTORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(ACTIVE_INVENTORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(SHOP_INVENTORIES_KEY);
         }
 
         #endregion

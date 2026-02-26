@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -9,6 +10,19 @@ namespace PlantDecor.DataAccessLayer.Repositories
     {
         public TagRepository(PlantDecorContext context) : base(context)
         {
+        }
+
+        public async Task<PaginatedResult<Tag>> GetAllTagsWithPaginationAsync(Pagination pagination)
+        {
+            var query = _context.Tags.OrderBy(t => t.TagName);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<Tag>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public async Task<bool> ExistsByNameAsync(string tagName, int? excludeId = null)

@@ -7,6 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string Name { get; set; } = null!;
         public bool? IsActive { get; set; }
         public int CategoryType { get; set; }
+        public string CategoryTypeName { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? ParentCategoryName { get; set; }

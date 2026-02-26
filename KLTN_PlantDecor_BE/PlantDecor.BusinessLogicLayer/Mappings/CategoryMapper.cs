@@ -18,6 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Name = category.Name,
                 IsActive = category.IsActive,
                 CategoryType = category.CategoryType,
+                CategoryTypeName = ((DataAccessLayer.Enums.CategoryTypeEnum)category.CategoryType).ToString(),
                 CreatedAt = category.CreatedAt,
                 UpdatedAt = category.UpdatedAt,
                 ParentCategoryName = category.ParentCategory?.Name

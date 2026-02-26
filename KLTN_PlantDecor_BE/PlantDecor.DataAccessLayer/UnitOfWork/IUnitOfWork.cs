@@ -16,6 +16,8 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IPlantRepository PlantRepository { get; }
         IPlantInstanceRepository PlantInstanceRepository { get; }
         IInventoryRepository InventoryRepository { get; }
+        IPlantInventoryRepository PlantInventoryRepository { get; }
+        IPlantComboRepository PlantComboRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

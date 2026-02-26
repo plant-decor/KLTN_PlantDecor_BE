@@ -88,10 +88,14 @@ namespace PlantDecor.API
                 });
             });
 
+            var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+
+            builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+                StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString));
+
             builder.Services.AddStackExchangeRedisCache(options =>
             {
-                // Lấy chuỗi kết nối từ appsettings.json
-                options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+                options.Configuration = redisConnectionString;
                 options.InstanceName = "PlantDecor_";
             });
 
@@ -112,6 +116,8 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IPlantService, PlantService>();
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IInventoryService, InventoryService>();
+            builder.Services.AddScoped<IPlantInventoryService, PlantInventoryService>();
+            builder.Services.AddScoped<IPlantComboService, PlantComboService>();
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
 

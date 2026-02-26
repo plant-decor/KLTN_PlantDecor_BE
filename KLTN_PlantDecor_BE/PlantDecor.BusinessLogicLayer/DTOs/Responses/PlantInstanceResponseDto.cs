@@ -12,6 +12,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? Age { get; set; }
         public string? Description { get; set; }
         public int Status { get; set; }
+        public string StatusName { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

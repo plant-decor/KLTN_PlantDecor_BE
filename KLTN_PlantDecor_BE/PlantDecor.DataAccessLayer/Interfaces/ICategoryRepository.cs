@@ -1,11 +1,12 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using System.Linq.Expressions;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
     public interface ICategoryRepository : IGenericRepository<Category>
     {
-        Task<List<Category>> GetAllWithParentAsync();
+        Task<PaginatedResult<Category>> GetAllWithParentAsync(Pagination pagination);
         Task<List<Category>> GetAllActiveWithParentAsync();
         Task<List<Category>> GetRootCategoriesWithChildrenAsync();
         Task<List<Category>> GetRootActiveCategoriesWithChildrenAsync();

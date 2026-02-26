@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -11,21 +12,35 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
         }
 
-        public async Task<List<PlantInstance>> GetAllWithPlantAsync()
+        public async Task<PaginatedResult<PlantInstance>> GetAllWithPlantAsync(Pagination pagination)
         {
-            return await _context.PlantInstances
+            var query = _context.PlantInstances
                 .Include(i => i.Plant)
-                .OrderByDescending(i => i.CreatedAt)
+                .OrderByDescending(i => i.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<List<PlantInstance>> GetByPlantIdAsync(int plantId)
+        public async Task<PaginatedResult<PlantInstance>> GetByPlantIdAsync(int plantId, Pagination pagination)
         {
-            return await _context.PlantInstances
+            var query = _context.PlantInstances
                 .Include(i => i.Plant)
                 .Where(i => i.PlantId == plantId)
-                .OrderByDescending(i => i.CreatedAt)
+                .OrderByDescending(i => i.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public async Task<PlantInstance?> GetByIdWithPlantAsync(int id)

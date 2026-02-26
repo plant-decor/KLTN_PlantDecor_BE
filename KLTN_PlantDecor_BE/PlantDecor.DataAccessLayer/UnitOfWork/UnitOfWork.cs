@@ -22,6 +22,8 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IPlantRepository? _plantRepository;
         private IPlantInstanceRepository? _plantInstanceRepository;
         private IInventoryRepository? _inventoryRepository;
+        private IPlantInventoryRepository? _plantInventoryRepository;
+        private IPlantComboRepository? _plantComboRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -58,6 +60,17 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         {
             get { return _inventoryRepository ??= new InventoryRepository(_context); }
         }
+
+        public IPlantInventoryRepository PlantInventoryRepository
+        {
+            get { return _plantInventoryRepository ??= new PlantInventoryRepository(_context); }
+        }
+
+        public IPlantComboRepository PlantComboRepository
+        {
+            get { return _plantComboRepository ??= new PlantComboRepository(_context); }
+        }
+
         // Transaction Management
         public async Task BeginTransactionAsync()
         {

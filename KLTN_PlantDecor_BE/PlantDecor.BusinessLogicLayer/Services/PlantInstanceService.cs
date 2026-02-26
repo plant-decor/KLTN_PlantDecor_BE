@@ -7,6 +7,7 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -25,23 +26,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _cacheService = cacheService;
         }
 
-        public async Task<List<PlantInstanceResponseDto>> GetAllInstancesAsync()
+        public async Task<PaginatedResult<PlantInstanceResponseDto>> GetAllInstancesAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<PlantInstanceResponseDto>>(ALL_INSTANCES_KEY);
+            var cacheKey = $"{ALL_INSTANCES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var instances = await _unitOfWork.PlantInstanceRepository.GetAllWithPlantAsync();
-            var result = instances.ToResponseList();
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAllWithPlantAsync(pagination);
+            var result = new PaginatedResult<PlantInstanceResponseDto>(
+                paginatedEntities.Items.ToResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_INSTANCES_KEY, result, DateTimeOffset.Now.AddMinutes(15));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
         }
 
-        public async Task<List<PlantInstanceResponseDto>> GetInstancesByPlantIdAsync(int plantId)
+        public async Task<PaginatedResult<PlantInstanceResponseDto>> GetInstancesByPlantIdAsync(int plantId, Pagination pagination)
         {
-            var cacheKey = $"{INSTANCES_BY_PLANT_PREFIX}{plantId}";
-            var cachedData = await _cacheService.GetDataAsync<List<PlantInstanceResponseDto>>(cacheKey);
+            var cacheKey = $"{INSTANCES_BY_PLANT_PREFIX}{plantId}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
@@ -49,8 +56,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (plant == null)
                 throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
-            var instances = await _unitOfWork.PlantInstanceRepository.GetByPlantIdAsync(plantId);
-            var result = instances.ToResponseList();
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetByPlantIdAsync(plantId, pagination);
+            var result = new PaginatedResult<PlantInstanceResponseDto>(
+                paginatedEntities.Items.ToResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
@@ -183,8 +195,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync(int plantId)
         {
-            await _cacheService.RemoveDataAsync(ALL_INSTANCES_KEY);
-            await _cacheService.RemoveDataAsync($"{INSTANCES_BY_PLANT_PREFIX}{plantId}");
+            await _cacheService.RemoveByPrefixAsync(ALL_INSTANCES_KEY);
+            await _cacheService.RemoveByPrefixAsync($"{INSTANCES_BY_PLANT_PREFIX}{plantId}");
         }
 
         #endregion

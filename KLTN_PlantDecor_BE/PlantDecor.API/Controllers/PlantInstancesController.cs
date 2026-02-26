@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.API.Controllers
 {
@@ -27,10 +28,10 @@ namespace PlantDecor.API.Controllers
         /// Lấy tất cả plant instances
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllInstances()
+        public async Task<IActionResult> GetAllInstances([FromQuery] Pagination pagination)
         {
-            var instances = await _plantInstanceService.GetAllInstancesAsync();
-            return Ok(new ApiResponse<IEnumerable<PlantInstanceResponseDto>>
+            var instances = await _plantInstanceService.GetAllInstancesAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantInstanceResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -44,10 +45,10 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpGet("by-plant/{plantId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetInstancesByPlantId(int plantId)
+        public async Task<IActionResult> GetInstancesByPlantId(int plantId, [FromQuery] Pagination pagination)
         {
-            var instances = await _plantInstanceService.GetInstancesByPlantIdAsync(plantId);
-            return Ok(new ApiResponse<IEnumerable<PlantInstanceResponseDto>>
+            var instances = await _plantInstanceService.GetInstancesByPlantIdAsync(plantId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantInstanceResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,

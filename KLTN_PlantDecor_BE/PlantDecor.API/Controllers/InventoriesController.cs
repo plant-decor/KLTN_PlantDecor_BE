@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.API.Controllers
 {
@@ -29,10 +30,10 @@ namespace PlantDecor.API.Controllers
         /// Lấy tất cả inventories (Admin)
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllInventories()
+        public async Task<IActionResult> GetAllInventories([FromQuery] Pagination pagination)
         {
-            var inventories = await _inventoryService.GetAllInventoriesAsync();
-            return Ok(new ApiResponse<IEnumerable<InventoryListResponseDto>>
+            var inventories = await _inventoryService.GetAllInventoriesAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<InventoryListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -46,10 +47,10 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpGet("active")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActiveInventories()
+        public async Task<IActionResult> GetActiveInventories([FromQuery] Pagination pagination)
         {
-            var inventories = await _inventoryService.GetActiveInventoriesAsync();
-            return Ok(new ApiResponse<IEnumerable<InventoryListResponseDto>>
+            var inventories = await _inventoryService.GetActiveInventoriesAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<InventoryListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -102,7 +103,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Cập nhật inventory
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateInventory(int id, [FromBody] InventoryUpdateDto request)
         {
             var inventory = await _inventoryService.UpdateInventoryAsync(id, request);
