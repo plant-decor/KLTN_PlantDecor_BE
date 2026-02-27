@@ -4,10 +4,13 @@ using Microsoft.IdentityModel.Tokens;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
+using PlantDecor.BusinessLogicLayer.Extensions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
@@ -23,13 +26,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ISecurityStampCacheService _stampCacheService;
-        // private readonly IEmailService _emailService;
+        private readonly IEmailService _emailService;
 
 
         public AuthenticationService(
             IHttpClientFactory httpClientFactory,
             IUnitOfWork unitOfWork,
             IConfiguration configuration,
+            IEmailService emailService,
             ISecurityStampCacheService stampCacheService)
         {
             _unitOfWork = unitOfWork;
@@ -40,7 +44,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _issuer = configuration["JwtSettings:Issuer"] ?? throw new ArgumentNullException("JWT Issuer not configured");
             _audience = configuration["JwtSettings:Audience"] ?? throw new ArgumentNullException("JWT Audience not configured");
             _expiryMinutes = int.Parse(configuration["JwtSettings:ExpiryMinutes"] ?? "30");
-            //  _emailService = emailService;
+            _emailService = emailService;
         }
 
         public string GenerateAccessToken(User user, string roleName)
@@ -81,36 +85,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                throw new BadRequestException("Email và mật khẩu không được để trống");
+                throw new BadRequestException("Email and password must not be empty");
             }
 
 
             var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                throw new NotFoundException("Người dùng không tồn tại");
+                throw new NotFoundException("User not found");
             }
 
             var isVerified = await _unitOfWork.UserRepository.IsVerifiedAsync(user.Id);
             if (!isVerified)
             {
-                throw new UnauthorizedException("Tài khoản chưa được xác thực email");
+                throw new UnauthorizedException("Account email has not been verified");
             }
 
             var isValidPassword = await _unitOfWork.UserRepository.VerifyPasswordAsync(user, request.Password);
             if (!isValidPassword)
             {
-                throw new BadRequestException("Mật khẩu không đúng");
+                throw new BadRequestException("Incorrect password");
             }
             if (user.Status != (int)UserStatusEnum.Active)
             {
-                throw new ForbiddenException("Tài khoản đang bị vô hiệu hóa");
+                throw new ForbiddenException("Account is disabled");
             }
 
             var roleName = user.Role?.Name;
             if (string.IsNullOrWhiteSpace(roleName))
             {
-                throw new ForbiddenException("Không tìm thấy vai trò của người dùng");
+                throw new ForbiddenException("User role not found");
             }
 
             var accessToken = GenerateAccessToken(user, roleName);
@@ -140,11 +144,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (success == 0)
             {
-                throw new Exception("Cập nhật RefreshToken thất bại");
+                throw new Exception("Failed to update RefreshToken");
             }
 
-            // Sau khi login thành công, trước khi return
-            //  await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
+            // Sau khi login thành công, trước khi return để optimize performance
+            // Ở đây nó optimize vì mỗi request sẽ validate security stamp,
+            // nếu cache miss sẽ query DB, nên set cache ngay sau khi login thành công để tránh cache miss ở request đầu tiên
+            // await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
 
             return new AuthenticationResponse
             {
@@ -158,9 +164,160 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new NotImplementedException();
         }
 
-        public Task<AuthenticationResponse?> RegisterAsync(UserRequest request)
+        public async Task<AuthenticationResponse?> RegisterAsync(UserRequest request)
         {
-            throw new NotImplementedException();
+            // Validate input Null or Empty
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new BadRequestException("Email, password, username and full name are required");
+            }
+
+            // Validate email format
+            if (!IsValidEmail(request.Email))
+            {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            // Validate phone format
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^(0|\+84)(\d{9})$"))
+            {
+                throw new BadRequestException("Invalid phone number format");
+            }
+            var phoneExists = await _unitOfWork.UserRepository.GetByPhoneAsync(request.PhoneNumber);
+            if (phoneExists != null)
+            {
+                throw new BadRequestException("Phone number is already in use");
+            }
+
+            //Validate password complexity
+            ValidatePassword(request.Password);
+
+
+            // Validate password confirmation
+            if (request.Password != request.ConfirmPassword)
+            {
+                throw new BadRequestException("Password and confirmation password do not match");
+            }
+
+            // Check if user already exists
+            var existingUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("This email is already registered");
+            }
+
+            // Check if role exists and Enum is valid
+            if (!Enum.IsDefined(typeof(RoleEnum), request.RoleId))
+            {
+                throw new BadRequestException($"Invalid role: {request.RoleId}");
+            }
+
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync((int)request.RoleId);
+            if (role == null)
+            {
+                throw new BadRequestException("Invalid role");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Create new user
+                // UserMapper để chuyển từ DTO Request sang Entity nhưng chưa mã hóa password
+                // Mã hóa password bằng BCrypt ở đây vì ở đây là tầng quản lý nghiệp vụ và có thể kiểm soát transaction 
+                var newUser = UserMapper.ToEntity(request);
+                newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+                // Tạo SecurityStamp mới cho user
+                newUser.UpdateSecurityStamp();
+
+                // PrepareCreate để tránh gọi SaveChanges nhiều lần
+                // PrepareCreate chỉ thêm entity vào context chứ không lưu vào db ngay lập tức như CreateAsync
+                _unitOfWork.UserRepository.PrepareCreate(newUser);
+                await _unitOfWork.SaveAsync();
+
+                // Get the created user to have the ID
+                var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+                if (createdUser == null)
+                {
+                    // Trường hợp lẽ ra không xảy ra nhưng vẫn kiểm tra để chắc chắn
+                    // Nếu không lấy được user vừa tạo thì rollback transaction và trả về lỗi
+                    throw new Exception("Failed to retrieve created user");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    Message = "Registration successful. Please verify your email to use full services",
+                    User = UserMapper.ToResponse(createdUser)
+                };
+
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        /*
+        "test@example.com"  // true
+        "user@domain"       // vẫn true
+        "user@@domain.com"  // false (2 ký tự @)
+        "user@domain.com "  // false (có space cuối)
+        ""                  // false
+        */
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ValidatePassword(string password)
+        {
+            var errors = new List<string>();
+
+            if (password.Length < 8)
+            {
+                errors.Add("Password must be at least 8 characters.");
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                errors.Add("Password must contain at least one uppercase letter.");
+            }
+
+            if (!password.Any(char.IsLower))
+            {
+                errors.Add("Password must contain at least one lowercase letter.");
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                errors.Add("Password must contain at least one digit.");
+            }
+
+            if (!password.Any(c => !char.IsLetterOrDigit(c)))
+            {
+                errors.Add("Password must contain at least one special character.");
+            }
+
+            if (errors.Count > 0)
+            {
+                throw new BadRequestException(string.Join(" ", errors));
+            }
         }
 
         public Task<ClaimsPrincipal?> ValidateToken(string token)

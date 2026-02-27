@@ -27,7 +27,7 @@ namespace PlantDecor.API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                throw new BadRequestException("Dữ liệu không hợp lệ");
+                throw new BadRequestException("Invalid Request");
             }
 
             var result = await _authenticationService.LoginAsync(request);
@@ -36,9 +36,50 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Đăng nhập thành công!",
+                Message = "Login Successfully!",
                 Payload = result
             });
+        }
+
+        [HttpPost("register")]
+        //   [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> Register(UserRequest request)
+        {
+            //if (!ModelState.IsValid)
+            //{
+            //    throw new BadRequestException("Invalid Request");
+            //}
+
+            var result = await _authenticationService.RegisterAsync(request);
+
+            if (result == null)
+            {
+                throw new Exception("Registration failed");
+            }
+
+            // Send Verification Email (Optional, can be triggered by user action instead)
+            //var verifyRequest = new ResendVerifyRequest() { Email = request.Email };
+
+            //var emailSent = await _authenticationService.VerifyEmailAsync(verifyRequest, CancellationToken.None);
+            //if (!emailSent)
+            //{
+            //    throw new Exception("Failed to send verification email");
+            //}
+
+            //return CreatedAtAction(
+            //            nameof(Register),   // Action name
+            //            new { email = request.Email },  // route values
+            //            result  // response body
+            //    );
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Register Successfully!",
+                Payload = result
+            });
+
+
         }
     }
 }
