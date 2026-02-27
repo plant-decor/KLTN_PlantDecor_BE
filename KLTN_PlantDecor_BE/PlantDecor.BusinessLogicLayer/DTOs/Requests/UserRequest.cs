@@ -1,5 +1,4 @@
-﻿using PlantDecor.DataAccessLayer.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -24,7 +23,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [RegularExpression(@"^(0|\+84)(\d{9})$", ErrorMessage = "Sai định dạng điện thoại")]
         public string? PhoneNumber { get; set; }
         [Required(ErrorMessage = "Cần có Role")]
-        public RoleEnum RoleId { get; set; }
+        public int RoleId { get; set; }
 
 
     }
