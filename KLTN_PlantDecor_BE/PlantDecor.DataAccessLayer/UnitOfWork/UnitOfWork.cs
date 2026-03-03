@@ -2,11 +2,6 @@
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
@@ -14,14 +9,16 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
     {
         private readonly PlantDecorContext _context;
         private IDbContextTransaction _transaction;
-        private IUserRepository _userRepository;
+
 
         // Repository instances
+        private IUserRepository? _userRepository;
         private ICategoryRepository? _categoryRepository;
         private ITagRepository? _tagRepository;
         private IPlantRepository? _plantRepository;
         private IPlantInstanceRepository? _plantInstanceRepository;
         private IInventoryRepository? _inventoryRepository;
+        private IRoleRepository? _roleRepository;
         private IPlantInventoryRepository? _plantInventoryRepository;
         private IPlantComboRepository? _plantComboRepository;
 
@@ -46,7 +43,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
             get { return _tagRepository ??= new TagRepository(_context); }
         }
 
-        public IPlantRepository PlantRepository 
+        public IPlantRepository PlantRepository
         {
             get { return _plantRepository ??= new PlantRepository(_context); }
         }
@@ -61,6 +58,10 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
             get { return _inventoryRepository ??= new InventoryRepository(_context); }
         }
 
+        public IRoleRepository RoleRepository
+        {
+            get { return _roleRepository ??= new RoleRepository(_context); }
+        }
         public IPlantInventoryRepository PlantInventoryRepository
         {
             get { return _plantInventoryRepository ??= new PlantInventoryRepository(_context); }

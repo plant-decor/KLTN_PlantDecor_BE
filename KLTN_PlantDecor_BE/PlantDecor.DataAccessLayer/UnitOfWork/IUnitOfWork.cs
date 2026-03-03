@@ -1,9 +1,4 @@
 ﻿using PlantDecor.DataAccessLayer.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
@@ -11,6 +6,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
     {
         // Repository access
         IUserRepository UserRepository { get; }
+        IRoleRepository RoleRepository { get; }
         ICategoryRepository CategoryRepository { get; }
         ITagRepository TagRepository { get; }
         IPlantRepository PlantRepository { get; }
