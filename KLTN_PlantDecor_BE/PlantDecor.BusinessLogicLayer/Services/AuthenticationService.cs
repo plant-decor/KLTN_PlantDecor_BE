@@ -211,12 +211,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             // Check if role exists and Enum is valid
-            if (!Enum.IsDefined(typeof(RoleEnum), request.RoleId))
-            {
-                throw new BadRequestException($"Invalid role: {request.RoleId}");
-            }
+            var userRoleEnum = (int)RoleEnum.Customer;
 
-            var role = await _unitOfWork.RoleRepository.GetByIdAsync((int)request.RoleId);
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(userRoleEnum);
             if (role == null)
             {
                 throw new BadRequestException("Invalid role");
@@ -230,6 +227,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // UserMapper để chuyển từ DTO Request sang Entity nhưng chưa mã hóa password
                 // Mã hóa password bằng BCrypt ở đây vì ở đây là tầng quản lý nghiệp vụ và có thể kiểm soát transaction 
                 var newUser = UserMapper.ToEntity(request);
+                newUser.RoleId = userRoleEnum;
                 newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
                 // Tạo SecurityStamp mới cho user
@@ -253,7 +251,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return new AuthenticationResponse
                 {
-                    Message = "Registration successful. Please verify your email to use full services",
                     User = UserMapper.ToResponse(createdUser)
                 };
 
@@ -317,6 +314,96 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (errors.Count > 0)
             {
                 throw new BadRequestException(string.Join(" ", errors));
+            }
+        }
+
+        public async Task<AuthenticationResponse?> CreateManagerAsync(CreateManagerRequest request)
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new BadRequestException("Email, password, username and full name are required");
+            }
+
+            if (!IsValidEmail(request.Email))
+            {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^(0|\+84)(\d{9})$"))
+            {
+                throw new BadRequestException("Invalid phone number format");
+            }
+
+            var phoneExists = await _unitOfWork.UserRepository.GetByPhoneAsync(request.PhoneNumber);
+            if (phoneExists != null)
+            {
+                throw new BadRequestException("Phone number is already in use");
+            }
+
+            ValidatePassword(request.Password);
+
+            if (request.Password != request.ConfirmPassword)
+            {
+                throw new BadRequestException("Password and confirmation password do not match");
+            }
+
+            var existingUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("This email is already registered");
+            }
+
+            var managerRoleId = (int)RoleEnum.Manager;
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(managerRoleId);
+            if (role == null)
+            {
+                throw new BadRequestException("Manager role not found");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var userRequest = new UserRequest
+                {
+                    Email = request.Email,
+                    Password = request.Password,
+                    ConfirmPassword = request.ConfirmPassword,
+                    Username = request.Username,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber
+                };
+
+                var newUser = UserMapper.ToEntity(userRequest);
+                newUser.RoleId = managerRoleId;
+                newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                newUser.UpdateSecurityStamp();
+
+                _unitOfWork.UserRepository.PrepareCreate(newUser);
+                await _unitOfWork.SaveAsync();
+
+                var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+                if (createdUser == null)
+                {
+                    throw new Exception("Failed to retrieve created manager account");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    User = UserMapper.ToResponse(createdUser)
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
         }
 

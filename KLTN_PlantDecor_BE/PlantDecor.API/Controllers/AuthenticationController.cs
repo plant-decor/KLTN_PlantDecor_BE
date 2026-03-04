@@ -75,7 +75,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Register Successfully!",
+                Message = "Register Successfully! Please verify your email to use full services.",
                 Payload = result
             });
 

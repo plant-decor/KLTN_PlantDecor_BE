@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.Security.Claims;
@@ -11,9 +14,37 @@ namespace PlantDecor.API.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IAuthenticationService _authenticationService;
+
+        public UserController(IUserService userService, IAuthenticationService authenticationService)
         {
             _userService = userService;
+            _authenticationService = authenticationService;
+        }
+
+        [HttpPost("create-manager")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateManagerAccount([FromBody] CreateManagerRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.CreateManagerAsync(request);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to create manager account");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Manager account created successfully!",
+                Payload = result
+            });
         }
 
         //   [Authorize(Roles = "Admin,User")]

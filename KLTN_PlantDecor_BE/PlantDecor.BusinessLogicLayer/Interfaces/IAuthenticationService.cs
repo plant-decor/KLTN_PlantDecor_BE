@@ -14,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<AuthenticationResponse?> LoginAsync(LoginRequest request);
         Task<AuthenticationResponse?> RefreshTokenAsync(string refreshToken);
         Task<AuthenticationResponse?> RegisterAsync(UserRequest request);
+        Task<AuthenticationResponse?> CreateManagerAsync(CreateManagerRequest request);
         //Task<AuthenticationResponse?> LogoutAsync(LogoutRequest request);
         //Task<AuthenticationResponse> LoginWithGoogle(GoogleAccessTokenRequest request);
 
