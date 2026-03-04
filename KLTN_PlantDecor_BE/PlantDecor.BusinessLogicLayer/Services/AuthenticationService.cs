@@ -150,7 +150,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Sau khi login thành công, trước khi return để optimize performance
             // Ở đây nó optimize vì mỗi request sẽ validate security stamp,
             // nếu cache miss sẽ query DB, nên set cache ngay sau khi login thành công để tránh cache miss ở request đầu tiên
-            // await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
+            await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
 
             return new AuthenticationResponse
             {

@@ -288,7 +288,7 @@ namespace PlantDecor.API
             app.UseRateLimiter();
             app.UseAuthentication();
             // để sau authentication thay vì ở đầu pipeline để tránh việc phải check security stamp cho các request không cần authentication (như swagger, health check, static files...)
-            //app.UseMiddleware<SecurityStampValidationMiddleware>();
+            app.UseMiddleware<SecurityStampValidationMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
             app.MapHealthChecks("/health");
