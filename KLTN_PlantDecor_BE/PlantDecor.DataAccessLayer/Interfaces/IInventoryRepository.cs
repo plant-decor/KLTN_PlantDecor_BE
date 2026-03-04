@@ -1,14 +1,15 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
-    public interface IInventoryRepository : IGenericRepository<Inventory>
+    public interface IMaterialRepository : IGenericRepository<Material>
     {
-        Task<List<Inventory>> GetAllWithDetailsAsync();
-        Task<List<Inventory>> GetActiveWithDetailsAsync();
-        Task<Inventory?> GetByIdWithDetailsAsync(int id);
-        Task<Inventory?> GetByIdWithOrdersAsync(int id);
-        Task<bool> ExistsByCodeAsync(string inventoryCode, int? excludeId = null);
-        Task<List<Inventory>> GetInventoriesForShopAsync();
+        Task<PaginatedResult<Material>> GetAllWithDetailsAsync(Pagination pagination);
+        Task<PaginatedResult<Material>> GetActiveWithDetailsAsync(Pagination pagination);
+        Task<Material?> GetByIdWithDetailsAsync(int id);
+        Task<Material?> GetByIdWithOrdersAsync(int id);
+        Task<bool> ExistsByCodeAsync(string materialCode, int? excludeId = null);
+        Task<PaginatedResult<Material>> GetMaterialsForShopAsync(Pagination pagination);
     }
 }

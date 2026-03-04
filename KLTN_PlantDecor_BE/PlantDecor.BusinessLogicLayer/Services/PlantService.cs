@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -27,29 +28,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region CRUD Operations
 
-        public async Task<List<PlantListResponseDto>> GetAllPlantsAsync()
+        public async Task<PaginatedResult<PlantListResponseDto>> GetAllPlantsAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<PlantListResponseDto>>(ALL_PLANTS_KEY);
+            var cacheKey = $"{ALL_PLANTS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var plants = await _unitOfWork.PlantRepository.GetAllWithDetailsAsync();
-            var result = plants.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.PlantRepository.GetAllWithDetailsAsync(pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_PLANTS_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
-        public async Task<List<PlantListResponseDto>> GetActivePlantsAsync()
+        public async Task<PaginatedResult<PlantListResponseDto>> GetActivePlantsAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<PlantListResponseDto>>(ACTIVE_PLANTS_KEY);
+            var cacheKey = $"{ACTIVE_PLANTS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var plants = await _unitOfWork.PlantRepository.GetActiveWithDetailsAsync();
-            var result = plants.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.PlantRepository.GetActiveWithDetailsAsync(pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ACTIVE_PLANTS_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -297,16 +310,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Shop Display
 
-        public async Task<List<PlantListResponseDto>> GetPlantsForShopAsync()
+        public async Task<PaginatedResult<PlantListResponseDto>> GetPlantsForShopAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<PlantListResponseDto>>(SHOP_PLANTS_KEY);
+            var cacheKey = $"{SHOP_PLANTS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var plants = await _unitOfWork.PlantRepository.GetPlantsForShopAsync();
-            var result = plants.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.PlantRepository.GetPlantsForShopAsync(pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(SHOP_PLANTS_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -316,9 +335,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync()
         {
-            await _cacheService.RemoveDataAsync(ALL_PLANTS_KEY);
-            await _cacheService.RemoveDataAsync(ACTIVE_PLANTS_KEY);
-            await _cacheService.RemoveDataAsync(SHOP_PLANTS_KEY);
+            await _cacheService.RemoveByPrefixAsync(ALL_PLANTS_KEY);
+            await _cacheService.RemoveByPrefixAsync(ACTIVE_PLANTS_KEY);
+            await _cacheService.RemoveByPrefixAsync(SHOP_PLANTS_KEY);
         }
 
         #endregion

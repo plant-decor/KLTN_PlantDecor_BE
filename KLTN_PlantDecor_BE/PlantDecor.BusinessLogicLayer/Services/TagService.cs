@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -22,17 +23,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _cacheService = cacheService;
         }
 
-        public async Task<List<TagResponseDto>> GetAllTagsAsync()
+        public async Task<PaginatedResult<TagResponseDto>> GetAllTagsAsync(Pagination pagination)
         {
-            var cachedTags = await _cacheService.GetDataAsync<List<TagResponseDto>>(ALL_TAGS_KEY);
+            var cacheKey = $"{ALL_TAGS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedTags = await _cacheService.GetDataAsync<PaginatedResult<TagResponseDto>>(cacheKey);
             if (cachedTags != null)
                 return cachedTags;
 
-            var tags = await _unitOfWork.TagRepository.GetAllAsync();
-            var response = tags.OrderBy(t => t.TagName).ToResponseList();
+            var paginatedEntities = await _unitOfWork.TagRepository.GetAllTagsWithPaginationAsync(pagination);
+            var result = new PaginatedResult<TagResponseDto>(
+                paginatedEntities.Items.ToResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_TAGS_KEY, response, DateTimeOffset.Now.AddMinutes(30));
-            return tags.OrderBy(t => t.TagName).ToResponseList();
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
         }
 
         public async Task<TagResponseDto?> GetTagByIdAsync(int id)
@@ -59,7 +66,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveDataAsync(ALL_TAGS_KEY);
+                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
 
                 return tag.ToResponse();
             }
@@ -89,7 +96,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveDataAsync(ALL_TAGS_KEY);
+                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
 
                 return tag.ToResponse();
             }
@@ -110,14 +117,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Tag với ID {id} không tồn tại");
 
                 // Check if tag is assigned to any products
-                if (tag.Plants.Any() || tag.Inventories.Any() || tag.PlantCombos.Any())
+                if (tag.Plants.Any() || tag.Materials.Any() || tag.PlantCombos.Any())
                     throw new BadRequestException("Không thể xóa tag đang được gắn với sản phẩm. Vui lòng gỡ liên kết trước.");
 
                 _unitOfWork.TagRepository.PrepareRemove(tag);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveDataAsync(ALL_TAGS_KEY);
+                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
 
                 return true;
             }

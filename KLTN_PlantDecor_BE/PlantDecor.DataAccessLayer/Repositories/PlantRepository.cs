@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -12,27 +13,41 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
         }
 
-        public async Task<List<Plant>> GetAllWithDetailsAsync()
+        public async Task<PaginatedResult<Plant>> GetAllWithDetailsAsync(Pagination pagination)
         {
-            return await _context.Plants
+            var query = _context.Plants
                 .Include(p => p.Categories)
                 .Include(p => p.Tags)
                 .Include(p => p.PlantImages)
                 .Include(p => p.PlantInstances)
-                .OrderByDescending(p => p.CreatedAt)
+                .OrderByDescending(p => p.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<Plant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<List<Plant>> GetActiveWithDetailsAsync()
+        public async Task<PaginatedResult<Plant>> GetActiveWithDetailsAsync(Pagination pagination)
         {
-            return await _context.Plants
+            var query = _context.Plants
                 .Where(p => p.IsActive == true)
                 .Include(p => p.Categories)
                 .Include(p => p.Tags)
                 .Include(p => p.PlantImages)
                 .Include(p => p.PlantInstances)
-                .OrderByDescending(p => p.CreatedAt)
+                .OrderByDescending(p => p.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<Plant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public async Task<Plant?> GetByIdWithDetailsAsync(int id)
@@ -63,17 +78,24 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .AnyAsync(p => p.Name == name);
         }
 
-        public async Task<List<Plant>> GetPlantsForShopAsync()
+        public async Task<PaginatedResult<Plant>> GetPlantsForShopAsync(Pagination pagination)
         {
-            return await _context.Plants
+            var query = _context.Plants
                 .Where(p => p.IsActive == true)
                 .Include(p => p.Categories)
                 .Include(p => p.Tags)
                 .Include(p => p.PlantImages)
                 .Include(p => p.PlantInstances.Where(i => i.Status == (int)PlantInstanceStatusEnum.Available))
                 .Where(p => p.PlantInstances.Any(i => i.Status == (int)PlantInstanceStatusEnum.Available))
-                .OrderByDescending(p => p.CreatedAt)
+                .OrderByDescending(p => p.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<Plant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
     }
 }

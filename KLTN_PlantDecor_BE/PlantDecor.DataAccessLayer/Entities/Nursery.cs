@@ -37,5 +37,15 @@ public partial class Nursery
 
     public virtual ICollection<PlantInstance> PlantInstances { get; set; } = new List<PlantInstance>();
 
-    public virtual ICollection<PlantInventory> PlantInventories { get; set; } = new List<PlantInventory>();
+    public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
+
+    public virtual ICollection<NurseryPlantCombo> NurseryPlantCombos { get; set; } = new List<NurseryPlantCombo>();
+
+    public virtual ICollection<NurseryCareService> NurseryCareServices { get; set; } = new List<NurseryCareService>();
+
+    public virtual ICollection<NurseryMaterial> NurseryMaterials { get; set; } = new List<NurseryMaterial>();
+
+    public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

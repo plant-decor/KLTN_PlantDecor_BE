@@ -32,7 +32,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public List<CategoryResponseDto> Categories { get; set; } = new List<CategoryResponseDto>();
         public List<TagResponseDto> Tags { get; set; } = new List<TagResponseDto>();
         public List<PlantImageResponseDto> Images { get; set; } = new List<PlantImageResponseDto>();
-        public List<PlantInstanceResponseDto> Instances { get; set; } = new List<PlantInstanceResponseDto>();
         public int TotalInstances { get; set; }
         public int AvailableInstances { get; set; }
     }

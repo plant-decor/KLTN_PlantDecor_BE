@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.API.Controllers
 {
@@ -28,10 +29,10 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetAllCategories()
+        public async Task<IActionResult> GetAllCategories([FromQuery] Pagination pagination)
         {
-            var categories = await _categoryService.GetAllCategoriesAsync();
-            return Ok(new ApiResponse<IEnumerable<CategoryResponseDto>>
+            var categories = await _categoryService.GetAllCategoriesAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<CategoryResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,

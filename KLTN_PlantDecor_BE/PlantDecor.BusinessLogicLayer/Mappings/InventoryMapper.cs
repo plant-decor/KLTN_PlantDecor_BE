@@ -5,40 +5,39 @@ using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
-    public static class InventoryMapper
+    public static class MaterialMapper
     {
         #region Entity to Response
-        public static InventoryResponseDto ToResponse(this Inventory inventory)
+        public static MaterialResponseDto ToResponse(this Material material)
         {
-            if (inventory == null) return null!;
-            return new InventoryResponseDto
+            if (material == null) return null!;
+            return new MaterialResponseDto
             {
-                Id = inventory.Id,
-                InventoryCode = inventory.InventoryCode,
-                Name = inventory.Name,
-                Description = inventory.Description,
-                BasePrice = inventory.BasePrice,
-                StockQuantity = inventory.StockQuantity,
-                Unit = inventory.Unit,
-                Brand = inventory.Brand,
-                Specifications = inventory.Specifications,
-                ExpiryMonths = inventory.ExpiryMonths,
-                IsActive = inventory.IsActive,
-                CreatedAt = inventory.CreatedAt,
-                UpdatedAt = inventory.UpdatedAt,
-                Categories = inventory.Categories.Select(c => new CategoryResponseDto
+                Id = material.Id,
+                MaterialCode = material.MaterialCode,
+                Name = material.Name,
+                Description = material.Description,
+                BasePrice = material.BasePrice,
+                Unit = material.Unit,
+                Brand = material.Brand,
+                Specifications = material.Specifications,
+                ExpiryMonths = material.ExpiryMonths,
+                IsActive = material.IsActive,
+                CreatedAt = material.CreatedAt,
+                UpdatedAt = material.UpdatedAt,
+                Categories = material.Categories.Select(c => new CategoryResponseDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     ParentCategoryId = c.ParentCategoryId,
                     IsActive = c.IsActive
                 }).ToList(),
-                Tags = inventory.Tags.Select(t => new TagResponseDto
+                Tags = material.Tags.Select(t => new TagResponseDto
                 {
                     Id = t.Id,
                     TagName = t.TagName
                 }).ToList(),
-                Images = inventory.InventoryImages.Select(i => new InventoryImageResponseDto
+                Images = material.MaterialImages.Select(i => new MaterialImageResponseDto
                 {
                     Id = i.Id,
                     ImageUrl = i.ImageUrl,
@@ -47,49 +46,47 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             };
         }
 
-        public static InventoryListResponseDto ToListResponse(this Inventory inventory)
+        public static MaterialListResponseDto ToListResponse(this Material material)
         {
-            if (inventory == null) return null!;
-            return new InventoryListResponseDto
+            if (material == null) return null!;
+            return new MaterialListResponseDto
             {
-                Id = inventory.Id,
-                InventoryCode = inventory.InventoryCode,
-                Name = inventory.Name,
-                BasePrice = inventory.BasePrice,
-                StockQuantity = inventory.StockQuantity,
-                Unit = inventory.Unit,
-                Brand = inventory.Brand,
-                IsActive = inventory.IsActive,
-                PrimaryImageUrl = inventory.InventoryImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? inventory.InventoryImages.FirstOrDefault()?.ImageUrl,
-                CategoryNames = inventory.Categories.Select(c => c.Name).ToList(),
-                TagNames = inventory.Tags.Select(t => t.TagName).ToList()
+                Id = material.Id,
+                MaterialCode = material.MaterialCode,
+                Name = material.Name,
+                BasePrice = material.BasePrice,
+                Unit = material.Unit,
+                Brand = material.Brand,
+                IsActive = material.IsActive,
+                PrimaryImageUrl = material.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                    ?? material.MaterialImages.FirstOrDefault()?.ImageUrl,
+                CategoryNames = material.Categories.Select(c => c.Name).ToList(),
+                TagNames = material.Tags.Select(t => t.TagName).ToList()
             };
         }
 
-        public static List<InventoryResponseDto> ToResponseList(this IEnumerable<Inventory> inventories)
+        public static List<MaterialResponseDto> ToResponseList(this IEnumerable<Material> materials)
         {
-            return inventories.Select(i => i.ToResponse()).ToList();
+            return materials.Select(m => m.ToResponse()).ToList();
         }
 
-        public static List<InventoryListResponseDto> ToListResponseList(this IEnumerable<Inventory> inventories)
+        public static List<MaterialListResponseDto> ToListResponseList(this IEnumerable<Material> materials)
         {
-            return inventories.Select(i => i.ToListResponse()).ToList();
+            return materials.Select(m => m.ToListResponse()).ToList();
         }
         #endregion
 
         #region Request to Entity
-        public static Inventory ToEntity(this InventoryRequestDto request)
+        public static Material ToEntity(this MaterialRequestDto request)
         {
             if (request == null) return null!;
 
-            return new Inventory
+            return new Material
             {
-                InventoryCode = request.InventoryCode,
+                MaterialCode = request.MaterialCode,
                 Name = request.Name,
                 Description = request.Description,
                 BasePrice = request.BasePrice,
-                StockQuantity = request.StockQuantity ?? 0,
                 Unit = request.Unit,
                 Brand = request.Brand,
                 Specifications = request.Specifications,
@@ -102,28 +99,27 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         #endregion
 
         #region Update Entity
-        public static void ToUpdate(this InventoryUpdateDto request, Inventory inventory)
+        public static void ToUpdate(this MaterialUpdateDto request, Material material)
         {
-            if (request == null || inventory == null) return;
+            if (request == null || material == null) return;
 
-            inventory.InventoryCode = request.InventoryCode ?? inventory.InventoryCode;
-            inventory.Name = request.Name;
-            inventory.Description = request.Description;
-            inventory.BasePrice = request.BasePrice;
-            inventory.StockQuantity = request.StockQuantity ?? inventory.StockQuantity;
-            inventory.Unit = request.Unit;
-            inventory.Brand = request.Brand;
-            inventory.Specifications = request.Specifications;
-            inventory.ExpiryMonths = request.ExpiryMonths;
-            inventory.IsActive = request.IsActive ?? inventory.IsActive;
-            inventory.UpdatedAt = DateTime.Now;
+            material.MaterialCode = request.MaterialCode ?? material.MaterialCode;
+            material.Name = request.Name;
+            material.Description = request.Description;
+            material.BasePrice = request.BasePrice;
+            material.Unit = request.Unit;
+            material.Brand = request.Brand;
+            material.Specifications = request.Specifications;
+            material.ExpiryMonths = request.ExpiryMonths;
+            material.IsActive = request.IsActive ?? material.IsActive;
+            material.UpdatedAt = DateTime.Now;
         }
         #endregion
 
         #region Helper
-        public static string GenerateInventoryCode()
+        public static string GenerateMaterialCode()
         {
-            return $"INV{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";
+            return $"MAT{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";
         }
         #endregion
     }

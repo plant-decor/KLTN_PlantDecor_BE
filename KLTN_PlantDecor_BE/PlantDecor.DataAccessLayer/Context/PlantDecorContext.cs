@@ -29,9 +29,11 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<ChatSession> ChatSessions { get; set; }
 
-    public virtual DbSet<Inventory> Inventories { get; set; }
+    public virtual DbSet<CommonPlant> CommonPlants { get; set; }
 
-    public virtual DbSet<InventoryImage> InventoryImages { get; set; }
+    public virtual DbSet<Material> Materials { get; set; }
+
+    public virtual DbSet<MaterialImage> MaterialImages { get; set; }
 
     public virtual DbSet<Invoice> Invoices { get; set; }
 
@@ -61,7 +63,11 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<PlantInstance> PlantInstances { get; set; }
 
-    public virtual DbSet<PlantInventory> PlantInventories { get; set; }
+    public virtual DbSet<NurseryPlantCombo> NurseryPlantCombos { get; set; }
+
+    public virtual DbSet<NurseryCareService> NurseryCareServices { get; set; }
+
+    public virtual DbSet<NurseryMaterial> NurseryMaterials { get; set; }
 
     public virtual DbSet<PlantRating> PlantRatings { get; set; }
 
@@ -168,21 +174,17 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.CartId)
                 .HasConstraintName("CartItem_CartId_fkey");
 
-            entity.HasOne(d => d.Inventory).WithMany(p => p.CartItems)
-                .HasForeignKey(d => d.InventoryId)
-                .HasConstraintName("CartItem_InventoryId_fkey");
+            entity.HasOne(d => d.CommonPlant).WithMany(p => p.CartItems)
+                .HasForeignKey(d => d.CommonPlantId)
+                .HasConstraintName("CartItem_CommonPlantId_fkey");
 
-            entity.HasOne(d => d.PlantCombo).WithMany(p => p.CartItems)
-                .HasForeignKey(d => d.PlantComboId)
-                .HasConstraintName("CartItem_PlantComboId_fkey");
+            entity.HasOne(d => d.NurseryPlantCombo).WithMany(p => p.CartItems)
+                .HasForeignKey(d => d.NurseryPlantComboId)
+                .HasConstraintName("CartItem_NurseryPlantComboId_fkey");
 
-            entity.HasOne(d => d.Plant).WithMany(p => p.CartItems)
-                .HasForeignKey(d => d.PlantId)
-                .HasConstraintName("CartItem_PlantId_fkey");
-
-            entity.HasOne(d => d.PlantInstance).WithMany(p => p.CartItems)
-                .HasForeignKey(d => d.PlantInstanceId)
-                .HasConstraintName("CartItem_PlantInstanceId_fkey");
+            entity.HasOne(d => d.NurseryMaterial).WithMany(p => p.CartItems)
+                .HasForeignKey(d => d.NurseryMaterialId)
+                .HasConstraintName("CartItem_NurseryMaterialId_fkey");
         });
 
         modelBuilder.Entity<Category>(entity =>
@@ -240,71 +242,131 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.StartedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        modelBuilder.Entity<Inventory>(entity =>
+        modelBuilder.Entity<Material>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("Inventory_pkey");
+            entity.HasKey(e => e.Id).HasName("Material_pkey");
 
-            entity.ToTable("Inventory");
+            entity.ToTable("Material");
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.Brand).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
-            entity.Property(e => e.InventoryCode).HasMaxLength(50);
+            entity.Property(e => e.MaterialCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Specifications).HasColumnType("jsonb");
             entity.Property(e => e.Unit).HasMaxLength(20);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            entity.HasMany(d => d.Categories).WithMany(p => p.Inventories)
+            entity.HasMany(d => d.Categories).WithMany(p => p.Materials)
                 .UsingEntity<Dictionary<string, object>>(
-                    "InventoryCategory",
+                    "MaterialCategory",
                     r => r.HasOne<Category>().WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("InventoryCategory_CategoryId_fkey"),
-                    l => l.HasOne<Inventory>().WithMany()
-                        .HasForeignKey("InventoryId")
+                        .HasConstraintName("MaterialCategory_CategoryId_fkey"),
+                    l => l.HasOne<Material>().WithMany()
+                        .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("InventoryCategory_InventoryId_fkey"),
+                        .HasConstraintName("MaterialCategory_MaterialId_fkey"),
                     j =>
                     {
-                        j.HasKey("InventoryId", "CategoryId").HasName("InventoryCategory_pkey");
-                        j.ToTable("InventoryCategory");
+                        j.HasKey("MaterialId", "CategoryId").HasName("MaterialCategory_pkey");
+                        j.ToTable("MaterialCategory");
                     });
 
-            entity.HasMany(d => d.Tags).WithMany(p => p.Inventories)
+            entity.HasMany(d => d.Tags).WithMany(p => p.Materials)
                 .UsingEntity<Dictionary<string, object>>(
-                    "InventoryTag",
+                    "MaterialTag",
                     r => r.HasOne<Tag>().WithMany()
                         .HasForeignKey("TagId")
                         .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("InventoryTag_TagId_fkey"),
-                    l => l.HasOne<Inventory>().WithMany()
-                        .HasForeignKey("InventoryId")
+                        .HasConstraintName("MaterialTag_TagId_fkey"),
+                    l => l.HasOne<Material>().WithMany()
+                        .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("InventoryTag_InventoryId_fkey"),
+                        .HasConstraintName("MaterialTag_MaterialId_fkey"),
                     j =>
                     {
-                        j.HasKey("InventoryId", "TagId").HasName("InventoryTag_pkey");
-                        j.ToTable("InventoryTag");
+                        j.HasKey("MaterialId", "TagId").HasName("MaterialTag_pkey");
+                        j.ToTable("MaterialTag");
                     });
         });
 
-        modelBuilder.Entity<InventoryImage>(entity =>
+        modelBuilder.Entity<MaterialImage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("InventoryImage_pkey");
+            entity.HasKey(e => e.Id).HasName("MaterialImage_pkey");
 
-            entity.ToTable("InventoryImage");
+            entity.ToTable("MaterialImage");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
             entity.Property(e => e.IsPrimary).HasDefaultValue(false);
 
-            entity.HasOne(d => d.Inventory).WithMany(p => p.InventoryImages)
-                .HasForeignKey(d => d.InventoryId)
-                .HasConstraintName("InventoryImage_InventoryId_fkey");
+            entity.HasOne(d => d.Material).WithMany(p => p.MaterialImages)
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("MaterialImage_MaterialId_fkey");
+        });
+
+        modelBuilder.Entity<NurseryPlantCombo>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("NurseryPlantCombo_pkey");
+
+            entity.ToTable("NurseryPlantCombo");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.PlantCombo).WithMany(p => p.NurseryPlantCombos)
+                .HasForeignKey(d => d.PlantComboId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryPlantCombo_PlantComboId_fkey");
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.NurseryPlantCombos)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryPlantCombo_NurseryId_fkey");
+        });
+
+        modelBuilder.Entity<NurseryCareService>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("NurseryCareService_pkey");
+
+            entity.ToTable("NurseryCareService");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.CareServicePackage).WithMany(p => p.NurseryCareServices)
+                .HasForeignKey(d => d.CareServicePackageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryCareService_CareServicePackageId_fkey");
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.NurseryCareServices)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryCareService_NurseryId_fkey");
+        });
+
+        modelBuilder.Entity<NurseryMaterial>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("NurseryMaterial_pkey");
+
+            entity.ToTable("NurseryMaterial");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Material).WithMany(p => p.NurseryMaterials)
+                .HasForeignKey(d => d.MaterialId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryMaterial_MaterialId_fkey");
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.NurseryMaterials)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("NurseryMaterial_NurseryId_fkey");
         });
 
         modelBuilder.Entity<Invoice>(entity =>
@@ -399,6 +461,11 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.ShipperId)
                 .HasConstraintName("Order_ShipperId_fkey")
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("Order_NurseryId_fkey");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -409,30 +476,28 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasIndex(e => e.OrderId, "IX_OrderItem_OrderId");
 
-            entity.HasIndex(e => e.PlantComboId, "IX_OrderItem_PlantComboId");
-
             entity.Property(e => e.ItemName).HasMaxLength(255);
             entity.Property(e => e.Price).HasPrecision(18, 2);
-
-            entity.HasOne(d => d.Inventory).WithMany(p => p.OrderItems)
-                .HasForeignKey(d => d.InventoryId)
-                .HasConstraintName("OrderItem_InventoryId_fkey");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("OrderItem_OrderId_fkey");
 
-            entity.HasOne(d => d.PlantCombo).WithMany(p => p.OrderItems)
-                .HasForeignKey(d => d.PlantComboId)
-                .HasConstraintName("OrderItem_PlantComboId_fkey");
-
-            entity.HasOne(d => d.Plant).WithMany(p => p.OrderItems)
-                .HasForeignKey(d => d.PlantId)
-                .HasConstraintName("OrderItem_PlantId_fkey");
+            entity.HasOne(d => d.CommonPlant).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.CommonPlantId)
+                .HasConstraintName("OrderItem_CommonPlantId_fkey");
 
             entity.HasOne(d => d.PlantInstance).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.PlantInstanceId)
                 .HasConstraintName("OrderItem_PlantInstanceId_fkey");
+
+            entity.HasOne(d => d.NurseryPlantCombo).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.NurseryPlantComboId)
+                .HasConstraintName("OrderItem_NurseryPlantComboId_fkey");
+
+            entity.HasOne(d => d.NurseryMaterial).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.NurseryMaterialId)
+                .HasConstraintName("OrderItem_NurseryMaterialId_fkey");
         });
 
         modelBuilder.Entity<Payment>(entity =>
@@ -620,21 +685,23 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("PlantImage_PlantInstance_fkey");
         });
 
-        modelBuilder.Entity<PlantInventory>(entity =>
+        modelBuilder.Entity<CommonPlant>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PlantInventory_pkey");
+            entity.HasKey(e => e.Id).HasName("CommonPlant_pkey");
 
-            entity.ToTable("PlantInventory");
+            entity.ToTable("CommonPlant");
 
-            entity.HasOne(d => d.Plant).WithMany(p => p.PlantInventories)
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Plant).WithMany(p => p.CommonPlants)
                 .HasForeignKey(d => d.PlantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("PlantInventory_PlantId_fkey");
+                .HasConstraintName("CommonPlant_PlantId_fkey");
 
-            entity.HasOne(d => d.Nursery).WithMany(p => p.PlantInventories)
+            entity.HasOne(d => d.Nursery).WithMany(p => p.CommonPlants)
                 .HasForeignKey(d => d.NurseryId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("PlantInventory_NurseryId_fkey");
+                .HasConstraintName("CommonPlant_NurseryId_fkey");
         });
 
         modelBuilder.Entity<PlantInstance>(entity =>
@@ -797,17 +864,17 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.MainCaretakerId)
                 .HasConstraintName("ServiceRegistration_MainCaretakerId_fkey");
 
-            entity.HasOne(d => d.Order).WithMany(p => p.ServiceRegistrations)
-                .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("ServiceRegistration_OrderId_fkey");
-
-            entity.HasOne(d => d.Service).WithMany(p => p.ServiceRegistrations)
-                .HasForeignKey(d => d.ServiceId)
-                .HasConstraintName("ServiceRegistration_ServiceId_fkey");
+            entity.HasOne(d => d.NurseryCareService).WithMany(p => p.ServiceRegistrations)
+                .HasForeignKey(d => d.NurseryCareServiceId)
+                .HasConstraintName("ServiceRegistration_NurseryCareServiceId_fkey");
 
             entity.HasOne(d => d.User).WithMany(p => p.ServiceRegistrationUsers)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("ServiceRegistration_UserId_fkey");
+
+            entity.HasOne(d => d.Order).WithOne(p => p.ServiceRegistration)
+                .HasForeignKey<ServiceRegistration>(d => d.OrderId)
+                .HasConstraintName("ServiceRegistration_OrderId_fkey");
         });
 
         modelBuilder.Entity<Tag>(entity =>

@@ -1,14 +1,15 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
     public interface IPlantRepository : IGenericRepository<Plant>
     {
-        Task<List<Plant>> GetAllWithDetailsAsync();
-        Task<List<Plant>> GetActiveWithDetailsAsync();
+        Task<PaginatedResult<Plant>> GetAllWithDetailsAsync(Pagination pagination);
+        Task<PaginatedResult<Plant>> GetActiveWithDetailsAsync(Pagination pagination);
         Task<Plant?> GetByIdWithDetailsAsync(int id);
         Task<Plant?> GetByIdWithInstancesAsync(int id);
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
-        Task<List<Plant>> GetPlantsForShopAsync();
+        Task<PaginatedResult<Plant>> GetPlantsForShopAsync(Pagination pagination);
     }
 }

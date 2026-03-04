@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -11,13 +12,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
         }
 
-        public async Task<List<Category>> GetAllWithParentAsync()
+        public async Task<PaginatedResult<Category>> GetAllWithParentAsync(Pagination pagination)
         {
-            return await _context.Categories
+            var query = _context.Categories
                 .AsNoTracking()
                 .Include(c => c.ParentCategory)
-                .OrderBy(c => c.Name)
+                .OrderBy(c => c.Name);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
                 .ToListAsync();
+
+            return new PaginatedResult<Category>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public async Task<List<Category>> GetAllActiveWithParentAsync()
@@ -68,12 +76,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             var category = await _context.Categories
                 .Include(c => c.Plants)
-                .Include(c => c.Inventories)
+                .Include(c => c.Materials)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (category == null) return false;
 
-            return category.Plants.Any() || category.Inventories.Any();
+            return category.Plants.Any() || category.Materials.Any();
         }
 
         public Task<List<Category>> GetRootActiveCategoriesWithChildrenAsync()

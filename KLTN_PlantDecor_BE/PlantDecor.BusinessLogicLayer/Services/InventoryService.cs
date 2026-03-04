@@ -6,20 +6,21 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
-    public class InventoryService : IInventoryService
+    public class MaterialService : IMaterialService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
 
-        private const string ALL_INVENTORIES_KEY = "inventories_all";
-        private const string ACTIVE_INVENTORIES_KEY = "inventories_active";
-        private const string SHOP_INVENTORIES_KEY = "inventories_shop";
+        private const string ALL_MATERIALS_KEY = "materials_all";
+        private const string ACTIVE_MATERIALS_KEY = "materials_active";
+        private const string SHOP_MATERIALS_KEY = "materials_shop";
 
-        public InventoryService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public MaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
@@ -27,64 +28,76 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region CRUD Operations
 
-        public async Task<List<InventoryListResponseDto>> GetAllInventoriesAsync()
+        public async Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(ALL_INVENTORIES_KEY);
+            var cacheKey = $"{ALL_MATERIALS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<MaterialListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetAllWithDetailsAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetAllWithDetailsAsync(pagination);
+            var result = new PaginatedResult<MaterialListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ALL_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
-        public async Task<List<InventoryListResponseDto>> GetActiveInventoriesAsync()
+        public async Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(ACTIVE_INVENTORIES_KEY);
+            var cacheKey = $"{ACTIVE_MATERIALS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<MaterialListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetActiveWithDetailsAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetActiveWithDetailsAsync(pagination);
+            var result = new PaginatedResult<MaterialListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(ACTIVE_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
-        public async Task<InventoryResponseDto?> GetInventoryByIdAsync(int id)
+        public async Task<MaterialResponseDto?> GetMaterialByIdAsync(int id)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(id);
-            if (inventory == null)
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(id);
+            if (material == null)
                 return null;
 
-            return inventory.ToResponse();
+            return material.ToResponse();
         }
 
-        public async Task<InventoryResponseDto> CreateInventoryAsync(InventoryRequestDto request)
+        public async Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                // Check if inventory code already exists
-                if (!string.IsNullOrEmpty(request.InventoryCode))
+                // Check if material code already exists
+                if (!string.IsNullOrEmpty(request.MaterialCode))
                 {
-                    if (await _unitOfWork.InventoryRepository.ExistsByCodeAsync(request.InventoryCode))
-                        throw new BadRequestException($"Inventory với mã '{request.InventoryCode}' đã tồn tại");
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(request.MaterialCode))
+                        throw new BadRequestException($"Material với mã '{request.MaterialCode}' đã tồn tại");
                 }
 
-                var inventory = request.ToEntity();
-                inventory.InventoryCode ??= InventoryMapper.GenerateInventoryCode();
+                var material = request.ToEntity();
+                material.MaterialCode ??= MaterialMapper.GenerateMaterialCode();
 
-                _unitOfWork.InventoryRepository.PrepareCreate(inventory);
+                _unitOfWork.MaterialRepository.PrepareCreate(material);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
 
-                return inventory.ToResponse();
+                return material.ToResponse();
             }
             catch (Exception)
             {
@@ -93,32 +106,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<InventoryResponseDto> UpdateInventoryAsync(int id, InventoryUpdateDto request)
+        public async Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(id);
-                if (inventory == null)
-                    throw new NotFoundException($"Inventory với ID {id} không tồn tại");
+                var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(id);
+                if (material == null)
+                    throw new NotFoundException($"Material với ID {id} không tồn tại");
 
-                // Check if inventory code already exists (excluding current inventory)
-                if (!string.IsNullOrEmpty(request.InventoryCode))
+                // Check if material code already exists (excluding current material)
+                if (!string.IsNullOrEmpty(request.MaterialCode))
                 {
-                    if (await _unitOfWork.InventoryRepository.ExistsByCodeAsync(request.InventoryCode, id))
-                        throw new BadRequestException($"Inventory với mã '{request.InventoryCode}' đã tồn tại");
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(request.MaterialCode, id))
+                        throw new BadRequestException($"Material với mã '{request.MaterialCode}' đã tồn tại");
                 }
 
-                request.ToUpdate(inventory);
+                request.ToUpdate(material);
 
-                _unitOfWork.InventoryRepository.PrepareUpdate(inventory);
+                _unitOfWork.MaterialRepository.PrepareUpdate(material);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
 
-                return inventory.ToResponse();
+                return material.ToResponse();
             }
             catch (Exception)
             {
@@ -127,28 +140,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<bool> DeleteInventoryAsync(int id)
+        public async Task<bool> DeleteMaterialAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                var inventory = await _unitOfWork.InventoryRepository.GetByIdWithOrdersAsync(id);
-                if (inventory == null)
-                    throw new NotFoundException($"Inventory với ID {id} không tồn tại");
+                var material = await _unitOfWork.MaterialRepository.GetByIdWithOrdersAsync(id);
+                if (material == null)
+                    throw new NotFoundException($"Material với ID {id} không tồn tại");
 
-                // Check if inventory is in cart or orders
-                if (inventory.CartItems.Any())
-                    throw new BadRequestException("Không thể xóa sản phẩm đang có trong giỏ hàng.");
-
-                if (inventory.OrderItems.Any())
-                    throw new BadRequestException("Không thể xóa sản phẩm đã có trong đơn hàng. Vui lòng vô hiệu hóa thay vì xóa.");
+                // Check if material has any nursery materials with cart or orders
+                var hasActiveOrders = material.NurseryMaterials.Any(nm => nm.CartItems.Any() || nm.OrderItems.Any());
+                if (hasActiveOrders)
+                    throw new BadRequestException("Không thể xóa vật liệu đã có trong đơn hàng. Vui lòng vô hiệu hóa thay vì xóa.");
 
                 // Soft delete by deactivating
-                inventory.IsActive = false;
-                inventory.UpdatedAt = DateTime.Now;
+                material.IsActive = false;
+                material.UpdatedAt = DateTime.Now;
 
-                _unitOfWork.InventoryRepository.PrepareUpdate(inventory);
+                _unitOfWork.MaterialRepository.PrepareUpdate(material);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -165,30 +176,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<bool> ToggleActiveAsync(int id)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdAsync(id);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {id} không tồn tại");
+            var material = await _unitOfWork.MaterialRepository.GetByIdAsync(id);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {id} không tồn tại");
 
-            inventory.IsActive = !inventory.IsActive;
-            inventory.UpdatedAt = DateTime.Now;
+            material.IsActive = !material.IsActive;
+            material.UpdatedAt = DateTime.Now;
 
-            _unitOfWork.InventoryRepository.PrepareUpdate(inventory);
+            _unitOfWork.MaterialRepository.PrepareUpdate(material);
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
 
-            return inventory.IsActive ?? true;
+            return material.IsActive ?? true;
         }
 
         #endregion
 
         #region Category & Tag Assignment
 
-        public async Task<InventoryResponseDto> AssignCategoriesToInventoryAsync(AssignInventoryCategoriesDto request)
+        public async Task<MaterialResponseDto> AssignCategoriesToMaterialAsync(AssignMaterialCategoriesDto request)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(request.InventoryId);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {request.InventoryId} không tồn tại");
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(request.MaterialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
 
             // Get valid categories
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
@@ -205,19 +216,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.BeginTransactionAsync();
 
                 // Clear existing categories and add new ones
-                inventory.Categories.Clear();
+                material.Categories.Clear();
                 foreach (var category in validCategories)
                 {
-                    inventory.Categories.Add(category);
+                    material.Categories.Add(category);
                 }
 
-                inventory.UpdatedAt = DateTime.Now;
+                material.UpdatedAt = DateTime.Now;
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
 
-                return inventory.ToResponse();
+                return material.ToResponse();
             }
             catch
             {
@@ -226,11 +237,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<InventoryResponseDto> AssignTagsToInventoryAsync(AssignInventoryTagsDto request)
+        public async Task<MaterialResponseDto> AssignTagsToMaterialAsync(AssignMaterialTagsDto request)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(request.InventoryId);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {request.InventoryId} không tồn tại");
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(request.MaterialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
 
             // Get valid tags
             var tags = await _unitOfWork.TagRepository.GetByIdsAsync(request.TagIds);
@@ -246,19 +257,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.BeginTransactionAsync();
 
                 // Clear existing tags and add new ones
-                inventory.Tags.Clear();
+                material.Tags.Clear();
                 foreach (var tag in tags)
                 {
-                    inventory.Tags.Add(tag);
+                    material.Tags.Add(tag);
                 }
 
-                inventory.UpdatedAt = DateTime.Now;
+                material.UpdatedAt = DateTime.Now;
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
 
-                return inventory.ToResponse();
+                return material.ToResponse();
             }
             catch
             {
@@ -267,82 +278,64 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<InventoryResponseDto> RemoveCategoryFromInventoryAsync(int inventoryId, int categoryId)
+        public async Task<MaterialResponseDto> RemoveCategoryFromMaterialAsync(int materialId, int categoryId)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(inventoryId);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {inventoryId} không tồn tại");
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
 
-            var category = inventory.Categories.FirstOrDefault(c => c.Id == categoryId);
+            var category = material.Categories.FirstOrDefault(c => c.Id == categoryId);
             if (category == null)
-                throw new NotFoundException($"Inventory không có category với ID {categoryId}");
+                throw new NotFoundException($"Material không có category với ID {categoryId}");
 
-            inventory.Categories.Remove(category);
-            inventory.UpdatedAt = DateTime.Now;
+            material.Categories.Remove(category);
+            material.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
 
-            return inventory.ToResponse();
+            return material.ToResponse();
         }
 
-        public async Task<InventoryResponseDto> RemoveTagFromInventoryAsync(int inventoryId, int tagId)
+        public async Task<MaterialResponseDto> RemoveTagFromMaterialAsync(int materialId, int tagId)
         {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(inventoryId);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {inventoryId} không tồn tại");
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
 
-            var tag = inventory.Tags.FirstOrDefault(t => t.Id == tagId);
+            var tag = material.Tags.FirstOrDefault(t => t.Id == tagId);
             if (tag == null)
-                throw new NotFoundException($"Inventory không có tag với ID {tagId}");
+                throw new NotFoundException($"Material không có tag với ID {tagId}");
 
-            inventory.Tags.Remove(tag);
-            inventory.UpdatedAt = DateTime.Now;
+            material.Tags.Remove(tag);
+            material.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
 
-            return inventory.ToResponse();
-        }
-
-        #endregion
-
-        #region Stock Management
-
-        public async Task<InventoryResponseDto> UpdateStockAsync(int id, int quantity)
-        {
-            var inventory = await _unitOfWork.InventoryRepository.GetByIdWithDetailsAsync(id);
-            if (inventory == null)
-                throw new NotFoundException($"Inventory với ID {id} không tồn tại");
-
-            if (quantity < 0)
-                throw new BadRequestException("Số lượng không thể âm");
-
-            inventory.StockQuantity = quantity;
-            inventory.UpdatedAt = DateTime.Now;
-
-            _unitOfWork.InventoryRepository.PrepareUpdate(inventory);
-            await _unitOfWork.SaveAsync();
-
-            await InvalidateCacheAsync();
-
-            return inventory.ToResponse();
+            return material.ToResponse();
         }
 
         #endregion
 
         #region Shop Display
 
-        public async Task<List<InventoryListResponseDto>> GetInventoriesForShopAsync()
+        public async Task<PaginatedResult<MaterialListResponseDto>> GetMaterialsForShopAsync(Pagination pagination)
         {
-            var cachedData = await _cacheService.GetDataAsync<List<InventoryListResponseDto>>(SHOP_INVENTORIES_KEY);
+            var cacheKey = $"{SHOP_MATERIALS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<MaterialListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var inventories = await _unitOfWork.InventoryRepository.GetInventoriesForShopAsync();
-            var result = inventories.ToListResponseList();
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetMaterialsForShopAsync(pagination);
+            var result = new PaginatedResult<MaterialListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
 
-            await _cacheService.SetDataAsync(SHOP_INVENTORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -352,9 +345,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync()
         {
-            await _cacheService.RemoveDataAsync(ALL_INVENTORIES_KEY);
-            await _cacheService.RemoveDataAsync(ACTIVE_INVENTORIES_KEY);
-            await _cacheService.RemoveDataAsync(SHOP_INVENTORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(ALL_MATERIALS_KEY);
+            await _cacheService.RemoveByPrefixAsync(ACTIVE_MATERIALS_KEY);
+            await _cacheService.RemoveByPrefixAsync(SHOP_MATERIALS_KEY);
         }
 
         #endregion

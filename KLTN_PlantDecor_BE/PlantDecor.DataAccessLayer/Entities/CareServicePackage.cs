@@ -35,5 +35,5 @@ public partial class CareServicePackage
 
     public virtual CareServicePackage? ParentService { get; set; }
 
-    public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
+    public virtual ICollection<NurseryCareService> NurseryCareServices { get; set; } = new List<NurseryCareService>();
 }

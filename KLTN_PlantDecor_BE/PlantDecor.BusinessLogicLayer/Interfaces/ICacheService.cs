@@ -16,5 +16,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         // Xóa dữ liệu
         Task<object> RemoveDataAsync(string key);
+
+        // Xóa tất cả dữ liệu có key bắt đầu bằng prefix
+        Task RemoveByPrefixAsync(string prefixKey);
     }
 }

@@ -16,9 +16,12 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ICategoryRepository? _categoryRepository;
         private ITagRepository? _tagRepository;
         private IPlantRepository? _plantRepository;
-        private IPlantInstanceRepository? _plantInstanceRepository;
-        private IInventoryRepository? _inventoryRepository;
+        private IMaterialRepository? _materialRepository;
         private IRoleRepository? _roleRepository;
+        private ICommonPlantRepository? _commonPlantRepository;
+        private IPlantComboRepository? _plantComboRepository;
+        private INurseryRepository? _nurseryRepository;
+        private INurseryMaterialRepository? _nurseryMaterialRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -46,20 +49,35 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
             get { return _plantRepository ??= new PlantRepository(_context); }
         }
 
-        public IPlantInstanceRepository PlantInstanceRepository
+        public IMaterialRepository MaterialRepository
         {
-            get { return _plantInstanceRepository ??= new PlantInstanceRepository(_context); }
-        }
-
-        public IInventoryRepository InventoryRepository
-        {
-            get { return _inventoryRepository ??= new InventoryRepository(_context); }
+            get { return _materialRepository ??= new MaterialRepository(_context); }
         }
 
         public IRoleRepository RoleRepository
         {
             get { return _roleRepository ??= new RoleRepository(_context); }
         }
+        public ICommonPlantRepository CommonPlantRepository
+        {
+            get { return _commonPlantRepository ??= new CommonPlantRepository(_context); }
+        }
+
+        public IPlantComboRepository PlantComboRepository
+        {
+            get { return _plantComboRepository ??= new PlantComboRepository(_context); }
+        }
+
+        public INurseryRepository NurseryRepository
+        {
+            get { return _nurseryRepository ??= new NurseryRepository(_context); }
+        }
+
+        public INurseryMaterialRepository NurseryMaterialRepository
+        {
+            get { return _nurseryMaterialRepository ??= new NurseryMaterialRepository(_context); }
+        }
+
         // Transaction Management
         public async Task BeginTransactionAsync()
         {

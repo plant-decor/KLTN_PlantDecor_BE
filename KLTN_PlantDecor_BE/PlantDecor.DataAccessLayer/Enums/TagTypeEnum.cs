@@ -10,5 +10,6 @@ namespace PlantDecor.DataAccessLayer.Enums
     {
         Plant = 1,
         Inventory = 2,
+        PlantCombo = 3
     }
 }

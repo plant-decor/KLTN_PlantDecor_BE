@@ -38,36 +38,36 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("ComboTag", (string)null);
                 });
 
-            modelBuilder.Entity("InventoryCategory", b =>
+            modelBuilder.Entity("MaterialCategory", b =>
                 {
-                    b.Property<int>("InventoryId")
+                    b.Property<int>("MaterialId")
                         .HasColumnType("integer");
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("integer");
 
-                    b.HasKey("InventoryId", "CategoryId")
-                        .HasName("InventoryCategory_pkey");
+                    b.HasKey("MaterialId", "CategoryId")
+                        .HasName("MaterialCategory_pkey");
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("InventoryCategory", (string)null);
+                    b.ToTable("MaterialCategory", (string)null);
                 });
 
-            modelBuilder.Entity("InventoryTag", b =>
+            modelBuilder.Entity("MaterialTag", b =>
                 {
-                    b.Property<int>("InventoryId")
+                    b.Property<int>("MaterialId")
                         .HasColumnType("integer");
 
                     b.Property<int>("TagId")
                         .HasColumnType("integer");
 
-                    b.HasKey("InventoryId", "TagId")
-                        .HasName("InventoryTag_pkey");
+                    b.HasKey("MaterialId", "TagId")
+                        .HasName("MaterialTag_pkey");
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("InventoryTag", (string)null);
+                    b.ToTable("MaterialTag", (string)null);
                 });
 
             modelBuilder.Entity("PlantCategory", b =>
@@ -246,21 +246,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("CartId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CommonPlantId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<int?>("InventoryId")
+                    b.Property<int?>("NurseryMaterialId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("PlantComboId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("PlantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("PlantInstanceId")
+                    b.Property<int?>("NurseryPlantComboId")
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("Price")
@@ -277,13 +274,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasIndex("CartId");
 
-                    b.HasIndex("InventoryId");
+                    b.HasIndex("CommonPlantId");
 
-                    b.HasIndex("PlantComboId");
+                    b.HasIndex("NurseryMaterialId");
 
-                    b.HasIndex("PlantId");
-
-                    b.HasIndex("PlantInstanceId");
+                    b.HasIndex("NurseryPlantComboId");
 
                     b.ToTable("CartItem", (string)null);
                 });
@@ -405,7 +400,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("ChatSession", (string)null);
                 });
 
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Inventory", b =>
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CommonPlant", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -413,91 +408,31 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("BasePrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Brand")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("ExpiryMonths")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("InventoryCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<bool?>("IsActive")
+                    b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<string>("Name")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Specifications")
-                        .HasColumnType("jsonb");
-
-                    b.Property<int?>("StockQuantity")
+                    b.Property<int>("NurseryId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Unit")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<int>("PlantId")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReservedQuantity")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id")
-                        .HasName("Inventory_pkey");
+                        .HasName("CommonPlant_pkey");
 
-                    b.ToTable("Inventory", (string)null);
-                });
+                    b.HasIndex("NurseryId");
 
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.InventoryImage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                    b.HasIndex("PlantId");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<int?>("InventoryId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool?>("IsPrimary")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.HasKey("Id")
-                        .HasName("InventoryImage_pkey");
-
-                    b.HasIndex("InventoryId");
-
-                    b.ToTable("InventoryImage", (string)null);
+                    b.ToTable("CommonPlant", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
@@ -601,6 +536,98 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("LayoutDesign", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Material", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("BasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ExpiryMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("MaterialCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Specifications")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("Material_pkey");
+
+                    b.ToTable("Material", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.MaterialImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool?>("IsPrimary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("MaterialId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("MaterialImage_pkey");
+
+                    b.HasIndex("MaterialId");
+
+                    b.ToTable("MaterialImage", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
                 {
                     b.Property<int>("Id")
@@ -667,6 +694,114 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("Nursery", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryCareService", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CareServicePackageId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("NurseryCareService_pkey");
+
+                    b.HasIndex("CareServicePackageId");
+
+                    b.HasIndex("NurseryId");
+
+                    b.ToTable("NurseryCareService", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReservedQuantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("NurseryMaterial_pkey");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("NurseryId");
+
+                    b.ToTable("NurseryMaterial", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlantComboId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("NurseryPlantCombo_pkey");
+
+                    b.HasIndex("NurseryId");
+
+                    b.HasIndex("PlantComboId");
+
+                    b.ToTable("NurseryPlantCombo", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -698,6 +833,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("OrderType")
                         .HasColumnType("integer");
@@ -742,6 +880,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasKey("Id")
                         .HasName("Order_pkey");
 
+                    b.HasIndex("NurseryId");
+
                     b.HasIndex("ShipperId");
 
                     b.HasIndex("UserId");
@@ -759,20 +899,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("InventoryId")
+                    b.Property<int?>("CommonPlantId")
                         .HasColumnType("integer");
 
                     b.Property<string>("ItemName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int?>("NurseryMaterialId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NurseryPlantComboId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("OrderId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("PlantComboId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("PlantId")
                         .HasColumnType("integer");
 
                     b.Property<int?>("PlantInstanceId")
@@ -785,21 +925,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ServiceId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id")
                         .HasName("OrderItem_pkey");
 
-                    b.HasIndex("InventoryId");
+                    b.HasIndex("CommonPlantId");
 
-                    b.HasIndex("PlantId");
+                    b.HasIndex("NurseryMaterialId");
+
+                    b.HasIndex("NurseryPlantComboId");
 
                     b.HasIndex("PlantInstanceId");
 
                     b.HasIndex(new[] { "OrderId" }, "IX_OrderItem_OrderId");
-
-                    b.HasIndex(new[] { "PlantComboId" }, "IX_OrderItem_PlantComboId");
 
                     b.ToTable("OrderItem", (string)null);
                 });
@@ -1258,36 +1395,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("PlantInstance", (string)null);
                 });
 
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInventory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("NurseryId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PlantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ReservedQuantity")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id")
-                        .HasName("PlantInventory_pkey");
-
-                    b.HasIndex("NurseryId");
-
-                    b.HasIndex("PlantId");
-
-                    b.ToTable("PlantInventory", (string)null);
-                });
-
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantRating", b =>
                 {
                     b.Property<int>("Id")
@@ -1572,6 +1679,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int?>("NurseryCareServiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NurseryId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -1581,9 +1694,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("ServiceDate")
                         .HasColumnType("timestamp without time zone");
-
-                    b.Property<int?>("ServiceId")
-                        .HasColumnType("integer");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -1598,9 +1708,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasIndex("MainCaretakerId");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("NurseryCareServiceId");
 
-                    b.HasIndex("ServiceId");
+                    b.HasIndex("NurseryId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -2001,34 +2114,34 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("ComboTag_TagId_fkey");
                 });
 
-            modelBuilder.Entity("InventoryCategory", b =>
+            modelBuilder.Entity("MaterialCategory", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .IsRequired()
-                        .HasConstraintName("InventoryCategory_CategoryId_fkey");
+                        .HasConstraintName("MaterialCategory_CategoryId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Inventory", null)
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Material", null)
                         .WithMany()
-                        .HasForeignKey("InventoryId")
+                        .HasForeignKey("MaterialId")
                         .IsRequired()
-                        .HasConstraintName("InventoryCategory_InventoryId_fkey");
+                        .HasConstraintName("MaterialCategory_MaterialId_fkey");
                 });
 
-            modelBuilder.Entity("InventoryTag", b =>
+            modelBuilder.Entity("MaterialTag", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Inventory", null)
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Material", null)
                         .WithMany()
-                        .HasForeignKey("InventoryId")
+                        .HasForeignKey("MaterialId")
                         .IsRequired()
-                        .HasConstraintName("InventoryTag_InventoryId_fkey");
+                        .HasConstraintName("MaterialTag_MaterialId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagId")
                         .IsRequired()
-                        .HasConstraintName("InventoryTag_TagId_fkey");
+                        .HasConstraintName("MaterialTag_TagId_fkey");
                 });
 
             modelBuilder.Entity("PlantCategory", b =>
@@ -2093,35 +2206,28 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasForeignKey("CartId")
                         .HasConstraintName("CartItem_CartId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Inventory", "Inventory")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CommonPlant", "CommonPlant")
                         .WithMany("CartItems")
-                        .HasForeignKey("InventoryId")
-                        .HasConstraintName("CartItem_InventoryId_fkey");
+                        .HasForeignKey("CommonPlantId")
+                        .HasConstraintName("CartItem_CommonPlantId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantCombo", "PlantCombo")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", "NurseryMaterial")
                         .WithMany("CartItems")
-                        .HasForeignKey("PlantComboId")
-                        .HasConstraintName("CartItem_PlantComboId_fkey");
+                        .HasForeignKey("NurseryMaterialId")
+                        .HasConstraintName("CartItem_NurseryMaterialId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", "NurseryPlantCombo")
                         .WithMany("CartItems")
-                        .HasForeignKey("PlantId")
-                        .HasConstraintName("CartItem_PlantId_fkey");
-
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
-                        .WithMany("CartItems")
-                        .HasForeignKey("PlantInstanceId")
-                        .HasConstraintName("CartItem_PlantInstanceId_fkey");
+                        .HasForeignKey("NurseryPlantComboId")
+                        .HasConstraintName("CartItem_NurseryPlantComboId_fkey");
 
                     b.Navigation("Cart");
 
-                    b.Navigation("Inventory");
+                    b.Navigation("CommonPlant");
 
-                    b.Navigation("Plant");
+                    b.Navigation("NurseryMaterial");
 
-                    b.Navigation("PlantCombo");
-
-                    b.Navigation("PlantInstance");
+                    b.Navigation("NurseryPlantCombo");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Category", b =>
@@ -2163,14 +2269,23 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.InventoryImage", b =>
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CommonPlant", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Inventory", "Inventory")
-                        .WithMany("InventoryImages")
-                        .HasForeignKey("InventoryId")
-                        .HasConstraintName("InventoryImage_InventoryId_fkey");
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("CommonPlants")
+                        .HasForeignKey("NurseryId")
+                        .IsRequired()
+                        .HasConstraintName("CommonPlant_NurseryId_fkey");
 
-                    b.Navigation("Inventory");
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
+                        .WithMany("CommonPlants")
+                        .HasForeignKey("PlantId")
+                        .IsRequired()
+                        .HasConstraintName("CommonPlant_PlantId_fkey");
+
+                    b.Navigation("Nursery");
+
+                    b.Navigation("Plant");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
@@ -2203,6 +2318,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.MaterialImage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Material", "Material")
+                        .WithMany("MaterialImages")
+                        .HasForeignKey("MaterialId")
+                        .HasConstraintName("MaterialImage_MaterialId_fkey");
+
+                    b.Navigation("Material");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Manager")
@@ -2213,8 +2338,72 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Manager");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryCareService", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CareServicePackage", "CareServicePackage")
+                        .WithMany("NurseryCareServices")
+                        .HasForeignKey("CareServicePackageId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryCareService_CareServicePackageId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("NurseryCareServices")
+                        .HasForeignKey("NurseryId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryCareService_NurseryId_fkey");
+
+                    b.Navigation("CareServicePackage");
+
+                    b.Navigation("Nursery");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Material", "Material")
+                        .WithMany("NurseryMaterials")
+                        .HasForeignKey("MaterialId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryMaterial_MaterialId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("NurseryMaterials")
+                        .HasForeignKey("NurseryId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryMaterial_NurseryId_fkey");
+
+                    b.Navigation("Material");
+
+                    b.Navigation("Nursery");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("NurseryPlantCombos")
+                        .HasForeignKey("NurseryId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryPlantCombo_NurseryId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantCombo", "PlantCombo")
+                        .WithMany("NurseryPlantCombos")
+                        .HasForeignKey("PlantComboId")
+                        .IsRequired()
+                        .HasConstraintName("NurseryPlantCombo_PlantComboId_fkey");
+
+                    b.Navigation("Nursery");
+
+                    b.Navigation("PlantCombo");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("Orders")
+                        .HasForeignKey("NurseryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("Order_NurseryId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Shipper")
                         .WithMany("ShipperOrders")
                         .HasForeignKey("ShipperId")
@@ -2229,43 +2418,45 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("Customer");
 
+                    b.Navigation("Nursery");
+
                     b.Navigation("Shipper");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.OrderItem", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Inventory", "Inventory")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CommonPlant", "CommonPlant")
                         .WithMany("OrderItems")
-                        .HasForeignKey("InventoryId")
-                        .HasConstraintName("OrderItem_InventoryId_fkey");
+                        .HasForeignKey("CommonPlantId")
+                        .HasConstraintName("OrderItem_CommonPlantId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", "NurseryMaterial")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("NurseryMaterialId")
+                        .HasConstraintName("OrderItem_NurseryMaterialId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", "NurseryPlantCombo")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("NurseryPlantComboId")
+                        .HasConstraintName("OrderItem_NurseryPlantComboId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
                         .HasConstraintName("OrderItem_OrderId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantCombo", "PlantCombo")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("PlantComboId")
-                        .HasConstraintName("OrderItem_PlantComboId_fkey");
-
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("PlantId")
-                        .HasConstraintName("OrderItem_PlantId_fkey");
-
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
                         .WithMany("OrderItems")
                         .HasForeignKey("PlantInstanceId")
                         .HasConstraintName("OrderItem_PlantInstanceId_fkey");
 
-                    b.Navigation("Inventory");
+                    b.Navigation("CommonPlant");
+
+                    b.Navigation("NurseryMaterial");
+
+                    b.Navigation("NurseryPlantCombo");
 
                     b.Navigation("Order");
-
-                    b.Navigation("Plant");
-
-                    b.Navigation("PlantCombo");
 
                     b.Navigation("PlantInstance");
                 });
@@ -2349,25 +2540,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("PlantInstance_PlantId_fkey");
 
                     b.Navigation("CurrentNursery");
-
-                    b.Navigation("Plant");
-                });
-
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInventory", b =>
-                {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
-                        .WithMany("PlantInventories")
-                        .HasForeignKey("NurseryId")
-                        .IsRequired()
-                        .HasConstraintName("PlantInventory_NurseryId_fkey");
-
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
-                        .WithMany("PlantInventories")
-                        .HasForeignKey("PlantId")
-                        .IsRequired()
-                        .HasConstraintName("PlantInventory_PlantId_fkey");
-
-                    b.Navigation("Nursery");
 
                     b.Navigation("Plant");
                 });
@@ -2479,15 +2651,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasForeignKey("MainCaretakerId")
                         .HasConstraintName("ServiceRegistration_MainCaretakerId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryCareService", "NurseryCareService")
                         .WithMany("ServiceRegistrations")
-                        .HasForeignKey("OrderId")
-                        .HasConstraintName("ServiceRegistration_OrderId_fkey");
+                        .HasForeignKey("NurseryCareServiceId")
+                        .HasConstraintName("ServiceRegistration_NurseryCareServiceId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CareServicePackage", "Service")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
                         .WithMany("ServiceRegistrations")
-                        .HasForeignKey("ServiceId")
-                        .HasConstraintName("ServiceRegistration_ServiceId_fkey");
+                        .HasForeignKey("NurseryId");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
+                        .WithOne("ServiceRegistration")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRegistration", "OrderId")
+                        .HasConstraintName("ServiceRegistration_OrderId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("ServiceRegistrationUsers")
@@ -2498,9 +2674,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("MainCaretaker");
 
-                    b.Navigation("Order");
+                    b.Navigation("Nursery");
 
-                    b.Navigation("Service");
+                    b.Navigation("NurseryCareService");
+
+                    b.Navigation("Order");
 
                     b.Navigation("User");
                 });
@@ -2640,7 +2818,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("InverseParentService");
 
-                    b.Navigation("ServiceRegistrations");
+                    b.Navigation("NurseryCareServices");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Cart", b =>
@@ -2660,11 +2838,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ChatParticipants");
                 });
 
-            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Inventory", b =>
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CommonPlant", b =>
                 {
                     b.Navigation("CartItems");
-
-                    b.Navigation("InventoryImages");
 
                     b.Navigation("OrderItems");
                 });
@@ -2681,11 +2857,47 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("RoomImages");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Material", b =>
+                {
+                    b.Navigation("MaterialImages");
+
+                    b.Navigation("NurseryMaterials");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
                 {
+                    b.Navigation("CommonPlants");
+
+                    b.Navigation("NurseryCareServices");
+
+                    b.Navigation("NurseryMaterials");
+
+                    b.Navigation("NurseryPlantCombos");
+
+                    b.Navigation("Orders");
+
                     b.Navigation("PlantInstances");
 
-                    b.Navigation("PlantInventories");
+                    b.Navigation("ServiceRegistrations");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryCareService", b =>
+                {
+                    b.Navigation("ServiceRegistrations");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", b =>
+                {
+                    b.Navigation("CartItems");
+
+                    b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
+                {
+                    b.Navigation("CartItems");
+
+                    b.Navigation("OrderItems");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
@@ -2696,7 +2908,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("Payments");
 
-                    b.Navigation("ServiceRegistrations");
+                    b.Navigation("ServiceRegistration");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Payment", b =>
@@ -2706,9 +2918,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Plant", b =>
                 {
-                    b.Navigation("CartItems");
-
-                    b.Navigation("OrderItems");
+                    b.Navigation("CommonPlants");
 
                     b.Navigation("PlantComboItems");
 
@@ -2717,8 +2927,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("PlantImages");
 
                     b.Navigation("PlantInstances");
-
-                    b.Navigation("PlantInventories");
 
                     b.Navigation("PlantRatings");
 
@@ -2733,9 +2941,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantCombo", b =>
                 {
-                    b.Navigation("CartItems");
-
-                    b.Navigation("OrderItems");
+                    b.Navigation("NurseryPlantCombos");
 
                     b.Navigation("PlantComboImages");
 
@@ -2746,8 +2952,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInstance", b =>
                 {
-                    b.Navigation("CartItems");
-
                     b.Navigation("OrderItems");
 
                     b.Navigation("PlantImages");

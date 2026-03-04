@@ -2,21 +2,18 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 {
-    public class InventoryUpdateDto
+    public class MaterialUpdateDto
     {
-        public string? InventoryCode { get; set; }
+        public string? MaterialCode { get; set; }
 
-        [Required(ErrorMessage = "Tên sản phẩm là bắt buộc")]
-        [StringLength(200, ErrorMessage = "Tên sản phẩm không được vượt quá 200 ký tự")]
+        [Required(ErrorMessage = "Tên vật liệu là bắt buộc")]
+        [StringLength(200, ErrorMessage = "Tên vật liệu không được vượt quá 200 ký tự")]
         public string? Name { get; set; }
 
         public string? Description { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Giá phải lớn hơn hoặc bằng 0")]
         public decimal? BasePrice { get; set; }
-
-        [Range(0, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn hoặc bằng 0")]
-        public int? StockQuantity { get; set; }
 
         public string? Unit { get; set; }
 

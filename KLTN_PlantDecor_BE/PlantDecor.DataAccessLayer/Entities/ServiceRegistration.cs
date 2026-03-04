@@ -11,7 +11,7 @@ public partial class ServiceRegistration
 
     public int? OrderId { get; set; }
 
-    public int? ServiceId { get; set; }
+    public int? NurseryCareServiceId { get; set; }
 
     public int? MainCaretakerId { get; set; }
 
@@ -41,7 +41,9 @@ public partial class ServiceRegistration
 
     public virtual Order? Order { get; set; }
 
-    public virtual CareServicePackage? Service { get; set; }
+    public virtual Nursery? Nursery { get; set; }
+
+    public virtual NurseryCareService? NurseryCareService { get; set; }
 
     public virtual ICollection<ServiceProgress> ServiceProgresses { get; set; } = new List<ServiceProgress>();
 

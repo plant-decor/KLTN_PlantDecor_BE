@@ -55,20 +55,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     ImageUrl = i.ImageUrl,
                     IsPrimary = i.IsPrimary
                 }).ToList(),
-                Instances = plant.PlantInstances.Select(i => new PlantInstanceResponseDto
-                {
-                    Id = i.Id,
-                    PlantId = i.PlantId,
-                    SpecificPrice = i.SpecificPrice,
-                    Height = i.Height,
-                    TrunkDiameter = i.TrunkDiameter,
-                    HealthStatus = i.HealthStatus,
-                    Age = i.Age,
-                    Description = i.Description,
-                    Status = i.Status,
-                    CreatedAt = i.CreatedAt,
-                    UpdatedAt = i.UpdatedAt
-                }).ToList(),
+                // PlantInstances temporarily disabled
                 TotalInstances = plant.PlantInstances.Count,
                 AvailableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available)
             };
