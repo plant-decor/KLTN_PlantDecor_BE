@@ -10,139 +10,139 @@ using PlantDecor.DataAccessLayer.Helpers;
 namespace PlantDecor.API.Controllers
 {
     /// <summary>
-    /// API quản lý Inventory (Admin)
+    /// API quản lý Materials (Admin)
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
     //[Authorize(Roles = "Admin")]
-    public class InventoriesController : ControllerBase
+    public class MaterialsController : ControllerBase
     {
-        private readonly IInventoryService _inventoryService;
+        private readonly IMaterialService _materialService;
 
-        public InventoriesController(IInventoryService inventoryService)
+        public MaterialsController(IMaterialService materialService)
         {
-            _inventoryService = inventoryService;
+            _materialService = materialService;
         }
 
         #region CRUD Operations
 
         /// <summary>
-        /// Lấy tất cả inventories (Admin)
+        /// Lấy tất cả materials (Admin)
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllInventories([FromQuery] Pagination pagination)
+        public async Task<IActionResult> GetAllMaterials([FromQuery] Pagination pagination)
         {
-            var inventories = await _inventoryService.GetAllInventoriesAsync(pagination);
-            return Ok(new ApiResponse<PaginatedResult<InventoryListResponseDto>>
+            var materials = await _materialService.GetAllMaterialsAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get all inventories successfully",
-                Payload = inventories
+                Message = "Get all materials successfully",
+                Payload = materials
             });
         }
 
         /// <summary>
-        /// Lấy inventories đang active
+        /// Lấy materials đang active
         /// </summary>
         [HttpGet("active")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActiveInventories([FromQuery] Pagination pagination)
+        public async Task<IActionResult> GetActiveMaterials([FromQuery] Pagination pagination)
         {
-            var inventories = await _inventoryService.GetActiveInventoriesAsync(pagination);
-            return Ok(new ApiResponse<PaginatedResult<InventoryListResponseDto>>
+            var materials = await _materialService.GetActiveMaterialsAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get active inventories successfully",
-                Payload = inventories
+                Message = "Get active materials successfully",
+                Payload = materials
             });
         }
 
         /// <summary>
-        /// Lấy inventory theo ID
+        /// Lấy material theo ID
         /// </summary>
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetInventoryById(int id)
+        public async Task<IActionResult> GetMaterialById(int id)
         {
-            var inventory = await _inventoryService.GetInventoryByIdAsync(id);
-            if (inventory == null)
+            var material = await _materialService.GetMaterialByIdAsync(id);
+            if (material == null)
                 return NotFound(new ApiResponse<object>
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Inventory with ID {id} not found"
+                    Message = $"Material with ID {id} not found"
                 });
 
-            return Ok(new ApiResponse<InventoryResponseDto>
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get inventory successfully",
-                Payload = inventory
+                Message = "Get material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Tạo inventory mới
+        /// Tạo material mới
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> CreateInventory([FromBody] InventoryRequestDto request)
+        public async Task<IActionResult> CreateMaterial([FromBody] MaterialRequestDto request)
         {
-            var inventory = await _inventoryService.CreateInventoryAsync(request);
-            return CreatedAtAction(nameof(GetInventoryById), new { id = inventory.Id }, new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.CreateMaterialAsync(request);
+            return CreatedAtAction(nameof(GetMaterialById), new { id = material.Id }, new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Create inventory successfully",
-                Payload = inventory
+                Message = "Create material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Cập nhật inventory
+        /// Cập nhật material
         /// </summary>
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdateInventory(int id, [FromBody] InventoryUpdateDto request)
+        public async Task<IActionResult> UpdateMaterial(int id, [FromBody] MaterialUpdateDto request)
         {
-            var inventory = await _inventoryService.UpdateInventoryAsync(id, request);
-            return Ok(new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.UpdateMaterialAsync(id, request);
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Update inventory successfully",
-                Payload = inventory
+                Message = "Update material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Xóa inventory
+        /// Xóa material
         /// </summary>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteInventory(int id)
+        public async Task<IActionResult> DeleteMaterial(int id)
         {
-            await _inventoryService.DeleteInventoryAsync(id);
+            await _materialService.DeleteMaterialAsync(id);
             return Ok(new ApiResponse<object>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Delete inventory successfully"
+                Message = "Delete material successfully"
             });
         }
 
         /// <summary>
-        /// Bật/tắt trạng thái active của inventory
+        /// Bật/tắt trạng thái active của material
         /// </summary>
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(int id)
         {
-            var isActive = await _inventoryService.ToggleActiveAsync(id);
+            var isActive = await _materialService.ToggleActiveAsync(id);
             return Ok(new ApiResponse<bool>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isActive ? "Inventory has been activated" : "Inventory has been deactivated",
+                Message = isActive ? "Material has been activated" : "Material has been deactivated",
                 Payload = isActive
             });
         }
@@ -152,86 +152,66 @@ namespace PlantDecor.API.Controllers
         #region Category & Tag Assignment
 
         /// <summary>
-        /// Gắn categories cho inventory
+        /// Gắn categories cho material
         /// </summary>
         [HttpPost("assign-categories")]
-        public async Task<IActionResult> AssignCategories([FromBody] AssignInventoryCategoriesDto request)
+        public async Task<IActionResult> AssignCategories([FromBody] AssignMaterialCategoriesDto request)
         {
-            var inventory = await _inventoryService.AssignCategoriesToInventoryAsync(request);
-            return Ok(new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.AssignCategoriesToMaterialAsync(request);
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Assign categories to inventory successfully",
-                Payload = inventory
+                Message = "Assign categories to material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Gắn tags cho inventory
+        /// Gắn tags cho material
         /// </summary>
         [HttpPost("assign-tags")]
-        public async Task<IActionResult> AssignTags([FromBody] AssignInventoryTagsDto request)
+        public async Task<IActionResult> AssignTags([FromBody] AssignMaterialTagsDto request)
         {
-            var inventory = await _inventoryService.AssignTagsToInventoryAsync(request);
-            return Ok(new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.AssignTagsToMaterialAsync(request);
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Assign tags to inventory successfully",
-                Payload = inventory
+                Message = "Assign tags to material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Gỡ category khỏi inventory
+        /// Gỡ category khỏi material
         /// </summary>
-        [HttpDelete("{inventoryId}/categories/{categoryId}")]
-        public async Task<IActionResult> RemoveCategory(int inventoryId, int categoryId)
+        [HttpDelete("{materialId}/categories/{categoryId}")]
+        public async Task<IActionResult> RemoveCategory(int materialId, int categoryId)
         {
-            var inventory = await _inventoryService.RemoveCategoryFromInventoryAsync(inventoryId, categoryId);
-            return Ok(new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.RemoveCategoryFromMaterialAsync(materialId, categoryId);
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Remove category from inventory successfully",
-                Payload = inventory
+                Message = "Remove category from material successfully",
+                Payload = material
             });
         }
 
         /// <summary>
-        /// Gỡ tag khỏi inventory
+        /// Gỡ tag khỏi material
         /// </summary>
-        [HttpDelete("{inventoryId}/tags/{tagId}")]
-        public async Task<IActionResult> RemoveTag(int inventoryId, int tagId)
+        [HttpDelete("{materialId}/tags/{tagId}")]
+        public async Task<IActionResult> RemoveTag(int materialId, int tagId)
         {
-            var inventory = await _inventoryService.RemoveTagFromInventoryAsync(inventoryId, tagId);
-            return Ok(new ApiResponse<InventoryResponseDto>
+            var material = await _materialService.RemoveTagFromMaterialAsync(materialId, tagId);
+            return Ok(new ApiResponse<MaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Remove tag from inventory successfully",
-                Payload = inventory
-            });
-        }
-
-        #endregion
-
-        #region Stock Management
-
-        /// <summary>
-        /// Cập nhật số lượng tồn kho
-        /// </summary>
-        [HttpPatch("{id}/stock")]
-        public async Task<IActionResult> UpdateStock(int id, [FromQuery] int quantity)
-        {
-            var inventory = await _inventoryService.UpdateStockAsync(id, quantity);
-            return Ok(new ApiResponse<InventoryResponseDto>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Update stock quantity successfully",
-                Payload = inventory
+                Message = "Remove tag from material successfully",
+                Payload = material
             });
         }
 

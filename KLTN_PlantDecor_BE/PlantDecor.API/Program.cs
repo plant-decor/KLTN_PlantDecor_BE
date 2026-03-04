@@ -114,13 +114,19 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
-            builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
-            builder.Services.AddScoped<IInventoryService, InventoryService>();
-            builder.Services.AddScoped<IPlantInventoryService, PlantInventoryService>();
+            // Temporarily disabled - PlantInstance APIs
+            // builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
+            builder.Services.AddScoped<IMaterialService, MaterialService>();
+            // Temporarily disabled - CommonPlant/PlantInventory APIs
+            // builder.Services.AddScoped<ICommonPlantService, CommonPlantService>();
             builder.Services.AddScoped<IPlantComboService, PlantComboService>();
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+
+            // Nursery Management APIs
+            builder.Services.AddScoped<INurseryService, NurseryService>();
+            builder.Services.AddScoped<INurseryMaterialService, NurseryMaterialService>();
 
             builder.Services.AddCors(options =>
             {

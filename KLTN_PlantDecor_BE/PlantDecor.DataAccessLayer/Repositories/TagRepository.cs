@@ -40,7 +40,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.Tags
                 .Include(t => t.Plants)
-                .Include(t => t.Inventories)
+                .Include(t => t.Materials)
                 .Include(t => t.PlantCombos)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }

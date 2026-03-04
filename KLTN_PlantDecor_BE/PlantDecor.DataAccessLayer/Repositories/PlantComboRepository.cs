@@ -62,8 +62,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PlantCombo?> GetByIdWithOrdersAsync(int id)
         {
             return await _context.PlantCombos
-                .Include(c => c.CartItems)
-                .Include(c => c.OrderItems)
+                .Include(c => c.NurseryPlantCombos)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 

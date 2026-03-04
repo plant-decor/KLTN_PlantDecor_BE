@@ -5,27 +5,24 @@ using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
-    public interface IInventoryService
+    public interface IMaterialService
     {
         // CRUD Operations
-        Task<PaginatedResult<InventoryListResponseDto>> GetAllInventoriesAsync(Pagination pagination);
-        Task<PaginatedResult<InventoryListResponseDto>> GetActiveInventoriesAsync(Pagination pagination);
-        Task<InventoryResponseDto?> GetInventoryByIdAsync(int id);
-        Task<InventoryResponseDto> CreateInventoryAsync(InventoryRequestDto request);
-        Task<InventoryResponseDto> UpdateInventoryAsync(int id, InventoryUpdateDto request);
-        Task<bool> DeleteInventoryAsync(int id);
+        Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination);
+        Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination);
+        Task<MaterialResponseDto?> GetMaterialByIdAsync(int id);
+        Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request);
+        Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
+        Task<bool> DeleteMaterialAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 
         // Category & Tag Assignment
-        Task<InventoryResponseDto> AssignCategoriesToInventoryAsync(AssignInventoryCategoriesDto request);
-        Task<InventoryResponseDto> AssignTagsToInventoryAsync(AssignInventoryTagsDto request);
-        Task<InventoryResponseDto> RemoveCategoryFromInventoryAsync(int inventoryId, int categoryId);
-        Task<InventoryResponseDto> RemoveTagFromInventoryAsync(int inventoryId, int tagId);
-
-        // Stock Management
-        Task<InventoryResponseDto> UpdateStockAsync(int id, int quantity);
+        Task<MaterialResponseDto> AssignCategoriesToMaterialAsync(AssignMaterialCategoriesDto request);
+        Task<MaterialResponseDto> AssignTagsToMaterialAsync(AssignMaterialTagsDto request);
+        Task<MaterialResponseDto> RemoveCategoryFromMaterialAsync(int materialId, int categoryId);
+        Task<MaterialResponseDto> RemoveTagFromMaterialAsync(int materialId, int tagId);
 
         // Shop Display
-        Task<PaginatedResult<InventoryListResponseDto>> GetInventoriesForShopAsync(Pagination pagination);
+        Task<PaginatedResult<MaterialListResponseDto>> GetMaterialsForShopAsync(Pagination pagination);
     }
 }

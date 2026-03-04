@@ -76,12 +76,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             var category = await _context.Categories
                 .Include(c => c.Plants)
-                .Include(c => c.Inventories)
+                .Include(c => c.Materials)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (category == null) return false;
 
-            return category.Plants.Any() || category.Inventories.Any();
+            return category.Plants.Any() || category.Materials.Any();
         }
 
         public Task<List<Category>> GetRootActiveCategoriesWithChildrenAsync()

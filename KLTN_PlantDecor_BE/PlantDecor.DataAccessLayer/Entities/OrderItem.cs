@@ -9,15 +9,14 @@ public partial class OrderItem
 
     public int? OrderId { get; set; }
 
-    public int? PlantId { get; set; }
+    // Foreign Keys for different product types (only one should be set)
+    public int? CommonPlantId { get; set; }
 
     public int? PlantInstanceId { get; set; }
 
-    public int? PlantComboId { get; set; }
+    public int? NurseryPlantComboId { get; set; }
 
-    public int? InventoryId { get; set; }
-
-    public int? ServiceId { get; set; }
+    public int? NurseryMaterialId { get; set; }
 
     public string? ItemName { get; set; }
 
@@ -25,13 +24,14 @@ public partial class OrderItem
 
     public decimal? Price { get; set; }
 
-    public virtual Inventory? Inventory { get; set; }
-
+    // Navigation Properties
     public virtual Order? Order { get; set; }
 
-    public virtual Plant? Plant { get; set; }
-
-    public virtual PlantCombo? PlantCombo { get; set; }
+    public virtual CommonPlant? CommonPlant { get; set; }
 
     public virtual PlantInstance? PlantInstance { get; set; }
+
+    public virtual NurseryPlantCombo? NurseryPlantCombo { get; set; }
+
+    public virtual NurseryMaterial? NurseryMaterial { get; set; }
 }

@@ -10,10 +10,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ICategoryRepository CategoryRepository { get; }
         ITagRepository TagRepository { get; }
         IPlantRepository PlantRepository { get; }
-        IPlantInstanceRepository PlantInstanceRepository { get; }
-        IInventoryRepository InventoryRepository { get; }
-        IPlantInventoryRepository PlantInventoryRepository { get; }
+        IMaterialRepository MaterialRepository { get; }
+        ICommonPlantRepository CommonPlantRepository { get; }
         IPlantComboRepository PlantComboRepository { get; }
+        INurseryRepository NurseryRepository { get; }
+        INurseryMaterialRepository NurseryMaterialRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

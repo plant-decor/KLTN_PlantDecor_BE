@@ -51,10 +51,6 @@ public partial class Plant
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual ICollection<PlantComboItem> PlantComboItems { get; set; } = new List<PlantComboItem>();
 
     public virtual ICollection<PlantGuide> PlantGuides { get; set; } = new List<PlantGuide>();
@@ -73,7 +69,7 @@ public partial class Plant
 
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 
-    public virtual ICollection<PlantInventory> PlantInventories { get; set; } = new List<PlantInventory>();
+    public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
 
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 

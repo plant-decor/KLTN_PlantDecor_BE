@@ -167,11 +167,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (combo == null)
                     throw new NotFoundException($"Combo với ID {id} không tồn tại");
 
-                if (combo.CartItems.Any())
-                    throw new BadRequestException("Không thể xóa combo đang có trong giỏ hàng.");
-
-                if (combo.OrderItems.Any())
-                    throw new BadRequestException("Không thể xóa combo đã có trong đơn hàng. Vui lòng vô hiệu hóa thay vì xóa.");
+                // Check if combo is in use via NurseryPlantCombos
+                if (combo.NurseryPlantCombos.Any())
+                    throw new BadRequestException("Không thể xóa combo đang được liên kết với nursery. Vui lòng vô hiệu hóa thay vì xóa.");
 
                 combo.IsActive = false;
                 combo.UpdatedAt = DateTime.Now;

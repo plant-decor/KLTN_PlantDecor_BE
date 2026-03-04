@@ -5,20 +5,20 @@ using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
-    public interface IPlantInventoryService
+    public interface ICommonPlantService
     {
         // CRUD Operations
-        Task<PaginatedResult<PlantInventoryListResponseDto>> GetAllPlantInventoriesAsync(Pagination pagination);
-        Task<PlantInventoryResponseDto?> GetPlantInventoryByIdAsync(int id);
-        Task<PlantInventoryResponseDto> CreatePlantInventoryAsync(PlantInventoryRequestDto request);
-        Task<PlantInventoryResponseDto> UpdatePlantInventoryAsync(int id, PlantInventoryUpdateDto request);
-        Task<bool> DeletePlantInventoryAsync(int id);
+        Task<PaginatedResult<CommonPlantListResponseDto>> GetAllCommonPlantsAsync(Pagination pagination);
+        Task<CommonPlantResponseDto?> GetCommonPlantByIdAsync(int id);
+        Task<CommonPlantResponseDto> CreateCommonPlantAsync(CommonPlantRequestDto request);
+        Task<CommonPlantResponseDto> UpdateCommonPlantAsync(int id, CommonPlantUpdateDto request);
+        Task<bool> DeleteCommonPlantAsync(int id);
 
         // Query Operations
-        Task<PaginatedResult<PlantInventoryListResponseDto>> GetByPlantIdAsync(int plantId, Pagination pagination);
-        Task<PaginatedResult<PlantInventoryListResponseDto>> GetByNurseryIdAsync(int nurseryId, Pagination pagination);
+        Task<PaginatedResult<CommonPlantListResponseDto>> GetByPlantIdAsync(int plantId, Pagination pagination);
+        Task<PaginatedResult<CommonPlantListResponseDto>> GetByNurseryIdAsync(int nurseryId, Pagination pagination);
 
         // Stock Management
-        Task<PlantInventoryResponseDto> UpdateQuantityAsync(int nurseryId, int plantId, int quantity);
+        Task<CommonPlantResponseDto> UpdateQuantityAsync(int nurseryId, int plantId, int quantity);
     }
 }

@@ -53,10 +53,6 @@ public partial class PlantCombo
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual ICollection<PlantComboImage> PlantComboImages { get; set; } = new List<PlantComboImage>();
 
     public virtual ICollection<PlantComboItem> PlantComboItems { get; set; } = new List<PlantComboItem>();
@@ -64,4 +60,6 @@ public partial class PlantCombo
     public virtual ICollection<UserBehaviorLog> UserBehaviorLogs { get; set; } = new List<UserBehaviorLog>();
 
     public virtual ICollection<Tag> TagsNavigation { get; set; } = new List<Tag>();
+
+    public virtual ICollection<NurseryPlantCombo> NurseryPlantCombos { get; set; } = new List<NurseryPlantCombo>();
 }

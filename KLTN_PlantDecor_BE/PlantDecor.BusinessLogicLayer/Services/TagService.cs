@@ -117,7 +117,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Tag với ID {id} không tồn tại");
 
                 // Check if tag is assigned to any products
-                if (tag.Plants.Any() || tag.Inventories.Any() || tag.PlantCombos.Any())
+                if (tag.Plants.Any() || tag.Materials.Any() || tag.PlantCombos.Any())
                     throw new BadRequestException("Không thể xóa tag đang được gắn với sản phẩm. Vui lòng gỡ liên kết trước.");
 
                 _unitOfWork.TagRepository.PrepareRemove(tag);

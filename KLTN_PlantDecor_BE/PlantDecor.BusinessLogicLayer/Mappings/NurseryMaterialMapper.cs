@@ -5,17 +5,20 @@ using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
-    public static class CommonPlantMapper
+    public static class NurseryMaterialMapper
     {
         #region Entity to Response
-        public static CommonPlantResponseDto ToResponse(this CommonPlant entity)
+        public static NurseryMaterialResponseDto ToResponse(this NurseryMaterial entity)
         {
             if (entity == null) return null!;
-            return new CommonPlantResponseDto
+            return new NurseryMaterialResponseDto
             {
                 Id = entity.Id,
-                PlantId = entity.PlantId,
-                PlantName = entity.Plant?.Name,
+                MaterialId = entity.MaterialId,
+                MaterialName = entity.Material?.Name,
+                MaterialCode = entity.Material?.MaterialCode,
+                Unit = entity.Material?.Unit,
+                BasePrice = entity.Material?.BasePrice,
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
                 Quantity = entity.Quantity,
@@ -24,14 +27,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             };
         }
 
-        public static CommonPlantListResponseDto ToListResponse(this CommonPlant entity)
+        public static NurseryMaterialListResponseDto ToListResponse(this NurseryMaterial entity)
         {
             if (entity == null) return null!;
-            return new CommonPlantListResponseDto
+            return new NurseryMaterialListResponseDto
             {
                 Id = entity.Id,
-                PlantId = entity.PlantId,
-                PlantName = entity.Plant?.Name,
+                MaterialId = entity.MaterialId,
+                MaterialName = entity.Material?.Name,
+                MaterialCode = entity.Material?.MaterialCode,
+                Unit = entity.Material?.Unit,
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
                 Quantity = entity.Quantity,
@@ -40,25 +45,25 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             };
         }
 
-        public static List<CommonPlantResponseDto> ToResponseList(this IEnumerable<CommonPlant> entities)
+        public static List<NurseryMaterialResponseDto> ToResponseList(this IEnumerable<NurseryMaterial> entities)
         {
             return entities.Select(e => e.ToResponse()).ToList();
         }
 
-        public static List<CommonPlantListResponseDto> ToListResponseList(this IEnumerable<CommonPlant> entities)
+        public static List<NurseryMaterialListResponseDto> ToListResponseList(this IEnumerable<NurseryMaterial> entities)
         {
             return entities.Select(e => e.ToListResponse()).ToList();
         }
         #endregion
 
         #region Request to Entity
-        public static CommonPlant ToEntity(this CommonPlantRequestDto request)
+        public static NurseryMaterial ToEntity(this NurseryMaterialRequestDto request)
         {
             if (request == null) return null!;
 
-            return new CommonPlant
+            return new NurseryMaterial
             {
-                PlantId = request.PlantId,
+                MaterialId = request.MaterialId,
                 NurseryId = request.NurseryId,
                 Quantity = request.Quantity,
                 ReservedQuantity = 0,
@@ -68,13 +73,13 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         #endregion
 
         #region Update Entity
-        public static void ToUpdate(this CommonPlantUpdateDto request, CommonPlant entity)
+        public static void ToUpdate(this NurseryMaterialUpdateDto request, NurseryMaterial entity)
         {
             if (request == null || entity == null) return;
 
-            entity.Quantity = request.Quantity ?? entity.Quantity;
-            entity.ReservedQuantity = request.ReservedQuantity ?? entity.ReservedQuantity;
-            entity.IsActive = request.IsActive ?? entity.IsActive;
+            if (request.Quantity.HasValue) entity.Quantity = request.Quantity.Value;
+            if (request.ReservedQuantity.HasValue) entity.ReservedQuantity = request.ReservedQuantity.Value;
+            if (request.IsActive.HasValue) entity.IsActive = request.IsActive.Value;
         }
         #endregion
     }

@@ -9,14 +9,14 @@ using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
-    public class PlantInventoryService : IPlantInventoryService
+    public class CommonPlantService : ICommonPlantService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
 
-        private const string ALL_PLANT_INVENTORIES_KEY = "plant_inventories_all";
+        private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
 
-        public PlantInventoryService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public CommonPlantService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
@@ -24,15 +24,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region CRUD Operations
 
-        public async Task<PaginatedResult<PlantInventoryListResponseDto>> GetAllPlantInventoriesAsync(Pagination pagination)
+        public async Task<PaginatedResult<CommonPlantListResponseDto>> GetAllCommonPlantsAsync(Pagination pagination)
         {
-            var cacheKey = $"{ALL_PLANT_INVENTORIES_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
-            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInventoryListResponseDto>>(cacheKey);
+            var cacheKey = $"{ALL_COMMON_PLANTS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<CommonPlantListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var paginatedEntities = await _unitOfWork.PlantInventoryRepository.GetAllWithDetailsAsync(pagination);
-            var result = new PaginatedResult<PlantInventoryListResponseDto>(
+            var paginatedEntities = await _unitOfWork.CommonPlantRepository.GetAllWithDetailsAsync(pagination);
+            var result = new PaginatedResult<CommonPlantListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
                 paginatedEntities.PageNumber,
@@ -43,16 +43,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<PlantInventoryResponseDto?> GetPlantInventoryByIdAsync(int id)
+        public async Task<CommonPlantResponseDto?> GetCommonPlantByIdAsync(int id)
         {
-            var inventory = await _unitOfWork.PlantInventoryRepository.GetByIdWithDetailsAsync(id);
-            if (inventory == null)
+            var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
+            if (commonPlant == null)
                 return null;
 
-            return inventory.ToResponse();
+            return commonPlant.ToResponse();
         }
 
-        public async Task<PlantInventoryResponseDto> CreatePlantInventoryAsync(PlantInventoryRequestDto request)
+        public async Task<CommonPlantResponseDto> CreateCommonPlantAsync(CommonPlantRequestDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
 
@@ -64,19 +64,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
 
                 // Check duplicate plant + nursery combination
-                if (await _unitOfWork.PlantInventoryRepository.ExistsAsync(request.PlantId, request.NurseryId))
-                    throw new BadRequestException($"Plant inventory cho Plant ID {request.PlantId} tại Nursery ID {request.NurseryId} đã tồn tại");
+                if (await _unitOfWork.CommonPlantRepository.ExistsAsync(request.PlantId, request.NurseryId))
+                    throw new BadRequestException($"CommonPlant cho Plant ID {request.PlantId} tại Nursery ID {request.NurseryId} đã tồn tại");
 
                 var entity = request.ToEntity();
 
-                _unitOfWork.PlantInventoryRepository.PrepareCreate(entity);
+                _unitOfWork.CommonPlantRepository.PrepareCreate(entity);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
 
                 // Reload with details
-                var created = await _unitOfWork.PlantInventoryRepository.GetByIdWithDetailsAsync(entity.Id);
+                var created = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(entity.Id);
                 return created!.ToResponse();
             }
             catch (Exception)
@@ -86,15 +86,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<PlantInventoryResponseDto> UpdatePlantInventoryAsync(int id, PlantInventoryUpdateDto request)
+        public async Task<CommonPlantResponseDto> UpdateCommonPlantAsync(int id, CommonPlantUpdateDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                var entity = await _unitOfWork.PlantInventoryRepository.GetByIdWithDetailsAsync(id);
+                var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"PlantInventory với ID {id} không tồn tại");
+                    throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
 
                 // Validate reserved quantity doesn't exceed quantity
                 var newQuantity = request.Quantity ?? entity.Quantity;
@@ -104,7 +104,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 request.ToUpdate(entity);
 
-                _unitOfWork.PlantInventoryRepository.PrepareUpdate(entity);
+                _unitOfWork.CommonPlantRepository.PrepareUpdate(entity);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -119,20 +119,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<bool> DeletePlantInventoryAsync(int id)
+        public async Task<bool> DeleteCommonPlantAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                var entity = await _unitOfWork.PlantInventoryRepository.GetByIdWithDetailsAsync(id);
+                var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"PlantInventory với ID {id} không tồn tại");
+                    throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
 
                 if (entity.ReservedQuantity > 0)
-                    throw new BadRequestException("Không thể xóa plant inventory đang có số lượng đặt trước");
+                    throw new BadRequestException("Không thể xóa common plant đang có số lượng đặt trước");
 
-                _unitOfWork.PlantInventoryRepository.PrepareRemove(entity);
+                _unitOfWork.CommonPlantRepository.PrepareRemove(entity);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -151,10 +151,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Query Operations
 
-        public async Task<PaginatedResult<PlantInventoryListResponseDto>> GetByPlantIdAsync(int plantId, Pagination pagination)
+        public async Task<PaginatedResult<CommonPlantListResponseDto>> GetByPlantIdAsync(int plantId, Pagination pagination)
         {
-            var paginatedEntities = await _unitOfWork.PlantInventoryRepository.GetByPlantIdAsync(plantId, pagination);
-            return new PaginatedResult<PlantInventoryListResponseDto>(
+            var paginatedEntities = await _unitOfWork.CommonPlantRepository.GetByPlantIdAsync(plantId, pagination);
+            return new PaginatedResult<CommonPlantListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
                 paginatedEntities.PageNumber,
@@ -162,10 +162,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             );
         }
 
-        public async Task<PaginatedResult<PlantInventoryListResponseDto>> GetByNurseryIdAsync(int nurseryId, Pagination pagination)
+        public async Task<PaginatedResult<CommonPlantListResponseDto>> GetByNurseryIdAsync(int nurseryId, Pagination pagination)
         {
-            var paginatedEntities = await _unitOfWork.PlantInventoryRepository.GetByNurseryIdAsync(nurseryId, pagination);
-            return new PaginatedResult<PlantInventoryListResponseDto>(
+            var paginatedEntities = await _unitOfWork.CommonPlantRepository.GetByNurseryIdAsync(nurseryId, pagination);
+            return new PaginatedResult<CommonPlantListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
                 paginatedEntities.PageNumber,
@@ -177,9 +177,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Stock Management
 
-        public async Task<PlantInventoryResponseDto> UpdateQuantityAsync(int nurseryId, int plantId, int quantity)
+        public async Task<CommonPlantResponseDto> UpdateQuantityAsync(int nurseryId, int plantId, int quantity)
         {
-            var entity = await _unitOfWork.PlantInventoryRepository.GetByPlantAndNurseryAsync(plantId, nurseryId);
+            var entity = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(plantId, nurseryId);
             if (entity == null)
                 throw new NotFoundException($"Không tìm thấy tồn kho cho PlantId {plantId} tại NurseryId {nurseryId}");
 
@@ -191,7 +191,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             entity.Quantity = quantity;
 
-            _unitOfWork.PlantInventoryRepository.PrepareUpdate(entity);
+            _unitOfWork.CommonPlantRepository.PrepareUpdate(entity);
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
@@ -205,7 +205,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync()
         {
-            await _cacheService.RemoveByPrefixAsync(ALL_PLANT_INVENTORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(ALL_COMMON_PLANTS_KEY);
         }
 
         #endregion

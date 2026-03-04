@@ -1,13 +1,12 @@
 namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
-    public class InventoryResponseDto
+    public class MaterialResponseDto
     {
         public int Id { get; set; }
-        public string? InventoryCode { get; set; }
+        public string? MaterialCode { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }
         public decimal? BasePrice { get; set; }
-        public int? StockQuantity { get; set; }
         public string? Unit { get; set; }
         public string? Brand { get; set; }
         public string? Specifications { get; set; }
@@ -19,23 +18,22 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         // Related data
         public List<CategoryResponseDto> Categories { get; set; } = new List<CategoryResponseDto>();
         public List<TagResponseDto> Tags { get; set; } = new List<TagResponseDto>();
-        public List<InventoryImageResponseDto> Images { get; set; } = new List<InventoryImageResponseDto>();
+        public List<MaterialImageResponseDto> Images { get; set; } = new List<MaterialImageResponseDto>();
     }
 
-    public class InventoryImageResponseDto
+    public class MaterialImageResponseDto
     {
         public int Id { get; set; }
         public string? ImageUrl { get; set; }
         public bool? IsPrimary { get; set; }
     }
 
-    public class InventoryListResponseDto
+    public class MaterialListResponseDto
     {
         public int Id { get; set; }
-        public string? InventoryCode { get; set; }
+        public string? MaterialCode { get; set; }
         public string? Name { get; set; }
         public decimal? BasePrice { get; set; }
-        public int? StockQuantity { get; set; }
         public string? Unit { get; set; }
         public string? Brand { get; set; }
         public bool? IsActive { get; set; }

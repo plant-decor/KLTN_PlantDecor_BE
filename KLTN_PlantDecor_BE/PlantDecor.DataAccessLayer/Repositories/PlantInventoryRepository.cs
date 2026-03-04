@@ -6,18 +6,18 @@ using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
 {
-    public class PlantInventoryRepository : GenericRepository<PlantInventory>, IPlantInventoryRepository
+    public class CommonPlantRepository : GenericRepository<CommonPlant>, ICommonPlantRepository
     {
-        public PlantInventoryRepository(PlantDecorContext context) : base(context)
+        public CommonPlantRepository(PlantDecorContext context) : base(context)
         {
         }
 
-        public async Task<PaginatedResult<PlantInventory>> GetAllWithDetailsAsync(Pagination pagination)
+        public async Task<PaginatedResult<CommonPlant>> GetAllWithDetailsAsync(Pagination pagination)
         {
-            var query = _context.PlantInventories
-                .Include(pi => pi.Plant)
-                .Include(pi => pi.Nursery)
-                .OrderByDescending(pi => pi.Id);
+            var query = _context.CommonPlants
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .OrderByDescending(cp => cp.Id);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -25,24 +25,24 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Take(pagination.Take)
                 .ToListAsync();
 
-            return new PaginatedResult<PlantInventory>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+            return new PaginatedResult<CommonPlant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PlantInventory?> GetByIdWithDetailsAsync(int id)
+        public async Task<CommonPlant?> GetByIdWithDetailsAsync(int id)
         {
-            return await _context.PlantInventories
-                .Include(pi => pi.Plant)
-                .Include(pi => pi.Nursery)
-                .FirstOrDefaultAsync(pi => pi.Id == id);
+            return await _context.CommonPlants
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .FirstOrDefaultAsync(cp => cp.Id == id);
         }
 
-        public async Task<PaginatedResult<PlantInventory>> GetByPlantIdAsync(int plantId, Pagination pagination)
+        public async Task<PaginatedResult<CommonPlant>> GetByPlantIdAsync(int plantId, Pagination pagination)
         {
-            var query = _context.PlantInventories
-                .Where(pi => pi.PlantId == plantId)
-                .Include(pi => pi.Plant)
-                .Include(pi => pi.Nursery)
-                .OrderByDescending(pi => pi.Id);
+            var query = _context.CommonPlants
+                .Where(cp => cp.PlantId == plantId)
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .OrderByDescending(cp => cp.Id);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -50,16 +50,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Take(pagination.Take)
                 .ToListAsync();
 
-            return new PaginatedResult<PlantInventory>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+            return new PaginatedResult<CommonPlant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PaginatedResult<PlantInventory>> GetByNurseryIdAsync(int nurseryId, Pagination pagination)
+        public async Task<PaginatedResult<CommonPlant>> GetByNurseryIdAsync(int nurseryId, Pagination pagination)
         {
-            var query = _context.PlantInventories
-                .Where(pi => pi.NurseryId == nurseryId)
-                .Include(pi => pi.Plant)
-                .Include(pi => pi.Nursery)
-                .OrderByDescending(pi => pi.Id);
+            var query = _context.CommonPlants
+                .Where(cp => cp.NurseryId == nurseryId)
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .OrderByDescending(cp => cp.Id);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -67,26 +67,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Take(pagination.Take)
                 .ToListAsync();
 
-            return new PaginatedResult<PlantInventory>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+            return new PaginatedResult<CommonPlant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PlantInventory?> GetByPlantAndNurseryAsync(int plantId, int nurseryId)
+        public async Task<CommonPlant?> GetByPlantAndNurseryAsync(int plantId, int nurseryId)
         {
-            return await _context.PlantInventories
-                .Include(pi => pi.Plant)
-                .Include(pi => pi.Nursery)
-                .FirstOrDefaultAsync(pi => pi.PlantId == plantId && pi.NurseryId == nurseryId);
+            return await _context.CommonPlants
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .FirstOrDefaultAsync(cp => cp.PlantId == plantId && cp.NurseryId == nurseryId);
         }
 
         public async Task<bool> ExistsAsync(int plantId, int nurseryId, int? excludeId = null)
         {
             if (excludeId.HasValue)
             {
-                return await _context.PlantInventories
-                    .AnyAsync(pi => pi.PlantId == plantId && pi.NurseryId == nurseryId && pi.Id != excludeId.Value);
+                return await _context.CommonPlants
+                    .AnyAsync(cp => cp.PlantId == plantId && cp.NurseryId == nurseryId && cp.Id != excludeId.Value);
             }
-            return await _context.PlantInventories
-                .AnyAsync(pi => pi.PlantId == plantId && pi.NurseryId == nurseryId);
+            return await _context.CommonPlants
+                .AnyAsync(cp => cp.PlantId == plantId && cp.NurseryId == nurseryId);
         }
     }
 }

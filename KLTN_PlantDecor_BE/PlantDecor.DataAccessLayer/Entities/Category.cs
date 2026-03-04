@@ -23,7 +23,7 @@ public partial class Category
 
     public virtual Category? ParentCategory { get; set; }
 
-    public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
+    public virtual ICollection<Material> Materials { get; set; } = new List<Material>();
 
     public virtual ICollection<Plant> Plants { get; set; } = new List<Plant>();
 }
