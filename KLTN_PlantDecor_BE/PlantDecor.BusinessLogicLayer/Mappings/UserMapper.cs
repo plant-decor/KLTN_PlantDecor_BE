@@ -47,7 +47,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PasswordHash = request.Password, // Hash ở service layer, không hash ở đây
                 Username = request.Username?.Trim(),
                 PhoneNumber = request.PhoneNumber?.Trim(),
-                RoleId = (int)request.RoleId,
                 Status = (int)UserStatusEnum.Active,
                 CreatedAt = DateTime.UtcNow,
 
