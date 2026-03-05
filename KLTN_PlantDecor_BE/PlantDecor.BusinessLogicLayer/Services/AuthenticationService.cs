@@ -381,6 +381,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 var newUser = UserMapper.ToEntity(userRequest);
                 newUser.RoleId = managerRoleId;
+                newUser.IsVerified = true; // Manager được tạo bởi Admin nên mặc định là đã verified
                 newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
                 newUser.UpdateSecurityStamp();
 
