@@ -124,6 +124,24 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(rt => rt.UserId == userId && rt.IsRevoked != true)
                 .ToListAsync();
         }
+
+        public async Task<bool> IsEmailExistsForOtherUserAsync(string email, int currentUserId)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var users = await GetAllAsync();
+                return users.Any(u => u.Email != null &&
+                                     u.Email.Equals(email, StringComparison.OrdinalIgnoreCase) &&
+                                     u.Id != currentUserId);
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
 

@@ -12,5 +12,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<RefreshToken>> GetRefreshTokenAsync(int userId);
         Task<User> GetByPhoneAsync(string phone);
         Task<bool> IsVerifiedAsync(int userId);
+
+        Task<bool> IsEmailExistsForOtherUserAsync(string email, int currentUserId);
     }
 }

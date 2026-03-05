@@ -56,12 +56,13 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     FullName = request.FullName?.Trim(),
                     CreatedAt = DateTime.UtcNow
                 }
+
             };
         }
         #endregion
 
         #region Request to Updated Entity (User tự cập nhật)
-        public static void ToUpdate(this UserUpdate request, User user)
+        public static void ToUpdate(this UserUpdateDto request, User user)
         {
             if (request == null || user == null) return;
 
@@ -75,6 +76,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             user.UserProfile ??= new UserProfile
             {
                 UserId = user.Id,
+                FullName = request.FullName?.Trim(),
                 CreatedAt = DateTime.UtcNow
             };
 

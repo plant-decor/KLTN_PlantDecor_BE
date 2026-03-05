@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 {
-    public class UserUpdate
+    public class UserUpdateDto
     {
         [Required(ErrorMessage = "UserName is required")]
         public string UserName { get; set; }

@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
-using PlantDecor.BusinessLogicLayer.DTOs.Requests;
-using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.Security.Claims;
@@ -22,27 +20,42 @@ namespace PlantDecor.API.Controllers
             _authenticationService = authenticationService;
         }
 
-        [HttpPost("create-manager")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateManagerAccount([FromBody] CreateManagerRequest request)
+        [HttpPut("user-profile")]
+        public async Task<IActionResult> UpdateUserInfo([FromBody] UserUpdateDto request)
         {
-            if (!ModelState.IsValid)
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
-                throw new BadRequestException("Invalid request");
+                throw new UnauthorizedException("Unable to identify user from token");
             }
-
-            var result = await _authenticationService.CreateManagerAsync(request);
-
-            if (result == null)
-            {
-                throw new Exception("Failed to create manager account");
-            }
-
-            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            var updatedUser = await _userService.UpdateUserInfoAsync(userId, request);
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                StatusCode = StatusCodes.Status201Created,
-                Message = "Manager account created successfully!",
+                StatusCode = StatusCodes.Status200OK,
+                Message = "User information updated successfully",
+                Payload = updatedUser
+            });
+        }
+
+        [HttpPut("user-email")]
+        public async Task<IActionResult> UpdateUserEmail([FromBody] EmailUpdateDto emailUpdate)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+            var result = await _userService.UpdateEmailAsync(userId, emailUpdate);
+            if (!result)
+            {
+                throw new Exception("Failed to update email");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Email updated successfully",
                 Payload = result
             });
         }

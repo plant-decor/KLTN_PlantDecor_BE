@@ -15,7 +15,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<bool> IsPhoneExistsForOtherUserAsync(string phone, int currentUserId);
         Task<bool> SetActive(int userId);
         Task<bool> Deactive(int userId);
-        Task<UserResponse> UpdateAsync(int id, UserUpdate user);
+        Task<UserResponse> UpdateUserInfoAsync(int id, UserUpdateDto user);
+        Task<bool> UpdateEmailAsync(int userId, EmailUpdateDto emailUpdate);
 
         Task<bool> UpdateAvatar(int userId, IFormFile avatarImage);
         Task<bool> UpdatePasswordAsync(int userId, PasswordUpdate passwordUpdate);
