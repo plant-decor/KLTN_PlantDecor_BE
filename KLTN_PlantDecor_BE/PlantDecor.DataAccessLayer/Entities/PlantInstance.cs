@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class PlantInstance
 {
@@ -30,8 +27,6 @@ public partial class PlantInstance
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
