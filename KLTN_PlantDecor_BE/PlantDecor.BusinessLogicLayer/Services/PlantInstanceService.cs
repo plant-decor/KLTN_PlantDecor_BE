@@ -1,0 +1,307 @@
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
+using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
+using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
+using PlantDecor.DataAccessLayer.UnitOfWork;
+
+namespace PlantDecor.BusinessLogicLayer.Services
+{
+    public class PlantInstanceService : IPlantInstanceService
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ICacheService _cacheService;
+
+        private const string NURSERY_INSTANCES_KEY = "nursery_instances";
+        private const string PLANT_NURSERIES_KEY = "plant_nurseries";
+
+        public PlantInstanceService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        {
+            _unitOfWork = unitOfWork;
+            _cacheService = cacheService;
+        }
+
+        #region Manager Operations
+
+        public async Task<BatchCreatePlantInstanceResponseDto> BatchCreateAsync(int nurseryId, int managerId, BatchCreatePlantInstanceRequestDto request)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Validate nursery thuộc về manager
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                if (nursery == null || nursery.Id != nurseryId)
+                    throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+                // Validate tất cả PlantId tồn tại
+                var plantIds = request.Instances.Select(i => i.PlantId).Distinct().ToList();
+                foreach (var plantId in plantIds)
+                {
+                    var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
+                    if (plant == null)
+                        throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                }
+
+                // Tạo các entity
+                var entities = request.Instances.ToEntityList(nurseryId);
+                await _unitOfWork.PlantInstanceRepository.AddRangeAsync(entities);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                await InvalidateCacheAsync(nurseryId);
+
+                // Reload với details
+                var result = new BatchCreatePlantInstanceResponseDto
+                {
+                    TotalCreated = entities.Count,
+                    Instances = entities.ToResponseList()
+                };
+
+                return result;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetByNurseryIdAsync(int nurseryId, int managerId, Pagination pagination, int? statusFilter = null)
+        {
+            // Validate nursery thuộc về manager
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != nurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_p{pagination.PageNumber}_s{pagination.PageSize}_st{statusFilter}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetByNurseryIdAsync(nurseryId, pagination, statusFilter);
+            var result = new PaginatedResult<PlantInstanceListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
+            return result;
+        }
+
+        public async Task<List<NurseryPlantSummaryDto>> GetPlantsSummaryByNurseryAsync(int nurseryId, int managerId)
+        {
+            // Validate nursery thuộc về manager
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != nurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_summary";
+            var cachedData = await _cacheService.GetDataAsync<List<NurseryPlantSummaryDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            var instances = await _unitOfWork.PlantInstanceRepository.GetAllByNurseryIdAsync(nurseryId);
+
+            var summary = instances
+                .Where(i => i.Plant != null)
+                .GroupBy(i => i.PlantId)
+                .Select(g =>
+                {
+                    var plant = g.First().Plant!;
+                    return new NurseryPlantSummaryDto
+                    {
+                        PlantId = plant.Id,
+                        PlantName = plant.Name,
+                        PrimaryImageUrl = plant.PlantImages?.FirstOrDefault(img => img.IsPrimary == true)?.ImageUrl
+                            ?? plant.PlantImages?.FirstOrDefault()?.ImageUrl,
+                        BasePrice = plant.BasePrice,
+                        TotalInstances = g.Count(),
+                        AvailableCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available),
+                        SoldCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Sold),
+                        ReservedCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Reserved),
+                        DamagedCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Damaged),
+                        UnavailableCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Inavailable),
+                        MinPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Min(),
+                        MaxPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Max()
+                    };
+                })
+                .OrderBy(s => s.PlantName)
+                .ToList();
+
+            await _cacheService.SetDataAsync(cacheKey, summary, DateTimeOffset.Now.AddMinutes(15));
+            return summary;
+        }
+
+        public async Task<PlantInstanceResponseDto> UpdateStatusAsync(int instanceId, int managerId, UpdatePlantInstanceStatusDto request)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (instance == null)
+                    throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+                // Validate nursery thuộc về manager
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                    throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+                instance.Status = request.Status;
+                instance.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+                return instance.ToResponse();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Validate nursery thuộc về manager
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                if (nursery == null)
+                    throw new ForbiddenException("Bạn không có vựa nào");
+
+                var instances = await _unitOfWork.PlantInstanceRepository.GetByIdsAsync(request.InstanceIds);
+
+                if (instances.Count != request.InstanceIds.Count)
+                {
+                    var foundIds = instances.Select(i => i.Id).ToHashSet();
+                    var missingIds = request.InstanceIds.Where(id => !foundIds.Contains(id)).ToList();
+                    throw new NotFoundException($"Không tìm thấy PlantInstance với IDs: {string.Join(", ", missingIds)}");
+                }
+
+                // Validate tất cả instance thuộc nursery của manager
+                var invalidInstances = instances.Where(i => i.CurrentNurseryId != nursery.Id).ToList();
+                if (invalidInstances.Any())
+                    throw new ForbiddenException($"Bạn không có quyền quản lý instance IDs: {string.Join(", ", invalidInstances.Select(i => i.Id))}");
+
+                foreach (var instance in instances)
+                {
+                    instance.Status = request.Status;
+                    instance.UpdatedAt = DateTime.Now;
+                    _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+                }
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                await InvalidateCacheAsync(nursery.Id);
+
+                return new BatchUpdateStatusResponseDto
+                {
+                    TotalUpdated = instances.Count,
+                    Status = request.Status,
+                    StatusName = PlantInstanceMapper.GetStatusName(request.Status)
+                };
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Shop Operations
+
+        public async Task<List<PlantNurseryAvailabilityDto>> GetNurseriesByPlantIdAsync(int plantId)
+        {
+            var cacheKey = $"{PLANT_NURSERIES_KEY}_{plantId}";
+            var cachedData = await _cacheService.GetDataAsync<List<PlantNurseryAvailabilityDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            // Validate plant tồn tại
+            var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var instances = await _unitOfWork.PlantInstanceRepository.GetAvailableByPlantIdAsync(plantId);
+
+            var result = instances
+                .Where(i => i.CurrentNursery != null && i.CurrentNursery.IsActive == true)
+                .GroupBy(i => i.CurrentNurseryId)
+                .Select(g =>
+                {
+                    var nursery = g.First().CurrentNursery!;
+                    return new PlantNurseryAvailabilityDto
+                    {
+                        NurseryId = nursery.Id,
+                        NurseryName = nursery.Name,
+                        Address = nursery.Address,
+                        Phone = nursery.Phone,
+                        Latitude = nursery.Latitude,
+                        Longitude = nursery.Longitude,
+                        AvailableInstanceCount = g.Count(),
+                        MinPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Min(),
+                        MaxPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Max()
+                    };
+                })
+                .OrderByDescending(n => n.AvailableInstanceCount)
+                .ToList();
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
+            return result;
+        }
+
+        public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination)
+        {
+            var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_available_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableByNurseryIdAsync(nurseryId, pagination);
+            var result = new PaginatedResult<PlantInstanceListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
+            return result;
+        }
+
+        public async Task<PlantInstanceResponseDto> GetInstanceDetailAsync(int instanceId)
+        {
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            if (instance.Status != (int)PlantInstanceStatusEnum.Available)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không khả dụng");
+
+            return instance.ToResponse();
+        }
+
+        #endregion
+
+        #region Cache Management
+
+        private async Task InvalidateCacheAsync(int? nurseryId = null)
+        {
+            await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_KEY);
+            if (nurseryId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}");
+            }
+            else
+            {
+                await _cacheService.RemoveByPrefixAsync(NURSERY_INSTANCES_KEY);
+            }
+        }
+
+        #endregion
+    }
+}

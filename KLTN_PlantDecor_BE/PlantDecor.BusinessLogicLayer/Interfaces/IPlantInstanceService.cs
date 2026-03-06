@@ -1,0 +1,65 @@
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.DataAccessLayer.Helpers;
+
+namespace PlantDecor.BusinessLogicLayer.Interfaces
+{
+    public interface IPlantInstanceService
+    {
+        #region Manager Operations
+
+        /// <summary>
+        /// Batch tạo nhiều PlantInstance cho một nursery
+        /// POST /api/manager/nurseries/{nurseryId}/plant-instances/batch
+        /// </summary>
+        Task<BatchCreatePlantInstanceResponseDto> BatchCreateAsync(int nurseryId, int managerId, BatchCreatePlantInstanceRequestDto request);
+
+        /// <summary>
+        /// Lấy danh sách PlantInstance theo nursery (phân trang + lọc theo status)
+        /// GET /api/manager/nurseries/{nurseryId}/plant-instances
+        /// </summary>
+        Task<PaginatedResult<PlantInstanceListResponseDto>> GetByNurseryIdAsync(int nurseryId, int managerId, Pagination pagination, int? statusFilter = null);
+
+        /// <summary>
+        /// Lấy tổng hợp thông tin plant theo nursery
+        /// GET /api/manager/nurseries/{nurseryId}/plants-summary
+        /// </summary>
+        Task<List<NurseryPlantSummaryDto>> GetPlantsSummaryByNurseryAsync(int nurseryId, int managerId);
+
+        /// <summary>
+        /// Cập nhật status một PlantInstance
+        /// PATCH /api/manager/plant-instances/{instanceId}/status
+        /// </summary>
+        Task<PlantInstanceResponseDto> UpdateStatusAsync(int instanceId, int managerId, UpdatePlantInstanceStatusDto request);
+
+        /// <summary>
+        /// Batch cập nhật status nhiều PlantInstance
+        /// PATCH /api/manager/plant-instances/batch-status
+        /// </summary>
+        Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request);
+
+        #endregion
+
+        #region Shop Operations
+
+        /// <summary>
+        /// Lấy danh sách nursery đang có plant available
+        /// GET /api/plants/{id}/nurseries
+        /// </summary>
+        Task<List<PlantNurseryAvailabilityDto>> GetNurseriesByPlantIdAsync(int plantId);
+
+        /// <summary>
+        /// Lấy danh sách PlantInstance available theo nursery (Shop - phân trang)
+        /// GET /api/nurseries/{nurseryId}/plant-instances
+        /// </summary>
+        Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination);
+
+        /// <summary>
+        /// Lấy chi tiết PlantInstance (Shop)
+        /// GET /api/plant-instances/{instanceId}
+        /// </summary>
+        Task<PlantInstanceResponseDto> GetInstanceDetailAsync(int instanceId);
+
+        #endregion
+    }
+}
