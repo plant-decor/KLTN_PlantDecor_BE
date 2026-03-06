@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/nursery-materials")]
     [ApiController]
-    //[Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager")]
     public class NurseryMaterialsController : ControllerBase
     {
         private readonly INurseryMaterialService _nurseryMaterialService;

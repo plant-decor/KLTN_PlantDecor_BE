@@ -31,7 +31,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaxPlants = combo.MaxPlants,
                 Tags = combo.Tags,
                 Season = combo.Season,
-                Quantity = combo.Quantity,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
@@ -72,7 +71,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 OriginalPrice = combo.OriginalPrice,
                 ComboPrice = combo.ComboPrice,
                 DiscountPercent = combo.DiscountPercent,
-                Quantity = combo.Quantity,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
@@ -118,7 +116,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaxPlants = request.MaxPlants,
                 Tags = request.Tags,
                 Season = request.Season,
-                Quantity = request.Quantity,
                 IsActive = request.IsActive,
                 ViewCount = 0,
                 PurchaseCount = 0,
@@ -163,7 +160,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             combo.MaxPlants = request.MaxPlants ?? combo.MaxPlants;
             combo.Tags = request.Tags ?? combo.Tags;
             combo.Season = request.Season ?? combo.Season;
-            combo.Quantity = request.Quantity ?? combo.Quantity;
             combo.IsActive = request.IsActive ?? combo.IsActive;
             combo.UpdatedAt = DateTime.Now;
         }

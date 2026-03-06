@@ -20,7 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? MaxPlants { get; set; }
         public string? Tags { get; set; }
         public string? Season { get; set; }
-        public int? Quantity { get; set; }
         public bool? IsActive { get; set; }
         public int? ViewCount { get; set; }
         public int? PurchaseCount { get; set; }

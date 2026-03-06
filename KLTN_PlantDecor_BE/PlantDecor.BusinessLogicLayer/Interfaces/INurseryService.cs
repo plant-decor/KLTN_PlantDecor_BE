@@ -14,7 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<NurseryResponseDto?> GetMyNurseryAsync(int managerId);
         Task<NurseryResponseDto> CreateNurseryAsync(int managerId, NurseryRequestDto request);
         Task<NurseryResponseDto> UpdateNurseryAsync(int id, NurseryUpdateDto request);
-        Task<bool> DeleteNurseryAsync(int id);
+        Task<bool> ToggleActiveAsync(int id);
 
         // Manager Operations
         Task<NurseryResponseDto> UpdateMyNurseryAsync(int managerId, NurseryUpdateDto request);

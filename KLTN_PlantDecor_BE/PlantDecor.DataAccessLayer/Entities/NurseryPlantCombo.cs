@@ -11,6 +11,8 @@ public partial class NurseryPlantCombo
 
     public int NurseryId { get; set; }
 
+    public int Quantity { get; set; }
+
     public bool IsActive { get; set; }
 
     public DateTime? CreatedAt { get; set; }

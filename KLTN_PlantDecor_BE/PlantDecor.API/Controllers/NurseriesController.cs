@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Services;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
@@ -19,10 +20,14 @@ namespace PlantDecor.API.Controllers
     public class NurseriesController : ControllerBase
     {
         private readonly INurseryService _nurseryService;
+        private readonly IPlantInstanceService _plantInstanceService;
+        private readonly ICommonPlantService _commonPlantService;
 
-        public NurseriesController(INurseryService nurseryService)
+        public NurseriesController(INurseryService nurseryService, IPlantInstanceService plantInstanceService, ICommonPlantService commonPlantService)
         {
             _nurseryService = nurseryService;
+            _plantInstanceService = plantInstanceService;
+            _commonPlantService = commonPlantService;
         }
 
         #region Manager Operations
@@ -73,7 +78,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Cập nhật thông tin vựa của Manager
         /// </summary>
-        [HttpPut("my-nursery")]
+        [HttpPatch("my-nursery")]
         public async Task<IActionResult> UpdateMyNursery([FromBody] NurseryUpdateDto request)
         {
             var managerId = GetCurrentUserId();
@@ -136,7 +141,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// [Admin] Cập nhật vựa theo ID
         /// </summary>
-        [HttpPut("/api/admin/nurseries/{id}")]
+        [HttpPatch("/api/admin/nurseries/{id}")]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateNursery(int id, [FromBody] NurseryUpdateDto request)
         {
@@ -151,18 +156,18 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Admin] Xóa vựa (soft delete)
+        /// Bật/tắt trạng thái active của nursery
         /// </summary>
-        [HttpDelete("/api/admin/nurseries/{id}")]
-        //[Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteNursery(int id)
+        [HttpPatch("/api/admin/nurseries/{id}/toggle-active")]
+        public async Task<IActionResult> ToggleActive(int id)
         {
-            await _nurseryService.DeleteNurseryAsync(id);
-            return Ok(new ApiResponse<object>
+            var isActive = await _nurseryService.ToggleActiveAsync(id);
+            return Ok(new ApiResponse<bool>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa vựa thành công"
+                Message = isActive ? "Nursery has been activated" : "Nursery has been deactivated",
+                Payload = isActive
             });
         }
 
@@ -184,6 +189,57 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy danh sách vựa thành công",
                 Payload = nurseries
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách PlantInstance available tại một vựa (Shop)
+        /// </summary>
+        [HttpGet("/api/nurseries/{nurseryId}/plant-instances")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAvailablePlantInstances(int nurseryId, [FromQuery] Pagination pagination)
+        {
+            var result = await _plantInstanceService.GetAvailableByNurseryIdAsync(nurseryId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantInstanceListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách cây tại vựa thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy chi tiết một PlantInstance (Shop)
+        /// </summary>
+        [HttpGet("/api/plant-instances/{instanceId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPlantInstanceDetail(int instanceId)
+        {
+            var result = await _plantInstanceService.GetInstanceDetailAsync(instanceId);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết cây thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách cây đại trà available tại một vựa (Shop)
+        /// </summary>
+        [HttpGet("/api/nurseries/{nurseryId}/common-plants")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAvailableCommonPlants(int nurseryId, [FromQuery] Pagination pagination)
+        {
+            var result = await _commonPlantService.GetActiveByNurseryIdAsync(nurseryId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<CommonPlantListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách cây đại trà tại vựa thành công",
+                Payload = result
             });
         }
 

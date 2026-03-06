@@ -18,10 +18,12 @@ namespace PlantDecor.API.Controllers
     public class PlantsController : ControllerBase
     {
         private readonly IPlantService _plantService;
+        private readonly IPlantInstanceService _plantInstanceService;
 
-        public PlantsController(IPlantService plantService)
+        public PlantsController(IPlantService plantService, IPlantInstanceService plantInstanceService)
         {
             _plantService = plantService;
+            _plantInstanceService = plantInstanceService;
         }
 
         #region CRUD Operations
@@ -212,6 +214,28 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Remove tag from plant successfully",
                 Payload = plant
+            });
+        }
+
+        #endregion
+
+        #region Shop - Public Operations
+
+        /// <summary>
+        /// Lấy danh sách nursery đang có plant này (cho người dùng)
+        /// GET /api/plants/{id}/nurseries
+        /// </summary>
+        [HttpGet("/api/plants/{id}/nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesByPlantId(int id)
+        {
+            var result = await _plantInstanceService.GetNurseriesByPlantIdAsync(id);
+            return Ok(new ApiResponse<List<PlantNurseryAvailabilityDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vựa có cây thành công",
+                Payload = result
             });
         }
 

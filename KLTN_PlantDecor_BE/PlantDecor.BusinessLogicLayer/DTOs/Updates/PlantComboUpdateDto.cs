@@ -45,9 +45,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public string? Season { get; set; }
 
-        [Range(0, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn hoặc bằng 0")]
-        public int? Quantity { get; set; }
-
         public bool? IsActive { get; set; }
     }
 }

@@ -90,7 +90,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PaginatedResult<PlantCombo>> GetCombosForShopAsync(Pagination pagination)
         {
             var query = _context.PlantCombos
-                .Where(c => c.IsActive == true && c.Quantity > 0)
+                .Where(c => c.IsActive == true)
                 .Include(c => c.PlantComboItems)
                     .ThenInclude(ci => ci.Plant)
                 .Include(c => c.PlantComboImages)

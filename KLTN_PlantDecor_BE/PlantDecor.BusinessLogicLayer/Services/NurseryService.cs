@@ -149,31 +149,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<bool> DeleteNurseryAsync(int id)
+        public async Task<bool> ToggleActiveAsync(int id)
         {
-            await _unitOfWork.BeginTransactionAsync();
+            var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(id);
+            if (nursery == null)
+                throw new NotFoundException($"Nursery với ID {id} không tồn tại");
 
-            try
-            {
-                var entity = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(id);
-                if (entity == null)
-                    throw new NotFoundException($"Vựa với ID {id} không tồn tại");
+            nursery.IsActive = !nursery.IsActive;
 
-                // Soft delete by setting IsActive to false
-                entity.IsActive = false;
-                _unitOfWork.NurseryRepository.PrepareUpdate(entity);
-                await _unitOfWork.SaveAsync();
-                await _unitOfWork.CommitTransactionAsync();
+            _unitOfWork.NurseryRepository.PrepareUpdate(nursery);
+            await _unitOfWork.SaveAsync();
+            await InvalidateCacheAsync();
 
-                await InvalidateCacheAsync();
-
-                return true;
-            }
-            catch (Exception)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
+            return nursery.IsActive ?? true;
         }
 
         #endregion

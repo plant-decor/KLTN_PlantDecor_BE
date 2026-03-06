@@ -22,6 +22,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IPlantComboRepository? _plantComboRepository;
         private INurseryRepository? _nurseryRepository;
         private INurseryMaterialRepository? _nurseryMaterialRepository;
+        private IPlantInstanceRepository? _plantInstanceRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -76,6 +77,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public INurseryMaterialRepository NurseryMaterialRepository
         {
             get { return _nurseryMaterialRepository ??= new NurseryMaterialRepository(_context); }
+        }
+
+        public IPlantInstanceRepository PlantInstanceRepository
+        {
+            get { return _plantInstanceRepository ??= new PlantInstanceRepository(_context); }
         }
 
         // Transaction Management

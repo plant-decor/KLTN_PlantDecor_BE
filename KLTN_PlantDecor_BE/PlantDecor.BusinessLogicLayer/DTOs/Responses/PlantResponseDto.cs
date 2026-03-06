@@ -23,7 +23,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PotSize { get; set; }
         public string? PlantType { get; set; }
         public string? CareLevel { get; set; }
-        public string? Texture { get; set; }
         public bool? IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

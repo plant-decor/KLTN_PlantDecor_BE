@@ -787,6 +787,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int>("PlantComboId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -1140,9 +1143,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
-
-                    b.Property<int?>("Quantity")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Season")
                         .HasMaxLength(50)
