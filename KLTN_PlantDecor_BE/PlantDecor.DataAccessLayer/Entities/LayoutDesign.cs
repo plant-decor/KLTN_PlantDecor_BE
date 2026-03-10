@@ -11,7 +11,7 @@ public partial class LayoutDesign
 
     public string? PreviewImageUrl { get; set; }
 
-    public int? ModerationStatus { get; set; }
+    public int? Status { get; set; }
 
     public bool? IsSaved { get; set; }
 
