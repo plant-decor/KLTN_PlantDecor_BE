@@ -107,5 +107,54 @@ namespace PlantDecor.API.Controllers
                 Payload = result
             });
         }
+
+        [HttpPost("logout")]
+        //[Authorize]
+        public async Task<IActionResult> Logout(LogoutRequest request)
+        {
+
+            // Nếu request body trống, lấy access token từ Authorization header
+            if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+                if (authHeader != null && authHeader.StartsWith("Bearer "))
+                {
+                    request.AccessToken = authHeader.Substring("Bearer ".Length).Trim();
+                }
+            }
+
+            // Invalidate security stamp to revoke tokens
+            await _authenticationService.LogoutAsync(request);
+            return Ok(new ApiResponse<string>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Logged out successfully!"
+            });
+        }
+
+        [HttpPost("logout-all")]
+        //[Authorize]
+        public async Task<IActionResult> LogoutAll(LogoutRequest request)
+        {
+            // Nếu request body trống, lấy access token từ Authorization header
+            if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+                if (authHeader != null && authHeader.StartsWith("Bearer "))
+                {
+                    request.AccessToken = authHeader.Substring("Bearer ".Length).Trim();
+                }
+            }
+            // Invalidate security stamp to revoke all tokens
+            await _authenticationService.LogoutAllAsync(request);
+            return Ok(new ApiResponse<string>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Logged out from all devices successfully!"
+            });
+        }
+
     }
 }

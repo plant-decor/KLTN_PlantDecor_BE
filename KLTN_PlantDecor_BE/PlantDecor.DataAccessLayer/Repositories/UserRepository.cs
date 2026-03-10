@@ -97,7 +97,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await Task.FromResult(BCrypt.Net.BCrypt.Verify(password, user.PasswordHash));
         }
 
-        public async Task<User> GetByPhoneAsync(string phone)
+        public async Task<User?> GetByPhoneAsync(string phone)
         {
             if (string.IsNullOrWhiteSpace(phone))
                 return null;
@@ -141,6 +141,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
             {
                 return false;
             }
+        }
+
+        public async Task<List<RefreshToken>?> GetOldRefreshTokenByDeviceIdAsync(int userId, string deviceId)
+        {
+            return await _context.RefreshTokens
+                     .Where(t => t.DeviceId == deviceId && t.UserId == userId && t.IsRevoked != true)
+                     .ToListAsync();
+        }
+
+        public async Task<RefreshToken?> GetRefreshTokenByDeviceIdAsync(int userId, string deviceId)
+        {
+            return await _context.RefreshTokens
+                     .FirstOrDefaultAsync(t => t.DeviceId == deviceId && t.UserId == userId && t.IsRevoked != true);
+        }
+
+        public async Task<RefreshToken?> GetRefreshTokenByRefreshTokenAsync(int userId, string refreshToken)
+        {
+            return await _context.RefreshTokens
+                     .FirstOrDefaultAsync(t => t.Token == refreshToken && t.UserId == userId && t.IsRevoked != true);
         }
     }
 }

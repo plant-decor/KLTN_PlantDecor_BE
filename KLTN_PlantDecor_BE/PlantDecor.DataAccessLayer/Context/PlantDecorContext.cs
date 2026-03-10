@@ -760,6 +760,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsRevoked).HasDefaultValue(false);
             entity.Property(e => e.Token).HasMaxLength(512);
+            entity.Property(e => e.DeviceId).HasMaxLength(255);
 
             entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens)
                 .HasForeignKey(d => d.UserId)

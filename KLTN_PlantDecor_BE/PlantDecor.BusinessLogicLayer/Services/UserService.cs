@@ -228,7 +228,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Cập nhật SecurityStamp nếu cần
                 if (needsSecurityStampUpdate)
                 {
-                    existingUser.InvalidateAllTokensAsync(_securityStampCacheService);
+                    await existingUser.InvalidateAllTokensAsync(_securityStampCacheService);
                 }
 
                 var updateResult = await _unitOfWork.UserRepository.UpdateAsync(existingUser);

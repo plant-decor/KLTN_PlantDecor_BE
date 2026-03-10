@@ -31,7 +31,7 @@ namespace PlantDecor.BusinessLogicLayer.Extensions
         /// </summary>
         public static void InvalidateRefreshToken(this User user)
         {
-            foreach (var token in user.RefreshTokens)
+            foreach (var token in user.RefreshTokens.Where(t => !t.IsRevoked))
             {
                 token.IsRevoked = true;
             }

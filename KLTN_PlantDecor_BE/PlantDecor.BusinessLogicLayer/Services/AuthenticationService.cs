@@ -13,6 +13,7 @@ using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -88,6 +89,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Email and password must not be empty");
             }
 
+            if (string.IsNullOrEmpty(request.DeviceId))
+            {
+                throw new BadRequestException("DeviceId is required for login");
+            }
+
 
             var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
             if (user == null)
@@ -95,8 +101,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException("User not found");
             }
 
-            var isVerified = await _unitOfWork.UserRepository.IsVerifiedAsync(user.Id);
-            if (!isVerified)
+            //var isVerified = await _unitOfWork.UserRepository.IsVerifiedAsync(user.Id);
+            if (!user.IsVerified)
             {
                 throw new UnauthorizedException("Account email has not been verified");
             }
@@ -119,14 +125,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var accessToken = GenerateAccessToken(user, roleName);
             var refreshToken = GenerateRefreshToken();
-            var expiresAt = DateTime.UtcNow.AddMinutes(30);
             var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
 
             // Revoke tất cả refresh token cũ của user
-            var oldTokens = await _unitOfWork.UserRepository.GetRefreshTokenAsync(user.Id);
-            foreach (var token in oldTokens)
+            if (!string.IsNullOrWhiteSpace(request.DeviceId))
             {
-                token.IsRevoked = true;
+                var oldDeviceTokens = await _unitOfWork.UserRepository.GetOldRefreshTokenByDeviceIdAsync(user.Id, request.DeviceId);
+                if (oldDeviceTokens != null)
+                {
+                    foreach (var token in oldDeviceTokens)
+                    {
+                        token.IsRevoked = true;
+                    }
+                }
             }
 
             // Tạo refresh token mới
@@ -136,7 +147,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Token = refreshToken,
                 IsRevoked = false,
                 CreatedDate = DateTime.UtcNow,
-                ExpiryDate = refreshTokenExpiry
+                ExpiryDate = refreshTokenExpiry,
+                DeviceId = request.DeviceId
             };
 
             user.RefreshTokens.Add(newRefreshToken);
@@ -255,7 +267,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 };
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
@@ -408,9 +420,183 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public Task<ClaimsPrincipal?> ValidateToken(string token)
+        public async Task<ClaimsPrincipal?> ValidateToken(string token)
         {
-            throw new NotImplementedException();
+            var tokenHandler = new JsonWebTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false, // hàm logout cho phép token hết hạn
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _issuer,
+                ValidAudience = _audience,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero
+            };
+            //trả về TokenValidationResult
+            //TokenValidationResult có các thông tin quan trọng như IsValid, ClaimsIdentity, Exception, SecurityToken
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
+
+            // Nếu token hợp lệ, trả về ClaimsPrincipal
+            //IsValid: xác định xem token có hợp lệ hay không
+            //ClaimsIdentity: chứa các thông tin về người dùng được mã hóa trong token
+            if (result.IsValid && result.ClaimsIdentity != null)
+            {
+                return new ClaimsPrincipal(result.ClaimsIdentity);
+            }
+
+            return null;
         }
+
+        public async Task<AuthenticationResponse?> LogoutAsync(LogoutRequest request)
+        {
+            // Validate input - ít nhất một trong hai token phải có
+            if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                throw new BadRequestException("Access token or refresh token must be provided");
+            }
+
+            User? user = null;
+
+
+            // Nếu có refresh token, tìm user bằng refresh token trước
+            if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                user = await _unitOfWork.UserRepository.GetByRefreshTokenAsync(request.RefreshToken);
+            }
+
+            // Nếu không tìm thấy user bằng refresh token và có access token
+            if (user == null && !string.IsNullOrWhiteSpace(request.AccessToken))
+            {
+                // Validate access token và lấy user ID từ claims
+                var principal = await ValidateToken(request.AccessToken);
+                if (principal != null)
+                {
+                    // lấy ra ID user từ claim "sub"
+                    var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                    if (int.TryParse(userIdClaim, out int userId))
+                    {
+                        user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                    }
+                }
+                else
+                {
+                    throw new BadRequestException("Invalid access token");
+                }
+            }
+
+            // Nếu không tìm thấy user
+            if (user == null)
+            {
+                throw new BadRequestException("Invalid token or user not found");
+            }
+
+
+            // Chỉ revoke đúng token được gửi lên
+            // không cần xóa cache vì nếu xóa thì đằng nào cũng phải lấy từ DB lên để validate
+
+            if (!string.IsNullOrWhiteSpace(request.DeviceId))
+            {
+                var deviceRefreshToken = await _unitOfWork.UserRepository.GetRefreshTokenByDeviceIdAsync(user.Id, request.DeviceId);
+                if (deviceRefreshToken != null)
+                    deviceRefreshToken.IsRevoked = true;
+            }
+            else if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                // fallback: revoke đúng token được gửi lên nếu không có DeviceId
+                var refreshTokenToRevoke = await _unitOfWork.UserRepository.GetRefreshTokenByRefreshTokenAsync(user.Id, request.RefreshToken);
+                if (refreshTokenToRevoke != null)
+                    refreshTokenToRevoke.IsRevoked = true;
+            }
+
+
+            // Update user trong database
+            var updateResult = await _unitOfWork.UserRepository.UpdateAsync(user);
+            if (updateResult == 0)
+            {
+                throw new Exception("Failed to update user during logout");
+            }
+
+            return new AuthenticationResponse
+            {
+            };
+
+        }
+
+        public async Task<AuthenticationResponse?> LogoutAllAsync(LogoutRequest request)
+        {
+            // Validate input - ít nhất một trong hai token phải có
+            if (string.IsNullOrWhiteSpace(request.AccessToken) && string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                throw new BadRequestException("Access token or refresh token must be provided");
+            }
+
+            User? user = null;
+
+            // Nếu có refresh token, tìm user bằng refresh token trước
+            if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                user = await _unitOfWork.UserRepository.GetByRefreshTokenAsync(request.RefreshToken);
+            }
+
+            // Nếu không tìm thấy user bằng refresh token và có access token
+            if (user == null && !string.IsNullOrWhiteSpace(request.AccessToken))
+            {
+                // Validate access token và lấy user ID từ claims
+                var principal = await ValidateToken(request.AccessToken);
+                if (principal != null)
+                {
+                    // lấy ra ID user từ claim "sub"
+                    var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                    if (int.TryParse(userIdClaim, out int userId))
+                    {
+                        user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                    }
+                }
+                else
+                {
+                    throw new BadRequestException("Invalid access token");
+                }
+            }
+
+            // Nếu không tìm thấy user
+            if (user == null)
+            {
+                throw new BadRequestException("Invalid token or user not found");
+            }
+
+
+            // Clear refresh token và expiry date
+            // Revoke tất cả refresh token cũ của user
+            // Trong hàm InvalidateAllTokensAsync đã có hàm revoke all token cũ rồi nên ở đây không cần revoke lại nữa, tránh gọi SaveChanges nhiều lần
+
+            //var oldTokens = await _unitOfWork.UserRepository.GetRefreshTokenAsync(user.Id);
+            //foreach (var token in oldTokens)
+            //{
+            //    token.IsRevoked = true;
+            //}
+
+
+            // Update SecurityStamp để invalidate access token hiện tại và vô hiệu hóa tất cả token cũ
+            // Đồng thời xóa cache cũ → lần validate tiếp sẽ fail, buộc user phải đăng nhập lại trên tất cả thiết bị
+            await user.InvalidateAllTokensAsync(_stampCacheService);
+
+
+            // Update user trong database
+            var updateResult = await _unitOfWork.UserRepository.UpdateAsync(user);
+            if (updateResult == 0)
+            {
+                throw new Exception("Failed to update user during logout");
+            }
+
+            return new AuthenticationResponse
+            {
+            };
+        }
+
     }
 }
+

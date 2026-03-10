@@ -10,5 +10,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         [Required(ErrorMessage = "Cần nhập mật khẩu")]
         public string Password { get; set; }
+
+        public string DeviceId { get; set; }
     }
 }
