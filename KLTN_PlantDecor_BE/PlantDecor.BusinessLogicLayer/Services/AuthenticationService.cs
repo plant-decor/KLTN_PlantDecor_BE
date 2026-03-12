@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Extensions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Libraries;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -14,6 +15,7 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -595,6 +597,149 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return new AuthenticationResponse
             {
             };
+        }
+
+        public async Task<bool> VerifyEmailAsync(ResendVerifyRequest request, CancellationToken cancellationToken)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null || user.IsVerified == true)
+            {
+                return false;
+            }
+
+            // Tạo JWT token thay vì DataProtection
+            var verificationToken = GenerateEmailVerificationToken(user.Id, user.SecurityStamp);
+
+            var encodedToken = HttpUtility.UrlEncode(verificationToken);
+            var confirmUrl = $"{_configuration["Appsettings:BaseUrl"]}/confirm-email?email={user.Email!}&token={encodedToken}";
+
+
+            await _emailService.SendEmailAsync(new EmailRequest
+            {
+                To = user.Email!,
+                Subject = "Confirm your email for register",
+                Body = EmailTemplateReader.ConfirmationTemplate(user.Username!, confirmUrl)
+            }, cancellationToken);
+
+            return true;
+        }
+
+        // Thêm các helper methods
+        private string GenerateEmailVerificationToken(int userId, string securityStamp)
+        {
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var signingCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim("sub", userId.ToString()),
+                    new Claim("type", "email_verification"),
+                    new Claim("SecurityStamp", securityStamp),
+                    new Claim("iat", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString())
+                }),
+                Expires = DateTime.UtcNow.AddHours(24), // 24 giờ hết hạn
+                Issuer = _issuer,
+                Audience = _audience,
+                SigningCredentials = signingCredentials
+            };
+
+            var handler = new JsonWebTokenHandler();
+            return handler.CreateToken(tokenDescriptor);
+        }
+
+        public async Task<AuthenticationResponse> ConfirmEmailAsync(ConfirmEmailRequest request)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            if (user.IsVerified == true)
+            {
+                throw new BadRequestException("Email is already verified");
+            }
+
+
+            try
+            {
+                var decodedToken = HttpUtility.UrlDecode(request.Token);
+                var (userId, securityStamp) = await ValidateEmailVerificationToken(decodedToken);
+
+                if (userId != user.Id)
+                {
+                    throw new BadRequestException("Invalid token");
+                }
+
+                // Kiểm tra SecurityStamp
+                if (!user.IsSecurityStampValid(securityStamp))
+                {
+                    throw new SecurityStampMismatchException("Token is invalid due to security stamp mismatch. Please request a new verification email.");
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                // Xác thực email thành công
+                user.IsVerified = true;
+                user.InvalidateAllTokensAsync(_stampCacheService);
+                _unitOfWork.UserRepository.PrepareUpdate(user);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    Message = "Verify Email Successfully!"
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new AuthenticationResponse
+                {
+                };
+            }
+        }
+
+        private async Task<(int userId, string securityStamp)> ValidateEmailVerificationToken(string token)
+        {
+            var tokenHandler = new JsonWebTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _issuer,
+                ValidAudience = _audience,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
+
+            if (!result.IsValid || result.ClaimsIdentity == null)
+            {
+                throw new BadRequestException("Invalid token");
+            }
+
+            var typeClaim = result.ClaimsIdentity.FindFirst("type")?.Value;
+            if (typeClaim != "email_verification")
+            {
+                throw new BadRequestException("Invalid token type");
+            }
+
+            var userIdClaim = result.ClaimsIdentity.FindFirst("sub")?.Value;
+            var securityStampClaim = result.ClaimsIdentity.FindFirst("SecurityStamp")?.Value;
+            if (!int.TryParse(userIdClaim, out int userId) || string.IsNullOrEmpty(securityStampClaim))
+            {
+                throw new BadRequestException("Invalid token claims");
+            }
+
+
+            return (userId, securityStampClaim);
         }
 
     }

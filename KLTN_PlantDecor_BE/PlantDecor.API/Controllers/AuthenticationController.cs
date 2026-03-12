@@ -59,13 +59,13 @@ namespace PlantDecor.API.Controllers
             }
 
             // Send Verification Email (Optional, can be triggered by user action instead)
-            //var verifyRequest = new ResendVerifyRequest() { Email = request.Email };
+            var verifyRequest = new ResendVerifyRequest() { Email = request.Email };
 
-            //var emailSent = await _authenticationService.VerifyEmailAsync(verifyRequest, CancellationToken.None);
-            //if (!emailSent)
-            //{
-            //    throw new Exception("Failed to send verification email");
-            //}
+            var emailSent = await _authenticationService.VerifyEmailAsync(verifyRequest, CancellationToken.None);
+            if (!emailSent)
+            {
+                throw new Exception("Failed to send verification email");
+            }
 
             //return CreatedAtAction(
             //            nameof(Register),   // Action name
@@ -148,11 +148,54 @@ namespace PlantDecor.API.Controllers
             }
             // Invalidate security stamp to revoke all tokens
             await _authenticationService.LogoutAllAsync(request);
-            return Ok(new ApiResponse<string>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Logged out from all devices successfully!"
+            });
+        }
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> Verify(ResendVerifyRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _authenticationService.VerifyEmailAsync(request, cancellationToken);
+
+            if (!result)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Failed to send verification email"
+                });
+            }
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Please check your mailbox to verify"
+            });
+        }
+
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _authenticationService.ConfirmEmailAsync(request);
+            if (result == null)
+            {
+                throw new Exception("Internal Server Error!");
+            }
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Token is not valid or out of date"
             });
         }
 

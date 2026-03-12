@@ -19,8 +19,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<AuthenticationResponse?> LogoutAllAsync(LogoutRequest request);
         //Task<AuthenticationResponse> LoginWithGoogle(GoogleAccessTokenRequest request);
 
-        //Task<bool> VerifyEmailAsync(ResendVerifyRequest request, CancellationToken cancellationToken);
-        //Task<AuthenticationResponse> ConfirmEmailAsync(ConfirmEmailRequest request);
+        Task<bool> VerifyEmailAsync(ResendVerifyRequest request, CancellationToken cancellationToken);
+        Task<AuthenticationResponse> ConfirmEmailAsync(ConfirmEmailRequest request);
 
         //Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
         //Task<AuthenticationResponse> ResetPasswordAsync(ResetPasswordRequest request);
