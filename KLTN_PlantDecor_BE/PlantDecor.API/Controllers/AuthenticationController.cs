@@ -163,11 +163,7 @@ namespace PlantDecor.API.Controllers
 
             if (!result)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Failed to send verification email"
-                });
+                throw new BadRequestException("Failed to send verification email");
             }
 
             return Ok(new ApiResponse<object>
