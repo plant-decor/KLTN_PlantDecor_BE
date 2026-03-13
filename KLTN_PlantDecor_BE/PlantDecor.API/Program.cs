@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using PlantDecor.API.Extensions;
 using PlantDecor.API.Middlewares;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Services;
@@ -122,6 +123,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();
@@ -294,6 +296,7 @@ namespace PlantDecor.API
             app.UseAuthorization();
             app.MapControllers();
             app.MapHealthChecks("/health");
+            app.RegisterRecurringJobs();
             app.Run();
         }
     }

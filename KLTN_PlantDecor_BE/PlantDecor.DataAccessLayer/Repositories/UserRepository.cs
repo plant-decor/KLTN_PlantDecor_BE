@@ -161,6 +161,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.RefreshTokens
                      .FirstOrDefaultAsync(t => t.Token == refreshToken && t.UserId == userId && t.IsRevoked != true);
         }
+
+        public async Task<int> DeleteRevokedRefreshTokensAsync()
+        {
+            var revokedTokens = await _context.RefreshTokens
+                .Where(rt => rt.IsRevoked)
+                .ToListAsync();
+
+            if (revokedTokens.Count == 0) return 0;
+
+            _context.RefreshTokens.RemoveRange(revokedTokens);
+            return await _context.SaveChangesAsync();
+        }
     }
 }
 
