@@ -22,6 +22,20 @@ namespace PlantDecor.API.Extensions
         }
 
         /// <summary>
+        /// Enqueue verification email with automatic retry on failure
+        /// </summary>
+        /// <param name="backgroundJobClient">Hangfire background job client</param>
+        /// <param name="email">User email to send verification link to</param>
+        /// <returns>Job ID</returns>
+        public static string EnqueueVerificationEmail(
+            this IBackgroundJobClient backgroundJobClient,
+            string email)
+        {
+            return backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                service => service.SendVerificationEmailAsync(email));
+        }
+
+        /// <summary>
         /// Schedule order success email to be sent after a delay
         /// </summary>
         /// <param name="backgroundJobClient">Hangfire background job client</param>
@@ -36,19 +50,6 @@ namespace PlantDecor.API.Extensions
             return backgroundJobClient.Schedule<IEmailBackgroundJobService>(
                 service => service.SendOrderSuccessEmailAsync(orderId),
                 delay);
-        }
-
-        /// <summary>
-        /// Configure global Hangfire settings for retry policies
-        /// </summary>
-        public static void ConfigureHangfireRetryPolicy(this IGlobalConfiguration configuration)
-        {
-            // Retry failed jobs automatically up to 3 times
-            configuration.UseFilter(new AutomaticRetryAttribute
-            {
-                Attempts = 3,
-                OnAttemptsExceeded = AttemptsExceededAction.Delete
-            });
         }
 
         /// <summary>

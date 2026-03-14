@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PlantDecor.API.Extensions;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
@@ -15,11 +17,13 @@ namespace PlantDecor.API.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
 
-        public AuthenticationController(IAuthenticationService authenticationService)
+        public AuthenticationController(IAuthenticationService authenticationService, IBackgroundJobClient backgroundJobClient)
         {
             _authenticationService = authenticationService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         [HttpPost("login")]
@@ -58,14 +62,8 @@ namespace PlantDecor.API.Controllers
                 throw new Exception("Registration failed");
             }
 
-            // Send Verification Email (Optional, can be triggered by user action instead)
-            var verifyRequest = new ResendVerifyRequest() { Email = request.Email };
-
-            var emailSent = await _authenticationService.VerifyEmailAsync(verifyRequest, CancellationToken.None);
-            if (!emailSent)
-            {
-                throw new Exception("Failed to send verification email");
-            }
+            // Enqueue verification email as background job (auto-retry on failure)
+            _backgroundJobClient.EnqueueVerificationEmail(request.Email);
 
             //return CreatedAtAction(
             //            nameof(Register),   // Action name

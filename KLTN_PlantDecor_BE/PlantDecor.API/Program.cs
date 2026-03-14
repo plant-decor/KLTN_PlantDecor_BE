@@ -123,7 +123,12 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IEmailBackgroundJobService, EmailBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
+
+            // Cart & Wishlist
+            builder.Services.AddScoped<ICartService, CartService>();
+            builder.Services.AddScoped<IWishlistService, WishlistService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();
