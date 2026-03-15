@@ -23,6 +23,8 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private INurseryRepository? _nurseryRepository;
         private INurseryMaterialRepository? _nurseryMaterialRepository;
         private IPlantInstanceRepository? _plantInstanceRepository;
+        private ICartRepository? _cartRepository;
+        private IWishlistRepository? _wishlistRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -82,6 +84,16 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IPlantInstanceRepository PlantInstanceRepository
         {
             get { return _plantInstanceRepository ??= new PlantInstanceRepository(_context); }
+        }
+
+        public ICartRepository CartRepository
+        {
+            get { return _cartRepository ??= new CartRepository(_context); }
+        }
+
+        public IWishlistRepository WishlistRepository
+        {
+            get { return _wishlistRepository ??= new WishlistRepository(_context); }
         }
 
         // Transaction Management
