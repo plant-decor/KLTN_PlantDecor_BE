@@ -15,7 +15,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             {
                 Id = tag.Id,
                 TagName = tag.TagName,
-                TagType = tag.TagType
+                TagType = tag.TagType,
+                TagTypeName = ((DataAccessLayer.Enums.TagTypeEnum)tag.TagType).ToString()
             };
         }
 

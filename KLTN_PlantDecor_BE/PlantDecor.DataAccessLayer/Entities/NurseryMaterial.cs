@@ -15,6 +15,8 @@ public partial class NurseryMaterial
 
     public int ReservedQuantity { get; set; }
 
+    public DateOnly? ExpiredDate { get; set; }
+
     public bool IsActive { get; set; }
 
     public virtual Material Material { get; set; } = null!;

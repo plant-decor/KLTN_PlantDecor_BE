@@ -5,5 +5,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Id { get; set; }
         public string TagName { get; set; } = null!;
         public int TagType { get; set; }
+        public string TagTypeName { get; set; } = null!;
     }
 }

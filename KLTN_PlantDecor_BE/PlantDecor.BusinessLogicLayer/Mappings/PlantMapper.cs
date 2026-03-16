@@ -20,10 +20,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Origin = plant.Origin,
                 Description = plant.Description,
                 BasePrice = plant.BasePrice,
-                Placement = plant.Placement,
                 Size = plant.Size,
-                MinHeight = plant.MinHeight,
-                MaxHeight = plant.MaxHeight,
                 GrowthRate = plant.GrowthRate,
                 Toxicity = plant.Toxicity,
                 AirPurifying = plant.AirPurifying,
@@ -32,7 +29,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiMeaning = plant.FengShuiMeaning,
                 PotIncluded = plant.PotIncluded,
                 PotSize = plant.PotSize,
-                PlantType = plant.PlantType,
                 CareLevel = plant.CareLevel,
                 IsActive = plant.IsActive,
                 CreatedAt = plant.CreatedAt,
@@ -104,10 +100,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Origin = request.Origin,
                 Description = request.Description,
                 BasePrice = request.BasePrice,
-                Placement = request.Placement,
                 Size = request.Size,
-                MinHeight = request.MinHeight,
-                MaxHeight = request.MaxHeight,
                 GrowthRate = request.GrowthRate,
                 Toxicity = request.Toxicity,
                 AirPurifying = request.AirPurifying,
@@ -116,7 +109,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiMeaning = request.FengShuiMeaning,
                 PotIncluded = request.PotIncluded,
                 PotSize = request.PotSize,
-                PlantType = request.PlantType,
                 CareLevel = request.CareLevel,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
@@ -135,10 +127,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             plant.Origin = request.Origin;
             plant.Description = request.Description;
             plant.BasePrice = request.BasePrice;
-            plant.Placement = request.Placement;
             plant.Size = request.Size;
-            plant.MinHeight = request.MinHeight;
-            plant.MaxHeight = request.MaxHeight;
             plant.GrowthRate = request.GrowthRate;
             plant.Toxicity = request.Toxicity;
             plant.AirPurifying = request.AirPurifying;
@@ -147,7 +136,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             plant.FengShuiMeaning = request.FengShuiMeaning;
             plant.PotIncluded = request.PotIncluded;
             plant.PotSize = request.PotSize;
-            plant.PlantType = request.PlantType;
             plant.CareLevel = request.CareLevel;
             plant.IsActive = request.IsActive ?? plant.IsActive;
             plant.UpdatedAt = DateTime.Now;
