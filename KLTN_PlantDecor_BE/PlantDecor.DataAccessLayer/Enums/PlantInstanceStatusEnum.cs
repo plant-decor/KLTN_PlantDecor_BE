@@ -12,6 +12,6 @@ namespace PlantDecor.DataAccessLayer.Enums
         Sold = 2,
         Reserved = 3,
         Damaged = 4,
-        Inavailable = 5
+        Inactive = 5
     }
 }

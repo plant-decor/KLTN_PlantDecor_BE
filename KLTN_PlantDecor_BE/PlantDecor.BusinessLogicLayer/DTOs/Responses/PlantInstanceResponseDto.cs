@@ -69,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int SoldCount { get; set; }
         public int ReservedCount { get; set; }
         public int DamagedCount { get; set; }
-        public int UnavailableCount { get; set; }
+        public int Inactive { get; set; }
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }
     }

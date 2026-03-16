@@ -9,7 +9,7 @@ namespace PlantDecor.DataAccessLayer.Enums
     public enum TagTypeEnum
     {
         Plant = 1,
-        Inventory = 2,
-        PlantCombo = 3
+        PlantCombo = 2,
+        Material = 3,
     }
 }

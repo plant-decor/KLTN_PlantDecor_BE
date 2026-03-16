@@ -121,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         SoldCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Sold),
                         ReservedCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Reserved),
                         DamagedCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Damaged),
-                        UnavailableCount = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Inavailable),
+                        Inactive = g.Count(i => i.Status == (int)PlantInstanceStatusEnum.Inactive),
                         MinPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Min(),
                         MaxPrice = g.Where(i => i.SpecificPrice.HasValue).Select(i => i.SpecificPrice!.Value).DefaultIfEmpty(0).Max()
                     };

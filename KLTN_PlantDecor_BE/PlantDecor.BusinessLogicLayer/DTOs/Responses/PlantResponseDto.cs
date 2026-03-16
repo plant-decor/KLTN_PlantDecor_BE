@@ -3,7 +3,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     public class PlantResponseDto
     {
         public int Id { get; set; }
-        public string? PlantCode { get; set; }
         public string Name { get; set; } = null!;
         public string? SpecificName { get; set; }
         public string? Origin { get; set; }
