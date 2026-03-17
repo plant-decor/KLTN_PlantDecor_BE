@@ -9,6 +9,8 @@ namespace PlantDecor.DataAccessLayer.Enums
     public enum CategoryTypeEnum
     {
         Plant = 1,
-        Inventory = 2,
+        Material = 2,
+        Service = 3,
+        Combo = 4,
     }
 }

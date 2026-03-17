@@ -13,7 +13,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             { (int)PlantInstanceStatusEnum.Sold, "Sold" },
             { (int)PlantInstanceStatusEnum.Reserved, "Reserved" },
             { (int)PlantInstanceStatusEnum.Damaged, "Damaged" },
-            { (int)PlantInstanceStatusEnum.Inavailable, "Unavailable" }
+            { (int)PlantInstanceStatusEnum.Inactive, "Inactive" }
         };
 
         public static string GetStatusName(int status)

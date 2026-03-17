@@ -17,13 +17,9 @@ public partial class Plant
 
     public decimal? BasePrice { get; set; }
 
-    public string? Placement { get; set; }
+    public int PlacementType { get; set; }
 
     public string? Size { get; set; }
-
-    public int? MinHeight { get; set; }
-
-    public int? MaxHeight { get; set; }
 
     public string? GrowthRate { get; set; }
 
@@ -41,7 +37,11 @@ public partial class Plant
 
     public string? PotSize { get; set; }
 
-    public string? PlantType { get; set; }
+    public bool IsUniqueInstance { get; set; }
+
+    public bool PetSafe { get; set; }
+
+    public bool ChildSafe { get; set; }
 
     public string? CareLevel { get; set; }
 

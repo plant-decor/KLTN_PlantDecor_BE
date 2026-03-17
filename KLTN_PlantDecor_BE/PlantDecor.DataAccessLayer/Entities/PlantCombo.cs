@@ -33,10 +33,6 @@ public partial class PlantCombo
 
     public decimal? DiscountPercent { get; set; }
 
-    public int? MinPlants { get; set; }
-
-    public int? MaxPlants { get; set; }
-
     public string? Tags { get; set; }
 
     public string? Season { get; set; }

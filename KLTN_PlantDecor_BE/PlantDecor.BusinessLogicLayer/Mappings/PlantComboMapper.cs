@@ -27,8 +27,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 OriginalPrice = combo.OriginalPrice,
                 ComboPrice = combo.ComboPrice,
                 DiscountPercent = combo.DiscountPercent,
-                MinPlants = combo.MinPlants,
-                MaxPlants = combo.MaxPlants,
                 Tags = combo.Tags,
                 Season = combo.Season,
                 IsActive = combo.IsActive,
@@ -112,8 +110,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 OriginalPrice = request.OriginalPrice,
                 ComboPrice = request.ComboPrice,
                 DiscountPercent = request.DiscountPercent,
-                MinPlants = request.MinPlants,
-                MaxPlants = request.MaxPlants,
                 Tags = request.Tags,
                 Season = request.Season,
                 IsActive = request.IsActive,
@@ -156,8 +152,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             combo.OriginalPrice = request.OriginalPrice ?? combo.OriginalPrice;
             combo.ComboPrice = request.ComboPrice ?? combo.ComboPrice;
             combo.DiscountPercent = request.DiscountPercent ?? combo.DiscountPercent;
-            combo.MinPlants = request.MinPlants ?? combo.MinPlants;
-            combo.MaxPlants = request.MaxPlants ?? combo.MaxPlants;
             combo.Tags = request.Tags ?? combo.Tags;
             combo.Season = request.Season ?? combo.Season;
             combo.IsActive = request.IsActive ?? combo.IsActive;

@@ -137,14 +137,9 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("CareServicePackage");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.Frequency).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
-
-            entity.HasOne(d => d.ParentService).WithMany(p => p.InverseParentService)
-                .HasForeignKey(d => d.ParentServiceId)
-                .HasConstraintName("CareServicePackage_ParentServiceId_fkey");
         });
 
         modelBuilder.Entity<Cart>(entity =>
@@ -530,8 +525,6 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Origin).HasMaxLength(100);
-            entity.Property(e => e.Placement).HasMaxLength(50);
-            entity.Property(e => e.PlantType).HasMaxLength(50);
             entity.Property(e => e.PotSize).HasMaxLength(50);
             entity.Property(e => e.Size).HasMaxLength(50);
             entity.Property(e => e.SpecificName).HasMaxLength(255);
