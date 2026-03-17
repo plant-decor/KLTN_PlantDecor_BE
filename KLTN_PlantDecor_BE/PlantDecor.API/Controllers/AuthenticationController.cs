@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
@@ -137,6 +138,37 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
                 Message = "Manager account created successfully!",
+                Payload = result
+            });
+        }
+
+        [HttpPost("create-staff")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> CreateStaffAccount([FromBody] CreateStaffRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var managerIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(managerIdClaim) || !int.TryParse(managerIdClaim, out int managerId))
+            {
+                throw new UnauthorizedException("Unable to identify manager from token");
+            }
+
+            var result = await _authenticationService.CreateStaffAsync(managerId, request);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to create staff account");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Staff account created successfully!",
                 Payload = result
             });
         }
