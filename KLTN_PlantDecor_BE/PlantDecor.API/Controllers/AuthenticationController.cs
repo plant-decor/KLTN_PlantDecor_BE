@@ -13,7 +13,6 @@ namespace PlantDecor.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [EnableRateLimiting("auth-strict")]
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
@@ -106,11 +105,6 @@ namespace PlantDecor.API.Controllers
             // Enqueue verification email as background job (auto-retry on failure)
             _backgroundJobClient.EnqueueVerificationEmail(request.Email);
 
-            //return CreatedAtAction(
-            //            nameof(Register),   // Action name
-            //            new { email = request.Email },  // route values
-            //            result  // response body
-            //    );
             return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
             {
                 Success = true,
@@ -148,7 +142,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPost("logout")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> Logout(LogoutRequest request)
         {
 
@@ -173,7 +167,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPost("logout-all")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> LogoutAll(LogoutRequest request)
         {
             // Nếu request body trống, lấy access token từ Authorization header
@@ -242,10 +236,10 @@ namespace PlantDecor.API.Controllers
             {
                 throw new Exception("Failed to reset password");
             }
-            return StatusCode(StatusCodes.Status201Created, new ApiResponse<object>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                StatusCode = StatusCodes.Status201Created,
+                StatusCode = StatusCodes.Status200OK,
                 Message = "Password set successfully"
             });
         }

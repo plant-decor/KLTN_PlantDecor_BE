@@ -1032,9 +1032,59 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return (userId, securityStampClaim);
         }
 
-        public Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // BUSINESS RULE: Chỉ cho phép reset password khi đã verified
+            if (user.IsVerified != true)
+            {
+                return false; // Không gửi email nếu chưa verify
+            }
+
+
+            // Tạo JWT token cho reset password
+            var resetToken = GeneratePasswordResetToken(user.Id, user.SecurityStamp);
+
+            var encodedToken = HttpUtility.UrlEncode(resetToken);
+            var resetUrl = $"{_configuration["Appsettings:BaseUrl"]}/reset-password?email={HttpUtility.UrlEncode(user.Email!)}&token={encodedToken}";
+
+            await _emailService.SendEmailAsync(new EmailRequest
+            {
+                To = user.Email!,
+                Subject = "Reset Password",
+                Body = EmailResetPasswordTemplate.ResetConfirmationTemplate(user.Username!, resetUrl)
+            }, cancellationToken);
+
+            return true;
+        }
+
+        private string GeneratePasswordResetToken(int userId, string securityStamp)
+        {
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var signingCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim("sub", userId.ToString()),
+                    new Claim("type", "password_reset"),
+                    new Claim("SecurityStamp", securityStamp),
+                    new Claim("iat", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString())
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(30), // 30 phút hết hạn
+                Issuer = _issuer,
+                Audience = _audience,
+                SigningCredentials = signingCredentials
+            };
+
+            var handler = new JsonWebTokenHandler();
+            return handler.CreateToken(tokenDescriptor);
         }
     }
 }
