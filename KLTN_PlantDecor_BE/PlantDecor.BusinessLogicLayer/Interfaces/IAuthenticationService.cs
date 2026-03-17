@@ -17,13 +17,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<AuthenticationResponse?> CreateManagerAsync(CreateManagerRequest request);
         Task<AuthenticationResponse?> LogoutAsync(LogoutRequest request);
         Task<AuthenticationResponse?> LogoutAllAsync(LogoutRequest request);
-        //Task<AuthenticationResponse> LoginWithGoogle(GoogleAccessTokenRequest request);
-
+        Task<AuthenticationResponse> LoginWithGoogle(GoogleAccessTokenRequest request);
         Task<bool> VerifyEmailAsync(ResendVerifyRequest request, CancellationToken cancellationToken);
         Task<AuthenticationResponse> ConfirmEmailAsync(ConfirmEmailRequest request);
 
-        //Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
-        //Task<AuthenticationResponse> ResetPasswordAsync(ResetPasswordRequest request);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
+        Task<AuthenticationResponse> ResetPasswordAsync(ResetPasswordRequest request);
 
 
     }

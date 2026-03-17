@@ -7,5 +7,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; }
+
+        [Required(ErrorMessage = "Current password is required")]
+        public string CurrentPassword { get; set; }
     }
 }

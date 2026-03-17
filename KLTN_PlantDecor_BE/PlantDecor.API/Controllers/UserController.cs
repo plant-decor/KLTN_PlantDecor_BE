@@ -96,6 +96,26 @@ namespace PlantDecor.API.Controllers
                 }
             });
         }
+        [HttpPost("set-password-for-google-login")]
+        public async Task<IActionResult> SetPassword([FromBody] SetPasswordDto dto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+            var result = await _userService.SetPasswordAsync(userId, dto);
+            if (!result)
+            {
+                throw new Exception("Failed to set password");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Password set successfully"
+            });
+        }
     }
 }
 

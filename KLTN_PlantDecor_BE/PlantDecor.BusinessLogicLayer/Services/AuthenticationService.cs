@@ -11,10 +11,12 @@ using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
+using System.Net.Http.Headers;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Web;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -173,9 +175,68 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
-        public Task<AuthenticationResponse?> RefreshTokenAsync(string refreshToken)
+        public async Task<AuthenticationResponse?> RefreshTokenAsync(string refreshToken)
         {
-            throw new NotImplementedException();
+            // 1. Tìm user theo refresh token (chỉ trả về nếu token chưa bị revoke và user Active)
+            var user = await _unitOfWork.UserRepository.GetByRefreshTokenAsync(refreshToken);
+            if (user == null)
+            {
+                throw new UnauthorizedException("Invalid or revoked refresh token");
+            }
+
+            // 2. Lấy thông tin refresh token để kiểm tra hạn
+            var existingToken = await _unitOfWork.UserRepository.GetRefreshTokenByRefreshTokenAsync(user.Id, refreshToken);
+            if (existingToken == null || existingToken.ExpiryDate < DateTime.UtcNow)
+            {
+                throw new UnauthorizedException("Refresh token has expired");
+            }
+
+            // 3. Kiểm tra trạng thái tài khoản
+            if (user.Status != (int)UserStatusEnum.Active)
+            {
+                throw new ForbiddenException("Account is disabled");
+            }
+
+            // 4. Lấy role name
+            var roleName = user.Role?.Name;
+            if (string.IsNullOrWhiteSpace(roleName))
+            {
+                throw new ForbiddenException("User role not found");
+            }
+
+            // 5. Token Rotation: revoke token cũ
+            existingToken.IsRevoked = true;
+
+            // 6. Tạo cặp token mới
+            var newAccessToken = GenerateAccessToken(user, roleName);
+            var newRefreshToken = GenerateRefreshToken();
+
+            var newRefreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = newRefreshToken,
+                IsRevoked = false,
+                CreatedDate = DateTime.UtcNow,
+                ExpiryDate = DateTime.UtcNow.AddDays(7),
+                DeviceId = existingToken.DeviceId  // Giữ nguyên DeviceId từ token cũ
+            };
+
+            user.RefreshTokens.Add(newRefreshTokenEntity);
+            var success = await _unitOfWork.SaveAsync();
+
+            if (success == 0)
+            {
+                throw new Exception("Failed to save new refresh token");
+            }
+
+            // 7. Cập nhật cache security stamp để tránh cache miss ở request tiếp theo
+            await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
+
+            return new AuthenticationResponse
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken
+            };
         }
 
         public async Task<AuthenticationResponse?> RegisterAsync(UserRequest request)
@@ -742,6 +803,239 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return (userId, securityStampClaim);
         }
 
+        public async Task<AuthenticationResponse> LoginWithGoogle(GoogleAccessTokenRequest request)
+        {
+            if (string.IsNullOrEmpty(request.DeviceId))
+                throw new BadRequestException("DeviceId is required for login");
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.AccessToken);
+
+                var response = await client.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo");
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new BadRequestException("Invalid Google access token");
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var userInfo = JsonSerializer.Deserialize<GoogleUserInfo>(content);
+
+                if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
+                {
+                    throw new UnauthorizedException("Failed to retrieve user info from Google");
+                }
+
+                var user = await _unitOfWork.UserRepository.GetByEmailAsync(userInfo.Email);
+                if (user == null)
+                {
+                    //  Tạo mới user với avatar từ Google
+                    user = new User
+                    {
+                        Username = userInfo.Name,
+                        Email = userInfo.Email,
+                        Status = (int)UserStatusEnum.Active,
+                        RoleId = (int)RoleEnum.Customer,
+                        CreatedAt = DateTime.UtcNow,
+                        AvatarUrl = userInfo.Picture,
+                        IsVerified = true,
+                        PasswordHash = string.Empty  // Google users have no password
+                    };
+
+                    user.UpdateSecurityStamp();
+                    _unitOfWork.UserRepository.PrepareCreate(user);
+                    await _unitOfWork.SaveAsync();
+                }
+                else
+                {
+                    //  Nếu user chưa có avatar thì cập nhật từ Google
+                    if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(userInfo.Picture))
+                    {
+                        user.AvatarUrl = userInfo.Picture;
+                        _unitOfWork.UserRepository.PrepareUpdate(user);
+                        await _unitOfWork.SaveAsync();
+                    }
+
+                    if (user.Status == (int)UserStatusEnum.Inactive)
+                    {
+                        throw new ForbiddenException("Account is disabled");
+                    }
+                }
+
+                // Lấy thông tin gói đăng ký hiện tại của customer
+                string roleName = user.Role?.Name ?? "Customer";
+
+                // Generate tokens
+                var accessToken = GenerateAccessToken(user, roleName);
+                var refreshToken = GenerateRefreshToken();
+                var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+                // Persist refresh token like normal login
+
+                // Revoke tất cả refresh token cũ của user
+                if (!string.IsNullOrWhiteSpace(request.DeviceId))
+                {
+                    var oldDeviceTokens = await _unitOfWork.UserRepository.GetOldRefreshTokenByDeviceIdAsync(user.Id, request.DeviceId);
+                    if (oldDeviceTokens != null)
+                    {
+                        foreach (var token in oldDeviceTokens)
+                        {
+                            token.IsRevoked = true;
+                        }
+                    }
+                }
+
+                // Tạo refresh token mới
+                var newRefreshToken = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    IsRevoked = false,
+                    CreatedDate = DateTime.UtcNow,
+                    ExpiryDate = refreshTokenExpiry,
+                    DeviceId = request.DeviceId
+                };
+
+                user.RefreshTokens.Add(newRefreshToken);
+                var success = await _unitOfWork.SaveAsync();
+
+                if (success == 0)
+                {
+                    throw new Exception("Failed to update RefreshToken");
+                }
+
+                await _stampCacheService.SetSecurityStampAsync(user.Id, user.SecurityStamp);
+
+                return new AuthenticationResponse
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Google login failed: " + ex.Message);
+            }
+        }
+
+        public async Task<AuthenticationResponse> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            // Business Rule: Chỉ cho phép reset khi đã verified
+            if (user.IsVerified != true)
+            {
+                throw new BadRequestException("Email has not been verified. Please verify your email before resetting password.");
+            }
+
+
+            try
+            {
+                var decodedToken = request.Token;
+                var (userId, securityStamp) = await ValidatePasswordResetToken(decodedToken);
+
+                if (userId != user.Id)
+                {
+                    throw new BadRequestException("Invalid token");
+                }
+
+                // Kiểm tra SecurityStamp
+                if (!user.IsSecurityStampValid(securityStamp))
+                {
+                    throw new BadRequestException("Token is invalid due to security stamp mismatch. Please request a new password reset email.");
+                }
+
+                // Validate password complexity
+                ValidatePassword(request.NewPassword);
+
+                // Validate password confirmation
+                if (request.NewPassword != request.ConfirmNewPassword)
+                {
+                    throw new BadRequestException("Password and confirmation password do not match");
+                }
+
+                //Validate old and new password
+                //if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.Password))
+                //{
+                //    return new AuthenticationResponse
+                //    {
+                //        Success = false,
+                //        Message = "Mật khẩu mới không được trùng với mật khẩu cũ"
+                //    };
+                //}
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Cập nhật mật khẩu mới đã được mã hóa
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                // Xóa refresh token cũ để buộc đăng nhập lại
+                await user.InvalidateAllTokensAsync(_stampCacheService);
+
+                _unitOfWork.UserRepository.PrepareUpdate(user);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Password reset failed: " + ex.Message);
+
+            }
+        }
+
+        private async Task<(int userId, string securityStamp)> ValidatePasswordResetToken(string token)
+        {
+            var tokenHandler = new JsonWebTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _issuer,
+                ValidAudience = _audience,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
+
+            if (!result.IsValid || result.ClaimsIdentity == null)
+            {
+                throw new BadRequestException("Invalid token");
+            }
+
+            var typeClaim = result.ClaimsIdentity.FindFirst("type")?.Value;
+            if (typeClaim != "password_reset")
+            {
+                throw new BadRequestException("Invalid token type");
+            }
+
+            var userIdClaim = result.ClaimsIdentity.FindFirst("sub")?.Value;
+            var securityStampClaim = result.ClaimsIdentity.FindFirst("SecurityStamp")?.Value;
+            if (!int.TryParse(userIdClaim, out int userId) || string.IsNullOrEmpty(securityStampClaim))
+            {
+                throw new BadRequestException("Invalid token claims");
+            }
+
+            return (userId, securityStampClaim);
+        }
+
+        public Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

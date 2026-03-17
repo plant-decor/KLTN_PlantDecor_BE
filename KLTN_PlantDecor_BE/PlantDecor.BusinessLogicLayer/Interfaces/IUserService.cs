@@ -20,5 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         Task<bool> UpdateAvatar(int userId, IFormFile avatarImage);
         Task<bool> UpdatePasswordAsync(int userId, PasswordUpdate passwordUpdate);
+        Task<bool> SetPasswordAsync(int userId, SetPasswordDto dto);
     }
 }

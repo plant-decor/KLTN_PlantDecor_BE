@@ -46,15 +46,56 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("login-google")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleAccessTokenRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid Request");
+            }
+            var result = await _authenticationService.LoginWithGoogle(request);
+            if (result == null)
+            {
+                throw new BadRequestException("Google authentication failed");
+            }
+            return Ok(new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Login Google Successfully!",
+                Payload = result
+            });
+        }
+
+        [HttpPost("refreshToken")]
+        public async Task<IActionResult> RefreshTokenAsync(RefreshTokenRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                throw new BadRequestException("Refresh token is required");
+            }
+
+            var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to refresh token");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Refreshtoken successfully!",
+                Payload = result
+            });
+        }
+
         [HttpPost("register")]
         //   [EnableRateLimiting("auth-strict")]
         public async Task<IActionResult> Register(UserRequest request)
         {
-            //if (!ModelState.IsValid)
-            //{
-            //    throw new BadRequestException("Invalid Request");
-            //}
-
             var result = await _authenticationService.RegisterAsync(request);
 
             if (result == null)
@@ -190,6 +231,39 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Token is not valid or out of date"
+            });
+        }
+
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _authenticationService.ResetPasswordAsync(request);
+            if (result == null)
+            {
+                throw new Exception("Failed to reset password");
+            }
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Password set successfully"
+            });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken)
+        {
+
+            var result = await _authenticationService.ForgotPasswordAsync(request, cancellationToken);
+            if (!result)
+            {
+                throw new BadRequestException("Email not found or not verified. Please verify your email first.");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Please check your mailbox to reset password"
             });
         }
 
