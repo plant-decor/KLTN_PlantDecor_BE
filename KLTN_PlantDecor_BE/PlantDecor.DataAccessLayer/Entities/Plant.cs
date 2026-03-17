@@ -39,9 +39,9 @@ public partial class Plant
 
     public bool IsUniqueInstance { get; set; }
 
-    public bool PetSafe { get; set; }
+    public bool? PetSafe { get; set; }
 
-    public bool ChildSafe { get; set; }
+    public bool? ChildSafe { get; set; }
 
     public string? CareLevel { get; set; }
 

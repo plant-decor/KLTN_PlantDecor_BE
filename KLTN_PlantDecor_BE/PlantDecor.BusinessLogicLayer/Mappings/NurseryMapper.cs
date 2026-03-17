@@ -7,27 +7,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 {
     public static class NurseryMapper
     {
-        private static readonly Dictionary<int, string> NurseryTypes = new()
-        {
-            { 1, "Indoor" },
-            { 2, "Outdoor" },
-            { 3, "Mixed" }
-        };
-
-        private static readonly Dictionary<int, string> LightConditions = new()
-        {
-            { 1, "Low" },
-            { 2, "Medium" },
-            { 3, "High" }
-        };
-
-        private static readonly Dictionary<int, string> HumidityLevels = new()
-        {
-            { 1, "Low" },
-            { 2, "Medium" },
-            { 3, "High" }
-        };
-
         #region Entity to Response
         public static NurseryResponseDto ToResponse(this Nursery entity)
         {
@@ -43,16 +22,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Latitude = entity.Latitude,
                 Longitude = entity.Longitude,
                 Phone = entity.Phone,
-                Type = entity.Type,
-                TypeName = entity.Type.HasValue && NurseryTypes.ContainsKey(entity.Type.Value) 
-                    ? NurseryTypes[entity.Type.Value] : null,
-                LightCondition = entity.LightCondition,
-                LightConditionName = entity.LightCondition.HasValue && LightConditions.ContainsKey(entity.LightCondition.Value)
-                    ? LightConditions[entity.LightCondition.Value] : null,
-                HumidityLevel = entity.HumidityLevel,
-                HumidityLevelName = entity.HumidityLevel.HasValue && HumidityLevels.ContainsKey(entity.HumidityLevel.Value)
-                    ? HumidityLevels[entity.HumidityLevel.Value] : null,
-                HasMistSystem = entity.HasMistSystem,
                 IsActive = entity.IsActive,
                 CreatedAt = entity.CreatedAt,
                 TotalPlants = entity.CommonPlants?.Count ?? 0,
@@ -71,9 +40,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Name = entity.Name,
                 Address = entity.Address,
                 Phone = entity.Phone,
-                Type = entity.Type,
-                TypeName = entity.Type.HasValue && NurseryTypes.ContainsKey(entity.Type.Value)
-                    ? NurseryTypes[entity.Type.Value] : null,
                 IsActive = entity.IsActive,
                 CreatedAt = entity.CreatedAt
             };
@@ -104,10 +70,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
                 Phone = request.Phone,
-                Type = request.Type,
-                LightCondition = request.LightCondition,
-                HumidityLevel = request.HumidityLevel,
-                HasMistSystem = request.HasMistSystem,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.UtcNow
             };
@@ -125,10 +87,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request.Latitude.HasValue) entity.Latitude = request.Latitude;
             if (request.Longitude.HasValue) entity.Longitude = request.Longitude;
             if (request.Phone != null) entity.Phone = request.Phone;
-            if (request.Type.HasValue) entity.Type = request.Type;
-            if (request.LightCondition.HasValue) entity.LightCondition = request.LightCondition;
-            if (request.HumidityLevel.HasValue) entity.HumidityLevel = request.HumidityLevel;
-            if (request.HasMistSystem.HasValue) entity.HasMistSystem = request.HasMistSystem;
             if (request.IsActive.HasValue) entity.IsActive = request.IsActive;
         }
         #endregion

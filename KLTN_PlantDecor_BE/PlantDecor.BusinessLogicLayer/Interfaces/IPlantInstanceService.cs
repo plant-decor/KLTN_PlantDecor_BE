@@ -60,6 +60,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// </summary>
         Task<PlantInstanceResponseDto> GetInstanceDetailAsync(int instanceId);
 
+        /// <summary>
+        /// Tìm kiếm PlantInstance available cho shop (toàn hệ thống hoặc theo vựa)
+        /// POST /api/shop/plant-instances/search
+        /// </summary>
+        Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null);
+
         #endregion
     }
 }

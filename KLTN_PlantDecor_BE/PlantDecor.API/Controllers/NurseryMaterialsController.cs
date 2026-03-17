@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/nursery-materials")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
+    //[Authorize(Roles = "Manager")]
     public class NurseryMaterialsController : ControllerBase
     {
         private readonly INurseryMaterialService _nurseryMaterialService;
@@ -185,23 +185,6 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Nhập vật tư thành công",
-                Payload = material
-            });
-        }
-
-        /// <summary>
-        /// [Admin] Cập nhật số lượng vật tư
-        /// </summary>
-        [HttpPatch("/api/admin/nursery-materials/nursery/{nurseryId}/materials/{materialId}/quantity")]
-        //[Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateQuantity(int nurseryId, int materialId, [FromBody] UpdateQuantityDto request)
-        {
-            var material = await _nurseryMaterialService.UpdateQuantityAsync(nurseryId, materialId, request.Quantity);
-            return Ok(new ApiResponse<NurseryMaterialResponseDto>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật số lượng thành công",
                 Payload = material
             });
         }

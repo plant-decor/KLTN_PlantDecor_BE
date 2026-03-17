@@ -21,14 +21,6 @@ public partial class Nursery
 
     public string? Phone { get; set; }
 
-    public int? Type { get; set; }
-
-    public int? LightCondition { get; set; }
-
-    public int? HumidityLevel { get; set; }
-
-    public bool? HasMistSystem { get; set; }
-
     public bool? IsActive { get; set; }
 
     public DateTime? CreatedAt { get; set; }

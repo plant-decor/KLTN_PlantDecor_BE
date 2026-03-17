@@ -8,7 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? ComboType { get; set; }
         public string? Description { get; set; }
         public string? SuitableSpace { get; set; }
-        public string? SuitableRooms { get; set; }
+        public List<string>? SuitableRooms { get; set; }
         public string? FengShuiElement { get; set; }
         public string? FengShuiPurpose { get; set; }
         public string? ThemeName { get; set; }
@@ -16,8 +16,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? OriginalPrice { get; set; }
         public decimal? ComboPrice { get; set; }
         public decimal? DiscountPercent { get; set; }
-        public int? MinPlants { get; set; }
-        public int? MaxPlants { get; set; }
         public string? Tags { get; set; }
         public string? Season { get; set; }
         public bool? IsActive { get; set; }

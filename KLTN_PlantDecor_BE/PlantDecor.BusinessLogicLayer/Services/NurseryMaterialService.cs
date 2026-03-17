@@ -104,9 +104,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Validate reserved quantity doesn't exceed quantity
                 var newQuantity = request.Quantity ?? entity.Quantity;
-                var newReserved = request.ReservedQuantity ?? entity.ReservedQuantity;
-                if (newReserved > newQuantity)
-                    throw new BadRequestException("Số lượng đặt trước không thể lớn hơn số lượng tồn kho");
 
                 request.ToUpdate(entity);
 
@@ -202,24 +199,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Get or create NurseryMaterial
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByMaterialAndNurseryAsync(request.MaterialId, nurseryId);
 
-                if (entity == null)
+                NurseryMaterial targerEntity;
+
+                if (entity != null && entity.ExpiredDate == request.ExpiredDate)
                 {
-                    // Create new NurseryMaterial
-                    entity = new NurseryMaterial
+                    // Update quantity
+                    entity.Quantity += request.Quantity;
+                    _unitOfWork.NurseryMaterialRepository.PrepareUpdate(entity);
+                    targerEntity = entity;
+                }
+                else
+                {
+                    // Create new (case: entity null OR khác ExpiredDate)
+                    var newEntity = new NurseryMaterial
                     {
                         MaterialId = request.MaterialId,
                         NurseryId = nurseryId,
                         Quantity = request.Quantity,
+                        ExpiredDate = request.ExpiredDate,
                         ReservedQuantity = 0,
                         IsActive = true
                     };
-                    _unitOfWork.NurseryMaterialRepository.PrepareCreate(entity);
-                }
-                else
-                {
-                    // Add to existing quantity
-                    entity.Quantity += request.Quantity;
-                    _unitOfWork.NurseryMaterialRepository.PrepareUpdate(entity);
+
+                    _unitOfWork.NurseryMaterialRepository.PrepareCreate(newEntity);
+                    targerEntity = newEntity;
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -228,7 +231,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await InvalidateCacheAsync();
 
                 // Reload with details
-                var result = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
+                var result = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(targerEntity.Id);
                 return result!.ToResponse();
             }
             catch (Exception)

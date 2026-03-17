@@ -17,6 +17,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn hoặc bằng 0")]
         public int Quantity { get; set; }
 
+        public DateOnly? ExpiredDate { get; set; }
+
         public bool IsActive { get; set; } = true;
     }
 
@@ -32,6 +34,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng nhập phải lớn hơn 0")]
         public int Quantity { get; set; }
 
-        public string? Note { get; set; }
+        public DateOnly? ExpiredDate { get; set; }
     }
 }

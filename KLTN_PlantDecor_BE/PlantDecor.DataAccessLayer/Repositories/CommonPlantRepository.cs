@@ -70,6 +70,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<CommonPlant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<List<CommonPlant>> GetAllByNurseryIdAsync(int nurseryId)
+        {
+            return await _context.CommonPlants
+                .Where(cp => cp.NurseryId == nurseryId)
+                .Include(cp => cp.Plant)
+                .Include(cp => cp.Nursery)
+                .ToListAsync();
+        }
+
         public async Task<CommonPlant?> GetByPlantAndNurseryAsync(int plantId, int nurseryId)
         {
             return await _context.CommonPlants

@@ -574,17 +574,14 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.ComboCode).HasMaxLength(50);
             entity.Property(e => e.ComboName).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.DiscountPercent).HasPrecision(5, 2);
             entity.Property(e => e.FengShuiElement).HasMaxLength(50);
             entity.Property(e => e.FengShuiPurpose).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.OriginalPrice).HasPrecision(18, 2);
             entity.Property(e => e.PurchaseCount).HasDefaultValue(0);
             entity.Property(e => e.ComboPrice).HasPrecision(18, 2);
             entity.Property(e => e.Season).HasMaxLength(50);
             entity.Property(e => e.SuitableRooms).HasColumnType("jsonb");
             entity.Property(e => e.SuitableSpace).HasMaxLength(100);
-            entity.Property(e => e.Tags).HasColumnType("text");
             entity.Property(e => e.ThemeDescription).HasMaxLength(500);
             entity.Property(e => e.ThemeName).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");

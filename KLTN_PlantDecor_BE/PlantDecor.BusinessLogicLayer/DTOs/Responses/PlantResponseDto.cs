@@ -8,21 +8,22 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Origin { get; set; }
         public string? Description { get; set; }
         public decimal? BasePrice { get; set; }
-        public string? Placement { get; set; }
+        public int? PlacementType { get; set; }
+        public string PlacementTypeName { get; set; } = null!;
         public string? Size { get; set; }
-        public int? MinHeight { get; set; }
-        public int? MaxHeight { get; set; }
         public string? GrowthRate { get; set; }
         public bool? Toxicity { get; set; }
         public bool? AirPurifying { get; set; }
         public bool? HasFlower { get; set; }
+        public bool? PetSafe { get; set; }
+        public bool? ChildSafe { get; set; }
         public string? FengShuiElement { get; set; }
         public string? FengShuiMeaning { get; set; }
         public bool? PotIncluded { get; set; }
         public string? PotSize { get; set; }
-        public string? PlantType { get; set; }
         public string? CareLevel { get; set; }
         public bool? IsActive { get; set; }
+        public bool? IsUniqueInstance { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

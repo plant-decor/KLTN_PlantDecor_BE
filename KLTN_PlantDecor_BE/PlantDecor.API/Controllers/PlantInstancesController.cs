@@ -122,6 +122,29 @@ namespace PlantDecor.API.Controllers
 
         #endregion
 
+        #region Shop Operations
+
+        /// <summary>
+        /// [Shop] Tìm kiếm cây định danh đang available (toàn hệ thống hoặc theo vựa)
+        /// POST /api/shop/plant-instances/search
+        /// </summary>
+        [HttpPost("/api/shop/plant-instances/search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchAvailablePlantInstancesForShop([FromBody] ShopPlantInstanceSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var result = await _plantInstanceService.SearchAvailableForShopAsync(pagination, request?.NurseryId);
+            return Ok(new ApiResponse<PaginatedResult<PlantInstanceListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tìm kiếm cây định danh cho shop thành công",
+                Payload = result
+            });
+        }
+
+        #endregion
+
         #region Private Methods
 
         private int GetCurrentUserId()

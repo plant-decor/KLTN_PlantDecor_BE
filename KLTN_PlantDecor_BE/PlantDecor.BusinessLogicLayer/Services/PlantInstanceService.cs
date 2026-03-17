@@ -285,6 +285,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return instance.ToResponse();
         }
 
+        public async Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null)
+        {
+            var cacheKey = nurseryId.HasValue
+                ? $"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}_shop_search_p{pagination.PageNumber}_s{pagination.PageSize}"
+                : $"{NURSERY_INSTANCES_KEY}_shop_search_all_p{pagination.PageNumber}_s{pagination.PageSize}";
+
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableForShopAsync(pagination, nurseryId);
+            var result = new PaginatedResult<PlantInstanceListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
+            return result;
+        }
+
         #endregion
 
         #region Cache Management

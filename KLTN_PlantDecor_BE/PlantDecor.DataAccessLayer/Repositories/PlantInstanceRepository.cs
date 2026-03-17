@@ -90,5 +90,29 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
+
+        public async Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null)
+        {
+            var query = _context.PlantInstances
+                .Where(pi => pi.Status == (int)PlantInstanceStatusEnum.Available)
+                .Include(pi => pi.Plant)
+                .Include(pi => pi.PlantImages)
+                .AsQueryable();
+
+            if (nurseryId.HasValue)
+            {
+                query = query.Where(pi => pi.CurrentNurseryId == nurseryId.Value);
+            }
+
+            query = query.OrderByDescending(pi => pi.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
     }
 }

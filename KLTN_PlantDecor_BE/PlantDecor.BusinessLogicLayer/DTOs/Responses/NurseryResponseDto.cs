@@ -11,13 +11,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? Latitude { get; set; }
         public decimal? Longitude { get; set; }
         public string? Phone { get; set; }
-        public int? Type { get; set; }
-        public string? TypeName { get; set; }
-        public int? LightCondition { get; set; }
-        public string? LightConditionName { get; set; }
-        public int? HumidityLevel { get; set; }
-        public string? HumidityLevelName { get; set; }
-        public bool? HasMistSystem { get; set; }
         public bool? IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
 
@@ -34,8 +27,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Name { get; set; }
         public string? Address { get; set; }
         public string? Phone { get; set; }
-        public int? Type { get; set; }
-        public string? TypeName { get; set; }
         public bool? IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
     }

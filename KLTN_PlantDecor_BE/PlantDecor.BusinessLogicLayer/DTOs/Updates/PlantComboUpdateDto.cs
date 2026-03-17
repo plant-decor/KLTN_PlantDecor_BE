@@ -16,7 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public string? SuitableSpace { get; set; }
 
-        public string? SuitableRooms { get; set; }
+        public List<string>? SuitableRooms { get; set; }
 
         public string? FengShuiElement { get; set; }
 
