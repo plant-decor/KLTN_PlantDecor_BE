@@ -125,10 +125,16 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IEmailBackgroundJobService, EmailBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
+            builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
 
             // Cart & Wishlist
             builder.Services.AddScoped<ICartService, CartService>();
             builder.Services.AddScoped<IWishlistService, WishlistService>();
+
+            // Order & Invoice & Payment
+            builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();

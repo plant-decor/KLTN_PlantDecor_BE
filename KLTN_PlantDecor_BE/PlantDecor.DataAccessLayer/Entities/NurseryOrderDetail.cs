@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace PlantDecor.DataAccessLayer.Entities;
 
-public partial class OrderItem
+public partial class NurseryOrderDetail
 {
     public int Id { get; set; }
 
-    public int? OrderId { get; set; }
+    public int NurseryOrderId { get; set; }
 
-    // Foreign Keys for different product types (only one should be set)
+    // Foreign keys for product sources. Exactly one should be set.
     public int? CommonPlantId { get; set; }
 
     public int? PlantInstanceId { get; set; }
@@ -22,12 +22,13 @@ public partial class OrderItem
 
     public int? Quantity { get; set; }
 
-    public decimal? Price { get; set; }
+    public decimal? UnitPrice { get; set; }
+
+    public decimal? Amount { get; set; }
 
     public int? Status { get; set; }
 
-    // Navigation Properties
-    public virtual Order? Order { get; set; }
+    public virtual NurseryOrder NurseryOrder { get; set; } = null!;
 
     public virtual CommonPlant? CommonPlant { get; set; }
 

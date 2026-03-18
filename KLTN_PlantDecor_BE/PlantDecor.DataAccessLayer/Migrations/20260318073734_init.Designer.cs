@@ -13,8 +13,8 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260317133316_Init DB")]
-    partial class InitDB
+    [Migration("20260318073734_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -443,22 +443,33 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int?>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NurseryOrderId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Status")
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("Type")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id")
                         .HasName("Invoice_pkey");
 
-                    b.HasIndex("OrderId")
-                        .IsUnique();
+                    b.HasIndex("NurseryId");
+
+                    b.HasIndex("NurseryOrderId");
+
+                    b.HasIndex("OrderId");
 
                     b.ToTable("Invoice", (string)null);
                 });
@@ -749,6 +760,121 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("NurseryMaterial", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<decimal?>("DepositAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PaymentStrategy")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("RemainingAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("SubTotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("NurseryOrder_pkey");
+
+                    b.HasIndex(new[] { "NurseryId" }, "IX_NurseryOrder_NurseryId");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_NurseryOrder_OrderId");
+
+                    b.HasIndex(new[] { "Status" }, "IX_NurseryOrder_Status");
+
+                    b.ToTable("NurseryOrder", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int?>("CommonPlantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ItemName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("NurseryMaterialId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NurseryOrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NurseryPlantComboId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PlantInstanceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id")
+                        .HasName("NurseryOrderDetail_pkey");
+
+                    b.HasIndex("CommonPlantId");
+
+                    b.HasIndex("NurseryMaterialId");
+
+                    b.HasIndex("NurseryPlantComboId");
+
+                    b.HasIndex("PlantInstanceId");
+
+                    b.HasIndex(new[] { "NurseryOrderId" }, "IX_NurseryOrderDetail_NurseryOrderId");
+
+                    b.ToTable("NurseryOrderDetail", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
                 {
                     b.Property<int>("Id")
@@ -914,6 +1040,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id")
                         .HasName("OrderItem_pkey");
 
@@ -946,6 +1075,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("OrderGroupCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
@@ -1691,6 +1824,52 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("ServiceRegistration", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Shipping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ShippedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TrackingCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("Shipping_pkey");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_Shipping_OrderId");
+
+                    b.ToTable("Shipping", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Tag", b =>
                 {
                     b.Property<int>("Id")
@@ -2251,10 +2430,24 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("Invoices")
+                        .HasForeignKey("NurseryId")
+                        .HasConstraintName("Invoice_NurseryId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryOrder", "NurseryOrder")
+                        .WithMany("Invoices")
+                        .HasForeignKey("NurseryOrderId")
+                        .HasConstraintName("Invoice_NurseryOrderId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
-                        .WithOne("Invoice")
-                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.Invoice", "OrderId")
+                        .WithMany("Invoices")
+                        .HasForeignKey("OrderId")
                         .HasConstraintName("Invoice_OrderId_fkey");
+
+                    b.Navigation("Nursery");
+
+                    b.Navigation("NurseryOrder");
 
                     b.Navigation("Order");
                 });
@@ -2335,6 +2528,67 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Material");
 
                     b.Navigation("Nursery");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany("NurseryOrders")
+                        .HasForeignKey("NurseryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("NurseryOrder_NurseryId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
+                        .WithMany("NurseryOrders")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("NurseryOrder_OrderId_fkey");
+
+                    b.Navigation("Nursery");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CommonPlant", "CommonPlant")
+                        .WithMany("NurseryOrderDetails")
+                        .HasForeignKey("CommonPlantId")
+                        .HasConstraintName("NurseryOrderDetail_CommonPlantId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", "NurseryMaterial")
+                        .WithMany("NurseryOrderDetails")
+                        .HasForeignKey("NurseryMaterialId")
+                        .HasConstraintName("NurseryOrderDetail_NurseryMaterialId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryOrder", "NurseryOrder")
+                        .WithMany("NurseryOrderDetails")
+                        .HasForeignKey("NurseryOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("NurseryOrderDetail_NurseryOrderId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", "NurseryPlantCombo")
+                        .WithMany("NurseryOrderDetails")
+                        .HasForeignKey("NurseryPlantComboId")
+                        .HasConstraintName("NurseryOrderDetail_NurseryPlantComboId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
+                        .WithMany("NurseryOrderDetails")
+                        .HasForeignKey("PlantInstanceId")
+                        .HasConstraintName("NurseryOrderDetail_PlantInstanceId_fkey");
+
+                    b.Navigation("CommonPlant");
+
+                    b.Navigation("NurseryMaterial");
+
+                    b.Navigation("NurseryOrder");
+
+                    b.Navigation("NurseryPlantCombo");
+
+                    b.Navigation("PlantInstance");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
@@ -2644,6 +2898,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Shipping", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("Shipping_OrderId_fkey");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Transaction", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Payment", "Payment")
@@ -2801,6 +3067,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("NurseryOrderDetails");
+
                     b.Navigation("OrderItems");
                 });
 
@@ -2827,9 +3095,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("CommonPlants");
 
+                    b.Navigation("Invoices");
+
                     b.Navigation("NurseryCareServices");
 
                     b.Navigation("NurseryMaterials");
+
+                    b.Navigation("NurseryOrders");
 
                     b.Navigation("NurseryPlantCombos");
 
@@ -2849,19 +3121,32 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("NurseryOrderDetails");
+
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
+                {
+                    b.Navigation("Invoices");
+
+                    b.Navigation("NurseryOrderDetails");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("NurseryOrderDetails");
+
                     b.Navigation("OrderItems");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
-                    b.Navigation("Invoice");
+                    b.Navigation("Invoices");
+
+                    b.Navigation("NurseryOrders");
 
                     b.Navigation("OrderItems");
 
@@ -2911,6 +3196,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInstance", b =>
                 {
+                    b.Navigation("NurseryOrderDetails");
+
                     b.Navigation("OrderItems");
 
                     b.Navigation("PlantImages");

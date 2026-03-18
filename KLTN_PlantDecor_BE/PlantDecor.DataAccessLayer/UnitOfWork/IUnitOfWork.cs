@@ -19,6 +19,10 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         INurseryPlantComboRepository NurseryPlantComboRepository { get; }
         ICartRepository CartRepository { get; }
         IWishlistRepository WishlistRepository { get; }
+        IPaymentRepository PaymentRepository { get; }
+        ITransactionRepository TransactionRepository { get; }
+        IOrderRepository OrderRepository { get; }
+        IInvoiceRepository InvoiceRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

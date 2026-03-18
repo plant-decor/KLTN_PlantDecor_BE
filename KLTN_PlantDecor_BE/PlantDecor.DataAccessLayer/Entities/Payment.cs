@@ -9,6 +9,8 @@ public partial class Payment
 
     public int? OrderId { get; set; }
 
+    public string? OrderGroupCode { get; set; }
+
     public int? PaymentType { get; set; }
 
     public decimal? Amount { get; set; }

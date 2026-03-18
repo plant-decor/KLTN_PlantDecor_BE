@@ -64,6 +64,12 @@ namespace PlantDecor.API.Extensions
                 "cleanup-revoked-refresh-tokens",
                 service => service.CleanupRevokedTokensAsync(),
                 "*/10 * * * *");
+
+            // Mark expired pending payments/transactions every minute
+            recurringJobManager.AddOrUpdate<IPaymentTimeoutService>(
+                "process-expired-payments",
+                service => service.ProcessExpiredPaymentsAsync(),
+                "*/1 * * * *");
         }
     }
 }

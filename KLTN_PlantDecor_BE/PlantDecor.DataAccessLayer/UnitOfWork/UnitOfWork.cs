@@ -26,6 +26,10 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private INurseryPlantComboRepository? _nurseryPlantComboRepository;
         private ICartRepository? _cartRepository;
         private IWishlistRepository? _wishlistRepository;
+        private IPaymentRepository? _paymentRepository;
+        private ITransactionRepository? _transactionRepository;
+        private IOrderRepository? _orderRepository;
+        private IInvoiceRepository? _invoiceRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -100,6 +104,26 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IWishlistRepository WishlistRepository
         {
             get { return _wishlistRepository ??= new WishlistRepository(_context); }
+        }
+
+        public IPaymentRepository PaymentRepository
+        {
+            get { return _paymentRepository ??= new PaymentRepository(_context); }
+        }
+
+        public ITransactionRepository TransactionRepository
+        {
+            get { return _transactionRepository ??= new TransactionRepository(_context); }
+        }
+
+        public IOrderRepository OrderRepository
+        {
+            get { return _orderRepository ??= new OrderRepository(_context); }
+        }
+
+        public IInvoiceRepository InvoiceRepository
+        {
+            get { return _invoiceRepository ??= new InvoiceRepository(_context); }
         }
 
         // Transaction Management

@@ -43,9 +43,11 @@ public partial class Order
 
     public int? OrderType { get; set; }
 
-    public virtual Invoice? Invoice { get; set; }
+    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
