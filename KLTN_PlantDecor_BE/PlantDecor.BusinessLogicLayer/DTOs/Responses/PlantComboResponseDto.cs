@@ -13,10 +13,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? FengShuiPurpose { get; set; }
         public string? ThemeName { get; set; }
         public string? ThemeDescription { get; set; }
-        public decimal? OriginalPrice { get; set; }
         public decimal? ComboPrice { get; set; }
-        public decimal? DiscountPercent { get; set; }
-        public string? Tags { get; set; }
         public string? Season { get; set; }
         public bool? IsActive { get; set; }
         public int? ViewCount { get; set; }
@@ -53,15 +50,34 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? ComboCode { get; set; }
         public string? ComboName { get; set; }
         public int? ComboType { get; set; }
-        public decimal? OriginalPrice { get; set; }
         public decimal? ComboPrice { get; set; }
-        public decimal? DiscountPercent { get; set; }
-        public int? Quantity { get; set; }
         public bool? IsActive { get; set; }
         public int? ViewCount { get; set; }
         public int? PurchaseCount { get; set; }
         public string? PrimaryImageUrl { get; set; }
         public int TotalItems { get; set; }
         public List<string> TagNames { get; set; } = new List<string>();
+    }
+
+    public class NurseryComboStockOperationResponseDto
+    {
+        public int NurseryId { get; set; }
+        public int PlantComboId { get; set; }
+        public string? ComboName { get; set; }
+        public string OperationType { get; set; } = string.Empty;
+        public int QuantityProcessed { get; set; }
+        public int ComboStockBefore { get; set; }
+        public int ComboStockAfter { get; set; }
+        public List<NurseryComboPlantStockChangeDto> PlantStockChanges { get; set; } = new List<NurseryComboPlantStockChangeDto>();
+    }
+
+    public class NurseryComboPlantStockChangeDto
+    {
+        public int PlantId { get; set; }
+        public string PlantName { get; set; } = string.Empty;
+        public int QuantityPerCombo { get; set; }
+        public int QuantityChanged { get; set; }
+        public int StockBefore { get; set; }
+        public int StockAfter { get; set; }
     }
 }

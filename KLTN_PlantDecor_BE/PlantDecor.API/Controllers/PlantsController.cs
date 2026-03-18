@@ -45,7 +45,7 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Shop] Tìm kiếm danh sách cây cho shop (chỉ cây có hàng)
+        /// [Shop] Tìm kiếm danh sách cây cho shop (gồm cây định danh và cây đại trà còn hàng)
         /// </summary>
         [HttpPost("/api/shop/plants/search")]
         [AllowAnonymous]
@@ -56,7 +56,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Search shop plants successfully",
+                Message = "Search shop products successfully",
                 Payload = plants
             });
         }
@@ -115,21 +115,6 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update plant successfully",
                 Payload = plant
-            });
-        }
-
-        /// <summary>
-        /// Xóa plant
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePlant(int id)
-        {
-            await _plantService.DeletePlantAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Delete plant successfully"
             });
         }
 
@@ -222,7 +207,18 @@ namespace PlantDecor.API.Controllers
         #region Shop - Public Operations
 
         /// <summary>
-        /// Lấy danh sách nursery đang có plant này (cho người dùng)
+        /// [Shop] Lấy chi tiết plant theo ID
+        /// GET /api/shop/plants/{id}
+        /// </summary>
+        [HttpGet("/api/shop/plants/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPlantDetailForShop(int id)
+        {
+            return await GetPlantById(id);
+        }
+
+        /// <summary>
+        /// Lấy danh sách nursery đang có plant(plant của plantInstance) này (cho người dùng)
         /// GET /api/plants/{id}/nurseries
         /// </summary>
         [HttpGet("/api/plants/{id}/nurseries")]

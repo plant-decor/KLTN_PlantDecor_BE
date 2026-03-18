@@ -65,6 +65,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static PlantListResponseDto ToListResponse(this Plant plant)
         {
             if (plant == null) return null!;
+
+            var availableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available);
+            var availableCommonQuantity = plant.CommonPlants
+                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Sum(cp => cp.Quantity - cp.ReservedQuantity);
+
             return new PlantListResponseDto
             {
                 Id = plant.Id,
@@ -76,7 +82,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
                     ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,
                 TotalInstances = plant.PlantInstances.Count,
-                AvailableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available),
+                AvailableInstances = availableInstances,
+                AvailableCommonQuantity = availableCommonQuantity,
+                TotalAvailableStock = availableInstances + availableCommonQuantity,
                 CategoryNames = plant.Categories.Select(c => c.Name).ToList(),
                 TagNames = plant.Tags.Select(t => t.TagName).ToList()
             };

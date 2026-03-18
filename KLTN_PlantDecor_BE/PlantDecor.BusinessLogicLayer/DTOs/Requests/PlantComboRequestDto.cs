@@ -58,4 +58,16 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Required(ErrorMessage = "Danh sách TagIds là bắt buộc")]
         public List<int> TagIds { get; set; } = new List<int>();
     }
+
+    public class AssembleNurseryComboRequestDto
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Số lượng combo tạo phải lớn hơn 0")]
+        public int Quantity { get; set; }
+    }
+
+    public class DecomposeNurseryComboRequestDto
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Số lượng combo phân rã phải lớn hơn 0")]
+        public int Quantity { get; set; }
+    }
 }

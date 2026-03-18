@@ -84,22 +84,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return fullNursery?.ToResponse();
         }
 
-        public async Task<NurseryResponseDto> CreateNurseryAsync(int managerId, NurseryRequestDto request)
+        public async Task<NurseryResponseDto> CreateNurseryAsync(NurseryRequestDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                // Check if manager already has a nursery
-                var existingNursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-                if (existingNursery != null)
-                    throw new BadRequestException("Manager đã có vựa, không thể tạo thêm");
-
                 // Check duplicate name
                 if (await _unitOfWork.NurseryRepository.ExistsByNameAsync(request.Name))
                     throw new BadRequestException($"Vựa với tên '{request.Name}' đã tồn tại");
 
-                var entity = request.ToEntity(managerId);
+                var entity = request.ToEntity();
 
                 _unitOfWork.NurseryRepository.PrepareCreate(entity);
                 await _unitOfWork.SaveAsync();

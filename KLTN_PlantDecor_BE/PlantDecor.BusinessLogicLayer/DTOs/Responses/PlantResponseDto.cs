@@ -53,6 +53,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PrimaryImageUrl { get; set; }
         public int TotalInstances { get; set; }
         public int AvailableInstances { get; set; }
+        public int AvailableCommonQuantity { get; set; }
+        public int TotalAvailableStock { get; set; }
         public List<string> CategoryNames { get; set; } = new List<string>();
         public List<string> TagNames { get; set; } = new List<string>();
     }

@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -51,19 +52,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var cachedData = await _cacheService.GetDataAsync<List<CategoryResponseDto>>(ROOT_CATEGORIES_KEY);
             if (cachedData != null)
                 return cachedData;
-            var rootCategories = await _unitOfWork.CategoryRepository.GetRootCategoriesWithChildrenAsync();
-            var result = rootCategories.ToResponseListWithChildren();
+
+            var allCategories = await _unitOfWork.CategoryRepository.GetAllAsync();
+            var result = BuildCategoryTree(allCategories, activeOnly: false);
             await _cacheService.SetDataAsync(ROOT_CATEGORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
         public async Task<CategoryResponseDto?> GetCategoryByIdAsync(int id)
         {
-            var category = await _unitOfWork.CategoryRepository.GetByIdWithDetailsAsync(id);
+            var allCategories = await _unitOfWork.CategoryRepository.GetAllAsync();
+            var tree = BuildCategoryTree(allCategories, activeOnly: false);
+            var category = FindCategoryInTree(tree, id);
             if (category == null)
                 return null;
 
-            return category.ToResponseWithChildren();
+            return category;
         }
 
         public async Task<CategoryResponseDto> CreateCategoryAsync(CategoryRequestDto request)
@@ -207,12 +211,80 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return cachedData;
             }
 
-            var rootActiveCategories = await _unitOfWork.CategoryRepository.GetRootActiveCategoriesWithChildrenAsync();
-
-            var result = rootActiveCategories.ToResponseListWithChildren();
+            var allCategories = await _unitOfWork.CategoryRepository.GetAllAsync();
+            var result = BuildCategoryTree(allCategories, activeOnly: true);
             await _cacheService.SetDataAsync(ROOT_ACTIVE_CATEGORIES_KEY, result, DateTimeOffset.Now.AddMinutes(30));
 
             return result;
+        }
+
+        private static List<CategoryResponseDto> BuildCategoryTree(IEnumerable<Category> categories, bool activeOnly)
+        {
+            var source = activeOnly
+                ? categories.Where(c => c.IsActive == true).ToList()
+                : categories.ToList();
+
+            var dtoMap = source.ToDictionary(c => c.Id, c => new CategoryResponseDto
+            {
+                Id = c.Id,
+                ParentCategoryId = c.ParentCategoryId,
+                Name = c.Name,
+                IsActive = c.IsActive,
+                CategoryType = c.CategoryType,
+                CategoryTypeName = ((CategoryTypeEnum)c.CategoryType).ToString(),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt,
+                SubCategories = new List<CategoryResponseDto>()
+            });
+
+            foreach (var item in source)
+            {
+                var currentDto = dtoMap[item.Id];
+
+                if (item.ParentCategoryId.HasValue && dtoMap.TryGetValue(item.ParentCategoryId.Value, out var parentDto))
+                {
+                    currentDto.ParentCategoryName = parentDto.Name;
+                    parentDto.SubCategories.Add(currentDto);
+                }
+            }
+
+            SortTreeByName(dtoMap.Values);
+
+            return dtoMap.Values
+                .Where(dto => !dto.ParentCategoryId.HasValue || !dtoMap.ContainsKey(dto.ParentCategoryId.Value))
+                .OrderBy(dto => dto.Name)
+                .ToList();
+        }
+
+        private static void SortTreeByName(IEnumerable<CategoryResponseDto> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                node.SubCategories = node.SubCategories
+                    .OrderBy(c => c.Name)
+                    .ToList();
+
+                SortTreeByName(node.SubCategories);
+            }
+        }
+
+        private static CategoryResponseDto? FindCategoryInTree(IEnumerable<CategoryResponseDto> nodes, int id)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Id == id)
+                {
+                    return node;
+                }
+
+                var found = FindCategoryInTree(node.SubCategories, id);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
     }
 }

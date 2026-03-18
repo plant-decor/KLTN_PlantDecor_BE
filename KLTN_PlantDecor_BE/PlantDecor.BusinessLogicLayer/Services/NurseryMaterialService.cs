@@ -150,6 +150,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<NurseryMaterialResponseDto> ToggleActiveAsync(int id)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
+                if (entity == null)
+                    throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
+
+                if (entity.IsActive && entity.ReservedQuantity > 0)
+                    throw new BadRequestException("Không thể tắt vật tư đang có số lượng đặt trước");
+
+                entity.IsActive = !entity.IsActive;
+
+                _unitOfWork.NurseryMaterialRepository.PrepareUpdate(entity);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                await InvalidateCacheAsync();
+
+                return entity.ToResponse();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
         #endregion
 
         #region Query Operations

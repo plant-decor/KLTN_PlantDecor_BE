@@ -61,11 +61,10 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Tạo vựa mới cho Manager
         /// </summary>
-        [HttpPost("/api/admin/nursery")]
+        [HttpPost("/api/admin/nurseries")]
         public async Task<IActionResult> CreateNursery([FromBody] NurseryRequestDto request)
         {
-            var managerId = GetCurrentUserId();
-            var nursery = await _nurseryService.CreateNurseryAsync(managerId, request);
+            var nursery = await _nurseryService.CreateNurseryAsync(request);
             return CreatedAtAction(nameof(GetMyNursery), new ApiResponse<NurseryResponseDto>
             {
                 Success = true,
@@ -172,7 +171,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// [Admin] Lấy vựa theo ID
         /// </summary>
-        [HttpGet("/api/admin/nurseries/{id}")]
+        [HttpGet("/api/nurseries/{id}")]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetNurseryById(int id)
         {
@@ -280,6 +279,33 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy chi tiết cây thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Shop] Lấy chi tiết một CommonPlant
+        /// </summary>
+        [HttpGet("/api/shop/common-plants/{commonPlantId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetCommonPlantDetail(int commonPlantId)
+        {
+            var result = await _commonPlantService.GetCommonPlantByIdAsync(commonPlantId);
+            if (result == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = $"Không tìm thấy cây đại trà với ID {commonPlantId}"
+                });
+            }
+
+            return Ok(new ApiResponse<CommonPlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết cây đại trà thành công",
                 Payload = result
             });
         }

@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
@@ -53,7 +54,7 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("/api/PlantCombos/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetComboById(int id)
         {
@@ -101,18 +102,6 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCombo(int id)
-        {
-            await _plantComboService.DeleteComboAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa combo thành công"
-            });
-        }
-
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(int id)
         {
@@ -123,6 +112,46 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = isActive ? "Combo đã được kích hoạt" : "Combo đã bị vô hiệu hóa",
                 Payload = isActive
+            });
+        }
+
+        #endregion
+
+        #region Manager - Nursery Combo Stock
+
+        /// <summary>
+        /// Tạo số lượng combo cho vựa bằng cách trừ kho cây đại trà
+        /// POST /api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/assemble
+        /// </summary>
+        [HttpPost("/api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/assemble")]
+        public async Task<IActionResult> AssembleComboStock(int nurseryId, int comboId, [FromBody] AssembleNurseryComboRequestDto request)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantComboService.AssembleComboStockAsync(nurseryId, managerId, comboId, request);
+            return Ok(new ApiResponse<NurseryComboStockOperationResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tạo tồn kho combo thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Phân rã số lượng combo của vựa để hoàn cây về kho cây đại trà
+        /// POST /api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/decompose
+        /// </summary>
+        [HttpPost("/api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/decompose")]
+        public async Task<IActionResult> DecomposeComboStock(int nurseryId, int comboId, [FromBody] DecomposeNurseryComboRequestDto request)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantComboService.DecomposeComboStockAsync(nurseryId, managerId, comboId, request);
+            return Ok(new ApiResponse<NurseryComboStockOperationResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Phân rã tồn kho combo thành công",
+                Payload = result
             });
         }
 
@@ -215,6 +244,36 @@ namespace PlantDecor.API.Controllers
                 Message = "Lấy danh sách combos cho shop thành công",
                 Payload = combos
             });
+        }
+
+        [HttpPost("shop/search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchCombosForShop([FromBody] PlantComboShopSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var search = request ?? new PlantComboShopSearchRequestDto();
+            var combos = await _plantComboService.GetSellingCombosAsync(pagination, search);
+            return Ok(new ApiResponse<PaginatedResult<SellingPlantComboResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tìm kiếm combos cho shop thành công",
+                Payload = combos
+            });
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return 1;
+            }
+            return userId;
         }
 
         #endregion

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using PlantDecor.API.Extensions;
 using PlantDecor.API.Middlewares;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -104,8 +105,14 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICacheService, RedisCacheService>();
             builder.Services.AddScoped<ISecurityStampCacheService, SecurityStampCacheService>();
 
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            dataSourceBuilder.EnableDynamicJson();
+            var dataSource = dataSourceBuilder.Build();
+
             builder.Services.AddDbContext<PlantDecorContext>(options =>
- options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseNpgsql(dataSource));
 
             //ADD SCOPED HERE
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

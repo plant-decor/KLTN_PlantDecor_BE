@@ -44,7 +44,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy tag theo ID
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("/api/Tags/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetTagById(int id)
         {

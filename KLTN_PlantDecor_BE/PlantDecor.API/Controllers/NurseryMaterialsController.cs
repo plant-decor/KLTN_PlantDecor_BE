@@ -78,17 +78,18 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Xóa vật tư khỏi vựa
+        /// Bật/tắt trạng thái active của vật tư trong vựa
         /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteNurseryMaterial(int id)
+        [HttpPatch("{id}/toggle-active")]
+        public async Task<IActionResult> ToggleActiveNurseryMaterial(int id)
         {
-            await _nurseryMaterialService.DeleteNurseryMaterialAsync(id);
-            return Ok(new ApiResponse<object>
+            var material = await _nurseryMaterialService.ToggleActiveAsync(id);
+            return Ok(new ApiResponse<NurseryMaterialResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Xóa vật tư thành công"
+                Message = material.IsActive ? "Đã bật vật tư" : "Đã tắt vật tư",
+                Payload = material
             });
         }
 
@@ -116,7 +117,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// [Admin] Lấy vật tư theo ID
         /// </summary>
-        [HttpGet("/api/admin/nursery-materials/{id}")]
+        [HttpGet("/api/nursery-materials/{id}")]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetNurseryMaterialById(int id)
         {

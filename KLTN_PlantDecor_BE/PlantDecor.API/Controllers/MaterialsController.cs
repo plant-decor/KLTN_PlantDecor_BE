@@ -64,7 +64,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy material theo ID
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("/api/material/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetMaterialById(int id)
         {
@@ -115,21 +115,6 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update material successfully",
                 Payload = material
-            });
-        }
-
-        /// <summary>
-        /// Xóa material
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMaterial(int id)
-        {
-            await _materialService.DeleteMaterialAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Delete material successfully"
             });
         }
 

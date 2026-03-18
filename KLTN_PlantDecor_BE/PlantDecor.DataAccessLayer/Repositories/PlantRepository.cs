@@ -86,7 +86,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(p => p.Tags)
                 .Include(p => p.PlantImages)
                 .Include(p => p.PlantInstances.Where(i => i.Status == (int)PlantInstanceStatusEnum.Available))
-                .Where(p => p.PlantInstances.Any(i => i.Status == (int)PlantInstanceStatusEnum.Available))
+                .Include(p => p.CommonPlants.Where(cp => cp.IsActive
+                    && cp.Quantity > cp.ReservedQuantity
+                    && cp.Nursery != null
+                    && cp.Nursery.IsActive == true))
+                .Where(p => p.PlantInstances.Any(i => i.Status == (int)PlantInstanceStatusEnum.Available)
+                    || p.CommonPlants.Any(cp => cp.IsActive
+                        && cp.Quantity > cp.ReservedQuantity
+                        && cp.Nursery != null
+                        && cp.Nursery.IsActive == true))
                 .OrderByDescending(p => p.CreatedAt);
 
             var totalCount = await query.CountAsync();
@@ -128,8 +136,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(p => p.PlantImages)
                 .Include(p => p.PlantInstances.Where(i => i.Status == (int)PlantInstanceStatusEnum.Available
                     && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value)))
+                .Include(p => p.CommonPlants.Where(cp => cp.IsActive
+                    && cp.Quantity > cp.ReservedQuantity
+                    && (!filter.NurseryId.HasValue || cp.NurseryId == filter.NurseryId.Value)
+                    && cp.Nursery != null
+                    && cp.Nursery.IsActive == true))
                 .Where(p => p.PlantInstances.Any(i => i.Status == (int)PlantInstanceStatusEnum.Available
-                    && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value)))
+                        && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value))
+                    || p.CommonPlants.Any(cp => cp.IsActive
+                        && cp.Quantity > cp.ReservedQuantity
+                        && (!filter.NurseryId.HasValue || cp.NurseryId == filter.NurseryId.Value)
+                        && cp.Nursery != null
+                        && cp.Nursery.IsActive == true))
                 .AsQueryable();
 
             query = ApplyFilters(query, filter, true);
@@ -213,10 +231,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 "name" => isDesc ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
                 "price" => isDesc ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
                 "availableinstances" when isShop => isDesc
-                    ? query.OrderByDescending(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available
-                        && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value)))
-                    : query.OrderBy(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available
-                        && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value))),
+                    ? query.OrderByDescending(p =>
+                        p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available
+                            && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value))
+                        + p.CommonPlants
+                            .Where(cp => cp.IsActive
+                                && cp.Quantity > cp.ReservedQuantity
+                                && (!filter.NurseryId.HasValue || cp.NurseryId == filter.NurseryId.Value)
+                                && cp.Nursery != null
+                                && cp.Nursery.IsActive == true)
+                            .Sum(cp => cp.Quantity - cp.ReservedQuantity))
+                    : query.OrderBy(p =>
+                        p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available
+                            && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value))
+                        + p.CommonPlants
+                            .Where(cp => cp.IsActive
+                                && cp.Quantity > cp.ReservedQuantity
+                                && (!filter.NurseryId.HasValue || cp.NurseryId == filter.NurseryId.Value)
+                                && cp.Nursery != null
+                                && cp.Nursery.IsActive == true)
+                            .Sum(cp => cp.Quantity - cp.ReservedQuantity)),
                 "availableinstances" => isDesc
                     ? query.OrderByDescending(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available))
                     : query.OrderBy(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available)),

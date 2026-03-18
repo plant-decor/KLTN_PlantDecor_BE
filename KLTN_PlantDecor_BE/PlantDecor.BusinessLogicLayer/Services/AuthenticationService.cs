@@ -403,6 +403,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Email, password, username and full name are required");
             }
 
+            if (request.NurseryId <= 0)
+            {
+                throw new BadRequestException("NurseryId is required");
+            }
+
             if (!IsValidEmail(request.Email))
             {
                 throw new BadRequestException("Invalid email format");
@@ -440,6 +445,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Manager role not found");
             }
 
+            var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(request.NurseryId);
+            if (nursery == null)
+            {
+                throw new NotFoundException($"Nursery với ID {request.NurseryId} không tồn tại");
+            }
+
+            if (nursery.ManagerId.HasValue)
+            {
+                throw new BadRequestException("Nursery này đã được gán cho một Manager khác");
+            }
+
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
@@ -463,17 +479,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 _unitOfWork.UserRepository.PrepareCreate(newUser);
                 await _unitOfWork.SaveAsync();
 
-                var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
-                if (createdUser == null)
+                if (newUser.Id <= 0)
                 {
                     throw new Exception("Failed to retrieve created manager account");
                 }
+
+                nursery.ManagerId = newUser.Id;
+                _unitOfWork.NurseryRepository.PrepareUpdate(nursery);
+                await _unitOfWork.SaveAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new AuthenticationResponse
                 {
-                    User = UserMapper.ToResponse(createdUser)
+                    User = UserMapper.ToResponse(newUser)
                 };
             }
             catch

@@ -57,13 +57,13 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         #endregion
 
         #region Request to Entity
-        public static Nursery ToEntity(this NurseryRequestDto request, int managerId)
+        public static Nursery ToEntity(this NurseryRequestDto request)
         {
             if (request == null) return null!;
 
             return new Nursery
             {
-                ManagerId = managerId,
+                ManagerId = null,
                 Name = request.Name,
                 Address = request.Address,
                 Area = request.Area,
