@@ -183,6 +183,65 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new NotImplementedException();
         }
 
+        public async Task<bool> SetPasswordAsync(int userId, SetPasswordDto dto)
+        {
+            if (dto.NewPassword != dto.ConfirmNewPassword)
+                throw new BadRequestException("Passwords do not match");
+
+            ValidatePassword(dto.NewPassword);
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new NotFoundException($"User with ID {userId} not found");
+                }
+
+                if (!string.IsNullOrEmpty(user.PasswordHash))
+                    throw new BadRequestException("Account already has a password. Use reset-password instead.");
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+                var result = await _unitOfWork.UserRepository.UpdateAsync(user);
+                if (result == 0)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new Exception("Failed to set password");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        private void ValidatePassword(string password)
+        {
+            var errors = new List<string>();
+
+            if (password.Length < 8)
+                errors.Add("Password must be at least 8 characters.");
+            if (!password.Any(char.IsUpper))
+                errors.Add("Password must contain at least one uppercase letter.");
+            if (!password.Any(char.IsLower))
+                errors.Add("Password must contain at least one lowercase letter.");
+            if (!password.Any(char.IsDigit))
+                errors.Add("Password must contain at least one digit.");
+            if (!password.Any(c => !char.IsLetterOrDigit(c)))
+                errors.Add("Password must contain at least one special character.");
+
+            if (errors.Count > 0)
+                throw new BadRequestException(string.Join(" ", errors));
+        }
+
         public async Task<bool> UpdateEmailAsync(int userId, EmailUpdateDto emailUpdate)
         {
             if (emailUpdate == null || string.IsNullOrEmpty(emailUpdate.Email))
@@ -198,6 +257,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     throw new NotFoundException($"User with ID {userId} not found");
+                }
+
+                // Block social login users (no password set) from changing email
+                if (string.IsNullOrEmpty(existingUser.PasswordHash))
+                    throw new BadRequestException("Please set a password for your account before changing email");
+
+                // Verify current password before allowing email change
+                var isPasswordValid = await _unitOfWork.UserRepository.VerifyPasswordAsync(existingUser, emailUpdate.CurrentPassword);
+                if (!isPasswordValid)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new BadRequestException("Current password is incorrect");
                 }
 
                 // Email input different from current email

@@ -16,7 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public string? SuitableSpace { get; set; }
 
-        public string? SuitableRooms { get; set; }
+        public List<string>? SuitableRooms { get; set; }
 
         public string? FengShuiElement { get; set; }
 
@@ -26,22 +26,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public string? ThemeDescription { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Giá gốc phải lớn hơn hoặc bằng 0")]
-        public decimal? OriginalPrice { get; set; }
-
         [Range(0, double.MaxValue, ErrorMessage = "Giá combo phải lớn hơn hoặc bằng 0")]
         public decimal? ComboPrice { get; set; }
-
-        [Range(0, 100, ErrorMessage = "Phần trăm giảm giá phải từ 0 đến 100")]
-        public decimal? DiscountPercent { get; set; }
-
-        [Range(1, int.MaxValue, ErrorMessage = "Số cây tối thiểu phải lớn hơn 0")]
-        public int? MinPlants { get; set; }
-
-        [Range(1, int.MaxValue, ErrorMessage = "Số cây tối đa phải lớn hơn 0")]
-        public int? MaxPlants { get; set; }
-
-        public string? Tags { get; set; }
 
         public string? Season { get; set; }
 
@@ -71,5 +57,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         [Required(ErrorMessage = "Danh sách TagIds là bắt buộc")]
         public List<int> TagIds { get; set; } = new List<int>();
+    }
+
+    public class AssembleNurseryComboRequestDto
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Số lượng combo tạo phải lớn hơn 0")]
+        public int Quantity { get; set; }
+    }
+
+    public class DecomposeNurseryComboRequestDto
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Số lượng combo phân rã phải lớn hơn 0")]
+        public int Quantity { get; set; }
     }
 }

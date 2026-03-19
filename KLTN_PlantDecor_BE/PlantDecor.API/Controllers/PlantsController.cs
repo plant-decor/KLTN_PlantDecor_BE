@@ -29,34 +29,34 @@ namespace PlantDecor.API.Controllers
         #region CRUD Operations
 
         /// <summary>
-        /// Lấy tất cả plants (Admin)
+        /// [System] Tìm kiếm danh sách tất cả plants (phân trang)
         /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetAllPlants([FromQuery] Pagination pagination)
+        [HttpPost("/api/system/plants/search")]
+        public async Task<IActionResult> SearchAllPlants([FromBody] PlantSearchRequestDto request)
         {
-            var plants = await _plantService.GetAllPlantsAsync(pagination);
+            var plants = await _plantService.SearchAllPlantsAsync(request);
             return Ok(new ApiResponse<PaginatedResult<PlantListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get all plants successfully",
+                Message = "Search all plants successfully",
                 Payload = plants
             });
         }
 
         /// <summary>
-        /// Lấy plants đang active
+        /// [Shop] Tìm kiếm danh sách cây cho shop (gồm cây định danh và cây đại trà còn hàng)
         /// </summary>
-        [HttpGet("active")]
+        [HttpPost("/api/shop/plants/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActivePlants([FromQuery] Pagination pagination)
+        public async Task<IActionResult> SearchPlantsForShop([FromBody] PlantSearchRequestDto request)
         {
-            var plants = await _plantService.GetActivePlantsAsync(pagination);
+            var plants = await _plantService.SearchPlantsForShopAsync(request);
             return Ok(new ApiResponse<PaginatedResult<PlantListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get active plants successfully",
+                Message = "Search shop products successfully",
                 Payload = plants
             });
         }
@@ -115,21 +115,6 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update plant successfully",
                 Payload = plant
-            });
-        }
-
-        /// <summary>
-        /// Xóa plant
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePlant(int id)
-        {
-            await _plantService.DeletePlantAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Delete plant successfully"
             });
         }
 
@@ -222,7 +207,18 @@ namespace PlantDecor.API.Controllers
         #region Shop - Public Operations
 
         /// <summary>
-        /// Lấy danh sách nursery đang có plant này (cho người dùng)
+        /// [Shop] Lấy chi tiết plant theo ID
+        /// GET /api/shop/plants/{id}
+        /// </summary>
+        [HttpGet("/api/shop/plants/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPlantDetailForShop(int id)
+        {
+            return await GetPlantById(id);
+        }
+
+        /// <summary>
+        /// Lấy danh sách nursery đang có plant(plant của plantInstance) này (cho người dùng)
         /// GET /api/plants/{id}/nurseries
         /// </summary>
         [HttpGet("/api/plants/{id}/nurseries")]

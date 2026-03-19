@@ -24,6 +24,8 @@ public partial class OrderItem
 
     public decimal? Price { get; set; }
 
+    public int? Status { get; set; }
+
     // Navigation Properties
     public virtual Order? Order { get; set; }
 

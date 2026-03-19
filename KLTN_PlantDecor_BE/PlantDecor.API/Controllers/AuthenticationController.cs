@@ -8,12 +8,12 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [EnableRateLimiting("auth-strict")]
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
@@ -46,15 +46,56 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("login-google")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleAccessTokenRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid Request");
+            }
+            var result = await _authenticationService.LoginWithGoogle(request);
+            if (result == null)
+            {
+                throw new BadRequestException("Google authentication failed");
+            }
+            return Ok(new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Login Google Successfully!",
+                Payload = result
+            });
+        }
+
+        [HttpPost("refreshToken")]
+        public async Task<IActionResult> RefreshTokenAsync(RefreshTokenRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                throw new BadRequestException("Refresh token is required");
+            }
+
+            var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to refresh token");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Refreshtoken successfully!",
+                Payload = result
+            });
+        }
+
         [HttpPost("register")]
         //   [EnableRateLimiting("auth-strict")]
         public async Task<IActionResult> Register(UserRequest request)
         {
-            //if (!ModelState.IsValid)
-            //{
-            //    throw new BadRequestException("Invalid Request");
-            //}
-
             var result = await _authenticationService.RegisterAsync(request);
 
             if (result == null)
@@ -65,11 +106,6 @@ namespace PlantDecor.API.Controllers
             // Enqueue verification email as background job (auto-retry on failure)
             _backgroundJobClient.EnqueueVerificationEmail(request.Email);
 
-            //return CreatedAtAction(
-            //            nameof(Register),   // Action name
-            //            new { email = request.Email },  // route values
-            //            result  // response body
-            //    );
             return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
             {
                 Success = true,
@@ -106,8 +142,39 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("create-staff")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> CreateStaffAccount([FromBody] CreateStaffRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var managerIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(managerIdClaim) || !int.TryParse(managerIdClaim, out int managerId))
+            {
+                throw new UnauthorizedException("Unable to identify manager from token");
+            }
+
+            var result = await _authenticationService.CreateStaffAsync(managerId, request);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to create staff account");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Staff account created successfully!",
+                Payload = result
+            });
+        }
+
         [HttpPost("logout")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> Logout(LogoutRequest request)
         {
 
@@ -132,7 +199,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPost("logout-all")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> LogoutAll(LogoutRequest request)
         {
             // Nếu request body trống, lấy access token từ Authorization header
@@ -190,6 +257,39 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Token is not valid or out of date"
+            });
+        }
+
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _authenticationService.ResetPasswordAsync(request);
+            if (result == null)
+            {
+                throw new Exception("Failed to reset password");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Password set successfully"
+            });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken)
+        {
+
+            var result = await _authenticationService.ForgotPasswordAsync(request, cancellationToken);
+            if (!result)
+            {
+                throw new BadRequestException("Email not found or not verified. Please verify your email first.");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Please check your mailbox to reset password"
             });
         }
 

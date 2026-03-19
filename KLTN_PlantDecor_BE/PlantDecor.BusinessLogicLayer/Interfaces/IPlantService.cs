@@ -10,6 +10,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // CRUD Operations
         Task<PaginatedResult<PlantListResponseDto>> GetAllPlantsAsync(Pagination pagination);
         Task<PaginatedResult<PlantListResponseDto>> GetActivePlantsAsync(Pagination pagination);
+        Task<PaginatedResult<PlantListResponseDto>> SearchAllPlantsAsync(PlantSearchRequestDto request);
+        Task<PaginatedResult<PlantListResponseDto>> SearchPlantsForShopAsync(PlantSearchRequestDto request);
         Task<PlantResponseDto?> GetPlantByIdAsync(int id);
         Task<PlantResponseDto> CreatePlantAsync(PlantRequestDto request);
         Task<PlantResponseDto> UpdatePlantAsync(int id, PlantUpdateDto request);

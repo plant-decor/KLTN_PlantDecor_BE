@@ -24,10 +24,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiPurpose = combo.FengShuiPurpose,
                 ThemeName = combo.ThemeName,
                 ThemeDescription = combo.ThemeDescription,
-                OriginalPrice = combo.OriginalPrice,
                 ComboPrice = combo.ComboPrice,
-                DiscountPercent = combo.DiscountPercent,
-                Tags = combo.Tags,
                 Season = combo.Season,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
@@ -66,9 +63,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ComboCode = combo.ComboCode,
                 ComboName = combo.ComboName,
                 ComboType = combo.ComboType,
-                OriginalPrice = combo.OriginalPrice,
                 ComboPrice = combo.ComboPrice,
-                DiscountPercent = combo.DiscountPercent,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
@@ -107,10 +102,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiPurpose = request.FengShuiPurpose,
                 ThemeName = request.ThemeName,
                 ThemeDescription = request.ThemeDescription,
-                OriginalPrice = request.OriginalPrice,
                 ComboPrice = request.ComboPrice,
-                DiscountPercent = request.DiscountPercent,
-                Tags = request.Tags,
                 Season = request.Season,
                 IsActive = request.IsActive,
                 ViewCount = 0,
@@ -149,10 +141,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             combo.FengShuiPurpose = request.FengShuiPurpose ?? combo.FengShuiPurpose;
             combo.ThemeName = request.ThemeName ?? combo.ThemeName;
             combo.ThemeDescription = request.ThemeDescription ?? combo.ThemeDescription;
-            combo.OriginalPrice = request.OriginalPrice ?? combo.OriginalPrice;
             combo.ComboPrice = request.ComboPrice ?? combo.ComboPrice;
-            combo.DiscountPercent = request.DiscountPercent ?? combo.DiscountPercent;
-            combo.Tags = request.Tags ?? combo.Tags;
             combo.Season = request.Season ?? combo.Season;
             combo.IsActive = request.IsActive ?? combo.IsActive;
             combo.UpdatedAt = DateTime.Now;

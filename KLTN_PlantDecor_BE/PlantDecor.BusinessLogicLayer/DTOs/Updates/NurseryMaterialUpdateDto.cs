@@ -7,9 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn hoặc bằng 0")]
         public int? Quantity { get; set; }
 
-        [Range(0, int.MaxValue, ErrorMessage = "Số lượng đã đặt trước phải lớn hơn hoặc bằng 0")]
-        public int? ReservedQuantity { get; set; }
-
+        public DateOnly? ExpiredDate { get; set; }
         public bool? IsActive { get; set; }
     }
 }

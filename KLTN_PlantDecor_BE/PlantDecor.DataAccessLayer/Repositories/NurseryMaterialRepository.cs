@@ -53,6 +53,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<NurseryMaterial>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<List<NurseryMaterial>> GetAllByNurseryIdAsync(int nurseryId)
+        {
+            return await _context.NurseryMaterials
+                .Where(nm => nm.NurseryId == nurseryId)
+                .Include(nm => nm.Material)
+                .Include(nm => nm.Nursery)
+                .ToListAsync();
+        }
+
         public async Task<PaginatedResult<NurseryMaterial>> GetByMaterialIdAsync(int materialId, Pagination pagination)
         {
             var query = _context.NurseryMaterials

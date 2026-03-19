@@ -4,6 +4,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateManagerRequest
     {
+        [Required(ErrorMessage = "Cần chọn vựa để gán cho Manager")]
+        [Range(1, int.MaxValue, ErrorMessage = "NurseryId không hợp lệ")]
+        public int NurseryId { get; set; }
+
         [Required(ErrorMessage = "Cần nhập Email")]
         [EmailAddress(ErrorMessage = "Sai định dạng email")]
         public string Email { get; set; } = string.Empty;

@@ -61,11 +61,10 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Tạo vựa mới cho Manager
         /// </summary>
-        [HttpPost]
+        [HttpPost("/api/admin/nurseries")]
         public async Task<IActionResult> CreateNursery([FromBody] NurseryRequestDto request)
         {
-            var managerId = GetCurrentUserId();
-            var nursery = await _nurseryService.CreateNurseryAsync(managerId, request);
+            var nursery = await _nurseryService.CreateNurseryAsync(request);
             return CreatedAtAction(nameof(GetMyNursery), new ApiResponse<NurseryResponseDto>
             {
                 Success = true,
@@ -78,7 +77,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Cập nhật thông tin vựa của Manager
         /// </summary>
-        [HttpPatch("my-nursery")]
+        [HttpPatch("/api/admin/my-nursery")]
         public async Task<IActionResult> UpdateMyNursery([FromBody] NurseryUpdateDto request)
         {
             var managerId = GetCurrentUserId();
@@ -92,23 +91,79 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Lấy danh sách vật tư sắp hết hạn của vựa hiện tại
+        /// </summary>
+        [HttpGet("my-nursery/materials/expiring-soon")]
+        public async Task<IActionResult> GetMyNurseryExpiringMaterials([FromQuery] int daysAhead = 30)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetMyNurseryExpiringMaterialsAsync(managerId, Math.Max(daysAhead, 1));
+            return Ok(new ApiResponse<List<NurseryMaterialExpiryAlertDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vật tư sắp hết hạn thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách sản phẩm sắp hết hàng của vựa hiện tại
+        /// </summary>
+        [HttpGet("my-nursery/products/low-stock")]
+        public async Task<IActionResult> GetMyNurseryLowStockProducts([FromQuery] int threshold = 5)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetMyNurseryLowStockProductsAsync(managerId, Math.Max(threshold, 0));
+            return Ok(new ApiResponse<List<NurseryLowStockProductAlertDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách sản phẩm sắp hết hàng thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy summary chung của vựa: cây đại trà, cây định danh và vật tư
+        /// </summary>
+        [HttpGet("my-nursery/inventory-summary")]
+        public async Task<IActionResult> GetMyNurseryInventorySummary([FromQuery] int lowStockThreshold = 5, [FromQuery] int expiringInDays = 30)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetMyNurseryInventorySummaryAsync(
+                managerId,
+                Math.Max(lowStockThreshold, 0),
+                Math.Max(expiringInDays, 1));
+
+            return Ok(new ApiResponse<NurseryInventorySummaryDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy summary kho vựa thành công",
+                Payload = result
+            });
+        }
+
         #endregion
 
         #region Admin Operations
 
         /// <summary>
-        /// [Admin] Lấy tất cả vựa
+        /// [System] Tìm kiếm tất cả vựa (phân trang)
         /// </summary>
-        [HttpGet("/api/admin/nurseries")]
+        [HttpPost("/api/system/nurseries/search")]
         //[Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllNurseries([FromQuery] Pagination pagination)
+        public async Task<IActionResult> SearchAllNurseries([FromBody] PaginationSearchRequestDto request)
         {
+            var pagination = request?.Pagination ?? new Pagination();
             var nurseries = await _nurseryService.GetAllNurseriesAsync(pagination);
             return Ok(new ApiResponse<PaginatedResult<NurseryListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa thành công",
+                Message = "Tìm kiếm danh sách vựa thành công",
                 Payload = nurseries
             });
         }
@@ -116,7 +171,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// [Admin] Lấy vựa theo ID
         /// </summary>
-        [HttpGet("/api/admin/nurseries/{id}")]
+        [HttpGet("/api/nurseries/{id}")]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetNurseryById(int id)
         {
@@ -176,35 +231,37 @@ namespace PlantDecor.API.Controllers
         #region Public Operations
 
         /// <summary>
-        /// Lấy danh sách vựa đang hoạt động (công khai)
+        /// [Shop] Tìm kiếm danh sách vựa đang hoạt động
         /// </summary>
-        [HttpGet("/api/nurseries")]
+        [HttpPost("/api/shop/nurseries/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActiveNurseries([FromQuery] Pagination pagination)
+        public async Task<IActionResult> SearchActiveNurseriesForShop([FromBody] PaginationSearchRequestDto request)
         {
+            var pagination = request?.Pagination ?? new Pagination();
             var nurseries = await _nurseryService.GetActiveNurseriesAsync(pagination);
             return Ok(new ApiResponse<PaginatedResult<NurseryListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa thành công",
+                Message = "Tìm kiếm danh sách vựa cho shop thành công",
                 Payload = nurseries
             });
         }
 
         /// <summary>
-        /// Lấy danh sách PlantInstance available tại một vựa (Shop)
+        /// [Shop] Tìm kiếm danh sách PlantInstance available tại một vựa
         /// </summary>
-        [HttpGet("/api/nurseries/{nurseryId}/plant-instances")]
+        [HttpPost("/api/shop/nurseries/{nurseryId}/plant-instances/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetAvailablePlantInstances(int nurseryId, [FromQuery] Pagination pagination)
+        public async Task<IActionResult> SearchAvailablePlantInstancesByNursery(int nurseryId, [FromBody] PaginationSearchRequestDto request)
         {
+            var pagination = request?.Pagination ?? new Pagination();
             var result = await _plantInstanceService.GetAvailableByNurseryIdAsync(nurseryId, pagination);
             return Ok(new ApiResponse<PaginatedResult<PlantInstanceListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách cây tại vựa thành công",
+                Message = "Tìm kiếm danh sách cây tại vựa thành công",
                 Payload = result
             });
         }
@@ -212,7 +269,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy chi tiết một PlantInstance (Shop)
         /// </summary>
-        [HttpGet("/api/plant-instances/{instanceId}")]
+        [HttpGet("/api/shop/plant-instances/{instanceId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPlantInstanceDetail(int instanceId)
         {
@@ -227,18 +284,46 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách cây đại trà available tại một vựa (Shop)
+        /// [Shop] Lấy chi tiết một CommonPlant
         /// </summary>
-        [HttpGet("/api/nurseries/{nurseryId}/common-plants")]
+        [HttpGet("/api/shop/common-plants/{commonPlantId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetAvailableCommonPlants(int nurseryId, [FromQuery] Pagination pagination)
+        public async Task<IActionResult> GetCommonPlantDetail(int commonPlantId)
         {
+            var result = await _commonPlantService.GetCommonPlantByIdAsync(commonPlantId);
+            if (result == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = $"Không tìm thấy cây đại trà với ID {commonPlantId}"
+                });
+            }
+
+            return Ok(new ApiResponse<CommonPlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết cây đại trà thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Shop] Tìm kiếm danh sách cây đại trà available tại một vựa
+        /// </summary>
+        [HttpPost("/api/shop/nurseries/{nurseryId}/common-plants/search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchAvailableCommonPlantsByNursery(int nurseryId, [FromBody] PaginationSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
             var result = await _commonPlantService.GetActiveByNurseryIdAsync(nurseryId, pagination);
             return Ok(new ApiResponse<PaginatedResult<CommonPlantListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách cây đại trà tại vựa thành công",
+                Message = "Tìm kiếm danh sách cây đại trà tại vựa thành công",
                 Payload = result
             });
         }

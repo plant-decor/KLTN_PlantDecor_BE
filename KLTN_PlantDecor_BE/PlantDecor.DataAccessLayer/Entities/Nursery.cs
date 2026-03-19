@@ -21,14 +21,6 @@ public partial class Nursery
 
     public string? Phone { get; set; }
 
-    public int? Type { get; set; }
-
-    public int? LightCondition { get; set; }
-
-    public int? HumidityLevel { get; set; }
-
-    public bool? HasMistSystem { get; set; }
-
     public bool? IsActive { get; set; }
 
     public DateTime? CreatedAt { get; set; }
@@ -48,4 +40,8 @@ public partial class Nursery
     public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
+
+    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 }

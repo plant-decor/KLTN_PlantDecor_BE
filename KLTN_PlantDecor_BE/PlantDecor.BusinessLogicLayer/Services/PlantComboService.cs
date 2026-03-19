@@ -62,7 +62,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 paginatedEntities.PageSize
             );
 
-            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
             return result;
         }
 
@@ -374,6 +374,231 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #endregion
 
+        #region Manager - Nursery Combo Stock
+
+        public async Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int nurseryId, int managerId, int comboId, AssembleNurseryComboRequestDto request)
+        {
+            if (request.Quantity <= 0)
+                throw new BadRequestException("Số lượng combo tạo phải lớn hơn 0");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != nurseryId)
+                throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            if (!combo.PlantComboItems.Any())
+                throw new BadRequestException("Combo chưa có thành phần cây để tạo tồn kho kinh doanh");
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                var stockChanges = new List<NurseryComboPlantStockChangeDto>();
+                var shortageMessages = new List<string>();
+
+                foreach (var item in combo.PlantComboItems)
+                {
+                    if (!item.PlantId.HasValue)
+                        throw new BadRequestException($"Combo item ID {item.Id} chưa có PlantId hợp lệ");
+
+                    if (!item.Quantity.HasValue || item.Quantity.Value <= 0)
+                        throw new BadRequestException($"Combo item ID {item.Id} có số lượng cây không hợp lệ");
+
+                    var requiredQuantity = item.Quantity.Value * request.Quantity;
+                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(item.PlantId.Value, nurseryId);
+                    if (commonPlant == null || !commonPlant.IsActive)
+                    {
+                        shortageMessages.Add($"- PlantId {item.PlantId.Value}: không tồn tại trong kho cây đại trà của vựa hoặc đang bị vô hiệu hóa");
+                        continue;
+                    }
+
+                    var availableStock = commonPlant.Quantity - commonPlant.ReservedQuantity;
+                    if (availableStock < requiredQuantity)
+                    {
+                        var plantName = item.Plant?.Name ?? $"PlantId {item.PlantId.Value}";
+                        shortageMessages.Add($"- {plantName}: cần {requiredQuantity}, khả dụng {availableStock}");
+                        continue;
+                    }
+
+                    var beforeStock = commonPlant.Quantity;
+                    commonPlant.Quantity -= requiredQuantity;
+                    _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+
+                    stockChanges.Add(new NurseryComboPlantStockChangeDto
+                    {
+                        PlantId = item.PlantId.Value,
+                        PlantName = item.Plant?.Name ?? string.Empty,
+                        QuantityPerCombo = item.Quantity.Value,
+                        QuantityChanged = requiredQuantity,
+                        StockBefore = beforeStock,
+                        StockAfter = commonPlant.Quantity
+                    });
+                }
+
+                if (shortageMessages.Any())
+                {
+                    throw new BadRequestException("Không đủ tồn kho cây đại trà để tạo combo:\n" + string.Join("\n", shortageMessages));
+                }
+
+                var nurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByNurseryAndComboAsync(nurseryId, comboId);
+                var comboStockBefore = nurseryCombo?.Quantity ?? 0;
+
+                if (nurseryCombo == null)
+                {
+                    nurseryCombo = new NurseryPlantCombo
+                    {
+                        NurseryId = nurseryId,
+                        PlantComboId = comboId,
+                        Quantity = request.Quantity,
+                        IsActive = true,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    _unitOfWork.NurseryPlantComboRepository.PrepareCreate(nurseryCombo);
+                }
+                else
+                {
+                    nurseryCombo.Quantity += request.Quantity;
+                    nurseryCombo.IsActive = true;
+                    nurseryCombo.UpdatedAt = DateTime.Now;
+                    _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryCombo);
+                }
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                await InvalidateCacheAsync();
+
+                return new NurseryComboStockOperationResponseDto
+                {
+                    NurseryId = nurseryId,
+                    PlantComboId = comboId,
+                    ComboName = combo.ComboName,
+                    OperationType = "assemble",
+                    QuantityProcessed = request.Quantity,
+                    ComboStockBefore = comboStockBefore,
+                    ComboStockAfter = nurseryCombo.Quantity,
+                    PlantStockChanges = stockChanges
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int nurseryId, int managerId, int comboId, DecomposeNurseryComboRequestDto request)
+        {
+            if (request.Quantity <= 0)
+                throw new BadRequestException("Số lượng combo phân rã phải lớn hơn 0");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != nurseryId)
+                throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            if (!combo.PlantComboItems.Any())
+                throw new BadRequestException("Combo chưa có thành phần cây để phân rã");
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                var nurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByNurseryAndComboAsync(nurseryId, comboId);
+                if (nurseryCombo == null || !nurseryCombo.IsActive)
+                    throw new NotFoundException("Vựa chưa có tồn kho combo này để phân rã");
+
+                var comboStockBefore = nurseryCombo.Quantity;
+                if (comboStockBefore < request.Quantity)
+                    throw new BadRequestException($"Không đủ số lượng combo để phân rã. Hiện có {comboStockBefore}, yêu cầu {request.Quantity}");
+
+                var stockChanges = new List<NurseryComboPlantStockChangeDto>();
+                foreach (var item in combo.PlantComboItems)
+                {
+                    if (!item.PlantId.HasValue)
+                        throw new BadRequestException($"Combo item ID {item.Id} chưa có PlantId hợp lệ");
+
+                    if (!item.Quantity.HasValue || item.Quantity.Value <= 0)
+                        throw new BadRequestException($"Combo item ID {item.Id} có số lượng cây không hợp lệ");
+
+                    var returnQuantity = item.Quantity.Value * request.Quantity;
+                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(item.PlantId.Value, nurseryId);
+                    var isNewCommonPlant = false;
+
+                    if (commonPlant == null)
+                    {
+                        commonPlant = new CommonPlant
+                        {
+                            PlantId = item.PlantId.Value,
+                            NurseryId = nurseryId,
+                            Quantity = 0,
+                            ReservedQuantity = 0,
+                            IsActive = true
+                        };
+                        isNewCommonPlant = true;
+                    }
+
+                    var beforeStock = commonPlant.Quantity;
+                    commonPlant.Quantity += returnQuantity;
+                    commonPlant.IsActive = true;
+                    if (isNewCommonPlant)
+                    {
+                        _unitOfWork.CommonPlantRepository.PrepareCreate(commonPlant);
+                    }
+                    else
+                    {
+                        _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                    }
+
+                    stockChanges.Add(new NurseryComboPlantStockChangeDto
+                    {
+                        PlantId = item.PlantId.Value,
+                        PlantName = item.Plant?.Name ?? string.Empty,
+                        QuantityPerCombo = item.Quantity.Value,
+                        QuantityChanged = returnQuantity,
+                        StockBefore = beforeStock,
+                        StockAfter = commonPlant.Quantity
+                    });
+                }
+
+                nurseryCombo.Quantity -= request.Quantity;
+                nurseryCombo.IsActive = nurseryCombo.Quantity > 0;
+                nurseryCombo.UpdatedAt = DateTime.Now;
+                _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryCombo);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                await InvalidateCacheAsync();
+
+                return new NurseryComboStockOperationResponseDto
+                {
+                    NurseryId = nurseryId,
+                    PlantComboId = comboId,
+                    ComboName = combo.ComboName,
+                    OperationType = "decompose",
+                    QuantityProcessed = request.Quantity,
+                    ComboStockBefore = comboStockBefore,
+                    ComboStockAfter = nurseryCombo.Quantity,
+                    PlantStockChanges = stockChanges
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        #endregion
+
         #region Shop Display
 
         public async Task<PaginatedResult<PlantComboListResponseDto>> GetCombosForShopAsync(Pagination pagination)
@@ -393,6 +618,68 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
+        }
+
+        public async Task<PaginatedResult<SellingPlantComboResponseDto>> GetSellingCombosAsync(Pagination pagination, PlantComboShopSearchRequestDto searchDto)
+        {
+            IQueryable<NurseryPlantCombo> query = _unitOfWork.NurseryPlantComboRepository.GetQuery()
+                .Where(npc => npc.Quantity > 0 && npc.PlantCombo.IsActive == true);
+
+            query = query
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.PlantComboImages)
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.TagsNavigation)
+                .Include(npc => npc.Nursery);
+
+            // Keyword search
+            if (!string.IsNullOrWhiteSpace(searchDto.Keyword))
+            {
+                var keyword = searchDto.Keyword.ToLower();
+                query = query.Where(npc => (npc.PlantCombo.ComboName != null && npc.PlantCombo.ComboName.ToLower().Contains(keyword)) ||
+                                           (npc.PlantCombo.Description != null && npc.PlantCombo.Description.ToLower().Contains(keyword)));
+            }
+
+            // Price range
+            if (searchDto.MinPrice.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.ComboPrice.HasValue && npc.PlantCombo.ComboPrice.Value >= searchDto.MinPrice.Value);
+            }
+            if (searchDto.MaxPrice.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.ComboPrice.HasValue && npc.PlantCombo.ComboPrice.Value <= searchDto.MaxPrice.Value);
+            }
+
+            // Tags
+            if (searchDto.TagIds != null && searchDto.TagIds.Any())
+            {
+                query = query.Where(npc => npc.PlantCombo.TagsNavigation.Any(tag => searchDto.TagIds.Contains(tag.Id)));
+            }
+
+            var sellingComboEntries = await query.ToListAsync();
+
+            var groupedByCombo = sellingComboEntries
+                .GroupBy(npc => npc.PlantCombo)
+                .Select(g => new SellingPlantComboResponseDto
+                {
+                    Id = g.Key.Id,
+                    Name = g.Key.ComboName ?? string.Empty,
+                    Description = g.Key.Description,
+                    Price = g.Key.ComboPrice ?? 0,
+                    ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                    AverageRating = 0,
+                    Nurseries = g.Select(npc => new SellingNurseryResponseDto
+                    {
+                        NurseryId = npc.NurseryId,
+                        NurseryName = npc.Nursery.Name ?? string.Empty,
+                        Quantity = npc.Quantity
+                    }).ToList()
+                });
+
+            var totalCount = groupedByCombo.Count();
+            var paginatedItems = groupedByCombo.Skip((pagination.PageNumber - 1) * pagination.PageSize).Take(pagination.PageSize).ToList();
+
+            return new PaginatedResult<SellingPlantComboResponseDto>(paginatedItems, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         #endregion

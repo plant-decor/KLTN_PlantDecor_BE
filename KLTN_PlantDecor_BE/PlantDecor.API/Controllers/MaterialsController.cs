@@ -27,34 +27,36 @@ namespace PlantDecor.API.Controllers
         #region CRUD Operations
 
         /// <summary>
-        /// Lấy tất cả materials (Admin)
+        /// [System] Tìm kiếm danh sách tất cả materials (phân trang)
         /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetAllMaterials([FromQuery] Pagination pagination)
+        [HttpPost("/api/system/materials/search")]
+        public async Task<IActionResult> SearchAllMaterials([FromBody] PaginationSearchRequestDto request)
         {
+            var pagination = request?.Pagination ?? new Pagination();
             var materials = await _materialService.GetAllMaterialsAsync(pagination);
             return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get all materials successfully",
+                Message = "Search all materials successfully",
                 Payload = materials
             });
         }
 
         /// <summary>
-        /// Lấy materials đang active
+        /// [Shop] Tìm kiếm danh sách vật tư cho shop
         /// </summary>
-        [HttpGet("active")]
+        [HttpPost("/api/shop/materials/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetActiveMaterials([FromQuery] Pagination pagination)
+        public async Task<IActionResult> SearchMaterialsForShop([FromBody] PaginationSearchRequestDto request)
         {
-            var materials = await _materialService.GetActiveMaterialsAsync(pagination);
+            var pagination = request?.Pagination ?? new Pagination();
+            var materials = await _materialService.GetMaterialsForShopAsync(pagination);
             return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Get active materials successfully",
+                Message = "Search shop materials successfully",
                 Payload = materials
             });
         }
@@ -62,7 +64,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy material theo ID
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("/api/material/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetMaterialById(int id)
         {
@@ -113,21 +115,6 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update material successfully",
                 Payload = material
-            });
-        }
-
-        /// <summary>
-        /// Xóa material
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMaterial(int id)
-        {
-            await _materialService.DeleteMaterialAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Delete material successfully"
             });
         }
 

@@ -30,6 +30,8 @@ public partial class PlantInstance
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
+    public virtual ICollection<NurseryOrderDetail> NurseryOrderDetails { get; set; } = new List<NurseryOrderDetail>();
+
     public virtual Plant? Plant { get; set; }
 
     public virtual Nursery? CurrentNursery { get; set; }

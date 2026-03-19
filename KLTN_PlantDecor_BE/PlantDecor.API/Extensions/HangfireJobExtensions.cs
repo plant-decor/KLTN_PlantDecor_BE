@@ -53,6 +53,20 @@ namespace PlantDecor.API.Extensions
         }
 
         /// <summary>
+        /// Enqueue order delivery processing - check strategy and create RemainingBalance invoice if needed
+        /// </summary>
+        /// <param name="backgroundJobClient">Hangfire background job client</param>
+        /// <param name="orderId">Order ID to process</param>
+        /// <returns>Job ID</returns>
+        public static string EnqueueOrderDeliveryProcessing(
+            this IBackgroundJobClient backgroundJobClient,
+            int orderId)
+        {
+            return backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
+                service => service.ProcessOrderDeliveryAsync(orderId));
+        }
+
+        /// <summary>
         /// Register all recurring Hangfire jobs
         /// </summary>
         public static void RegisterRecurringJobs(this IApplicationBuilder app)
@@ -64,6 +78,12 @@ namespace PlantDecor.API.Extensions
                 "cleanup-revoked-refresh-tokens",
                 service => service.CleanupRevokedTokensAsync(),
                 "*/10 * * * *");
+
+            // Mark expired pending payments/transactions every minute
+            recurringJobManager.AddOrUpdate<IPaymentTimeoutService>(
+                "process-expired-payments",
+                service => service.ProcessExpiredPaymentsAsync(),
+                "*/1 * * * *");
         }
     }
 }

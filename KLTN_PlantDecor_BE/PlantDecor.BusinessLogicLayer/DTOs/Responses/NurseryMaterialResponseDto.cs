@@ -11,6 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public int Quantity { get; set; }
+        public DateOnly? ExpiredDate { get; set; }
         public int ReservedQuantity { get; set; }
         public bool IsActive { get; set; }
         public int AvailableQuantity => Quantity - ReservedQuantity;
@@ -26,6 +27,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public int Quantity { get; set; }
+        public DateOnly? ExpiredDate { get; set; }
         public int ReservedQuantity { get; set; }
         public bool IsActive { get; set; }
         public int AvailableQuantity => Quantity - ReservedQuantity;

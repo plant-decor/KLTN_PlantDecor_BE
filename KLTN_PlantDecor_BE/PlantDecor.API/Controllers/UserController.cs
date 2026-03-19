@@ -20,6 +20,28 @@ namespace PlantDecor.API.Controllers
             _authenticationService = authenticationService;
         }
 
+        [HttpGet("user-profile")]
+        public async Task<IActionResult> GetUserProfile()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "User profile retrieved successfully",
+                Payload = user
+            });
+        }
+
         [HttpPut("user-profile")]
         public async Task<IActionResult> UpdateUserInfo([FromBody] UserUpdateDto request)
         {
@@ -94,6 +116,26 @@ namespace PlantDecor.API.Controllers
                 {
                     avatarURL = updatedUser.AvatarUrl
                 }
+            });
+        }
+        [HttpPost("set-password-for-google-login")]
+        public async Task<IActionResult> SetPassword([FromBody] SetPasswordDto dto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+            var result = await _userService.SetPasswordAsync(userId, dto);
+            if (!result)
+            {
+                throw new Exception("Failed to set password");
+            }
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Password set successfully"
             });
         }
     }

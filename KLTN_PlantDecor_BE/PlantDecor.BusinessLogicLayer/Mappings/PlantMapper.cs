@@ -20,16 +20,21 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Origin = plant.Origin,
                 Description = plant.Description,
                 BasePrice = plant.BasePrice,
+                PlacementType = plant.PlacementType,
+                PlacementTypeName = ((PlacementTypeEnum)plant.PlacementType).ToString(),
                 Size = plant.Size,
                 GrowthRate = plant.GrowthRate,
                 Toxicity = plant.Toxicity,
                 AirPurifying = plant.AirPurifying,
                 HasFlower = plant.HasFlower,
+                PetSafe = plant.PetSafe,
+                ChildSafe = plant.ChildSafe,
                 FengShuiElement = plant.FengShuiElement,
                 FengShuiMeaning = plant.FengShuiMeaning,
                 PotIncluded = plant.PotIncluded,
                 PotSize = plant.PotSize,
                 CareLevel = plant.CareLevel,
+                IsUniqueInstance = plant.IsUniqueInstance,
                 IsActive = plant.IsActive,
                 CreatedAt = plant.CreatedAt,
                 UpdatedAt = plant.UpdatedAt,
@@ -60,6 +65,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static PlantListResponseDto ToListResponse(this Plant plant)
         {
             if (plant == null) return null!;
+
+            var availableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available);
+            var availableCommonQuantity = plant.CommonPlants
+                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Sum(cp => cp.Quantity - cp.ReservedQuantity);
+
             return new PlantListResponseDto
             {
                 Id = plant.Id,
@@ -71,7 +82,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
                     ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,
                 TotalInstances = plant.PlantInstances.Count,
-                AvailableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available),
+                AvailableInstances = availableInstances,
+                AvailableCommonQuantity = availableCommonQuantity,
+                TotalAvailableStock = availableInstances + availableCommonQuantity,
                 CategoryNames = plant.Categories.Select(c => c.Name).ToList(),
                 TagNames = plant.Tags.Select(t => t.TagName).ToList()
             };
@@ -100,11 +113,14 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Origin = request.Origin,
                 Description = request.Description,
                 BasePrice = request.BasePrice,
+                PlacementType = request.PlacementType,
                 Size = request.Size,
                 GrowthRate = request.GrowthRate,
                 Toxicity = request.Toxicity,
                 AirPurifying = request.AirPurifying,
                 HasFlower = request.HasFlower,
+                PetSafe = request.PetSafe,
+                ChildSafe = request.ChildSafe,
                 FengShuiElement = request.FengShuiElement,
                 FengShuiMeaning = request.FengShuiMeaning,
                 PotIncluded = request.PotIncluded,
@@ -112,7 +128,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 CareLevel = request.CareLevel,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                UpdatedAt = DateTime.Now,
+                IsUniqueInstance = request.IsUniqueInstance
             };
         }
         #endregion
@@ -122,22 +139,66 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (request == null || plant == null) return;
 
-            plant.Name = request.Name;
-            plant.SpecificName = request.SpecificName;
-            plant.Origin = request.Origin;
-            plant.Description = request.Description;
-            plant.BasePrice = request.BasePrice;
-            plant.Size = request.Size;
-            plant.GrowthRate = request.GrowthRate;
-            plant.Toxicity = request.Toxicity;
-            plant.AirPurifying = request.AirPurifying;
-            plant.HasFlower = request.HasFlower;
-            plant.FengShuiElement = request.FengShuiElement;
-            plant.FengShuiMeaning = request.FengShuiMeaning;
-            plant.PotIncluded = request.PotIncluded;
-            plant.PotSize = request.PotSize;
-            plant.CareLevel = request.CareLevel;
-            plant.IsActive = request.IsActive ?? plant.IsActive;
+            if (request.Name != null)
+                plant.Name = request.Name;
+
+            if (request.SpecificName != null)
+                plant.SpecificName = request.SpecificName;
+
+            if (request.Origin != null)
+                plant.Origin = request.Origin;
+
+            if (request.Description != null)
+                plant.Description = request.Description;
+
+            if (request.BasePrice.HasValue)
+                plant.BasePrice = request.BasePrice.Value;
+
+            if (request.Size != null)
+                plant.Size = request.Size;
+
+            if (request.GrowthRate != null)
+                plant.GrowthRate = request.GrowthRate;
+
+            if (request.PlacementType != null)
+                plant.PlacementType = request.PlacementType.Value;
+
+            if (request.Toxicity.HasValue)
+                plant.Toxicity = request.Toxicity.Value;
+
+            if (request.AirPurifying.HasValue)
+                plant.AirPurifying = request.AirPurifying.Value;
+
+            if (request.HasFlower.HasValue)
+                plant.HasFlower = request.HasFlower.Value;
+
+            if (request.PetSafe.HasValue)
+                plant.PetSafe = request.PetSafe.Value;
+
+            if (request.ChildSafe.HasValue)
+                plant.ChildSafe = request.ChildSafe.Value;
+
+            if (request.FengShuiElement != null)
+                plant.FengShuiElement = request.FengShuiElement;
+
+            if (request.FengShuiMeaning != null)
+                plant.FengShuiMeaning = request.FengShuiMeaning;
+
+            if (request.PotIncluded.HasValue)
+                plant.PotIncluded = request.PotIncluded.Value;
+
+            if (request.PotSize != null)
+                plant.PotSize = request.PotSize;
+
+            if (request.CareLevel != null)
+                plant.CareLevel = request.CareLevel;
+
+            if (request.IsActive.HasValue)
+                plant.IsActive = request.IsActive.Value;
+
+            if (request.IsUniqueInstance.HasValue)
+                plant.IsUniqueInstance = request.IsUniqueInstance.Value;
+
             plant.UpdatedAt = DateTime.Now;
         }
         #endregion

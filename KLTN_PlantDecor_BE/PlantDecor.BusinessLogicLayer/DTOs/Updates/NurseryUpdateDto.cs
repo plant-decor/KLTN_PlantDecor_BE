@@ -20,14 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? Phone { get; set; }
 
-        public int? Type { get; set; }
-
-        public int? LightCondition { get; set; }
-
-        public int? HumidityLevel { get; set; }
-
-        public bool? HasMistSystem { get; set; }
-
         public bool? IsActive { get; set; }
     }
 }

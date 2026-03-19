@@ -21,23 +21,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? Phone { get; set; }
 
-        /// <summary>
-        /// Loại vựa: 1 = Indoor, 2 = Outdoor, 3 = Mixed
-        /// </summary>
-        public int? Type { get; set; }
-
-        /// <summary>
-        /// Điều kiện ánh sáng: 1 = Low, 2 = Medium, 3 = High
-        /// </summary>
-        public int? LightCondition { get; set; }
-
-        /// <summary>
-        /// Độ ẩm: 1 = Low, 2 = Medium, 3 = High
-        /// </summary>
-        public int? HumidityLevel { get; set; }
-
-        public bool? HasMistSystem { get; set; }
-
         public bool IsActive { get; set; } = true;
     }
 }

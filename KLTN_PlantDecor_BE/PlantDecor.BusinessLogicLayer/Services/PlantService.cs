@@ -47,6 +47,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
+        public async Task<PaginatedResult<PlantListResponseDto>> SearchAllPlantsAsync(PlantSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var filter = BuildSearchFilter(request);
+
+            var cacheKey = BuildSearchCacheKey("plants_system_search", filter, pagination);
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantRepository.SearchAllWithDetailsAsync(filter, pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
+        }
+
         public async Task<PaginatedResult<PlantListResponseDto>> GetActivePlantsAsync(Pagination pagination)
         {
             var cacheKey = $"{ACTIVE_PLANTS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
@@ -329,6 +351,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
+        public async Task<PaginatedResult<PlantListResponseDto>> SearchPlantsForShopAsync(PlantSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var filter = BuildSearchFilter(request);
+
+            var cacheKey = BuildSearchCacheKey("plants_shop_search", filter, pagination);
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantRepository.SearchForShopAsync(filter, pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
+        }
+
         #endregion
 
         #region Cache Management
@@ -338,6 +382,45 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ALL_PLANTS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_PLANTS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_PLANTS_KEY);
+            await _cacheService.RemoveByPrefixAsync("plants_system_search");
+            await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+        }
+
+        private static PlantSearchFilter BuildSearchFilter(PlantSearchRequestDto? request)
+        {
+            return new PlantSearchFilter
+            {
+                Keyword = request?.Keyword,
+                IsActive = request?.IsActive,
+                PlacementType = request?.PlacementType,
+                CareLevel = request?.CareLevel,
+                Toxicity = request?.Toxicity,
+                AirPurifying = request?.AirPurifying,
+                HasFlower = request?.HasFlower,
+                PetSafe = request?.PetSafe,
+                ChildSafe = request?.ChildSafe,
+                IsUniqueInstance = request?.IsUniqueInstance,
+                MinBasePrice = request?.MinBasePrice,
+                MaxBasePrice = request?.MaxBasePrice,
+                CategoryIds = request?.CategoryIds,
+                TagIds = request?.TagIds,
+                NurseryId = request?.NurseryId,
+                SortBy = request?.SortBy,
+                SortDirection = request?.SortDirection
+            };
+        }
+
+        private static string BuildSearchCacheKey(string prefix, PlantSearchFilter filter, Pagination pagination)
+        {
+            var categoryPart = filter.CategoryIds == null || filter.CategoryIds.Count == 0
+                ? "none"
+                : string.Join("-", filter.CategoryIds.OrderBy(x => x));
+
+            var tagPart = filter.TagIds == null || filter.TagIds.Count == 0
+                ? "none"
+                : string.Join("-", filter.TagIds.OrderBy(x => x));
+
+            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

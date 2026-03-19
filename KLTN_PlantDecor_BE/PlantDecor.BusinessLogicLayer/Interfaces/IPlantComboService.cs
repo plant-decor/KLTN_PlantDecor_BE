@@ -25,7 +25,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto> AssignTagsToComboAsync(AssignComboTagsDto request);
         Task<PlantComboResponseDto> RemoveTagFromComboAsync(int comboId, int tagId);
 
+        // Manager - Nursery Combo Stock
+        Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int nurseryId, int managerId, int comboId, AssembleNurseryComboRequestDto request);
+        Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int nurseryId, int managerId, int comboId, DecomposeNurseryComboRequestDto request);
+
         // Shop Display
         Task<PaginatedResult<PlantComboListResponseDto>> GetCombosForShopAsync(Pagination pagination);
+        Task<PaginatedResult<SellingPlantComboResponseDto>> GetSellingCombosAsync(Pagination pagination, PlantComboShopSearchRequestDto searchDto);
     }
 }

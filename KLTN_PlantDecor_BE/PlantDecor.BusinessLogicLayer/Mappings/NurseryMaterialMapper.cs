@@ -19,6 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaterialCode = entity.Material?.MaterialCode,
                 Unit = entity.Material?.Unit,
                 BasePrice = entity.Material?.BasePrice,
+                ExpiredDate = entity.ExpiredDate,
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
                 Quantity = entity.Quantity,
@@ -37,6 +38,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaterialName = entity.Material?.Name,
                 MaterialCode = entity.Material?.MaterialCode,
                 Unit = entity.Material?.Unit,
+                ExpiredDate = entity.ExpiredDate,
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
                 Quantity = entity.Quantity,
@@ -66,6 +68,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaterialId = request.MaterialId,
                 NurseryId = request.NurseryId,
                 Quantity = request.Quantity,
+                ExpiredDate = request.ExpiredDate,
                 ReservedQuantity = 0,
                 IsActive = request.IsActive
             };
@@ -78,8 +81,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request == null || entity == null) return;
 
             if (request.Quantity.HasValue) entity.Quantity = request.Quantity.Value;
-            if (request.ReservedQuantity.HasValue) entity.ReservedQuantity = request.ReservedQuantity.Value;
             if (request.IsActive.HasValue) entity.IsActive = request.IsActive.Value;
+            if (request.ExpiredDate.HasValue) entity.ExpiredDate = request.ExpiredDate.Value;
         }
         #endregion
     }

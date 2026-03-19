@@ -13,6 +13,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<NurseryMaterialResponseDto> CreateNurseryMaterialAsync(NurseryMaterialRequestDto request);
         Task<NurseryMaterialResponseDto> UpdateNurseryMaterialAsync(int id, NurseryMaterialUpdateDto request);
         Task<bool> DeleteNurseryMaterialAsync(int id);
+        Task<NurseryMaterialResponseDto> ToggleActiveAsync(int id);
 
         // Query Operations
         Task<PaginatedResult<NurseryMaterialListResponseDto>> GetByNurseryIdAsync(int nurseryId, Pagination pagination);

@@ -78,7 +78,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy category theo ID
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("/api/category/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetCategoryById(int id)
         {
@@ -129,21 +129,6 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update Category Successfully!",
                 Payload = category
-            });
-        }
-
-        /// <summary>
-        /// Xóa category
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCategory(int id)
-        {
-            await _categoryService.DeleteCategoryAsync(id);
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Delete Category successfully!"
             });
         }
 

@@ -17,7 +17,7 @@ public partial class PlantCombo
 
     public string? SuitableSpace { get; set; }
 
-    public string? SuitableRooms { get; set; }
+    public List<string>? SuitableRooms { get; set; }
 
     public string? FengShuiElement { get; set; }
 
@@ -27,13 +27,7 @@ public partial class PlantCombo
 
     public string? ThemeDescription { get; set; }
 
-    public decimal? OriginalPrice { get; set; }
-
     public decimal? ComboPrice { get; set; }
-
-    public decimal? DiscountPercent { get; set; }
-
-    public string? Tags { get; set; }
 
     public string? Season { get; set; }
 
