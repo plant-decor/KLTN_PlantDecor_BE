@@ -16,5 +16,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(npc => npc.Id == id);
         }
 
+        public async Task<NurseryPlantCombo?> GetByIdWithComboItemsAsync(int id)
+        {
+            return await _context.NurseryPlantCombos
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.PlantComboItems)
+                .FirstOrDefaultAsync(npc => npc.Id == id);
+        }
     }
 }
