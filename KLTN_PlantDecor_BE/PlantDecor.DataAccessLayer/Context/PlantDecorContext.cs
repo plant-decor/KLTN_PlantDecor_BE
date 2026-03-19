@@ -578,31 +578,30 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.OrderGroupCode).HasMaxLength(64);
 
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("Payment_OrderId_fkey");
         });
 
-            modelBuilder.Entity<Shipping>(entity =>
-            {
-                entity.HasKey(e => e.Id).HasName("Shipping_pkey");
+        modelBuilder.Entity<Shipping>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Shipping_pkey");
 
-                entity.ToTable("Shipping");
+            entity.ToTable("Shipping");
 
-                entity.HasIndex(e => e.OrderId, "IX_Shipping_OrderId");
+            entity.HasIndex(e => e.OrderId, "IX_Shipping_OrderId");
 
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                entity.Property(e => e.Note).HasMaxLength(255);
-                entity.Property(e => e.TrackingCode).HasMaxLength(100);
-                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Note).HasMaxLength(255);
+            entity.Property(e => e.TrackingCode).HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                entity.HasOne(d => d.Order).WithMany()
-                .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("Shipping_OrderId_fkey");
-            });
+            entity.HasOne(d => d.Order).WithMany()
+            .HasForeignKey(d => d.OrderId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .HasConstraintName("Shipping_OrderId_fkey");
+        });
 
         modelBuilder.Entity<Plant>(entity =>
         {

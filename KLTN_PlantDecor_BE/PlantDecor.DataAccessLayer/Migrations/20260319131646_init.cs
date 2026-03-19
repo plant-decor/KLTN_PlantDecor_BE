@@ -1008,7 +1008,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     OrderId = table.Column<int>(type: "integer", nullable: true),
-                    OrderGroupCode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     PaymentType = table.Column<int>(type: "integer", nullable: true),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),

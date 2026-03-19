@@ -1073,10 +1073,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("OrderGroupCode")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 

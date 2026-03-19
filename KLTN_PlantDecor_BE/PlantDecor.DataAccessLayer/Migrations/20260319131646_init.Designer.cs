@@ -13,7 +13,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260318073734_init")]
+    [Migration("20260319131646_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1075,10 +1075,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("OrderGroupCode")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
