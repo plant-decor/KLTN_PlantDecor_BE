@@ -131,6 +131,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IEmailBackgroundJobService, EmailBackgroundJobService>();
+            builder.Services.AddScoped<IOrderBackgroundJobService, OrderBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
             builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
 

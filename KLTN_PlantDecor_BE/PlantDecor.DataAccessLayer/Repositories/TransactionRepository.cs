@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -20,6 +21,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.Transactions
                 .Where(t => t.PaymentId == paymentId)
+                .ToListAsync();
+        }
+
+        public async Task<List<Transaction>> GetExpiredPendingTransactionsAsync()
+        {
+            var now = DateTime.Now;
+            return await _context.Transactions
+                .Where(t => t.Status == (int)TransactionStatusEnum.Pending &&
+                           t.ExpiredAt.HasValue &&
+                           t.ExpiredAt.Value <= now)
                 .ToListAsync();
         }
     }

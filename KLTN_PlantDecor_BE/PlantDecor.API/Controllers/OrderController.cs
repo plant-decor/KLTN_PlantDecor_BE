@@ -29,11 +29,11 @@ namespace PlantDecor.API.Controllers
         {
             var userId = GetUserId();
             var result = await _orderService.CreateOrderAsync(userId, request);
-            return StatusCode(StatusCodes.Status201Created, new ApiResponse<List<OrderResponseDto>>
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<OrderResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Orders created successfully",
+                Message = "Order created successfully",
                 Payload = result
             });
         }
@@ -85,6 +85,22 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Order cancelled successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Đánh dấu đơn hàng đã giao thành công (dành cho shipper/admin)
+        /// </summary>
+        [HttpPatch("{id}/delivered")]
+        public async Task<IActionResult> MarkOrderAsDelivered(int id)
+        {
+            var result = await _orderService.MarkOrderAsDeliveredAsync(id);
+            return Ok(new ApiResponse<OrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Order marked as delivered successfully",
                 Payload = result
             });
         }

@@ -26,75 +26,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<CreatePaymentUrlResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto request, HttpContext httpContext)
         {
-            var targetOrders = await ResolveTargetOrdersAsync(userId, request);
-            var paymentCandidates = targetOrders
-                .Select(order =>
-                {
-                    var (paymentType, amount) = DeterminePaymentTypeAndAmount(order);
-                    return new { Order = order, PaymentType = paymentType, Amount = amount };
-                })
-                .ToList();
-
-            var paymentType = paymentCandidates[0].PaymentType;
-            if (paymentCandidates.Any(x => x.PaymentType != paymentType))
-                throw new BadRequestException("All shop orders in a group must be in the same payable stage");
-
-            var amount = paymentCandidates.Sum(x => x.Amount);
+            var order = await ResolveTargetOrderAsync(userId, request);
+            var (paymentType, amount) = DeterminePaymentTypeAndAmount(order);
 
             if (amount <= 0)
                 throw new BadRequestException("Payment amount must be greater than 0");
 
-            const string? orderGroupCode = null;
-            var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(targetOrders[0].Id);
-
+            // Check if there's a pending payment with active transaction
+            var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(order.Id);
             var now = DateTime.Now;
 
-            var paymentsForType = existingPayments
-                .Where(p => p.PaymentType == (int)paymentType)
-                .ToList();
-
-            var activePendingPayment = paymentsForType.FirstOrDefault(p =>
+            var activePendingPayment = existingPayments.FirstOrDefault(p =>
+                p.PaymentType == (int)paymentType &&
                 p.Status == (int)PaymentStatusEnum.Pending &&
                 p.Transactions.Any(t =>
                     t.Status == (int)TransactionStatusEnum.Pending &&
                     (!t.ExpiredAt.HasValue || t.ExpiredAt.Value > now)));
 
             if (activePendingPayment != null)
-                throw new BadRequestException("An active payment is pending. Please complete or cancel it before retrying");
+                throw new BadRequestException("An active payment is pending. Please use retry payment API or wait for it to expire");
 
-            var attemptCount = paymentsForType.Count;
-            if (attemptCount >= MaxRetryAttempts)
-                throw new BadRequestException($"Payment retry limit exceeded. Maximum attempts: {MaxRetryAttempts}");
-
+            // For RemainingBalance payment, Invoice should already exist (created when order was delivered)
             if (paymentType == PaymentTypeEnum.RemainingBalance)
             {
-                foreach (var candidate in paymentCandidates)
-                {
-                    var existingInvoice = await _unitOfWork.InvoiceRepository
-                        .GetPendingByOrderIdAndTypeAsync(candidate.Order.Id, (int)InvoiceTypeEnum.RemainingBalance);
+                var existingInvoice = await _unitOfWork.InvoiceRepository
+                    .GetPendingByOrderIdAndTypeAsync(order.Id, (int)InvoiceTypeEnum.RemainingBalance);
 
-                    if (existingInvoice != null)
-                        continue;
-
-                    _unitOfWork.InvoiceRepository.PrepareCreate(new Invoice
-                    {
-                        OrderId = candidate.Order.Id,
-                        NurseryId = candidate.Order.NurseryId,
-                        Type = (int)InvoiceTypeEnum.RemainingBalance,
-                        TotalAmount = candidate.Amount,
-                        Status = (int)InvoiceStatusEnum.Pending,
-                        IssuedDate = DateTime.Now
-                    });
-                }
-
-                await _unitOfWork.SaveAsync();
+                if (existingInvoice == null)
+                    throw new BadRequestException("RemainingBalance invoice not found. Order may not be in the correct status for remaining payment.");
             }
 
             // Create Payment record (Pending)
             var payment = new Payment
             {
-                OrderId = targetOrders[0].Id,
-                OrderGroupCode = orderGroupCode,
+                OrderId = order.Id,
                 PaymentType = (int)paymentType,
                 Amount = amount,
                 Status = (int)PaymentStatusEnum.Pending,
@@ -111,20 +76,85 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Amount = amount,
                 Status = (int)TransactionStatusEnum.Pending,
                 TransactionId = txnRef.ToString(),
-                OrderInfo = $"Thanh toan don hang {targetOrders[0].Id}",
+                OrderInfo = $"Thanh toan don hang {order.Id}",
                 CreatedAt = DateTime.Now,
                 ExpiredAt = DateTime.Now.AddMinutes(PaymentTimeoutMinutes)
             };
             _unitOfWork.TransactionRepository.PrepareCreate(transaction);
             await _unitOfWork.SaveAsync();
 
-            var paymentUrl = GenerateVnPayUrl(txnRef, amount, targetOrders[0].Id, httpContext);
+            var paymentUrl = GenerateVnPayUrl(txnRef, amount, order.Id, httpContext);
 
             return new CreatePaymentUrlResponseDto
             {
                 PaymentId = payment.Id,
-                PaymentUrl = paymentUrl,
-                OrderGroupCode = orderGroupCode
+                PaymentUrl = paymentUrl
+            };
+        }
+
+        public async Task<CreatePaymentUrlResponseDto> RetryPaymentAsync(int userId, int paymentId, HttpContext httpContext)
+        {
+            var payment = await _unitOfWork.PaymentRepository.GetByIdWithTransactionsAsync(paymentId);
+            if (payment == null)
+                throw new NotFoundException($"Payment {paymentId} not found");
+
+            // Verify payment belongs to user's order
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(payment.OrderId!.Value);
+            if (order == null)
+                throw new NotFoundException("Order not found");
+
+            if (order.UserId != userId)
+                throw new ForbiddenException("You don't have access to this payment");
+
+            // Only allow retry for Pending payments
+            if (payment.Status != (int)PaymentStatusEnum.Pending)
+                throw new BadRequestException($"Cannot retry payment with status: {(PaymentStatusEnum)payment.Status!.Value}");
+
+            var now = DateTime.Now;
+
+            // Check retry limit (max 3 transactions per payment)
+            var transactionCount = payment.Transactions.Count;
+            if (transactionCount >= MaxRetryAttempts)
+                throw new BadRequestException($"Payment retry limit exceeded. Maximum attempts: {MaxRetryAttempts}");
+
+            // Check if there's an active pending transaction
+            var activePendingTransaction = payment.Transactions.FirstOrDefault(t =>
+                t.Status == (int)TransactionStatusEnum.Pending &&
+                (!t.ExpiredAt.HasValue || t.ExpiredAt.Value > now));
+
+            if (activePendingTransaction != null)
+                throw new BadRequestException("An active transaction is pending. Please wait for it to expire or complete");
+
+            // Expire all pending transactions
+            foreach (var transaction in payment.Transactions.Where(t => t.Status == (int)TransactionStatusEnum.Pending))
+            {
+                transaction.Status = (int)TransactionStatusEnum.TimedOut;
+                transaction.ExpiredAt = now;
+                _unitOfWork.TransactionRepository.PrepareUpdate(transaction);
+            }
+            await _unitOfWork.SaveAsync();
+
+            // Create new Transaction
+            var txnRef = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var newTransaction = new Transaction
+            {
+                PaymentId = payment.Id,
+                Amount = payment.Amount,
+                Status = (int)TransactionStatusEnum.Pending,
+                TransactionId = txnRef.ToString(),
+                OrderInfo = $"Thanh toan don hang {order.Id}",
+                CreatedAt = DateTime.Now,
+                ExpiredAt = DateTime.Now.AddMinutes(PaymentTimeoutMinutes)
+            };
+            _unitOfWork.TransactionRepository.PrepareCreate(newTransaction);
+            await _unitOfWork.SaveAsync();
+
+            var paymentUrl = GenerateVnPayUrl(txnRef, payment.Amount ?? 0, order.Id, httpContext);
+
+            return new CreatePaymentUrlResponseDto
+            {
+                PaymentId = payment.Id,
+                PaymentUrl = paymentUrl
             };
         }
 
@@ -186,28 +216,39 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (responseCode == "00")
                 {
                     var paymentType = (PaymentTypeEnum)payment.PaymentType!.Value;
-                    var targetOrders = await ResolveTargetOrdersForPaymentAsync(payment);
+                    var order = await ResolveTargetOrderForPaymentAsync(payment);
 
                     dbTransaction.Status = (int)TransactionStatusEnum.Completed;
                     payment.Status = (int)PaymentStatusEnum.Success;
                     payment.PaidAt = DateTime.Now;
 
-                    foreach (var order in targetOrders)
+                    var newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    order.Status = newOrderStatus;
+                    order.UpdatedAt = DateTime.Now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(order);
+
+                    // Update all NurseryOrder status to match parent Order status
+                    foreach (var nurseryOrder in order.NurseryOrders)
                     {
-                        order.Status = DetermineSuccessOrderStatus(paymentType);
-                        order.UpdatedAt = DateTime.Now;
-                        _unitOfWork.OrderRepository.PrepareUpdate(order);
-
-                        // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
-                        var invoice = await _unitOfWork.InvoiceRepository
-                            .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
-
-                        if (invoice == null)
-                            throw new NotFoundException($"Invoice not found for order {order.Id}");
-
-                        invoice.Status = (int)InvoiceStatusEnum.Paid;
-                        _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
+                        nurseryOrder.Status = newOrderStatus;
+                        nurseryOrder.UpdatedAt = DateTime.Now;
                     }
+
+                    // Update inventory for OtherProduct orders (CommonPlant, NurseryMaterial, NurseryPlantCombo)
+                    if (order.OrderType == (int)OrderTypeEnum.OtherProduct)
+                    {
+                        await UpdateInventoryForOrderAsync(order);
+                    }
+
+                    // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
+                    var invoice = await _unitOfWork.InvoiceRepository
+                        .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
+
+                    if (invoice == null)
+                        throw new NotFoundException($"Invoice not found for order {order.Id}");
+
+                    invoice.Status = (int)InvoiceStatusEnum.Paid;
+                    _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
                 }
                 else
                 {
@@ -215,9 +256,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ? (int)TransactionStatusEnum.Cancelled
                         : (int)TransactionStatusEnum.Failed;
 
-                    payment.Status = responseCode == "24"
-                        ? (int)PaymentStatusEnum.Cancelled
-                        : (int)PaymentStatusEnum.Failed;
+                    // Only update Payment status to Cancelled if user explicitly cancelled (code 24)
+                    // For other errors, keep Payment as Pending to allow retry
+                    if (responseCode == "24")
+                    {
+                        payment.Status = (int)PaymentStatusEnum.Cancelled;
+                    }
+                    // For other error codes, Payment remains Pending (no status update needed)
                 }
 
                 _unitOfWork.TransactionRepository.PrepareUpdate(dbTransaction);
@@ -284,13 +329,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _ => (int)OrderStatusEnum.Paid
         };
 
-        private async Task<List<Order>> ResolveTargetOrdersAsync(int userId, CreatePaymentRequestDto request)
+        private async Task<Order> ResolveTargetOrderAsync(int userId, CreatePaymentRequestDto request)
         {
-            if (!string.IsNullOrWhiteSpace(request.OrderGroupCode))
-            {
-                throw new BadRequestException("OrderGroupCode is temporarily unsupported");
-            }
-
             if (!request.OrderId.HasValue)
                 throw new BadRequestException("OrderId is required");
 
@@ -301,15 +341,68 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (order.UserId != userId)
                 throw new ForbiddenException("You don't have access to this order");
 
-            return new List<Order> { order };
+            return order;
         }
 
-        private async Task<List<Order>> ResolveTargetOrdersForPaymentAsync(Payment payment)
+        private async Task<Order> ResolveTargetOrderForPaymentAsync(Payment payment)
         {
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(payment.OrderId!.Value)
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(payment.OrderId!.Value)
                 ?? throw new NotFoundException("Order not found");
 
-            return new List<Order> { order };
+            return order;
+        }
+
+        /// <summary>
+        /// Update inventory (Quantity and ReservedQuantity) for OtherProduct orders.
+        /// - CommonPlant: Quantity -= quantity, ReservedQuantity += quantity
+        /// - NurseryMaterial: Quantity -= quantity, ReservedQuantity += quantity
+        /// - NurseryPlantCombo: Quantity -= quantity (combo quantity already deducted from plants when created)
+        /// </summary>
+        private async Task UpdateInventoryForOrderAsync(Order order)
+        {
+            foreach (var nurseryOrder in order.NurseryOrders)
+            {
+                foreach (var detail in nurseryOrder.NurseryOrderDetails)
+                {
+                    var quantity = detail.Quantity ?? 0;
+                    if (quantity <= 0) continue;
+
+                    // Handle CommonPlant
+                    if (detail.CommonPlantId.HasValue)
+                    {
+                        var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(detail.CommonPlantId.Value);
+                        if (commonPlant != null)
+                        {
+                            commonPlant.Quantity -= quantity;
+                            commonPlant.ReservedQuantity += quantity;
+                            _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                        }
+                    }
+                    // Handle NurseryMaterial
+                    else if (detail.NurseryMaterialId.HasValue)
+                    {
+                        var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(detail.NurseryMaterialId.Value);
+                        if (nurseryMaterial != null)
+                        {
+                            nurseryMaterial.Quantity -= quantity;
+                            nurseryMaterial.ReservedQuantity += quantity;
+                            _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                        }
+                    }
+                    // Handle NurseryPlantCombo - only update combo quantity (plant quantities already deducted when combo was created)
+                    else if (detail.NurseryPlantComboId.HasValue)
+                    {
+                        var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository
+                            .GetByIdAsync(detail.NurseryPlantComboId.Value);
+
+                        if (nurseryPlantCombo != null)
+                        {
+                            nurseryPlantCombo.Quantity -= quantity;
+                            _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryPlantCombo);
+                        }
+                    }
+                }
+            }
         }
 
         #endregion

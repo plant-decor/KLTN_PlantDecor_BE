@@ -18,44 +18,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task ProcessExpiredPaymentsAsync()
         {
-            var now = DateTime.Now;
-            var pendingPayments = await _unitOfWork.PaymentRepository.GetPendingWithTransactionsAsync();
-
-            var updatedPaymentCount = 0;
-            var updatedTransactionCount = 0;
-
-            foreach (var payment in pendingPayments)
+            try
             {
-                var expiredPendingTransactions = payment.Transactions
-                    .Where(t => t.Status == (int)TransactionStatusEnum.Pending
-                        && t.ExpiredAt.HasValue
-                        && t.ExpiredAt.Value <= now)
-                    .ToList();
+                _logger.LogInformation("Starting auto-expire pending transactions job");
 
-                if (!expiredPendingTransactions.Any())
-                    continue;
+                var expiredTransactions = await _unitOfWork.TransactionRepository.GetExpiredPendingTransactionsAsync();
 
-                foreach (var transaction in expiredPendingTransactions)
+                if (!expiredTransactions.Any())
+                {
+                    _logger.LogInformation("No expired pending transactions found");
+                    return;
+                }
+
+                _logger.LogInformation("Found {Count} expired pending transactions to update", expiredTransactions.Count);
+
+                foreach (var transaction in expiredTransactions)
                 {
                     transaction.Status = (int)TransactionStatusEnum.TimedOut;
                     _unitOfWork.TransactionRepository.PrepareUpdate(transaction);
-                    updatedTransactionCount++;
+                    _logger.LogInformation("Expired transaction {TransactionId}", transaction.TransactionId);
                 }
 
-                payment.Status = (int)PaymentStatusEnum.Failed;
-                _unitOfWork.PaymentRepository.PrepareUpdate(payment);
-                updatedPaymentCount++;
-            }
-
-            if (updatedPaymentCount > 0 || updatedTransactionCount > 0)
-            {
                 await _unitOfWork.SaveAsync();
-            }
 
-            _logger.LogInformation(
-                "Payment timeout job completed. Updated payments: {PaymentCount}, updated transactions: {TransactionCount}",
-                updatedPaymentCount,
-                updatedTransactionCount);
+                _logger.LogInformation("Successfully expired {Count} transactions. Payments remain Pending to allow retry.", expiredTransactions.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error expiring transactions");
+                throw;
+            }
         }
     }
 }

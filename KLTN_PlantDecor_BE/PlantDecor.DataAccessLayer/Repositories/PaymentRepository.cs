@@ -25,14 +25,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Payment>> GetByOrderGroupCodeAsync(string orderGroupCode)
-        {
-            return await _context.Payments
-                .Include(p => p.Transactions)
-                .Where(p => p.OrderGroupCode == orderGroupCode)
-                .ToListAsync();
-        }
-
         public async Task<List<Payment>> GetPendingWithTransactionsAsync()
         {
             return await _context.Payments

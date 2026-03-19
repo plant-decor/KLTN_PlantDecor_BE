@@ -6,7 +6,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<Payment?> GetByIdWithTransactionsAsync(int paymentId);
         Task<List<Payment>> GetByOrderIdAsync(int orderId);
-        Task<List<Payment>> GetByOrderGroupCodeAsync(string orderGroupCode);
         Task<List<Payment>> GetPendingWithTransactionsAsync();
     }
 }
