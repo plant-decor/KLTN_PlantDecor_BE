@@ -19,11 +19,5 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(o => o.Payments)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
         }
-
-        public async Task<List<Order>> GetByGroupCodeWithDetailsAsync(string orderGroupCode)
-        {
-            // Temporarily disabled because OrderGroupCode is not used in current flow.
-            return await Task.FromResult(new List<Order>());
-        }
     }
 }

@@ -14,7 +14,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? Status { get; set; }
         public string? StatusName { get; set; }
         public int? PaymentStrategy { get; set; }
-        public string? OrderGroupCode { get; set; }
         public int? OrderType { get; set; }
         public string? Note { get; set; }
         public DateTime? CreatedAt { get; set; }

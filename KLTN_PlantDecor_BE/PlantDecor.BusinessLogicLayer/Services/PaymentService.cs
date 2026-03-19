@@ -26,26 +26,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<CreatePaymentUrlResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto request, HttpContext httpContext)
         {
-            var targetOrders = await ResolveTargetOrdersAsync(userId, request);
-            var paymentCandidates = targetOrders
-                .Select(order =>
-                {
-                    var (paymentType, amount) = DeterminePaymentTypeAndAmount(order);
-                    return new { Order = order, PaymentType = paymentType, Amount = amount };
-                })
-                .ToList();
-
-            var paymentType = paymentCandidates[0].PaymentType;
-            if (paymentCandidates.Any(x => x.PaymentType != paymentType))
-                throw new BadRequestException("All shop orders in a group must be in the same payable stage");
-
-            var amount = paymentCandidates.Sum(x => x.Amount);
+            var order = await ResolveTargetOrderAsync(userId, request);
+            var (paymentType, amount) = DeterminePaymentTypeAndAmount(order);
 
             if (amount <= 0)
                 throw new BadRequestException("Payment amount must be greater than 0");
 
-            const string? orderGroupCode = null;
-            var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(targetOrders[0].Id);
+            var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(order.Id);
 
             var now = DateTime.Now;
 
@@ -66,35 +53,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (attemptCount >= MaxRetryAttempts)
                 throw new BadRequestException($"Payment retry limit exceeded. Maximum attempts: {MaxRetryAttempts}");
 
+            // For RemainingBalance payment, Invoice should already exist (created when order was delivered)
             if (paymentType == PaymentTypeEnum.RemainingBalance)
             {
-                foreach (var candidate in paymentCandidates)
-                {
-                    var existingInvoice = await _unitOfWork.InvoiceRepository
-                        .GetPendingByOrderIdAndTypeAsync(candidate.Order.Id, (int)InvoiceTypeEnum.RemainingBalance);
+                var existingInvoice = await _unitOfWork.InvoiceRepository
+                    .GetPendingByOrderIdAndTypeAsync(order.Id, (int)InvoiceTypeEnum.RemainingBalance);
 
-                    if (existingInvoice != null)
-                        continue;
-
-                    _unitOfWork.InvoiceRepository.PrepareCreate(new Invoice
-                    {
-                        OrderId = candidate.Order.Id,
-                        NurseryId = candidate.Order.NurseryId,
-                        Type = (int)InvoiceTypeEnum.RemainingBalance,
-                        TotalAmount = candidate.Amount,
-                        Status = (int)InvoiceStatusEnum.Pending,
-                        IssuedDate = DateTime.Now
-                    });
-                }
-
-                await _unitOfWork.SaveAsync();
+                if (existingInvoice == null)
+                    throw new BadRequestException("RemainingBalance invoice not found. Order may not be in the correct status for remaining payment.");
             }
 
             // Create Payment record (Pending)
             var payment = new Payment
             {
-                OrderId = targetOrders[0].Id,
-                OrderGroupCode = orderGroupCode,
+                OrderId = order.Id,
                 PaymentType = (int)paymentType,
                 Amount = amount,
                 Status = (int)PaymentStatusEnum.Pending,
@@ -111,20 +83,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Amount = amount,
                 Status = (int)TransactionStatusEnum.Pending,
                 TransactionId = txnRef.ToString(),
-                OrderInfo = $"Thanh toan don hang {targetOrders[0].Id}",
+                OrderInfo = $"Thanh toan don hang {order.Id}",
                 CreatedAt = DateTime.Now,
                 ExpiredAt = DateTime.Now.AddMinutes(PaymentTimeoutMinutes)
             };
             _unitOfWork.TransactionRepository.PrepareCreate(transaction);
             await _unitOfWork.SaveAsync();
 
-            var paymentUrl = GenerateVnPayUrl(txnRef, amount, targetOrders[0].Id, httpContext);
+            var paymentUrl = GenerateVnPayUrl(txnRef, amount, order.Id, httpContext);
 
             return new CreatePaymentUrlResponseDto
             {
                 PaymentId = payment.Id,
-                PaymentUrl = paymentUrl,
-                OrderGroupCode = orderGroupCode
+                PaymentUrl = paymentUrl
             };
         }
 
@@ -186,28 +157,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (responseCode == "00")
                 {
                     var paymentType = (PaymentTypeEnum)payment.PaymentType!.Value;
-                    var targetOrders = await ResolveTargetOrdersForPaymentAsync(payment);
+                    var order = await ResolveTargetOrderForPaymentAsync(payment);
 
                     dbTransaction.Status = (int)TransactionStatusEnum.Completed;
                     payment.Status = (int)PaymentStatusEnum.Success;
                     payment.PaidAt = DateTime.Now;
 
-                    foreach (var order in targetOrders)
+                    var newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    order.Status = newOrderStatus;
+                    order.UpdatedAt = DateTime.Now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(order);
+
+                    // Update all NurseryOrder status to match parent Order status
+                    foreach (var nurseryOrder in order.NurseryOrders)
                     {
-                        order.Status = DetermineSuccessOrderStatus(paymentType);
-                        order.UpdatedAt = DateTime.Now;
-                        _unitOfWork.OrderRepository.PrepareUpdate(order);
-
-                        // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
-                        var invoice = await _unitOfWork.InvoiceRepository
-                            .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
-
-                        if (invoice == null)
-                            throw new NotFoundException($"Invoice not found for order {order.Id}");
-
-                        invoice.Status = (int)InvoiceStatusEnum.Paid;
-                        _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
+                        nurseryOrder.Status = newOrderStatus;
+                        nurseryOrder.UpdatedAt = DateTime.Now;
                     }
+
+                    // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
+                    var invoice = await _unitOfWork.InvoiceRepository
+                        .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
+
+                    if (invoice == null)
+                        throw new NotFoundException($"Invoice not found for order {order.Id}");
+
+                    invoice.Status = (int)InvoiceStatusEnum.Paid;
+                    _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
                 }
                 else
                 {
@@ -284,13 +260,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _ => (int)OrderStatusEnum.Paid
         };
 
-        private async Task<List<Order>> ResolveTargetOrdersAsync(int userId, CreatePaymentRequestDto request)
+        private async Task<Order> ResolveTargetOrderAsync(int userId, CreatePaymentRequestDto request)
         {
-            if (!string.IsNullOrWhiteSpace(request.OrderGroupCode))
-            {
-                throw new BadRequestException("OrderGroupCode is temporarily unsupported");
-            }
-
             if (!request.OrderId.HasValue)
                 throw new BadRequestException("OrderId is required");
 
@@ -301,15 +272,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (order.UserId != userId)
                 throw new ForbiddenException("You don't have access to this order");
 
-            return new List<Order> { order };
+            return order;
         }
 
-        private async Task<List<Order>> ResolveTargetOrdersForPaymentAsync(Payment payment)
+        private async Task<Order> ResolveTargetOrderForPaymentAsync(Payment payment)
         {
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(payment.OrderId!.Value)
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(payment.OrderId!.Value)
                 ?? throw new NotFoundException("Order not found");
 
-            return new List<Order> { order };
+            return order;
         }
 
         #endregion

@@ -2,7 +2,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateOrderRequestDto
     {
-        public int NurseryId { get; set; }
+        // NOTE: NurseryId is automatically resolved from items, not needed in request
+        // public int NurseryId { get; set; }
+
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? CustomerName { get; set; }
