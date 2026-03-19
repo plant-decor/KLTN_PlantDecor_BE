@@ -293,5 +293,55 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("send-otp")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.SendOtpAsync(request, cancellationToken);
+
+            if (!result.Success)
+            {
+                throw new BadRequestException(result.Message);
+            }
+
+            return Ok(new ApiResponse<OtpResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "OTP sent successfully to your email",
+                Payload = result
+            });
+        }
+
+        [HttpPost("verify-otp")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.VerifyOtpAsync(request);
+
+            if (!result.Success)
+            {
+                throw new BadRequestException(result.Message);
+            }
+
+            return Ok(new ApiResponse<OtpResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = result.Message,
+                Payload = result
+            });
+        }
+
     }
 }
