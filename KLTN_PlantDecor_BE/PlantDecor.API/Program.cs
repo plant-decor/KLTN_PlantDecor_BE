@@ -291,8 +291,8 @@ namespace PlantDecor.API
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
+        //    if (app.Environment.IsDevelopment() )
+         //   {
                 app.UseSwagger();
                 app.UseSwaggerUI();
                 app.UseHangfireDashboard(options: new DashboardOptions
@@ -300,7 +300,7 @@ namespace PlantDecor.API
                     Authorization = [],
                     DarkModeEnabled = true
                 });
-            }
+           // }
             // dùng để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
             // nếu không có thì sẽ bị lỗi do tất cả request đều có cùng 1 IP (IP của proxy)
             app.UseForwardedHeaders();
