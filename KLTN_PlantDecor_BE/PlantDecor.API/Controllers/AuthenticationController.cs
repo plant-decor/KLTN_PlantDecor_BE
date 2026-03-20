@@ -293,16 +293,16 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpPost("send-otp")]
+        [HttpPost("send-otp-email-verification")]
         [EnableRateLimiting("auth-strict")]
-        public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> SendOtpEmailVerification([FromBody] SendOtpEmailVerificationRequest request, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
                 throw new BadRequestException("Invalid request");
             }
 
-            var result = await _authenticationService.SendOtpAsync(request, cancellationToken);
+            var result = await _authenticationService.SendOtpEmailVerificationAsync(request, cancellationToken);
 
             if (!result.Success)
             {
@@ -318,16 +318,16 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpPost("verify-otp")]
+        [HttpPost("verify-otp-email-verification")]
         [EnableRateLimiting("auth-strict")]
-        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        public async Task<IActionResult> VerifyOtpEmailVerification([FromBody] VerifyOtpEmailVerificationRequest request)
         {
             if (!ModelState.IsValid)
             {
                 throw new BadRequestException("Invalid request");
             }
 
-            var result = await _authenticationService.VerifyOtpAsync(request);
+            var result = await _authenticationService.VerifyOtpEmailVerificationAsync(request);
 
             if (!result.Success)
             {
@@ -335,6 +335,76 @@ namespace PlantDecor.API.Controllers
             }
 
             return Ok(new ApiResponse<OtpResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = result.Message,
+                Payload = result
+            });
+        }
+
+        [HttpPost("send-otp-password-reset")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> SendOtpPasswordReset([FromBody] SendOtpPasswordResetRequest request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.SendOtpPasswordResetAsync(request, cancellationToken);
+
+            if (!result.Success)
+            {
+                throw new BadRequestException(result.Message);
+            }
+
+            return Ok(new ApiResponse<OtpResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "OTP sent successfully to your email",
+                Payload = result
+            });
+        }
+
+        //[HttpPost("verify-otp-password-reset")]
+        //[EnableRateLimiting("auth-strict")]
+        //public async Task<IActionResult> VerifyOtpPasswordReset([FromBody] VerifyOtpPasswordResetRequest request)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        throw new BadRequestException("Invalid request");
+        //    }
+
+        //    var result = await _authenticationService.VerifyOtpPasswordResetAsync(request);
+
+        //    if (!result.Success)
+        //    {
+        //        throw new BadRequestException(result.Message);
+        //    }
+
+        //    return Ok(new ApiResponse<OtpResponse>
+        //    {
+        //        Success = true,
+        //        StatusCode = StatusCodes.Status200OK,
+        //        Message = result.Message,
+        //        Payload = result
+        //    });
+        //}
+
+        [HttpPost("reset-password-with-otp")]
+        [EnableRateLimiting("auth-strict")]
+        public async Task<IActionResult> ResetPasswordWithOtp([FromBody] ResetPasswordWithOtpRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.ResetPasswordWithOtpAsync(request);
+
+            return Ok(new ApiResponse<AuthenticationResponse>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
