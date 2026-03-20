@@ -13,7 +13,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION}
-      - Redis__Connection=${REDIS_CONNECTION}
+      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
 
     depends_on:
       - redis
