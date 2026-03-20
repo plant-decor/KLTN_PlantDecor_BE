@@ -32,6 +32,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ISecurityStampCacheService _stampCacheService;
         private readonly IEmailService _emailService;
+        private readonly IOtpCacheService _otpCacheService;
 
 
         public AuthenticationService(
@@ -39,17 +40,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             IConfiguration configuration,
             IEmailService emailService,
-            ISecurityStampCacheService stampCacheService)
+            ISecurityStampCacheService stampCacheService,
+            IOtpCacheService otpCacheService)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
             _stampCacheService = stampCacheService;
+            _emailService = emailService;
+            _otpCacheService = otpCacheService;
             _secretKey = configuration["JwtSettings:Key"] ?? throw new ArgumentNullException("JWT Key not configured");
             _issuer = configuration["JwtSettings:Issuer"] ?? throw new ArgumentNullException("JWT Issuer not configured");
             _audience = configuration["JwtSettings:Audience"] ?? throw new ArgumentNullException("JWT Audience not configured");
             _expiryMinutes = int.Parse(configuration["JwtSettings:ExpiryMinutes"] ?? "30");
-            _emailService = emailService;
         }
 
         public string GenerateAccessToken(User user, string roleName)
@@ -1208,6 +1211,293 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var handler = new JsonWebTokenHandler();
             return handler.CreateToken(tokenDescriptor);
+        }
+
+        // OTP Methods for Email Verification
+        public async Task<OtpResponse> SendOtpEmailVerificationAsync(SendOtpEmailVerificationRequest request, CancellationToken cancellationToken)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            if (user.IsVerified)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Email is already verified"
+                };
+            }
+
+            try
+            {
+                // Generate 6-digit OTP
+                var otpCode = GenerateOtpCode();
+                var expiresAt = DateTime.UtcNow.AddMinutes(10); // 10 minutes
+
+                // Save OTP to cache
+                var saved = await _otpCacheService.SaveOtpAsync(
+                    request.Email,
+                    otpCode,
+                    "EmailVerification",
+                    user.Id,
+                    expiryMinutes: 10
+                );
+
+                if (!saved)
+                {
+                    return new OtpResponse
+                    {
+                        Success = false,
+                        Message = "Failed to generate OTP"
+                    };
+                }
+
+                // Send OTP via email
+                await _emailService.SendEmailAsync(new EmailRequest
+                {
+                    To = user.Email!,
+                    Subject = "Verify your email address",
+                    Body = EmailTemplateReader.OtpEmailVerificationTemplate(user.Username!, otpCode, expiresAt)
+                }, cancellationToken);
+
+                return new OtpResponse
+                {
+                    Success = true,
+                    Message = "OTP sent successfully to your email",
+                    ExpiresAt = expiresAt
+                };
+            }
+            catch
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Failed to send OTP"
+                };
+            }
+        }
+
+        public async Task<OtpResponse> VerifyOtpEmailVerificationAsync(VerifyOtpEmailVerificationRequest request)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            // Validate OTP from cache
+            var isValid = await _otpCacheService.ValidateOtpAsync(request.Email, request.OtpCode.Trim(), "EmailVerification");
+
+            if (!isValid)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Invalid or expired OTP"
+                };
+            }
+
+            // Verify email
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                user.IsVerified = true;
+                user.InvalidateAllTokensAsync(_stampCacheService);
+                _unitOfWork.UserRepository.PrepareUpdate(user);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new OtpResponse
+                {
+                    Success = true,
+                    Message = "Email verified successfully"
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Failed to verify email"
+                };
+            }
+        }
+
+        // OTP Methods for Password Reset
+        public async Task<OtpResponse> SendOtpPasswordResetAsync(SendOtpPasswordResetRequest request, CancellationToken cancellationToken)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            if (!user.IsVerified)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Email is not verified. Please verify your email first."
+                };
+            }
+
+            try
+            {
+                // Generate 6-digit OTP
+                var otpCode = GenerateOtpCode();
+                var expiresAt = DateTime.UtcNow.AddMinutes(10); // 10 minutes
+
+                // Save OTP to cache
+                var saved = await _otpCacheService.SaveOtpAsync(
+                    request.Email,
+                    otpCode,
+                    "PasswordReset",
+                    user.Id,
+                    expiryMinutes: 10
+                );
+
+                if (!saved)
+                {
+                    return new OtpResponse
+                    {
+                        Success = false,
+                        Message = "Failed to generate OTP"
+                    };
+                }
+
+                // Send OTP via email
+                await _emailService.SendEmailAsync(new EmailRequest
+                {
+                    To = user.Email!,
+                    Subject = "Reset your password",
+                    Body = EmailTemplateReader.OtpPasswordResetTemplate(user.Username!, otpCode, expiresAt)
+                }, cancellationToken);
+
+                return new OtpResponse
+                {
+                    Success = true,
+                    Message = "OTP sent successfully to your email",
+                    ExpiresAt = expiresAt
+                };
+            }
+            catch
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Failed to send OTP"
+                };
+            }
+        }
+
+        public async Task<OtpResponse> VerifyOtpPasswordResetAsync(VerifyOtpPasswordResetRequest request)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            // Validate OTP from cache
+            var isValid = await _otpCacheService.ValidateOtpAsync(request.Email, request.OtpCode.Trim(), "PasswordReset");
+
+            if (!isValid)
+            {
+                return new OtpResponse
+                {
+                    Success = false,
+                    Message = "Invalid or expired OTP"
+                };
+            }
+
+            return new OtpResponse
+            {
+                Success = true,
+                Message = "OTP verified successfully. You can now reset your password."
+            };
+        }
+
+        public async Task<AuthenticationResponse> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequest request)
+        {
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            if (!user.IsVerified)
+            {
+                throw new BadRequestException("Email has not been verified. Please verify your email first.");
+            }
+
+            ValidatePassword(request.NewPassword);
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                throw new BadRequestException("Password and confirmation password do not match");
+            }
+
+            // Validate OTP from cache
+            var isValid = await _otpCacheService.ValidateOtpAsync(request.Email, request.OtpCode.Trim(), "PasswordReset");
+
+            if (!isValid)
+            {
+                throw new BadRequestException("Invalid or expired OTP");
+            }
+
+            // Reset password
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                user.UpdateSecurityStamp();
+                await user.InvalidateAllTokensAsync(_stampCacheService);
+
+                _unitOfWork.UserRepository.PrepareUpdate(user);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    Message = "Password reset successfully. Please login with your new password."
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Failed to reset password. Please try again.");
+            }
+        }
+
+        private string GenerateOtpCode()
+        {
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                var bytes = new byte[4];
+                rng.GetBytes(bytes);
+                var number = BitConverter.ToUInt32(bytes, 0);
+                // Generate 6-digit number (100000 - 999999)
+                return (100000 + (number % 900000)).ToString();
+            }
         }
     }
 }

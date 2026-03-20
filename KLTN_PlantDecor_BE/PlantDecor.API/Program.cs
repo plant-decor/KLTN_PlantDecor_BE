@@ -104,6 +104,7 @@ namespace PlantDecor.API
             // Redis Service Registration
             builder.Services.AddScoped<ICacheService, RedisCacheService>();
             builder.Services.AddScoped<ISecurityStampCacheService, SecurityStampCacheService>();
+            builder.Services.AddScoped<IOtpCacheService, OtpCacheService>();
 
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 

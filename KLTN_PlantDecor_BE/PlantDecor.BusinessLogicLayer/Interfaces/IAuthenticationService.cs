@@ -25,6 +25,15 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
         Task<AuthenticationResponse> ResetPasswordAsync(ResetPasswordRequest request);
 
+        // OTP methods for Email Verification
+        Task<OtpResponse> SendOtpEmailVerificationAsync(SendOtpEmailVerificationRequest request, CancellationToken cancellationToken);
+        Task<OtpResponse> VerifyOtpEmailVerificationAsync(VerifyOtpEmailVerificationRequest request);
+
+        // OTP methods for Password Reset
+        Task<OtpResponse> SendOtpPasswordResetAsync(SendOtpPasswordResetRequest request, CancellationToken cancellationToken);
+        Task<OtpResponse> VerifyOtpPasswordResetAsync(VerifyOtpPasswordResetRequest request);
+        Task<AuthenticationResponse> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequest request);
+
 
     }
 }
