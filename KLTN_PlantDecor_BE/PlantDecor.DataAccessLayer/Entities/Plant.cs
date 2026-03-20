@@ -7,8 +7,6 @@ public partial class Plant
 {
     public int Id { get; set; }
 
-    public string? PlantCode { get; set; }
-
     public string Name { get; set; } = null!;
 
     public string? SpecificName { get; set; }
@@ -19,13 +17,9 @@ public partial class Plant
 
     public decimal? BasePrice { get; set; }
 
-    public string? Placement { get; set; }
+    public int PlacementType { get; set; }
 
     public string? Size { get; set; }
-
-    public int? MinHeight { get; set; }
-
-    public int? MaxHeight { get; set; }
 
     public string? GrowthRate { get; set; }
 
@@ -43,21 +37,19 @@ public partial class Plant
 
     public string? PotSize { get; set; }
 
-    public string? PlantType { get; set; }
+    public bool IsUniqueInstance { get; set; }
+
+    public bool? PetSafe { get; set; }
+
+    public bool? ChildSafe { get; set; }
 
     public string? CareLevel { get; set; }
-
-    public string? Texture { get; set; }
 
     public bool? IsActive { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual ICollection<PlantComboItem> PlantComboItems { get; set; } = new List<PlantComboItem>();
 
@@ -76,6 +68,8 @@ public partial class Plant
     public virtual ICollection<UserPreference> UserPreferences { get; set; } = new List<UserPreference>();
 
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+
+    public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
 
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 

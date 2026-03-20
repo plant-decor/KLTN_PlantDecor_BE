@@ -9,11 +9,15 @@ public partial class ServiceRating
 
     public int? ServiceRegistrationId { get; set; }
 
+    public int? UserId { get; set; }
+
     public decimal? Rating { get; set; }
 
     public string? Description { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
-    public virtual ServiceRegistration? ServiceRegistration { get; set; }
+    public virtual ServiceRegistration ServiceRegistration { get; set; } = null!;
+
+    public virtual User User { get; set; } = null!;
 }

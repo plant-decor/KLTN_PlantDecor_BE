@@ -9,7 +9,9 @@ public partial class Tag
 
     public string TagName { get; set; } = null!;
 
-    public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
+    public int TagType { get; set; }
+
+    public virtual ICollection<Material> Materials { get; set; } = new List<Material>();
 
     public virtual ICollection<PlantCombo> PlantCombos { get; set; } = new List<PlantCombo>();
 

@@ -53,7 +53,7 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 /KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
-/KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
+
 
 
 .vs/
@@ -61,3 +61,5 @@ nunit-*.xml
 # environment variables
 .env 
 /KLTN_PlantDecor_BE/PlantDecor.API/appsettings.Development.json
+/KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
+/KLTN_PlantDecor_BE/PlantDecor.DataAccessLayer/Context/PlantDecorContextFactory.cs

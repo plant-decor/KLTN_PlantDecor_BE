@@ -9,8 +9,6 @@ public partial class Cart
 
     public int? UserId { get; set; }
 
-    public int? Status { get; set; }
-
     public DateTime? UpdatedAt { get; set; }
 
     public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();

@@ -7,7 +7,11 @@ public partial class Order
 {
     public int Id { get; set; }
 
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
+
+    public int NurseryId { get; set; }
+
+    public int? ShipperId { get; set; }
 
     public string? Address { get; set; }
 
@@ -43,9 +47,13 @@ public partial class Order
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
+    public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
+
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
-    public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
+    public virtual ServiceRegistration? ServiceRegistration { get; set; }
 
-    public virtual User? User { get; set; }
+    public virtual User Customer { get; set; } = null!;
+    public virtual User? Shipper { get; set; }
+    public virtual Nursery Nursery { get; set; } = null!;
 }

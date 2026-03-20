@@ -1,0 +1,14 @@
+﻿using System.Text.Json.Serialization;
+
+namespace PlantDecor.API.Responses
+{
+    public class ApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public int StatusCode { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public T? Payload { get; set; }
+    }
+}

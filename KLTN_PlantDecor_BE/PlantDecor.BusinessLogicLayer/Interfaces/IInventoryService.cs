@@ -1,0 +1,28 @@
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.DataAccessLayer.Helpers;
+
+namespace PlantDecor.BusinessLogicLayer.Interfaces
+{
+    public interface IMaterialService
+    {
+        // CRUD Operations
+        Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination);
+        Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination);
+        Task<MaterialResponseDto?> GetMaterialByIdAsync(int id);
+        Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request);
+        Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
+        Task<bool> DeleteMaterialAsync(int id);
+        Task<bool> ToggleActiveAsync(int id);
+
+        // Category & Tag Assignment
+        Task<MaterialResponseDto> AssignCategoriesToMaterialAsync(AssignMaterialCategoriesDto request);
+        Task<MaterialResponseDto> AssignTagsToMaterialAsync(AssignMaterialTagsDto request);
+        Task<MaterialResponseDto> RemoveCategoryFromMaterialAsync(int materialId, int categoryId);
+        Task<MaterialResponseDto> RemoveTagFromMaterialAsync(int materialId, int tagId);
+
+        // Shop Display
+        Task<PaginatedResult<MaterialListResponseDto>> GetMaterialsForShopAsync(Pagination pagination);
+    }
+}

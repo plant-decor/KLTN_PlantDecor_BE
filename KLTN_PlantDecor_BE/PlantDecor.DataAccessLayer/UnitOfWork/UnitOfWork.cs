@@ -1,10 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
 using PlantDecor.DataAccessLayer.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using PlantDecor.DataAccessLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Repositories;
 
 namespace PlantDecor.DataAccessLayer.UnitOfWork
 {
@@ -13,7 +10,121 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private readonly PlantDecorContext _context;
         private IDbContextTransaction _transaction;
 
-        public UnitOfWork() => _context ??= new PlantDecorContext();
+
+        // Repository instances
+        private IUserRepository? _userRepository;
+        private ICategoryRepository? _categoryRepository;
+        private ITagRepository? _tagRepository;
+        private IPlantRepository? _plantRepository;
+        private IMaterialRepository? _materialRepository;
+        private IRoleRepository? _roleRepository;
+        private ICommonPlantRepository? _commonPlantRepository;
+        private IPlantComboRepository? _plantComboRepository;
+        private INurseryRepository? _nurseryRepository;
+        private INurseryMaterialRepository? _nurseryMaterialRepository;
+        private IPlantInstanceRepository? _plantInstanceRepository;
+        private INurseryPlantComboRepository? _nurseryPlantComboRepository;
+        private ICartRepository? _cartRepository;
+        private IWishlistRepository? _wishlistRepository;
+        private IPaymentRepository? _paymentRepository;
+        private ITransactionRepository? _transactionRepository;
+        private IOrderRepository? _orderRepository;
+        private IInvoiceRepository? _invoiceRepository;
+
+        public UnitOfWork(PlantDecorContext context)
+        {
+            _context = context;
+        }
+
+        //Lazy loading of repositories
+        public IUserRepository UserRepository
+        {
+            get { return _userRepository ??= new UserRepository(_context); }
+        }
+
+        public ICategoryRepository CategoryRepository
+        {
+            get { return _categoryRepository ??= new CategoryRepository(_context); }
+        }
+
+        public ITagRepository TagRepository
+        {
+            get { return _tagRepository ??= new TagRepository(_context); }
+        }
+
+        public IPlantRepository PlantRepository
+        {
+            get { return _plantRepository ??= new PlantRepository(_context); }
+        }
+
+        public IMaterialRepository MaterialRepository
+        {
+            get { return _materialRepository ??= new MaterialRepository(_context); }
+        }
+
+        public IRoleRepository RoleRepository
+        {
+            get { return _roleRepository ??= new RoleRepository(_context); }
+        }
+        public ICommonPlantRepository CommonPlantRepository
+        {
+            get { return _commonPlantRepository ??= new CommonPlantRepository(_context); }
+        }
+
+        public IPlantComboRepository PlantComboRepository
+        {
+            get { return _plantComboRepository ??= new PlantComboRepository(_context); }
+        }
+
+        public INurseryRepository NurseryRepository
+        {
+            get { return _nurseryRepository ??= new NurseryRepository(_context); }
+        }
+
+        public INurseryMaterialRepository NurseryMaterialRepository
+        {
+            get { return _nurseryMaterialRepository ??= new NurseryMaterialRepository(_context); }
+        }
+
+        public IPlantInstanceRepository PlantInstanceRepository
+        {
+            get { return _plantInstanceRepository ??= new PlantInstanceRepository(_context); }
+        }
+
+        public INurseryPlantComboRepository NurseryPlantComboRepository
+        {
+            get { return _nurseryPlantComboRepository ??= new NurseryPlantComboRepository(_context); }
+        }
+
+        public ICartRepository CartRepository
+        {
+            get { return _cartRepository ??= new CartRepository(_context); }
+        }
+
+        public IWishlistRepository WishlistRepository
+        {
+            get { return _wishlistRepository ??= new WishlistRepository(_context); }
+        }
+
+        public IPaymentRepository PaymentRepository
+        {
+            get { return _paymentRepository ??= new PaymentRepository(_context); }
+        }
+
+        public ITransactionRepository TransactionRepository
+        {
+            get { return _transactionRepository ??= new TransactionRepository(_context); }
+        }
+
+        public IOrderRepository OrderRepository
+        {
+            get { return _orderRepository ??= new OrderRepository(_context); }
+        }
+
+        public IInvoiceRepository InvoiceRepository
+        {
+            get { return _invoiceRepository ??= new InvoiceRepository(_context); }
+        }
 
         // Transaction Management
         public async Task BeginTransactionAsync()

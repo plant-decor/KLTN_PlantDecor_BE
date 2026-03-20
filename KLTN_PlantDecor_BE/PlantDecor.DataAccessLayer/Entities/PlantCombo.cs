@@ -17,7 +17,7 @@ public partial class PlantCombo
 
     public string? SuitableSpace { get; set; }
 
-    public string? SuitableRooms { get; set; }
+    public List<string>? SuitableRooms { get; set; }
 
     public string? FengShuiElement { get; set; }
 
@@ -27,21 +27,9 @@ public partial class PlantCombo
 
     public string? ThemeDescription { get; set; }
 
-    public decimal? OriginalPrice { get; set; }
-
-    public decimal? SalePrice { get; set; }
-
-    public decimal? DiscountPercent { get; set; }
-
-    public int? MinPlants { get; set; }
-
-    public int? MaxPlants { get; set; }
-
-    public string? Tags { get; set; }
+    public decimal? ComboPrice { get; set; }
 
     public string? Season { get; set; }
-
-    public int? Quantity { get; set; }
 
     public bool? IsActive { get; set; }
 
@@ -53,10 +41,6 @@ public partial class PlantCombo
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual ICollection<PlantComboImage> PlantComboImages { get; set; } = new List<PlantComboImage>();
 
     public virtual ICollection<PlantComboItem> PlantComboItems { get; set; } = new List<PlantComboItem>();
@@ -64,4 +48,6 @@ public partial class PlantCombo
     public virtual ICollection<UserBehaviorLog> UserBehaviorLogs { get; set; } = new List<UserBehaviorLog>();
 
     public virtual ICollection<Tag> TagsNavigation { get; set; } = new List<Tag>();
+
+    public virtual ICollection<NurseryPlantCombo> NurseryPlantCombos { get; set; } = new List<NurseryPlantCombo>();
 }

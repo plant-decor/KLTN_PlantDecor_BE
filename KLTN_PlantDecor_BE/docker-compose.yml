@@ -1,0 +1,42 @@
+﻿version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: PlantDecor.API/Dockerfile
+    container_name: plant-api
+
+    ports:
+      - "5000:8080"
+
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION}
+      - Redis__Connection=${REDIS_CONNECTION}
+
+    depends_on:
+      - redis
+
+    restart: always
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7
+    container_name: plant-redis
+    command: redis-server --save 60 1
+    restart: always
+
+    networks:
+      - app-network
+
+networks:
+  app-network:

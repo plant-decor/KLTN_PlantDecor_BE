@@ -13,6 +13,8 @@ public partial class Category
 
     public bool? IsActive { get; set; }
 
+    public int CategoryType { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -21,7 +23,7 @@ public partial class Category
 
     public virtual Category? ParentCategory { get; set; }
 
-    public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
+    public virtual ICollection<Material> Materials { get; set; } = new List<Material>();
 
     public virtual ICollection<Plant> Plants { get; set; } = new List<Plant>();
 }

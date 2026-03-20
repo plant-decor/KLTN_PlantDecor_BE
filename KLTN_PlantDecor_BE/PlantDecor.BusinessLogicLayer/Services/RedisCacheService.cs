@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class RedisCacheService : ICacheService
     {
         private readonly IDistributedCache _cache;
-        public RedisCacheService(IDistributedCache cache)
+        private readonly IConnectionMultiplexer _connectionMultiplexer;
+        private readonly string _instanceName;
+
+        public RedisCacheService(IDistributedCache cache, IConnectionMultiplexer connectionMultiplexer)
         {
             _cache = cache;
+            _connectionMultiplexer = connectionMultiplexer;
+            _instanceName = "PlantDecor_";
         }
 
         public async Task<T> GetDataAsync<T>(string key)
@@ -45,6 +51,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
 
             await _cache.SetStringAsync(key, serializedData, options);
+        }
+
+        public async Task RemoveByPrefixAsync(string prefixKey)
+        {
+            var server = _connectionMultiplexer.GetServer(_connectionMultiplexer.GetEndPoints().First());
+            var pattern = $"{_instanceName}{prefixKey}*";
+            var db = _connectionMultiplexer.GetDatabase();
+
+            await foreach (var key in server.KeysAsync(pattern: pattern))
+            {
+                await db.KeyDeleteAsync(key);
+            }
         }
     }
 }

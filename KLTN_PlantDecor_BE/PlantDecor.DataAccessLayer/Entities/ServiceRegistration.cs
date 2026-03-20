@@ -11,7 +11,7 @@ public partial class ServiceRegistration
 
     public int? OrderId { get; set; }
 
-    public int? ServiceId { get; set; }
+    public int? NurseryCareServiceId { get; set; }
 
     public int? MainCaretakerId { get; set; }
 
@@ -27,6 +27,10 @@ public partial class ServiceRegistration
 
     public DateTime? ApprovedAt { get; set; }
 
+    public string? Address { get; set; }
+
+    public string? Phone { get; set; }
+
     public string? CancelReason { get; set; }
 
     public int? EstimatedDuration { get; set; }
@@ -37,11 +41,13 @@ public partial class ServiceRegistration
 
     public virtual Order? Order { get; set; }
 
-    public virtual CareServicePackage? Service { get; set; }
+    public virtual Nursery? Nursery { get; set; }
+
+    public virtual NurseryCareService? NurseryCareService { get; set; }
 
     public virtual ICollection<ServiceProgress> ServiceProgresses { get; set; } = new List<ServiceProgress>();
 
-    public virtual ICollection<ServiceRating> ServiceRatings { get; set; } = new List<ServiceRating>();
-
     public virtual User? User { get; set; }
+
+    public virtual ServiceRating? ServiceRating { get; set; }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class RefreshToken
 {
@@ -11,7 +8,9 @@ public partial class RefreshToken
 
     public string Token { get; set; } = null!;
 
-    public bool? IsRevoked { get; set; }
+    public string? DeviceId { get; set; }
+
+    public bool IsRevoked { get; set; }
 
     public DateTime? CreatedDate { get; set; }
 
