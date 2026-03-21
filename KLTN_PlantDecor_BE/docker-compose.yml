@@ -16,6 +16,11 @@ services:
 
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
+      - JwtSettings__Key=${JwtSettings__Key}
+      - JwtSettings__Issuer=${JwtSettings__Issuer}
+      - JwtSettings__Audience=${JwtSettings__Audience}
 
     depends_on:
       - redis
