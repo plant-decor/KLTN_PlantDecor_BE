@@ -11,8 +11,8 @@ services:
       - "5000:8080"
 
     # LOAD toàn bộ biến từ file .env
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
 
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
