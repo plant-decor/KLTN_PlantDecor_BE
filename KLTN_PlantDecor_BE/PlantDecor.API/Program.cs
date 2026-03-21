@@ -288,6 +288,7 @@ namespace PlantDecor.API
                 options.HeartbeatInterval = TimeSpan.FromSeconds(30); // Kiểm tra tình trạng của worker mỗi 30 giây
                 options.ServerTimeout = TimeSpan.FromMinutes(5); // Nếu worker không phản hồi trong 5 phút, coi như bị treo và sẽ được đánh dấu là failed để có thể retry lại
             });
+            builder.Configuration.AddEnvironmentVariables();
 
             var app = builder.Build();
 
