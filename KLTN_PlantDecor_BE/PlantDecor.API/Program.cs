@@ -124,13 +124,14 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
 
-             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
+            builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IMaterialService, MaterialService>();
             builder.Services.AddScoped<ICommonPlantService, CommonPlantService>();
             builder.Services.AddScoped<IPlantComboService, PlantComboService>();
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
+            //builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IEmailService, ResendEmailService>();
             builder.Services.AddScoped<IEmailBackgroundJobService, EmailBackgroundJobService>();
             builder.Services.AddScoped<IOrderBackgroundJobService, OrderBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
@@ -291,16 +292,16 @@ namespace PlantDecor.API
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-        //    if (app.Environment.IsDevelopment() )
-         //   {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-                app.UseHangfireDashboard(options: new DashboardOptions
-                {
-                    Authorization = [],
-                    DarkModeEnabled = true
-                });
-           // }
+            //    if (app.Environment.IsDevelopment() )
+            //   {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+            app.UseHangfireDashboard(options: new DashboardOptions
+            {
+                Authorization = [],
+                DarkModeEnabled = true
+            });
+            // }
             // dùng để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
             // nếu không có thì sẽ bị lỗi do tất cả request đều có cùng 1 IP (IP của proxy)
             app.UseForwardedHeaders();
