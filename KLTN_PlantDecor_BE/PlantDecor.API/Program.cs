@@ -26,7 +26,7 @@ namespace PlantDecor.API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration.AddEnvironmentVariables();
+           
             // Add services to the container.
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
