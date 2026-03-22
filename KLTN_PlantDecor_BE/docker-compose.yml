@@ -1,10 +1,8 @@
-﻿version: '3.8'
+﻿
 
 services:
   api:
-    build:
-      context: .
-      dockerfile: PlantDecor.API/Dockerfile
+    image: paul423/plantdecor-api:latest
     container_name: plant-api
 
     ports:
