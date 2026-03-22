@@ -38,7 +38,7 @@ jobs:
           key: ${{ secrets.DROPLET_SSH_KEY }}
           port: ${{ secrets.DROPLET_PORT }}
           script: |
-            cd /var/www/KLTN_PlantDecor_BE/KLTN_PlantDecor_BE
+            cd KLTN_PlantDecor_BE/KLTN_PlantDecor_BE
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
