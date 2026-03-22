@@ -25,8 +25,8 @@ jobs:
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./PlantDecor.API/Dockerfile
+          context: ./KLTN_PlantDecor_BE
+          file: ./KLTN_PlantDecor_BE/PlantDecor.API/Dockerfile
           push: true
           tags: paul423/plantdecor-api:latest
 
