@@ -2,7 +2,9 @@
 
 services:
   api:
-    image: paul423/plantdecor-api:latest
+    build:
+      context: .
+      dockerfile: PlantDecor.API/Dockerfile
     container_name: plant-api
 
     ports:
