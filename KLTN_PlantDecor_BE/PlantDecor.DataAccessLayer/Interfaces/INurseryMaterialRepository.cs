@@ -12,5 +12,15 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<PaginatedResult<NurseryMaterial>> GetByMaterialIdAsync(int materialId, Pagination pagination);
         Task<NurseryMaterial?> GetByMaterialAndNurseryAsync(int materialId, int nurseryId);
         Task<bool> ExistsAsync(int materialId, int nurseryId, int? excludeId = null);
+
+        Task<PaginatedResult<NurseryMaterial>> SearchForShopAsync(
+            Pagination pagination,
+            string? searchTerm,
+            List<int>? categoryIds,
+            List<int>? tagIds,
+            double? minPrice,
+            double? maxPrice,
+            string? sortBy,
+            bool isAscending);
     }
 }

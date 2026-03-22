@@ -23,6 +23,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ITransactionRepository TransactionRepository { get; }
         IOrderRepository OrderRepository { get; }
         IInvoiceRepository InvoiceRepository { get; }
+        IUserBehaviorLogRepository UserBehaviorLogRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

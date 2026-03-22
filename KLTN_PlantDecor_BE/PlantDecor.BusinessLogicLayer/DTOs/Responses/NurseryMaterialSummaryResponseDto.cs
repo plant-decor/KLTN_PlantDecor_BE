@@ -25,7 +25,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Threshold { get; set; }
     }
 
-    public class NurseryInventorySummaryDto
+    public class NurseryMaterialSummaryResponseDto
     {
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }

@@ -324,12 +324,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #endregion
 
+        #region Shop Operations
+
+        public async Task<PaginatedResult<NurseryMaterialListResponseDto>> SearchNurseryMaterialsForShopAsync(NurseryMaterialShopSearchRequestDto searchRequest, Pagination pagination)
+        {
+            var paginatedEntities = await _unitOfWork.NurseryMaterialRepository.SearchForShopAsync(
+                pagination,
+                searchRequest.SearchTerm,
+                searchRequest.CategoryIds,
+                searchRequest.TagIds,
+                searchRequest.MinPrice,
+                searchRequest.MaxPrice,
+                searchRequest.SortBy,
+                searchRequest.IsAscending);
+
+            return new PaginatedResult<NurseryMaterialListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+        }
+
+        #endregion
+
         #region Private Methods
 
         private async Task InvalidateCacheAsync()
         {
             await _cacheService.RemoveDataAsync(ALL_NURSERY_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERY_MATERIALS_KEY}_");
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
         }
 
         #endregion

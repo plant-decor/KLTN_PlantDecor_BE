@@ -20,6 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<NurseryResponseDto> UpdateMyNurseryAsync(int managerId, NurseryUpdateDto request);
         Task<List<NurseryMaterialExpiryAlertDto>> GetMyNurseryExpiringMaterialsAsync(int managerId, int daysAhead = 30);
         Task<List<NurseryLowStockProductAlertDto>> GetMyNurseryLowStockProductsAsync(int managerId, int threshold = 5);
-        Task<NurseryInventorySummaryDto> GetMyNurseryInventorySummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30);
+        Task<NurseryMaterialSummaryResponseDto> GetMyNurseryMaterialSummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30);
     }
 }

@@ -268,14 +268,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<NurseryInventorySummaryDto> GetMyNurseryInventorySummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30)
+        public async Task<NurseryMaterialSummaryResponseDto> GetMyNurseryMaterialSummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
                 throw new NotFoundException("Bạn chưa có vựa nào");
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_inventory_summary_t{lowStockThreshold}_d{expiringInDays}";
-            var cachedData = await _cacheService.GetDataAsync<NurseryInventorySummaryDto>(cacheKey);
+            var cachedData = await _cacheService.GetDataAsync<NurseryMaterialSummaryResponseDto>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
@@ -289,7 +289,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var activeMaterials = materials.Where(m => m.IsActive).ToList();
             var activeCommonPlants = commonPlants.Where(cp => cp.IsActive).ToList();
 
-            var summary = new NurseryInventorySummaryDto
+            var summary = new NurseryMaterialSummaryResponseDto
             {
                 NurseryId = nursery.Id,
                 NurseryName = nursery.Name,
@@ -344,6 +344,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Remove all paginated cache
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERIES_KEY}_");
             await _cacheService.RemoveByPrefixAsync($"{ACTIVE_NURSERIES_KEY}_");
+            await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
+            await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
         }
 
         #endregion

@@ -128,16 +128,16 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy summary chung của vựa: cây đại trà, cây định danh và vật tư
         /// </summary>
-        [HttpGet("my-nursery/inventory-summary")]
-        public async Task<IActionResult> GetMyNurseryInventorySummary([FromQuery] int lowStockThreshold = 5, [FromQuery] int expiringInDays = 30)
+        [HttpGet("my-nursery/material-summary")]
+        public async Task<IActionResult> GetMyNurseryMaterialSummary([FromQuery] int lowStockThreshold = 5, [FromQuery] int expiringInDays = 30)
         {
             var managerId = GetCurrentUserId();
-            var result = await _nurseryService.GetMyNurseryInventorySummaryAsync(
+            var result = await _nurseryService.GetMyNurseryMaterialSummaryAsync(
                 managerId,
                 Math.Max(lowStockThreshold, 0),
                 Math.Max(expiringInDays, 1));
 
-            return Ok(new ApiResponse<NurseryInventorySummaryDto>
+            return Ok(new ApiResponse<NurseryMaterialSummaryResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,

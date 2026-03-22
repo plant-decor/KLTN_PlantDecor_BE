@@ -209,6 +209,30 @@ namespace PlantDecor.API.Controllers
 
         #endregion
 
+        #region Shop Operations
+
+        /// <summary>
+        /// Tìm kiếm vật tư trong các vựa (Shop)
+        /// </summary>
+        [HttpPost("/api/shop/nursery-materials/search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchNurseryMaterialsForShop([FromBody] NurseryMaterialShopSearchRequestDto request)
+        {
+            var searchRequest = request ?? new NurseryMaterialShopSearchRequestDto();
+            var pagination = searchRequest.Pagination ?? new Pagination();
+
+            var result = await _nurseryMaterialService.SearchNurseryMaterialsForShopAsync(searchRequest, pagination);
+            return Ok(new ApiResponse<PaginatedResult<NurseryMaterialListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tìm kiếm vật tư thành công",
+                Payload = result
+            });
+        }
+
+        #endregion
+
         #region Private Methods
 
         private int GetCurrentUserId()

@@ -66,7 +66,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
+                await InvalidateCacheAsync();
 
                 return tag.ToResponse();
             }
@@ -96,7 +96,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
+                await InvalidateCacheAsync();
 
                 return tag.ToResponse();
             }
@@ -124,7 +124,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
+                await InvalidateCacheAsync();
 
                 return true;
             }
@@ -133,6 +133,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        private async Task InvalidateCacheAsync()
+        {
+            await _cacheService.RemoveByPrefixAsync(ALL_TAGS_KEY);
+            await _cacheService.RemoveByPrefixAsync("plants_system_search");
+            await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            await _cacheService.RemoveByPrefixAsync("materials_shop");
+            await _cacheService.RemoveByPrefixAsync("combos_shop");
+            await _cacheService.RemoveByPrefixAsync("common_plants_all");
+            await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
         }
     }
 }

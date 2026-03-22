@@ -18,6 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
         private const string NURSERY_COMMON_PLANTS_KEY = "nursery_common_plants";
         private const string PLANT_NURSERIES_COMMON_KEY = "plant_nurseries_common";
+        private const string PLANT_SHOP_SEARCH = "plants_shop_search";
 
         public CommonPlantService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -214,6 +215,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             await _cacheService.RemoveByPrefixAsync(ALL_COMMON_PLANTS_KEY);
             await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_COMMON_KEY);
+            await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH);
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
             if (nurseryId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}");
@@ -398,6 +401,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
             return result;
+        }
+
+        public async Task<PaginatedResult<CommonPlantListResponseDto>> SearchCommonPlantsForShopAsync(CommonPlantShopSearchRequestDto searchRequest, Pagination pagination)
+        {
+            var paginatedEntities = await _unitOfWork.CommonPlantRepository.SearchForShopAsync(
+                pagination,
+                searchRequest.SearchTerm,
+                searchRequest.CategoryIds,
+                searchRequest.TagIds,
+                searchRequest.Sizes,
+                searchRequest.MinPrice,
+                searchRequest.MaxPrice,
+                searchRequest.SortBy,
+                searchRequest.IsAscending);
+
+            return new PaginatedResult<CommonPlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
         }
 
         #endregion

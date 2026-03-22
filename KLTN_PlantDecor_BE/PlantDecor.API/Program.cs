@@ -136,6 +136,8 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IOrderBackgroundJobService, OrderBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
             builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
+            builder.Services.AddScoped<IUserBehaviorLogService, UserBehaviorLogService>();
+            builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 
             // Cart & Wishlist
             builder.Services.AddScoped<ICartService, CartService>();
