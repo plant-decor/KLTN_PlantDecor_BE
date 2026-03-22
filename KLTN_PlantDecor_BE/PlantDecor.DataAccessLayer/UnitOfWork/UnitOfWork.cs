@@ -30,6 +30,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ITransactionRepository? _transactionRepository;
         private IOrderRepository? _orderRepository;
         private IInvoiceRepository? _invoiceRepository;
+        private IUserBehaviorLogRepository? _userBehaviorLogRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -124,6 +125,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IInvoiceRepository InvoiceRepository
         {
             get { return _invoiceRepository ??= new InvoiceRepository(_context); }
+        }
+
+        public IUserBehaviorLogRepository UserBehaviorLogRepository
+        {
+            get { return _userBehaviorLogRepository ??= new UserBehaviorLogRepository(_context); }
         }
 
         // Transaction Management

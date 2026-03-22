@@ -384,6 +384,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(SHOP_PLANTS_KEY);
             await _cacheService.RemoveByPrefixAsync("plants_system_search");
             await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+            await _cacheService.RemoveByPrefixAsync("common_plants_all");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
+            await _cacheService.RemoveByPrefixAsync("nursery_instances");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries");
+            await _cacheService.RemoveByPrefixAsync("combos_all");
+            await _cacheService.RemoveByPrefixAsync("combos_active");
+            await _cacheService.RemoveByPrefixAsync("combos_shop");
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
         }
 
         private static PlantSearchFilter BuildSearchFilter(PlantSearchRequestDto? request)

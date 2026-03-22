@@ -26,5 +26,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Manager Operations
         Task<PaginatedResult<NurseryMaterialListResponseDto>> GetMyNurseryMaterialsAsync(int managerId, Pagination pagination);
         Task<NurseryMaterialResponseDto> ImportToMyNurseryAsync(int managerId, ImportMaterialRequestDto request);
+
+        // Shop Operations
+        Task<PaginatedResult<NurseryMaterialListResponseDto>> SearchNurseryMaterialsForShopAsync(NurseryMaterialShopSearchRequestDto searchRequest, Pagination pagination);
     }
 }

@@ -16,6 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private const string NURSERY_INSTANCES_KEY = "nursery_instances";
         private const string PLANT_NURSERIES_KEY = "plant_nurseries";
+        private const string PLANT_SHOP_SEARCH_KEY = "plants_shop_search";
 
         public PlantInstanceService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -313,6 +314,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private async Task InvalidateCacheAsync(int? nurseryId = null)
         {
             await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_KEY);
+            await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH_KEY);
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
             if (nurseryId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}");

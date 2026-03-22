@@ -95,5 +95,87 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 query = query.Where(nm => nm.Id != excludeId.Value);
             return await query.AnyAsync();
         }
+
+        public async Task<PaginatedResult<NurseryMaterial>> SearchForShopAsync(
+            Pagination pagination,
+            string? searchTerm,
+            List<int>? categoryIds,
+            List<int>? tagIds,
+            double? minPrice,
+            double? maxPrice,
+            string? sortBy,
+            bool isAscending)
+        {
+            var query = _context.NurseryMaterials
+                .Include(nm => nm.Material).ThenInclude(m => m.Categories)
+                .Include(nm => nm.Material).ThenInclude(m => m.Tags)
+                .Include(nm => nm.Nursery)
+                .Where(nm => nm.IsActive && nm.Quantity > nm.ReservedQuantity && nm.Nursery.IsActive == true);
+
+            // Search term
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.ToLower();
+                query = query.Where(nm =>
+                    (nm.Material.Name != null && nm.Material.Name.ToLower().Contains(term)) ||
+                    (nm.Material.Description != null && nm.Material.Description.ToLower().Contains(term)) ||
+                    (nm.Nursery.Name != null && nm.Nursery.Name.ToLower().Contains(term)));
+            }
+
+            // Category filter
+            if (categoryIds != null && categoryIds.Any())
+            {
+                query = query.Where(nm => nm.Material.Categories.Any(c => categoryIds.Contains(c.Id)));
+            }
+
+            // Tag filter
+            if (tagIds != null && tagIds.Any())
+            {
+                query = query.Where(nm => nm.Material.Tags.Any(t => tagIds.Contains(t.Id)));
+            }
+
+            // Price filter
+            if (minPrice.HasValue)
+            {
+                query = query.Where(nm => (double?)nm.Material.BasePrice >= minPrice.Value);
+            }
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(nm => (double?)nm.Material.BasePrice <= maxPrice.Value);
+            }
+
+            // Sorting
+            if (!string.IsNullOrEmpty(sortBy))
+            {
+                switch (sortBy.ToLower())
+                {
+                    case "price":
+                        query = isAscending
+                            ? query.OrderBy(nm => nm.Material.BasePrice)
+                            : query.OrderByDescending(nm => nm.Material.BasePrice);
+                        break;
+                    case "name":
+                        query = isAscending
+                            ? query.OrderBy(nm => nm.Material.Name)
+                            : query.OrderByDescending(nm => nm.Material.Name);
+                        break;
+                    default:
+                        query = query.OrderByDescending(nm => nm.Id);
+                        break;
+                }
+            }
+            else
+            {
+                query = query.OrderByDescending(nm => nm.Id);
+            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<NurseryMaterial>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
     }
 }
