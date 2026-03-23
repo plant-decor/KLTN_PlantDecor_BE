@@ -24,6 +24,9 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IOrderRepository OrderRepository { get; }
         IInvoiceRepository InvoiceRepository { get; }
         IUserBehaviorLogRepository UserBehaviorLogRepository { get; }
+        IChatSessionRepository ChatSessionRepository { get; }
+        IChatMessageRepository ChatMessageRepository { get; }
+        IChatParticipantRepository ChatParticipantRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();
