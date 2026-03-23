@@ -63,5 +63,7 @@ public partial class User
 
     public virtual ServiceRating? ServiceRating { get; set; }
 
+    public virtual CustomerSurvey? CustomerSurvey { get; set; }
+
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 }

@@ -19,6 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string ALL_MATERIALS_KEY = "materials_all";
         private const string ACTIVE_MATERIALS_KEY = "materials_active";
         private const string SHOP_MATERIALS_KEY = "materials_shop";
+        private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
         public MaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -327,7 +328,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (cachedData != null)
                 return cachedData;
 
-            var paginatedEntities = await _unitOfWork.MaterialRepository.GetMaterialsForShopAsync(pagination);
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetActiveWithDetailsAsync(pagination);
             var result = new PaginatedResult<MaterialListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
@@ -339,16 +340,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
+        public async Task<List<NurseryListResponseDto>> GetNurseriesByMaterialAsync(int materialId)
+        {
+            var cacheKey = $"{NURSERIES_BY_MATERIAL_KEY}_{materialId}";
+            var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var material = await _unitOfWork.MaterialRepository.GetByIdAsync(materialId);
+            if (material == null)
+            {
+                throw new NotFoundException($"Material với ID '{materialId}' không tồn tại");
+            }
+
+            var nurseryMaterials = new List<NurseryMaterial>();
+            var pageNumber = 1;
+            PaginatedResult<NurseryMaterial> pagedResult;
+
+            do
+            {
+                pagedResult = await _unitOfWork.NurseryMaterialRepository.GetByMaterialIdAsync(
+                    materialId,
+                    new Pagination(pageNumber, 100)
+                );
+
+                nurseryMaterials.AddRange(pagedResult.Items.Where(nm => nm.Quantity > 0 && nm.IsActive));
+                pageNumber++;
+            }
+            while (nurseryMaterials.Count < pagedResult.TotalCount && pagedResult.Items.Any());
+
+            var nurseries = nurseryMaterials.Select(nm => nm.Nursery).Where(n => n != null && n.IsActive == true).ToList();
+
+            var result = nurseries.Select(n => n!.ToListResponse()).ToList();
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
+            return result;
+        }
+
         #endregion
 
-        #region Cache Management
+        #region Private Methods
 
-        private async Task InvalidateCacheAsync()
+        private async Task InvalidateCacheAsync(int? materialId = null)
         {
             await _cacheService.RemoveByPrefixAsync(ALL_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            if (materialId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
+            }
         }
 
         #endregion

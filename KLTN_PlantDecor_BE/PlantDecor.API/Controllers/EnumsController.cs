@@ -18,6 +18,7 @@ namespace PlantDecor.API.Controllers
             ["ComboType"] = typeof(ComboTypeEnum),
             ["Gender"] = typeof(GenderEnum),
             ["PlacementType"] = typeof(PlacementTypeEnum),
+            ["CareLevelType"] = typeof(CareLevelTypeEnum),
             ["PlantInstanceStatus"] = typeof(PlantInstanceStatusEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
@@ -108,7 +109,8 @@ namespace PlantDecor.API.Controllers
                 Message = "Get plant enums successfully",
                 Payload = new List<EnumGroupResponseDto>
                 {
-                    CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum))
+                    CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
+                    CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
                 }
             });
         }

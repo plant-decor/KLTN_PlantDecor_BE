@@ -33,7 +33,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiMeaning = plant.FengShuiMeaning,
                 PotIncluded = plant.PotIncluded,
                 PotSize = plant.PotSize,
-                CareLevel = plant.CareLevel,
+                CareLevelType = plant.CareLevelType,
+                CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
+                CareLevel = GetCareLevelName(plant.CareLevelType),
                 IsUniqueInstance = plant.IsUniqueInstance,
                 IsActive = plant.IsActive,
                 CreatedAt = plant.CreatedAt,
@@ -77,7 +79,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Name = plant.Name,
                 BasePrice = plant.BasePrice,
                 Size = plant.Size,
-                CareLevel = plant.CareLevel,
+                CareLevelType = plant.CareLevelType,
+                CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
+                CareLevel = GetCareLevelName(plant.CareLevelType),
                 IsActive = plant.IsActive,
                 PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
                     ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,
@@ -125,7 +129,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiMeaning = request.FengShuiMeaning,
                 PotIncluded = request.PotIncluded,
                 PotSize = request.PotSize,
-                CareLevel = request.CareLevel,
+                CareLevelType = ResolveCareLevelType(request.CareLevelType, request.CareLevel),
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
@@ -190,8 +194,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request.PotSize != null)
                 plant.PotSize = request.PotSize;
 
-            if (request.CareLevel != null)
-                plant.CareLevel = request.CareLevel;
+            if (request.CareLevelType.HasValue || request.CareLevel != null)
+                plant.CareLevelType = ResolveCareLevelType(request.CareLevelType, request.CareLevel);
 
             if (request.IsActive.HasValue)
                 plant.IsActive = request.IsActive.Value;
@@ -202,6 +206,40 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             plant.UpdatedAt = DateTime.Now;
         }
         #endregion
+
+        private static int? ResolveCareLevelType(int? careLevelType, string? careLevel)
+        {
+            if (careLevelType.HasValue)
+            {
+                return careLevelType.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(careLevel))
+            {
+                return null;
+            }
+
+            return careLevel.Trim().ToLowerInvariant() switch
+            {
+                "easy" or "de" => (int)CareLevelTypeEnum.Easy,
+                "medium" or "trungbinh" or "trung binh" => (int)CareLevelTypeEnum.Medium,
+                "hard" or "kho" => (int)CareLevelTypeEnum.Hard,
+                "expert" or "chuyengia" or "chuyen gia" => (int)CareLevelTypeEnum.Expert,
+                _ => null
+            };
+        }
+
+        private static string? GetCareLevelName(int? careLevelType)
+        {
+            if (!careLevelType.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
+                ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
+                : null;
+        }
 
 
     }

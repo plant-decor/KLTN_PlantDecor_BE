@@ -121,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     // 1. Profile Match Score
                     decimal profileScore = 0;
-                    if (IsEasyCare(plant.CareLevel)) profileScore += 3;
+                    if (IsEasyCare(plant.CareLevelType)) profileScore += 3;
                     if (plant.ChildSafe == true || plant.PetSafe == true) profileScore += 2;
                     profileScore += CalculateFengShuiScore(userElement, plant.FengShuiElement);
 
@@ -207,7 +207,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(img => img.ImageUrl)
                         .FirstOrDefault(),
                     BasePrice = p.Plant.BasePrice,
-                    CareLevel = p.Plant.CareLevel,
+                    CareLevelTypeName = GetCareLevelName(p.Plant.CareLevelType),
                     FengShuiElement = p.Plant.FengShuiElement,
                     PreferenceScore = p.PreferenceScore ?? 0,
                     ProfileMatchScore = p.ProfileMatchScore ?? 0,
@@ -266,8 +266,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var seedCareLevels = seedPlants
-                .Select(p => NormalizeText(p.CareLevel))
-                .Where(x => !string.IsNullOrEmpty(x))
+                .Where(p => p.CareLevelType.HasValue)
+                .Select(p => p.CareLevelType!.Value)
                 .ToHashSet();
 
             var seedElements = seedPlants
@@ -301,7 +301,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     decimal contextualScore = 0m;
 
-                    if (seedCareLevels.Contains(NormalizeText(plant.CareLevel)))
+                    if (plant.CareLevelType.HasValue && seedCareLevels.Contains(plant.CareLevelType.Value))
                     {
                         contextualScore += 3m;
                     }
@@ -354,7 +354,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(img => img.ImageUrl)
                         .FirstOrDefault(),
                     BasePrice = x.Plant.BasePrice,
-                    CareLevel = x.Plant.CareLevel,
+                    CareLevelTypeName = GetCareLevelName(x.Plant.CareLevelType),
                     FengShuiElement = x.Plant.FengShuiElement,
                     PreferenceScore = Math.Round(x.ContextualScore, 2),
                     ProfileMatchScore = x.Preference?.ProfileMatchScore ?? 0,
@@ -447,10 +447,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return 0;
         }
 
-        private static bool IsEasyCare(string? careLevel)
+        private static bool IsEasyCare(int? careLevelType)
         {
-            var normalized = NormalizeText(careLevel);
-            return normalized == "de" || normalized == "easy";
+            return careLevelType == (int)CareLevelTypeEnum.Easy;
+        }
+
+        private static string? GetCareLevelName(int? careLevelType)
+        {
+            if (!careLevelType.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
+                ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
+                : null;
         }
 
         private static string NormalizeElement(string? element)

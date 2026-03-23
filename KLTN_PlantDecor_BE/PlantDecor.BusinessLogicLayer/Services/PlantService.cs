@@ -402,6 +402,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Keyword = request?.Keyword,
                 IsActive = request?.IsActive,
                 PlacementType = request?.PlacementType,
+                CareLevelType = request?.CareLevelType,
                 CareLevel = request?.CareLevel,
                 Toxicity = request?.Toxicity,
                 AirPurifying = request?.AirPurifying,
@@ -429,7 +430,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : string.Join("-", filter.TagIds.OrderBy(x => x));
 
-            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

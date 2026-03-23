@@ -62,6 +62,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Shop] Lấy danh sách các vựa có bán material cụ thể
+        /// </summary>
+        [HttpGet("/api/shop/materials/{materialId}/nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesByMaterial(int materialId)
+        {
+            var nurseries = await _materialService.GetNurseriesByMaterialAsync(materialId);
+            return Ok(new ApiResponse<List<NurseryListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = $"Get nurseries for material {materialId} successfully",
+                Payload = nurseries
+            });
+        }
+
+        /// <summary>
         /// Lấy material theo ID
         /// </summary>
         [HttpGet("/api/material/{id}")]

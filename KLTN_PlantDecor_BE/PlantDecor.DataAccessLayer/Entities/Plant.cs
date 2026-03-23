@@ -43,7 +43,7 @@ public partial class Plant
 
     public bool? ChildSafe { get; set; }
 
-    public string? CareLevel { get; set; }
+    public int? CareLevelType { get; set; }
 
     public bool? IsActive { get; set; }
 

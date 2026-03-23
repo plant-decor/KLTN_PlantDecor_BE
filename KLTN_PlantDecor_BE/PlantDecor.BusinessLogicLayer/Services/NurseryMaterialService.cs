@@ -16,6 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
 
         private const string ALL_NURSERY_MATERIALS_KEY = "nursery_materials_all";
+        private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
         public NurseryMaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -79,7 +80,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 // Reload with details
                 var created = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
@@ -111,7 +112,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return entity.ToResponse();
             }
@@ -139,7 +140,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return true;
             }
@@ -169,7 +170,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return entity.ToResponse();
             }
@@ -355,6 +356,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveDataAsync(ALL_NURSERY_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERY_MATERIALS_KEY}_");
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+        }
+
+        private async Task InvalidateCacheAsync(int? materialId = null)
+        {
+            await _cacheService.RemoveByPrefixAsync(ALL_NURSERY_MATERIALS_KEY);
+            if (materialId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
+            }
         }
 
         #endregion

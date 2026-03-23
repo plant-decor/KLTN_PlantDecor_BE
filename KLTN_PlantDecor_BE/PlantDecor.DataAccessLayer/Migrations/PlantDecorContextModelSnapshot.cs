@@ -427,6 +427,56 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("CommonPlant", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("ExperienceLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("HasChildren")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool?>("HasPets")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal?>("MaxBudget")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("PreferredPlacement")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("CustomerSurvey_pkey");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerSurvey", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
                     b.Property<int>("Id")
@@ -1108,9 +1158,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("CareLevel")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("CareLevelType")
+                        .HasColumnType("integer");
 
                     b.Property<bool?>("ChildSafe")
                         .HasColumnType("boolean");
@@ -1199,6 +1248,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool?>("ChildSafe")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("ComboCode")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -1234,6 +1286,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<bool?>("PetSafe")
+                        .HasColumnType("boolean");
 
                     b.Property<int?>("PurchaseCount")
                         .ValueGeneratedOnAdd()
@@ -2421,6 +2476,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Plant");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
+                        .WithOne("CustomerSurvey")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("CustomerSurvey_UserId_fkey");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
@@ -3224,6 +3291,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ChatParticipants");
 
                     b.Navigation("CustomerOrders");
+
+                    b.Navigation("CustomerSurvey");
 
                     b.Navigation("LayoutDesigns");
 

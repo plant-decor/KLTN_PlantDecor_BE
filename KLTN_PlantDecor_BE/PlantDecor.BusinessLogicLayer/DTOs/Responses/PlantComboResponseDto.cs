@@ -11,6 +11,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public List<string>? SuitableRooms { get; set; }
         public string? FengShuiElement { get; set; }
         public string? FengShuiPurpose { get; set; }
+        public bool? PetSafe { get; set; }
+        public bool? ChildSafe { get; set; }
         public string? ThemeName { get; set; }
         public string? ThemeDescription { get; set; }
         public decimal? ComboPrice { get; set; }
@@ -51,6 +53,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? ComboName { get; set; }
         public int? ComboType { get; set; }
         public decimal? ComboPrice { get; set; }
+        public bool? PetSafe { get; set; }
+        public bool? ChildSafe { get; set; }
         public bool? IsActive { get; set; }
         public int? ViewCount { get; set; }
         public int? PurchaseCount { get; set; }

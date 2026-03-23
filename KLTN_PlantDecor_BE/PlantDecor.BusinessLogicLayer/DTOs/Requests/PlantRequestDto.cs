@@ -41,6 +41,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public string? PotSize { get; set; }
 
+        public int? CareLevelType { get; set; }
+
         public string? CareLevel { get; set; }
 
         public bool IsActive { get; set; } = true;

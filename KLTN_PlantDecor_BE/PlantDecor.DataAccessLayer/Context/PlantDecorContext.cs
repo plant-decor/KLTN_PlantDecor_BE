@@ -31,6 +31,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<CommonPlant> CommonPlants { get; set; }
 
+    public virtual DbSet<CustomerSurvey> CustomerSurveys { get; set; }
+
     public virtual DbSet<Material> Materials { get; set; }
 
     public virtual DbSet<MaterialImage> MaterialImages { get; set; }
@@ -241,6 +243,20 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("ChatSession");
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<CustomerSurvey>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("CustomerSurvey_pkey");
+            entity.ToTable("CustomerSurvey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.MaxBudget).HasPrecision(18, 2);
+            entity.Property(e => e.HasPets).HasDefaultValue(false);
+            entity.Property(e => e.HasChildren).HasDefaultValue(false);
+            entity.HasOne(d => d.User).WithOne(p => p.CustomerSurvey)
+                .HasForeignKey<CustomerSurvey>(d => d.UserId)
+                .HasConstraintName("CustomerSurvey_UserId_fkey");
         });
 
         modelBuilder.Entity<Material>(entity =>
@@ -612,7 +628,6 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Name, "IX_Plant_Name");
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
-            entity.Property(e => e.CareLevel).HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.FengShuiElement).HasMaxLength(50);
             entity.Property(e => e.GrowthRate).HasMaxLength(50);

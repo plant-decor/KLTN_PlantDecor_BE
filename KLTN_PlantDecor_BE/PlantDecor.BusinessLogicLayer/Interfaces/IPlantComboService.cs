@@ -32,5 +32,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Shop Display
         Task<PaginatedResult<PlantComboListResponseDto>> GetCombosForShopAsync(Pagination pagination);
         Task<PaginatedResult<SellingPlantComboResponseDto>> GetSellingCombosAsync(Pagination pagination, PlantComboShopSearchRequestDto searchDto);
+        Task<List<NurseryListResponseDto>> GetNurseriesByComboAsync(int comboId);
     }
 }

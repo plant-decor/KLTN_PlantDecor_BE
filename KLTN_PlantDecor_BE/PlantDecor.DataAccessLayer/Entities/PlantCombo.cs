@@ -23,6 +23,10 @@ public partial class PlantCombo
 
     public string? FengShuiPurpose { get; set; }
 
+    public bool? PetSafe { get; set; }
+
+    public bool? ChildSafe { get; set; }
+
     public string? ThemeName { get; set; }
 
     public string? ThemeDescription { get; set; }

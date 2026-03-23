@@ -19,6 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string ALL_COMBOS_KEY = "combos_all";
         private const string ACTIVE_COMBOS_KEY = "combos_active";
         private const string SHOP_COMBOS_KEY = "combos_shop";
+        private const string NURSERIES_BY_COMBO_KEY = "nurseries_by_combo";
 
         public PlantComboService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -90,19 +91,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var combo = request.ToEntity();
                 combo.ComboCode ??= PlantComboMapper.GenerateComboCode();
 
-                _unitOfWork.PlantComboRepository.PrepareCreate(combo);
-                await _unitOfWork.SaveAsync();
-
-                // Add combo items
+                // Add combo items and determine safety
+                var plantsInCombo = new List<Plant>();
                 if (request.ComboItems.Any())
                 {
                     foreach (var itemDto in request.ComboItems)
                     {
-                        // Validate plant exists
-                        var plant = await _unitOfWork.PlantRepository.GetByIdAsync(itemDto.PlantId);
-                        if (plant == null)
-                            throw new NotFoundException($"Plant với ID {itemDto.PlantId} không tồn tại");
+                        var plant = await _unitOfWork.PlantRepository.GetByIdAsync(itemDto.PlantId)
+                            ?? throw new NotFoundException($"Plant với ID {itemDto.PlantId} không tồn tại");
+                        plantsInCombo.Add(plant);
+                    }
+                }
 
+                // Recalculate safety based on plants
+                combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.PetSafe == true);
+                combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.ChildSafe == true);
+
+                _unitOfWork.PlantComboRepository.PrepareCreate(combo);
+                await _unitOfWork.SaveAsync();
+
+                if (plantsInCombo.Any())
+                {
+                    foreach (var itemDto in request.ComboItems)
+                    {
                         var comboItem = itemDto.ToComboItemEntity(combo.Id);
                         combo.PlantComboItems.Add(comboItem);
                     }
@@ -111,7 +122,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(combo.Id);
 
                 // Reload with details
                 var created = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(combo.Id);
@@ -142,11 +153,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 request.ToUpdate(combo);
 
+                // Recalculate safety based on existing plants in the combo
+                var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();
+                combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.PetSafe == true);
+                combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.ChildSafe == true);
+
                 _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(id);
 
                 return combo.ToResponse();
             }
@@ -178,7 +194,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(id);
 
                 return true;
             }
@@ -201,7 +217,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
             await _unitOfWork.SaveAsync();
 
-            await InvalidateCacheAsync();
+            await InvalidateCacheAsync(id);
 
             return combo.IsActive ?? true;
         }
@@ -221,23 +237,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
 
                 // Validate plant exists
-                var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId);
-                if (plant == null)
-                    throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId)
+                    ?? throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
 
                 // Check if plant already exists in combo
-                var existingItem = combo.PlantComboItems.FirstOrDefault(i => i.PlantId == request.PlantId);
-                if (existingItem != null)
+                if (combo.PlantComboItems.Any(i => i.PlantId == request.PlantId))
                     throw new BadRequestException($"Plant với ID {request.PlantId} đã có trong combo");
 
                 var comboItem = request.ToComboItemEntity(comboId);
                 combo.PlantComboItems.Add(comboItem);
                 combo.UpdatedAt = DateTime.Now;
 
+                // Recalculate safety
+                var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();
+                plantsInCombo.Add(plant); // Add the new plant for calculation
+                combo.PetSafe = plantsInCombo.All(p => p?.PetSafe == true);
+                combo.ChildSafe = plantsInCombo.All(p => p?.ChildSafe == true);
+
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(comboId);
 
                 // Reload with details
                 var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
@@ -262,9 +282,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             combo.PlantComboItems.Remove(item);
             combo.UpdatedAt = DateTime.Now;
+
+            // Recalculate safety
+            var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();
+            combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.PetSafe == true);
+            combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.ChildSafe == true);
+
             await _unitOfWork.SaveAsync();
 
-            await InvalidateCacheAsync();
+            await InvalidateCacheAsync(comboId);
 
             // Reload with details
             var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
@@ -285,19 +311,25 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var comboItem = combo.PlantComboItems.First(i => i.Id == comboItemId);
 
                 // Validate plant exists
-                var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId);
-                if (plant == null)
-                    throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId)
+                    ?? throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
 
                 comboItem.PlantId = request.PlantId;
                 comboItem.Quantity = request.Quantity;
                 comboItem.Notes = request.Notes;
                 combo.UpdatedAt = DateTime.Now;
 
+                // Recalculate safety
+                // Manually update the plant in the collection for accurate calculation
+                comboItem.Plant = plant;
+                var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();
+                combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.PetSafe == true);
+                combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p?.ChildSafe == true);
+
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(combo.Id);
 
                 // Reload with details
                 var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(combo.Id);
@@ -342,7 +374,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(request.PlantComboId);
 
                 return combo.ToResponse();
             }
@@ -367,7 +399,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             combo.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveAsync();
 
-            await InvalidateCacheAsync();
+            await InvalidateCacheAsync(comboId);
 
             return combo.ToResponse();
         }
@@ -470,7 +502,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(comboId);
 
                 return new NurseryComboStockOperationResponseDto
                 {
@@ -576,7 +608,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(comboId);
 
                 return new NurseryComboStockOperationResponseDto
                 {
@@ -650,6 +682,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 query = query.Where(npc => npc.PlantCombo.ComboPrice.HasValue && npc.PlantCombo.ComboPrice.Value <= searchDto.MaxPrice.Value);
             }
 
+            // Safety filters
+            if (searchDto.PetSafe.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.PetSafe == searchDto.PetSafe.Value);
+            }
+            if (searchDto.ChildSafe.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.ChildSafe == searchDto.ChildSafe.Value);
+            }
+
+            // Category filter: combo is matched when any plant in the combo belongs to CategoryId
+            if (searchDto.CategoryId.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.PlantComboItems
+                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => c.Id == searchDto.CategoryId.Value)));
+            }
+
             // Tags
             if (searchDto.TagIds != null && searchDto.TagIds.Any())
             {
@@ -691,6 +740,47 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
+        }
+
+        private async Task InvalidateCacheAsync(int? comboId = null)
+        {
+            await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
+            await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
+            await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
+            await _cacheService.RemoveByPrefixAsync("selling_combos_");
+            if (comboId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_COMBO_KEY}_{comboId.Value}");
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        public async Task<List<NurseryListResponseDto>> GetNurseriesByComboAsync(int comboId)
+        {
+            var cacheKey = $"{NURSERIES_BY_COMBO_KEY}_{comboId}";
+            var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdAsync(comboId);
+            if (combo == null)
+            {
+                throw new NotFoundException($"Plant combo với ID '{comboId}' không tồn tại");
+            }
+
+            var nurseryPlantCombos = await _unitOfWork.NurseryPlantComboRepository.GetQuery()
+                .Where(npc => npc.PlantComboId == comboId && npc.Quantity > 0 && npc.IsActive)
+                .Include(npc => npc.Nursery)
+                .ToListAsync();
+
+            var nurseries = nurseryPlantCombos.Select(npc => npc.Nursery).Where(n => n != null && n.IsActive == true).ToList();
+
+            var result = nurseries.Select(n => n!.ToListResponse()).ToList();
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
+            return result;
         }
 
         #endregion

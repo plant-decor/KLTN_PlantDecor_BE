@@ -5,6 +5,7 @@ namespace PlantDecor.DataAccessLayer.Helpers
         public string? Keyword { get; set; }
         public bool? IsActive { get; set; }
         public int? PlacementType { get; set; }
+        public int? CareLevelType { get; set; }
         public string? CareLevel { get; set; }
         public bool? Toxicity { get; set; }
         public bool? AirPurifying { get; set; }
