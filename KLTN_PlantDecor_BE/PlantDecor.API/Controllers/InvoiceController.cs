@@ -8,6 +8,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về hóa đơn của người dùng
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]

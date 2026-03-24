@@ -9,6 +9,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về thanh toán thông qua VNPay cho hóa đơn của user
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class PaymentController : ControllerBase
