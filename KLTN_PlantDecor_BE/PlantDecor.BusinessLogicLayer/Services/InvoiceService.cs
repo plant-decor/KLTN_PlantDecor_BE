@@ -53,11 +53,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (order.Status != (int)OrderStatusEnum.RemainingPaymentPending)
                 throw new BadRequestException("Order is not in RemainingPaymentPending status");
 
+            // Check if RemainingBalance invoice already exists
             var existing = await _unitOfWork.InvoiceRepository
                 .GetPendingByOrderIdAndTypeAsync(orderId, (int)InvoiceTypeEnum.RemainingBalance);
+
             if (existing != null)
                 return MapToDto(existing);
 
+            // Collect all InvoiceDetails from all NurseryOrders
             var details = order.NurseryOrders
                 .SelectMany(no => no.NurseryOrderDetails)
                 .Select(d => new InvoiceDetail
@@ -72,16 +75,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!details.Any())
                 throw new BadRequestException("Cannot generate invoice details because NurseryOrderDetails are empty");
 
+            // Create single RemainingBalance Invoice for the entire Order
             var invoice = new Invoice
             {
                 OrderId = orderId,
-                NurseryId = order.NurseryId,
                 Type = (int)InvoiceTypeEnum.RemainingBalance,
-                TotalAmount = order.RemainingAmount,
+                TotalAmount = order.RemainingAmount ?? 0,
                 Status = (int)InvoiceStatusEnum.Pending,
                 IssuedDate = DateTime.Now,
                 InvoiceDetails = details
             };
+
             _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
             await _unitOfWork.SaveAsync();
 
@@ -92,7 +96,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             Id = invoice.Id,
             OrderId = invoice.OrderId,
-            NurseryId = invoice.NurseryId,
             IssuedDate = invoice.IssuedDate,
             TotalAmount = invoice.TotalAmount,
             Type = invoice.Type,

@@ -29,6 +29,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IPaymentRepository? _paymentRepository;
         private ITransactionRepository? _transactionRepository;
         private IOrderRepository? _orderRepository;
+        private INurseryOrderRepository? _nurseryOrderRepository;
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
         private IChatSessionRepository? _chatSessionRepository;
@@ -123,6 +124,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IOrderRepository OrderRepository
         {
             get { return _orderRepository ??= new OrderRepository(_context); }
+        }
+
+        public INurseryOrderRepository NurseryOrderRepository
+        {
+            get { return _nurseryOrderRepository ??= new NurseryOrderRepository(_context); }
         }
 
         public IInvoiceRepository InvoiceRepository

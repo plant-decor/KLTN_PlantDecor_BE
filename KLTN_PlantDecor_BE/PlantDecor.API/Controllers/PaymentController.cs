@@ -21,7 +21,7 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Tạo URL thanh toán VNPay cho một đơn hàng
+        /// Tạo URL thanh toán VNPay cho một Invoice
         /// </summary>
         [HttpPost("create")]
         [Authorize]

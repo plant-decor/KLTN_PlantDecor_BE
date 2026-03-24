@@ -6,10 +6,6 @@ public partial class Order
 
     public int UserId { get; set; }
 
-    public int NurseryId { get; set; }
-
-    public int? ShipperId { get; set; }
-
     public string? Address { get; set; }
 
     public string? Phone { get; set; }
@@ -30,8 +26,6 @@ public partial class Order
 
     public string? ReturnReason { get; set; }
 
-    public string? ShipperNote { get; set; }
-
     public DateTime? CompletedAt { get; set; }
 
     public DateTime? CreatedAt { get; set; }
@@ -49,6 +43,4 @@ public partial class Order
     public virtual ServiceRegistration? ServiceRegistration { get; set; }
 
     public virtual User Customer { get; set; } = null!;
-    public virtual User? Shipper { get; set; }
-    public virtual Nursery Nursery { get; set; } = null!;
 }

@@ -26,13 +26,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<CreatePaymentUrlResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto request, HttpContext httpContext)
         {
-            var order = await ResolveTargetOrderAsync(userId, request);
-            var (paymentType, amount) = DeterminePaymentTypeAndAmount(order);
+            // Resolve Invoice and validate access
+            var invoice = await _unitOfWork.InvoiceRepository.GetByIdWithDetailsAsync(request.InvoiceId);
+            if (invoice == null)
+                throw new NotFoundException($"Invoice {request.InvoiceId} not found");
+
+            if (!invoice.OrderId.HasValue)
+                throw new BadRequestException("Invoice is not associated with any order");
+
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(invoice.OrderId.Value);
+            if (order == null)
+                throw new NotFoundException("Order not found");
+
+            if (order.UserId != userId)
+                throw new ForbiddenException("You don't have access to this invoice");
+
+            // Validate Invoice status
+            if (invoice.Status != (int)InvoiceStatusEnum.Pending)
+                throw new BadRequestException($"Invoice is not in Pending status. Current status: {(InvoiceStatusEnum)invoice.Status!.Value}");
+
+            // Get payment type and amount from Invoice
+            var paymentType = (PaymentTypeEnum)invoice.Type!.Value;
+            var amount = invoice.TotalAmount ?? 0;
 
             if (amount <= 0)
                 throw new BadRequestException("Payment amount must be greater than 0");
 
-            // Check if there's a pending payment with active transaction
+            // Check if there's a pending payment with active transaction for this invoice
             var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(order.Id);
             var now = DateTime.Now;
 
@@ -45,16 +65,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (activePendingPayment != null)
                 throw new BadRequestException("An active payment is pending. Please use retry payment API or wait for it to expire");
-
-            // For RemainingBalance payment, Invoice should already exist (created when order was delivered)
-            if (paymentType == PaymentTypeEnum.RemainingBalance)
-            {
-                var existingInvoice = await _unitOfWork.InvoiceRepository
-                    .GetPendingByOrderIdAndTypeAsync(order.Id, (int)InvoiceTypeEnum.RemainingBalance);
-
-                if (existingInvoice == null)
-                    throw new BadRequestException("RemainingBalance invoice not found. Order may not be in the correct status for remaining payment.");
-            }
 
             // Create Payment record (Pending)
             var payment = new Payment
@@ -208,6 +218,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (payment == null)
                 return new VnpayIpnResponseDto { RspCode = "01", Message = "Payment not found" };
 
+            // Cập nhật Transaction với response code từ VnPay (dù thành công hay thất bại) để lưu lại kết quả callback và phục vụ mục đích tra cứu, thống kê sau này.
             dbTransaction.ResponseCode = responseCode;
 
             await _unitOfWork.BeginTransactionAsync();
@@ -215,13 +226,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 if (responseCode == "00")
                 {
+                    // Cập nhật Payment, Order, Invoice chỉ khi thanh toán thành công (code 00).
+                    // Các code lỗi khác chỉ cập nhật Transaction mà không thay đổi trạng thái Payment để cho phép người dùng retry.
                     var paymentType = (PaymentTypeEnum)payment.PaymentType!.Value;
+                    // Load Order with details for status update and inventory adjustment
                     var order = await ResolveTargetOrderForPaymentAsync(payment);
 
+                    // Update Transaction status to Completed
                     dbTransaction.Status = (int)TransactionStatusEnum.Completed;
+                    // Update Payment status to Success
                     payment.Status = (int)PaymentStatusEnum.Success;
                     payment.PaidAt = DateTime.Now;
 
+                    // Update Order status based on payment type and current order status
                     var newOrderStatus = DetermineSuccessOrderStatus(paymentType);
                     order.Status = newOrderStatus;
                     order.UpdatedAt = DateTime.Now;
@@ -240,7 +257,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         await UpdateInventoryForOrderAsync(order);
                     }
 
+                    // Update PlantInstance status for PlantInstance orders
+                    if (order.OrderType == (int)OrderTypeEnum.PlantInstance)
+                    {
+                        await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
+                    }
+
                     // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
+                    // Dùng để xác định Invoice nào cần cập nhật trạng thái sang Paid sau khi thanh toán thành công, dựa trên loại thanh toán (Deposit, FullPayment, RemainingBalance).
                     var invoice = await _unitOfWork.InvoiceRepository
                         .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
 
@@ -304,45 +328,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return vnpay.CreateRequestUrl(_configuration["Vnpay:BaseUrl"]!, _configuration["Vnpay:HashSecret"]!);
         }
 
-        private static (PaymentTypeEnum paymentType, decimal amount) DeterminePaymentTypeAndAmount(Order order)
-        {
-            var strategy = (PaymentStrategiesEnum)(order.PaymentStrategy ?? (int)PaymentStrategiesEnum.FullPayment);
-
-            if (strategy == PaymentStrategiesEnum.FullPayment)
-                return (PaymentTypeEnum.FullPayment, order.TotalAmount ?? 0);
-
-            // Deposit strategy
-            if (order.Status == (int)OrderStatusEnum.Pending)
-                return (PaymentTypeEnum.Deposit, order.DepositAmount ?? 0);
-
-            if (order.Status == (int)OrderStatusEnum.RemainingPaymentPending)
-                return (PaymentTypeEnum.RemainingBalance, order.RemainingAmount ?? 0);
-
-            throw new BadRequestException("Order is not in a payable state");
-        }
-
+        // Dùng để xác định trạng thái mới của đơn hàng sau khi thanh toán thành công dựa trên loại thanh toán (Deposit, FullPayment, RemainingBalance).
         private static int DetermineSuccessOrderStatus(PaymentTypeEnum paymentType) => paymentType switch
         {
             PaymentTypeEnum.FullPayment => (int)OrderStatusEnum.Paid,
             PaymentTypeEnum.Deposit => (int)OrderStatusEnum.DepositPaid,
-            PaymentTypeEnum.RemainingBalance => (int)OrderStatusEnum.Completed,
+            PaymentTypeEnum.RemainingBalance => (int)OrderStatusEnum.PendingConfirmation,
             _ => (int)OrderStatusEnum.Paid
         };
-
-        private async Task<Order> ResolveTargetOrderAsync(int userId, CreatePaymentRequestDto request)
-        {
-            if (!request.OrderId.HasValue)
-                throw new BadRequestException("OrderId is required");
-
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(request.OrderId.Value);
-            if (order == null)
-                throw new NotFoundException($"Order {request.OrderId.Value} not found");
-
-            if (order.UserId != userId)
-                throw new ForbiddenException("You don't have access to this order");
-
-            return order;
-        }
 
         private async Task<Order> ResolveTargetOrderForPaymentAsync(Payment payment)
         {
@@ -399,6 +392,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         {
                             nurseryPlantCombo.Quantity -= quantity;
                             _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryPlantCombo);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update PlantInstance status for PlantInstance orders.
+        /// - Deposit/FullPayment: Available → Reserved (item paid but not yet delivered)
+        /// - RemainingBalance: Keep Reserved (will be Sold when delivered)
+        /// </summary>
+        private async Task UpdatePlantInstanceStatusForOrderAsync(Order order, PaymentTypeEnum paymentType)
+        {
+            // Only update to Reserved when first payment (Deposit or FullPayment), not for RemainingBalance
+            if (paymentType == PaymentTypeEnum.RemainingBalance)
+                return;
+
+            foreach (var nurseryOrder in order.NurseryOrders)
+            {
+                foreach (var detail in nurseryOrder.NurseryOrderDetails)
+                {
+                    if (detail.PlantInstanceId.HasValue)
+                    {
+                        var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
+                        if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available)
+                        {
+                            plantInstance.Status = (int)PlantInstanceStatusEnum.Reserved;
+                            _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
                         }
                     }
                 }

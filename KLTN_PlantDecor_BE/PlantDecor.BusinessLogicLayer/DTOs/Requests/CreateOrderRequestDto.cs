@@ -2,26 +2,24 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateOrderRequestDto
     {
-        // NOTE: NurseryId is automatically resolved from items, not needed in request
-        // public int NurseryId { get; set; }
-
+        // Thông tin giao hàng
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? CustomerName { get; set; }
         public string? Note { get; set; }
-        public int PaymentStrategy { get; set; }
-        public int OrderType { get; set; }
-        public List<CreateOrderItemDto> Items { get; set; } = new();
-    }
 
-    public class CreateOrderItemDto
-    {
-        public int? CommonPlantId { get; set; }
+        // Chiến lược thanh toán: FullPayment = 1, Deposit = 2
+        public int PaymentStrategy { get; set; }
+
+        // Loại đơn hàng: PlantInstance = 1, OtherProduct = 2
+        public int OrderType { get; set; }
+
+        // OPTION 1: Checkout từ Cart (OtherProduct)
+        // Nếu null hoặc rỗng → checkout toàn bộ Cart
+        // Nếu có giá trị → chỉ checkout các CartItem được chọn
+        public List<int>? CartItemIds { get; set; }
+
+        // OPTION 2: Mua ngay PlantInstance (không qua Cart)
         public int? PlantInstanceId { get; set; }
-        public int? NurseryPlantComboId { get; set; }
-        public int? NurseryMaterialId { get; set; }
-        public string? ItemName { get; set; }
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
     }
 }

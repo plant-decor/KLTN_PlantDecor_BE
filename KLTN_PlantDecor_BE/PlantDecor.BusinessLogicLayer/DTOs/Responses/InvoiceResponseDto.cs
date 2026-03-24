@@ -4,7 +4,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     {
         public int Id { get; set; }
         public int? OrderId { get; set; }
-        public int? NurseryId { get; set; }
         public DateTime? IssuedDate { get; set; }
         public decimal? TotalAmount { get; set; }
         public int? Type { get; set; }
