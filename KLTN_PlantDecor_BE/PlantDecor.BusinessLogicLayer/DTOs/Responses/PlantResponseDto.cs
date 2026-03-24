@@ -10,7 +10,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? BasePrice { get; set; }
         public int? PlacementType { get; set; }
         public string PlacementTypeName { get; set; } = null!;
-        public string? Size { get; set; }
+        public int? Size { get; set; }
+        public string? SizeName { get; set; }
         public string? GrowthRate { get; set; }
         public bool? Toxicity { get; set; }
         public bool? AirPurifying { get; set; }
@@ -49,7 +50,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Id { get; set; }
         public string Name { get; set; } = null!;
         public decimal? BasePrice { get; set; }
-        public string? Size { get; set; }
+        public int? Size { get; set; }
+        public string? SizeName { get; set; }
         public int? CareLevelType { get; set; }
         public string? CareLevelTypeName { get; set; }
         public string? CareLevel { get; set; }

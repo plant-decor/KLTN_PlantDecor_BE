@@ -617,7 +617,6 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Origin).HasMaxLength(100);
             entity.Property(e => e.PotSize).HasMaxLength(50);
-            entity.Property(e => e.Size).HasMaxLength(50);
             entity.Property(e => e.SpecificName).HasMaxLength(255);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 

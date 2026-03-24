@@ -23,6 +23,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PlacementType = plant.PlacementType,
                 PlacementTypeName = ((PlacementTypeEnum)plant.PlacementType).ToString(),
                 Size = plant.Size,
+                SizeName = GetPlantSizeName(plant.Size),
                 GrowthRate = plant.GrowthRate,
                 Toxicity = plant.Toxicity,
                 AirPurifying = plant.AirPurifying,
@@ -79,6 +80,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Name = plant.Name,
                 BasePrice = plant.BasePrice,
                 Size = plant.Size,
+                SizeName = GetPlantSizeName(plant.Size),
                 CareLevelType = plant.CareLevelType,
                 CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
                 CareLevel = GetCareLevelName(plant.CareLevelType),
@@ -238,6 +240,18 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
                 ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
+                : null;
+        }
+
+        private static string? GetPlantSizeName(int? size)
+        {
+            if (!size.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(PlantSizeEnum), size.Value)
+                ? ((PlantSizeEnum)size.Value).ToString()
                 : null;
         }
 

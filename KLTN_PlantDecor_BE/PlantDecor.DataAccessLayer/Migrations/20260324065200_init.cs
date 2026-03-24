@@ -108,7 +108,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Description = table.Column<string>(type: "text", nullable: true),
                     BasePrice = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     PlacementType = table.Column<int>(type: "integer", nullable: false),
-                    Size = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Size = table.Column<int>(type: "integer", nullable: true),
                     GrowthRate = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Toxicity = table.Column<bool>(type: "boolean", nullable: true),
                     AirPurifying = table.Column<bool>(type: "boolean", nullable: true),

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -15,6 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantResponseDto?> GetPlantByIdAsync(int id);
         Task<PlantResponseDto> CreatePlantAsync(PlantRequestDto request);
         Task<PlantResponseDto> UpdatePlantAsync(int id, PlantUpdateDto request);
+        Task<PlantResponseDto> UploadPlantImagesAsync(int plantId, List<IFormFile> files);
         Task<bool> DeletePlantAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 

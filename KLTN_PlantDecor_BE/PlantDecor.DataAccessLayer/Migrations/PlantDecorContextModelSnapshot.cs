@@ -1237,9 +1237,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("Size")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("Size")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SpecificName")
                         .HasMaxLength(255)

@@ -129,7 +129,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             string? searchTerm,
             List<int>? categoryIds,
             List<int>? tagIds,
-            List<string>? sizes,
+            List<int>? sizes,
             double? minPrice,
             double? maxPrice,
             string? sortBy,
@@ -166,7 +166,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             // Size filter
             if (sizes != null && sizes.Any())
             {
-                query = query.Where(cp => sizes.Contains(cp.Plant.Size));
+                query = query.Where(cp => cp.Plant.Size.HasValue && sizes.Contains(cp.Plant.Size.Value));
             }
 
             // Price filter

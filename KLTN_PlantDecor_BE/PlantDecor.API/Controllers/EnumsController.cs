@@ -18,6 +18,7 @@ namespace PlantDecor.API.Controllers
             ["ComboType"] = typeof(ComboTypeEnum),
             ["Gender"] = typeof(GenderEnum),
             ["PlacementType"] = typeof(PlacementTypeEnum),
+            ["PlantSize"] = typeof(PlantSizeEnum),
             ["CareLevelType"] = typeof(CareLevelTypeEnum),
             ["PlantInstanceStatus"] = typeof(PlantInstanceStatusEnum),
             ["Role"] = typeof(RoleEnum),
@@ -110,7 +111,28 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
+                    CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
                     CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Plant Size
+        /// GET /api/system/enums/plant-sizes
+        /// </summary>
+        [HttpGet("plant-sizes")]
+        [AllowAnonymous]
+        public IActionResult GetPlantSizeEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get plant size enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PlantSize", typeof(PlantSizeEnum))
                 }
             });
         }

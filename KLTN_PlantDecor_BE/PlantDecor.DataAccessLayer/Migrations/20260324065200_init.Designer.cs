@@ -13,7 +13,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260324061634_init")]
+    [Migration("20260324065200_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1240,9 +1240,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("Size")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("Size")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SpecificName")
                         .HasMaxLength(255)

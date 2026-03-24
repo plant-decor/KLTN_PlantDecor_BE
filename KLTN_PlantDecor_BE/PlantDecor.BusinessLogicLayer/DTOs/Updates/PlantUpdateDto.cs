@@ -19,7 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public int? PlacementType { get; set; }
 
-        public string? Size { get; set; }
+        public int? Size { get; set; }
 
         public string? GrowthRate { get; set; }
 

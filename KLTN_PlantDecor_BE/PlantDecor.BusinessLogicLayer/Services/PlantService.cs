@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -15,15 +17,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly ICloudinaryService _cloudinaryService;
+        private readonly ILogger<PlantService> _logger;
 
         private const string ALL_PLANTS_KEY = "plants_all";
         private const string ACTIVE_PLANTS_KEY = "plants_active";
         private const string SHOP_PLANTS_KEY = "plants_shop";
 
-        public PlantService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public PlantService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            ICloudinaryService cloudinaryService,
+            ILogger<PlantService> logger)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _cloudinaryService = cloudinaryService;
+            _logger = logger;
         }
 
         #region CRUD Operations
@@ -153,6 +163,85 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<PlantResponseDto> UploadPlantImagesAsync(int plantId, List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+                throw new BadRequestException("No files were uploaded");
+
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            foreach (var file in files)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+                if (!isValid)
+                {
+                    throw new BadRequestException(errorMessage);
+                }
+            }
+
+            var uploadedFiles = await _cloudinaryService.UploadFilesAsync(files, "PlantImages");
+            if (uploadedFiles == null || uploadedFiles.Count == 0)
+            {
+                throw new BadRequestException("Plant images upload failed");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var hasPrimary = plant.PlantImages.Any(i => i.IsPrimary == true);
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    plant.PlantImages.Add(new PlantImage
+                    {
+                        PlantId = plant.Id,
+                        ImageUrl = uploadedFile.SecureUrl,
+                        IsPrimary = !hasPrimary,
+                        CreatedAt = DateTime.Now
+                    });
+
+                    if (!hasPrimary)
+                    {
+                        hasPrimary = true;
+                    }
+                }
+
+                plant.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantRepository.PrepareUpdate(plant);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                        continue;
+
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to cleanup uploaded plant image: {PublicId}", uploadedFile.PublicId);
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
         }
 
         public async Task<bool> DeletePlantAsync(int id)
