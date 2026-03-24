@@ -24,5 +24,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         // Shop Display
         Task<PaginatedResult<MaterialListResponseDto>> GetMaterialsForShopAsync(Pagination pagination);
+        Task<List<NurseryListResponseDto>> GetNurseriesByMaterialAsync(int materialId);
     }
 }

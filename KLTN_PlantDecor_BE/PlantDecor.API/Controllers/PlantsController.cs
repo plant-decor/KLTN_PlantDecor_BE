@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 
@@ -114,6 +115,28 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update plant successfully",
+                Payload = plant
+            });
+        }
+
+        /// <summary>
+        /// Upload ảnh cho plant
+        /// </summary>
+        [HttpPost("{id}/images")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadPlantImages(int id, [FromForm] List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+            {
+                throw new BadRequestException("No files were uploaded");
+            }
+
+            var plant = await _plantService.UploadPlantImagesAsync(id, files);
+            return Ok(new ApiResponse<PlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload plant images successfully",
                 Payload = plant
             });
         }

@@ -113,6 +113,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Shop] Lấy danh sách vựa đang có cây đại trà theo PlantId
+        /// </summary>
+        [HttpGet("/api/shop/plants/{plantId}/common-nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesWithCommonPlant(int plantId)
+        {
+            var result = await _commonPlantService.GetNurseriesWithCommonPlantAsync(plantId);
+
+            return Ok(new ApiResponse<List<PlantNurseryAvailabilityDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vựa có cây đại trà thành công",
+                Payload = result
+            });
+        }
+
         #region Private Methods
 
         private int GetCurrentUserId()

@@ -8,7 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string? SearchTerm { get; set; }
         public List<int>? CategoryIds { get; set; }
         public List<int>? TagIds { get; set; }
-        public List<string>? Sizes { get; set; }
+        public List<int>? Sizes { get; set; }
         public double? MinPrice { get; set; }
         public double? MaxPrice { get; set; }
         public string? SortBy { get; set; }

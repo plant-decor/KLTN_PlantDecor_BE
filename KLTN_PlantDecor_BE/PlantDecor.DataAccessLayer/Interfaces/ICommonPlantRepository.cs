@@ -28,7 +28,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             string? searchTerm,
             List<int>? categoryIds,
             List<int>? tagIds,
-            List<string>? sizes,
+            List<int>? sizes,
             double? minPrice,
             double? maxPrice,
             string? sortBy,

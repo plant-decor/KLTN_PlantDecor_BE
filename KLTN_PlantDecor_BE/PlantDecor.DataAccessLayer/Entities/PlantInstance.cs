@@ -28,8 +28,6 @@ public partial class PlantInstance
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual ICollection<NurseryOrderDetail> NurseryOrderDetails { get; set; } = new List<NurseryOrderDetail>();
 
     public virtual Plant? Plant { get; set; }
@@ -40,5 +38,9 @@ public partial class PlantInstance
 
     public virtual ICollection<PlantRating> PlantRatings { get; set; } = new List<PlantRating>();
 
+    public virtual ICollection<LayoutDesignPlant> LayoutDesignPlants { get; set; } = new List<LayoutDesignPlant>();
+
     public virtual UserPlant? UserPlant { get; set; }
+
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 }

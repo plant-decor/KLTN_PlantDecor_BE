@@ -5,12 +5,8 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -73,19 +69,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Where(log => log.CreatedAt >= thirtyDaysAgo && log.UserId != null && targetUserIds.Contains(log.UserId.Value) && log.PlantId != null && log.ActionType != null)
                 .ToListAsync();
 
-            var completedOrderPlants = await _context.OrderItems
-                .Where(oi => oi.Order != null && targetUserIds.Contains(oi.Order.UserId) && oi.Order.Status == (int)OrderStatusEnum.Completed)
-                .Select(oi => new
-                {
-                    UserId = oi.Order.UserId,
-                    PlantId = oi.CommonPlant != null
-                        ? oi.CommonPlant.PlantId
-                        : (oi.PlantInstance != null ? oi.PlantInstance.PlantId : (int?)null)
-                })
-                .Where(x => x.PlantId != null)
-                .Select(x => new { x.UserId, PlantId = x.PlantId!.Value })
-                .Distinct()
-                .ToListAsync();
+            // TEST DỮ LIỆU HARDCODE  ******************************************************
+            //var completedOrderPlants = await _context.OrderItems
+            //    .Where(oi => oi.Order != null && targetUserIds.Contains(oi.Order.UserId) && oi.Order.Status == (int)OrderStatusEnum.Completed)
+            //    .Select(oi => new
+            //    {
+            //        UserId = oi.Order.UserId,
+            //        PlantId = oi.CommonPlant != null
+            //            ? oi.CommonPlant.PlantId
+            //            : (oi.PlantInstance != null ? oi.PlantInstance.PlantId : (int?)null)
+            //    })
+            //    .Where(x => x.PlantId != null)
+            //    .Select(x => new { x.UserId, PlantId = x.PlantId!.Value })
+            //    .Distinct()
+            //    .ToListAsync();
+            var completedOrderPlants = 1;
 
             var existingPreferences = await _context.UserPreferences
                 .Where(p => p.UserId != null && targetUserIds.Contains(p.UserId.Value))
@@ -98,9 +96,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     g => Math.Min(10m, g.Sum(log => ActionScoreMap.TryGetValue(log.ActionType!.Value, out var score) ? score : 0m))
                 );
 
-            var purchasedPairs = completedOrderPlants
-                .Select(x => (x.UserId, x.PlantId))
-                .ToHashSet();
+            // TEST DỮ LIỆU HARDCODE  ************************************************
+            //var purchasedPairs = completedOrderPlants
+            //    .Select(x => (x.UserId, x.PlantId))
+            //    .ToHashSet();
+            var purchasedPairs = 1;
 
             var preferenceMap = existingPreferences
                 .Where(p => p.UserId != null && p.PlantId != null)
@@ -121,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     // 1. Profile Match Score
                     decimal profileScore = 0;
-                    if (IsEasyCare(plant.CareLevel)) profileScore += 3;
+                    if (IsEasyCare(plant.CareLevelType)) profileScore += 3;
                     if (plant.ChildSafe == true || plant.PetSafe == true) profileScore += 2;
                     profileScore += CalculateFengShuiScore(userElement, plant.FengShuiElement);
 
@@ -131,8 +131,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     // 2. Behavior Score
                     behaviorScoreByUserPlant.TryGetValue((user.Id, plant.Id), out var behaviorScore);
 
-                    // 3. Purchase History Score
-                    decimal purchaseScore = purchasedPairs.Contains((user.Id, plant.Id)) ? 10 : 0;
+                    // 3. Purchase History Score (Test dữ liệu hardcode) ************************
+                    //decimal purchaseScore = purchasedPairs.Contains((user.Id, plant.Id)) ? 10 : 0;
+                    var purchaseScore = 0m;
 
                     // 4. Preference Score
                     decimal preferenceScore = (profileScore * 0.2m) + (behaviorScore * 0.4m) + (purchaseScore * 0.4m);
@@ -207,7 +208,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(img => img.ImageUrl)
                         .FirstOrDefault(),
                     BasePrice = p.Plant.BasePrice,
-                    CareLevel = p.Plant.CareLevel,
+                    CareLevelTypeName = GetCareLevelName(p.Plant.CareLevelType),
                     FengShuiElement = p.Plant.FengShuiElement,
                     PreferenceScore = p.PreferenceScore ?? 0,
                     ProfileMatchScore = p.ProfileMatchScore ?? 0,
@@ -266,8 +267,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var seedCareLevels = seedPlants
-                .Select(p => NormalizeText(p.CareLevel))
-                .Where(x => !string.IsNullOrEmpty(x))
+                .Where(p => p.CareLevelType.HasValue)
+                .Select(p => p.CareLevelType!.Value)
                 .ToHashSet();
 
             var seedElements = seedPlants
@@ -301,7 +302,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     decimal contextualScore = 0m;
 
-                    if (seedCareLevels.Contains(NormalizeText(plant.CareLevel)))
+                    if (plant.CareLevelType.HasValue && seedCareLevels.Contains(plant.CareLevelType.Value))
                     {
                         contextualScore += 3m;
                     }
@@ -354,7 +355,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(img => img.ImageUrl)
                         .FirstOrDefault(),
                     BasePrice = x.Plant.BasePrice,
-                    CareLevel = x.Plant.CareLevel,
+                    CareLevelTypeName = GetCareLevelName(x.Plant.CareLevelType),
                     FengShuiElement = x.Plant.FengShuiElement,
                     PreferenceScore = Math.Round(x.ContextualScore, 2),
                     ProfileMatchScore = x.Preference?.ProfileMatchScore ?? 0,
@@ -447,10 +448,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return 0;
         }
 
-        private static bool IsEasyCare(string? careLevel)
+        private static bool IsEasyCare(int? careLevelType)
         {
-            var normalized = NormalizeText(careLevel);
-            return normalized == "de" || normalized == "easy";
+            return careLevelType == (int)CareLevelTypeEnum.Easy;
+        }
+
+        private static string? GetCareLevelName(int? careLevelType)
+        {
+            if (!careLevelType.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
+                ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
+                : null;
         }
 
         private static string NormalizeElement(string? element)

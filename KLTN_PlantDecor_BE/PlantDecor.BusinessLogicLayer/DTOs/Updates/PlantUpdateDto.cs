@@ -19,7 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public int? PlacementType { get; set; }
 
-        public string? Size { get; set; }
+        public int? Size { get; set; }
 
         public string? GrowthRate { get; set; }
 
@@ -40,6 +40,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         public bool? PotIncluded { get; set; }
 
         public string? PotSize { get; set; }
+
+        public int? CareLevelType { get; set; }
 
         public string? CareLevel { get; set; }
 

@@ -8,6 +8,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string? Keyword { get; set; }
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }
+        public bool? PetSafe { get; set; }
+        public bool? ChildSafe { get; set; }
         public int? CategoryId { get; set; }
         public List<int>? TagIds { get; set; }
     }

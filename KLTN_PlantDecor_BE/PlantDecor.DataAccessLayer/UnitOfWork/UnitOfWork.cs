@@ -31,6 +31,9 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IOrderRepository? _orderRepository;
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
+        private IChatSessionRepository? _chatSessionRepository;
+        private IChatMessageRepository? _chatMessageRepository;
+        private IChatParticipantRepository? _chatParticipantRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -130,6 +133,21 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IUserBehaviorLogRepository UserBehaviorLogRepository
         {
             get { return _userBehaviorLogRepository ??= new UserBehaviorLogRepository(_context); }
+        }
+
+        public IChatSessionRepository ChatSessionRepository
+        {
+            get { return _chatSessionRepository ??= new ChatSessionRepository(_context); }
+        }
+
+        public IChatMessageRepository ChatMessageRepository
+        {
+            get { return _chatMessageRepository ??= new ChatMessageRepository(_context); }
+        }
+
+        public IChatParticipantRepository ChatParticipantRepository
+        {
+            get { return _chatParticipantRepository ??= new ChatParticipantRepository(_context); }
         }
 
         // Transaction Management
