@@ -136,6 +136,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Upload ảnh cho material
+        /// </summary>
+        [HttpPost("{id}/images")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadMaterialImages(int id, [FromForm] List<IFormFile> files)
+        {
+            var material = await _materialService.UploadMaterialImagesAsync(id, files);
+            return Ok(new ApiResponse<MaterialResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload material images successfully",
+                Payload = material
+            });
+        }
+
+        /// <summary>
         /// Bật/tắt trạng thái active của material
         /// </summary>
         [HttpPatch("{id}/toggle-active")]

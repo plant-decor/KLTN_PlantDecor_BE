@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -15,16 +16,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly ICloudinaryService _cloudinaryService;
 
         private const string ALL_MATERIALS_KEY = "materials_all";
         private const string ACTIVE_MATERIALS_KEY = "materials_active";
         private const string SHOP_MATERIALS_KEY = "materials_shop";
         private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
-        public MaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public MaterialService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _cloudinaryService = cloudinaryService;
         }
 
         #region CRUD Operations
@@ -139,6 +142,80 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<MaterialResponseDto> UploadMaterialImagesAsync(int materialId, List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+                throw new BadRequestException("No files were uploaded");
+
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            foreach (var file in files)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+                if (!isValid)
+                    throw new BadRequestException(errorMessage);
+            }
+
+            List<FileUploadResponse> uploadedFiles = new();
+
+            try
+            {
+                uploadedFiles = await _cloudinaryService.UploadFilesAsync(files, "MaterialImages");
+                if (uploadedFiles.Count == 0)
+                    throw new BadRequestException("Material images upload failed");
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var hasPrimary = material.MaterialImages.Any(i => i.IsPrimary == true);
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    material.MaterialImages.Add(new MaterialImage
+                    {
+                        MaterialId = material.Id,
+                        ImageUrl = uploadedFile.SecureUrl,
+                        IsPrimary = !hasPrimary,
+                        CreatedAt = DateTime.Now
+                    });
+
+                    if (!hasPrimary)
+                        hasPrimary = true;
+                }
+
+                material.UpdatedAt = DateTime.Now;
+                _unitOfWork.MaterialRepository.PrepareUpdate(material);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                        continue;
+
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(materialId);
+
+            var updatedMaterial = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updatedMaterial!.ToResponse();
         }
 
         public async Task<bool> DeleteMaterialAsync(int id)

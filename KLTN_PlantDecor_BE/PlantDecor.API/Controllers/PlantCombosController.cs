@@ -123,6 +123,20 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("{id}/images")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadComboImages(int id, [FromForm] List<IFormFile> files)
+        {
+            var combo = await _plantComboService.UploadPlantComboImagesAsync(id, files);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload combo images successfully",
+                Payload = combo
+            });
+        }
+
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(int id)
         {
