@@ -9,17 +9,17 @@ public partial class RoomImage
 
     public int? UserId { get; set; }
 
-    public int? LayoutDesignId { get; set; }
-
     public string? ImageUrl { get; set; }
 
     public DateTime? UploadedAt { get; set; }
 
     public int? ViewAngle { get; set; }
 
-    public virtual LayoutDesign? LayoutDesign { get; set; }
+    public virtual ICollection<LayoutDesign> LayoutDesigns { get; set; } = new List<LayoutDesign>();
 
     public virtual ICollection<RoomUploadModeration> RoomUploadModerations { get; set; } = new List<RoomUploadModeration>();
+
+    public virtual ICollection<RoomDesignPreferences> RoomDesignPreferences { get; set; } = new List<RoomDesignPreferences>();
 
     public virtual User? User { get; set; }
 }

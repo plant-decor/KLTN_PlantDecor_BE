@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class CommonPlant
@@ -23,7 +20,9 @@ public partial class CommonPlant
 
     public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual ICollection<NurseryOrderDetail> NurseryOrderDetails { get; set; } = new List<NurseryOrderDetail>();
+
+    public virtual ICollection<LayoutDesignPlant> LayoutDesignPlants { get; set; } = new List<LayoutDesignPlant>();
+
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class Invoice
 {
@@ -20,6 +17,12 @@ public partial class Invoice
     public int? Type { get; set; }
 
     public int? Status { get; set; }
+
+    public string? CustomerName { get; set; }
+
+    public string? CustomerEmail { get; set; }
+
+    public string? CustomerAddress { get; set; }
 
     public virtual ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
 
