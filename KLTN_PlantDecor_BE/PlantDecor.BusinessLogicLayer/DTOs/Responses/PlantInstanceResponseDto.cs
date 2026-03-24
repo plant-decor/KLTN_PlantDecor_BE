@@ -99,6 +99,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     /// </summary>
     public class PlantNurseryAvailabilityDto
     {
+        public int? CommonPlantId { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public string? Address { get; set; }

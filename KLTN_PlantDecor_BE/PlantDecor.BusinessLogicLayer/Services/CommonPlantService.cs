@@ -386,6 +386,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Where(cp => cp.Nursery != null && cp.Nursery.IsActive == true)
                 .Select(cp => new PlantNurseryAvailabilityDto
                 {
+                    CommonPlantId = cp.Id,
                     NurseryId = cp.Nursery!.Id,
                     NurseryName = cp.Nursery.Name,
                     Address = cp.Nursery.Address,
