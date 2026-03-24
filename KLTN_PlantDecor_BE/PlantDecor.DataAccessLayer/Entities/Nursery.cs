@@ -39,9 +39,5 @@ public partial class Nursery
 
     public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
 
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-
     public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
-
-    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 }

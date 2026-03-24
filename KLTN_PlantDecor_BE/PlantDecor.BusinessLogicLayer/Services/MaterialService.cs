@@ -342,7 +342,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryListResponseDto>> GetNurseriesByMaterialAsync(int materialId)
         {
-            var cacheKey = $"{NURSERIES_BY_MATERIAL_KEY}_{materialId}";
+            var cacheKey = $"{NURSERIES_BY_MATERIAL_KEY}_{materialId}_v2";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
@@ -369,9 +369,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
             while (nurseryMaterials.Count < pagedResult.TotalCount && pagedResult.Items.Any());
 
-            var nurseries = nurseryMaterials.Select(nm => nm.Nursery).Where(n => n != null && n.IsActive == true).ToList();
+            var result = nurseryMaterials
+                .Where(nm => nm.Nursery != null && nm.Nursery.IsActive == true)
+                .OrderByDescending(nm => nm.Id)
+                .GroupBy(nm => nm.NurseryId)
+                .Select(g => g.First())
+                .Select(nm =>
+                {
+                    var nursery = nm.Nursery!.ToListResponse();
+                    nursery.NurseryMaterialId = nm.Id;
+                    return nursery;
+                })
+                .ToList();
 
-            var result = nurseries.Select(n => n!.ToListResponse()).ToList();
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
         }

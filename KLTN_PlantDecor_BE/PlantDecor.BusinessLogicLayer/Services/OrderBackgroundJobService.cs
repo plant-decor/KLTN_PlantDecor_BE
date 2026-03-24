@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -65,20 +64,35 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     nurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
                     nurseryOrder.UpdatedAt = DateTime.Now;
+                    _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
                 }
 
-                // Create RemainingBalance Invoice
+                // Collect all InvoiceDetails from all NurseryOrders
+                var invoiceDetails = order.NurseryOrders
+                    .SelectMany(no => no.NurseryOrderDetails)
+                    .Select(d => new InvoiceDetail
+                    {
+                        ItemName = d.ItemName,
+                        UnitPrice = d.UnitPrice,
+                        Quantity = d.Quantity,
+                        Amount = d.Amount
+                    })
+                    .ToList();
+
+                // Create single RemainingBalance Invoice for the entire Order
                 var invoice = new Invoice
                 {
                     OrderId = orderId,
-                    NurseryId = order.NurseryId,
                     Type = (int)InvoiceTypeEnum.RemainingBalance,
                     TotalAmount = order.RemainingAmount ?? 0,
                     Status = (int)InvoiceStatusEnum.Pending,
-                    IssuedDate = DateTime.Now
+                    IssuedDate = DateTime.Now,
+                    InvoiceDetails = invoiceDetails
                 };
 
                 _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
+
+                // Save all changes once
                 await _unitOfWork.SaveAsync();
 
                 _logger.LogInformation("Successfully created RemainingBalance invoice for Order {OrderId}", orderId);

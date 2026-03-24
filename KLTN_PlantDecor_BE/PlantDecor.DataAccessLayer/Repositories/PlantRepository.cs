@@ -219,6 +219,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (filter.MaxBasePrice.HasValue)
                 query = query.Where(p => p.BasePrice.HasValue && p.BasePrice.Value <= filter.MaxBasePrice.Value);
 
+            if (filter.Sizes != null && filter.Sizes.Count > 0)
+                query = query.Where(p => p.Size.HasValue && filter.Sizes.Contains(p.Size.Value));
+
+            if (!string.IsNullOrWhiteSpace(filter.FengShuiElement))
+            {
+                var fengShuiElement = filter.FengShuiElement.Trim().ToLower();
+                query = query.Where(p => p.FengShuiElement != null && p.FengShuiElement.ToLower() == fengShuiElement);
+            }
+
             if (filter.CategoryIds != null && filter.CategoryIds.Count > 0)
                 query = query.Where(p => p.Categories.Any(c => filter.CategoryIds.Contains(c.Id)));
 
@@ -255,6 +264,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
             {
                 "name" => isDesc ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
                 "price" => isDesc ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
+                "size" or "sizename" or "plantsize" => isDesc
+                    ? query.OrderByDescending(p => p.Size)
+                    : query.OrderBy(p => p.Size),
+                "fengshuielement" or "fengshui" or "menh" => isDesc
+                    ? query.OrderByDescending(p => p.FengShuiElement)
+                    : query.OrderBy(p => p.FengShuiElement),
                 "availableinstances" when isShop => isDesc
                     ? query.OrderByDescending(p =>
                         p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available

@@ -1,0 +1,8 @@
+using PlantDecor.DataAccessLayer.Entities;
+
+namespace PlantDecor.DataAccessLayer.Interfaces
+{
+    public interface INurseryOrderRepository : IGenericRepository<NurseryOrder>
+    {
+    }
+}

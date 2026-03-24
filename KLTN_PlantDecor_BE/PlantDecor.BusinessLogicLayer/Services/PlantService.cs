@@ -503,6 +503,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 MaxBasePrice = request?.MaxBasePrice,
                 CategoryIds = request?.CategoryIds,
                 TagIds = request?.TagIds,
+                Sizes = request?.Sizes,
+                FengShuiElement = request?.FengShuiElement,
                 NurseryId = request?.NurseryId,
                 SortBy = request?.SortBy,
                 SortDirection = request?.SortDirection
@@ -519,7 +521,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : string.Join("-", filter.TagIds.OrderBy(x => x));
 
-            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+            var sizePart = filter.Sizes == null || filter.Sizes.Count == 0
+                ? "none"
+                : string.Join("-", filter.Sizes.OrderBy(x => x));
+
+            var fengShuiPart = string.IsNullOrWhiteSpace(filter.FengShuiElement)
+                ? "none"
+                : filter.FengShuiElement.Trim().ToLowerInvariant();
+
+            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

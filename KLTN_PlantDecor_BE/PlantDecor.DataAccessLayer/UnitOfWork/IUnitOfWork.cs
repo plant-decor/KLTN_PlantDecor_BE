@@ -22,6 +22,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IPaymentRepository PaymentRepository { get; }
         ITransactionRepository TransactionRepository { get; }
         IOrderRepository OrderRepository { get; }
+        INurseryOrderRepository NurseryOrderRepository { get; }
         IInvoiceRepository InvoiceRepository { get; }
         IUserBehaviorLogRepository UserBehaviorLogRepository { get; }
         IChatSessionRepository ChatSessionRepository { get; }

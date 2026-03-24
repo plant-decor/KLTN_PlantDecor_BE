@@ -11,6 +11,8 @@ public partial class NurseryOrder
 
     public int NurseryId { get; set; }
 
+    public int? ShipperId { get; set; }
+
     public decimal? SubTotalAmount { get; set; }
 
     public decimal? DepositAmount { get; set; }
@@ -23,6 +25,8 @@ public partial class NurseryOrder
 
     public string? Note { get; set; }
 
+    public string? ShipperNote { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -31,7 +35,7 @@ public partial class NurseryOrder
 
     public virtual Nursery Nursery { get; set; } = null!;
 
-    public virtual ICollection<NurseryOrderDetail> NurseryOrderDetails { get; set; } = new List<NurseryOrderDetail>();
+    public virtual User? Shipper { get; set; }
 
-    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+    public virtual ICollection<NurseryOrderDetail> NurseryOrderDetails { get; set; } = new List<NurseryOrderDetail>();
 }

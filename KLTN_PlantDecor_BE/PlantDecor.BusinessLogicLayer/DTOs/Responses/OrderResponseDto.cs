@@ -4,7 +4,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public int NurseryId { get; set; }
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? CustomerName { get; set; }
@@ -19,8 +18,22 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
-        public List<ShippingResponseDto> Shippings { get; set; } = new();
+        public List<NurseryOrderResponseDto> NurseryOrders { get; set; } = new();
         public List<InvoiceResponseDto> Invoices { get; set; } = new();
+    }
+
+    public class NurseryOrderResponseDto
+    {
+        public int Id { get; set; }
+        public int NurseryId { get; set; }
+        public string? NurseryName { get; set; }
+        public int? ShipperId { get; set; }
+        public string? ShipperName { get; set; }
+        public decimal? SubTotalAmount { get; set; }
+        public int? Status { get; set; }
+        public string? StatusName { get; set; }
+        public string? ShipperNote { get; set; }
+        public List<OrderItemResponseDto> Items { get; set; } = new();
     }
 
     public class OrderItemResponseDto
@@ -31,18 +44,5 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? Price { get; set; }
         public int? Status { get; set; }
         public string? StatusName { get; set; }
-    }
-
-    public class ShippingResponseDto
-    {
-        public int Id { get; set; }
-        public int? Status { get; set; }
-        public string? StatusName { get; set; }
-        public string? TrackingCode { get; set; }
-        public string? Note { get; set; }
-        public DateTime? ShippedAt { get; set; }
-        public DateTime? DeliveredAt { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 }

@@ -10,6 +10,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về wishlist của user
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]

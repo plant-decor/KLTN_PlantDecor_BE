@@ -13,7 +13,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260324065200_init")]
+    [Migration("20260324121122_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -502,12 +502,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<int?>("NurseryId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("NurseryOrderId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -523,10 +517,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("Invoice_pkey");
-
-                    b.HasIndex("NurseryId");
-
-                    b.HasIndex("NurseryOrderId");
 
                     b.HasIndex("OrderId");
 
@@ -918,6 +908,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<int?>("ShipperId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShipperNote")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
 
@@ -932,6 +929,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("NurseryOrder_pkey");
+
+                    b.HasIndex("ShipperId");
 
                     b.HasIndex(new[] { "NurseryId" }, "IX_NurseryOrder_NurseryId");
 
@@ -1073,9 +1072,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("NurseryId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("OrderType")
                         .HasColumnType("integer");
 
@@ -1091,13 +1087,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("ReturnReason")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("ShipperId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ShipperNote")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -1118,10 +1107,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("Order_pkey");
-
-                    b.HasIndex("NurseryId");
-
-                    b.HasIndex("ShipperId");
 
                     b.HasIndex("UserId");
 
@@ -2548,24 +2533,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
-                        .WithMany("Invoices")
-                        .HasForeignKey("NurseryId")
-                        .HasConstraintName("Invoice_NurseryId_fkey");
-
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryOrder", "NurseryOrder")
-                        .WithMany("Invoices")
-                        .HasForeignKey("NurseryOrderId")
-                        .HasConstraintName("Invoice_NurseryOrderId_fkey");
-
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
                         .WithMany("Invoices")
                         .HasForeignKey("OrderId")
                         .HasConstraintName("Invoice_OrderId_fkey");
-
-                    b.Navigation("Nursery");
-
-                    b.Navigation("NurseryOrder");
 
                     b.Navigation("Order");
                 });
@@ -2697,9 +2668,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsRequired()
                         .HasConstraintName("NurseryOrder_OrderId_fkey");
 
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Shipper")
+                        .WithMany("ShipperNurseryOrders")
+                        .HasForeignKey("ShipperId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("NurseryOrder_ShipperId_fkey");
+
                     b.Navigation("Nursery");
 
                     b.Navigation("Order");
+
+                    b.Navigation("Shipper");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", b =>
@@ -2763,19 +2742,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
-                        .WithMany("Orders")
-                        .HasForeignKey("NurseryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("Order_NurseryId_fkey");
-
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Shipper")
-                        .WithMany("ShipperOrders")
-                        .HasForeignKey("ShipperId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("Order_ShipperId_fkey");
-
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Customer")
                         .WithMany("CustomerOrders")
                         .HasForeignKey("UserId")
@@ -2783,10 +2749,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
-
-                    b.Navigation("Nursery");
-
-                    b.Navigation("Shipper");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Payment", b =>
@@ -3226,8 +3188,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("CommonPlants");
 
-                    b.Navigation("Invoices");
-
                     b.Navigation("NurseryCareServices");
 
                     b.Navigation("NurseryMaterials");
@@ -3235,8 +3195,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("NurseryOrders");
 
                     b.Navigation("NurseryPlantCombos");
-
-                    b.Navigation("Orders");
 
                     b.Navigation("PlantInstances");
 
@@ -3259,8 +3217,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
                 {
-                    b.Navigation("Invoices");
-
                     b.Navigation("NurseryOrderDetails");
                 });
 
@@ -3387,7 +3343,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("ServiceRegistrationUsers");
 
-                    b.Navigation("ShipperOrders");
+                    b.Navigation("ShipperNurseryOrders");
 
                     b.Navigation("UserBehaviorLogs");
 

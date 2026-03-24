@@ -22,6 +22,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     public class NurseryListResponseDto
     {
         public int Id { get; set; }
+        public int? NurseryMaterialId { get; set; }
+        public int? NurseryPlantComboId { get; set; }
+        public int? CommonPlantId { get; set; }
         public int? ManagerId { get; set; }
         public string? ManagerName { get; set; }
         public string? Name { get; set; }

@@ -361,6 +361,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.DepositAmount).HasPrecision(18, 2);
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
             entity.Property(e => e.Note).HasMaxLength(255);
+            entity.Property(e => e.ShipperNote).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -373,6 +374,11 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.NurseryId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("NurseryOrder_NurseryId_fkey");
+
+            entity.HasOne(d => d.Shipper).WithMany(p => p.ShipperNurseryOrders)
+                .HasForeignKey(d => d.ShipperId)
+                .HasConstraintName("NurseryOrder_ShipperId_fkey")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<NurseryOrderDetail>(entity =>
@@ -460,14 +466,6 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.Invoices)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("Invoice_OrderId_fkey");
-
-            entity.HasOne(d => d.NurseryOrder).WithMany(p => p.Invoices)
-                .HasForeignKey(d => d.NurseryOrderId)
-                .HasConstraintName("Invoice_NurseryOrderId_fkey");
-
-            entity.HasOne(d => d.Nursery).WithMany(p => p.Invoices)
-                .HasForeignKey(d => d.NurseryId)
-                .HasConstraintName("Invoice_NurseryId_fkey");
         });
 
         modelBuilder.Entity<InvoiceDetail>(entity =>
@@ -568,23 +566,12 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
             entity.Property(e => e.ReturnReason).HasMaxLength(255);
-            entity.Property(e => e.ShipperNote).HasMaxLength(255);
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(d => d.Shipper).WithMany(p => p.ShipperOrders)
-                .HasForeignKey(d => d.ShipperId)
-                .HasConstraintName("Order_ShipperId_fkey")
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(d => d.Nursery).WithMany(p => p.Orders)
-                .HasForeignKey(d => d.NurseryId)
-                .OnDelete(DeleteBehavior.Restrict)
-                .HasConstraintName("Order_NurseryId_fkey");
         });
 
         modelBuilder.Entity<Payment>(entity =>
