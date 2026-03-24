@@ -512,28 +512,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "LayoutDesign",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<int>(type: "integer", nullable: true),
-                    PreviewImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: true),
-                    IsSaved = table.Column<bool>(type: "boolean", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("LayoutDesign_pkey", x => x.Id);
-                    table.ForeignKey(
-                        name: "LayoutDesign_UserId_fkey",
-                        column: x => x.UserId,
-                        principalTable: "User",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Nursery",
                 columns: table => new
                 {
@@ -577,6 +555,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     table.PrimaryKey("RefreshToken_pkey", x => x.Id);
                     table.ForeignKey(
                         name: "RefreshToken_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomImage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ViewAngle = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("RoomImage_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "RoomImage_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id");
@@ -666,79 +665,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     table.PrimaryKey("UserProfile_pkey", x => x.Id);
                     table.ForeignKey(
                         name: "UserProfile_UserId_fkey",
-                        column: x => x.UserId,
-                        principalTable: "User",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Wishlist",
-                columns: table => new
-                {
-                    PlantId = table.Column<int>(type: "integer", nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Wishlist", x => new { x.UserId, x.PlantId });
-                    table.ForeignKey(
-                        name: "Wishlist_PlantId_fkey",
-                        column: x => x.PlantId,
-                        principalTable: "Plant",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "Wishlist_UserId_fkey",
-                        column: x => x.UserId,
-                        principalTable: "User",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AILayoutResponseModeration",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    LayoutDesignId = table.Column<int>(type: "integer", nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: true),
-                    Reason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("AILayoutResponseModeration_pkey", x => x.Id);
-                    table.ForeignKey(
-                        name: "AILayoutResponseModeration_LayoutDesignId_fkey",
-                        column: x => x.LayoutDesignId,
-                        principalTable: "LayoutDesign",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RoomImage",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<int>(type: "integer", nullable: true),
-                    LayoutDesignId = table.Column<int>(type: "integer", nullable: true),
-                    ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("RoomImage_pkey", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RoomImage_LayoutDesign",
-                        column: x => x.LayoutDesignId,
-                        principalTable: "LayoutDesign",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "RoomImage_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id");
@@ -936,6 +862,67 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "LayoutDesign",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    RoomImageId = table.Column<int>(type: "integer", nullable: true),
+                    PreviewImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    PlantCollageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
+                    RawResponse = table.Column<string>(type: "text", nullable: true),
+                    AIResponseImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: true),
+                    IsSaved = table.Column<bool>(type: "boolean", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("LayoutDesign_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "LayoutDesign_RoomImageId_fkey",
+                        column: x => x.RoomImageId,
+                        principalTable: "RoomImage",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "LayoutDesign_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomDesignPreferences",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoomImageId = table.Column<int>(type: "integer", nullable: false),
+                    RoomType = table.Column<int>(type: "integer", nullable: true),
+                    RoomStyle = table.Column<int>(type: "integer", nullable: true),
+                    RoomArea = table.Column<int>(type: "integer", nullable: true),
+                    MinBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
+                    MaxBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
+                    CareLevel = table.Column<int>(type: "integer", nullable: true),
+                    IsOftenAway = table.Column<bool>(type: "boolean", nullable: true),
+                    NaturalLightLevel = table.Column<int>(type: "integer", nullable: true),
+                    HasAllergy = table.Column<bool>(type: "boolean", nullable: true),
+                    AllergyNote = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("RoomDesignPreferences_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "RoomDesignPreferences_RoomImageId_fkey",
+                        column: x => x.RoomImageId,
+                        principalTable: "RoomImage",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RoomUploadModeration",
                 columns: table => new
                 {
@@ -1110,78 +1097,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Shipping",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<int>(type: "integer", nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: true),
-                    TrackingCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ShippedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DeliveredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("Shipping_pkey", x => x.Id);
-                    table.ForeignKey(
-                        name: "Shipping_OrderId_fkey",
-                        column: x => x.OrderId,
-                        principalTable: "Order",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "OrderItem",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<int>(type: "integer", nullable: true),
-                    CommonPlantId = table.Column<int>(type: "integer", nullable: true),
-                    PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
-                    NurseryPlantComboId = table.Column<int>(type: "integer", nullable: true),
-                    NurseryMaterialId = table.Column<int>(type: "integer", nullable: true),
-                    ItemName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    Quantity = table.Column<int>(type: "integer", nullable: true),
-                    Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("OrderItem_pkey", x => x.Id);
-                    table.ForeignKey(
-                        name: "OrderItem_CommonPlantId_fkey",
-                        column: x => x.CommonPlantId,
-                        principalTable: "CommonPlant",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "OrderItem_NurseryMaterialId_fkey",
-                        column: x => x.NurseryMaterialId,
-                        principalTable: "NurseryMaterial",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "OrderItem_NurseryPlantComboId_fkey",
-                        column: x => x.NurseryPlantComboId,
-                        principalTable: "NurseryPlantCombo",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "OrderItem_OrderId_fkey",
-                        column: x => x.OrderId,
-                        principalTable: "Order",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "OrderItem_PlantInstanceId_fkey",
-                        column: x => x.PlantInstanceId,
-                        principalTable: "PlantInstance",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "PlantImage",
                 columns: table => new
                 {
@@ -1284,6 +1199,113 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Wishlist",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    ItemType = table.Column<int>(type: "integer", nullable: false),
+                    CommonPlantId = table.Column<int>(type: "integer", nullable: true),
+                    PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
+                    NurseryPlantComboId = table.Column<int>(type: "integer", nullable: true),
+                    NurseryMaterialId = table.Column<int>(type: "integer", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Wishlist", x => x.Id);
+                    table.ForeignKey(
+                        name: "Wishlist_CommonPlantId_fkey",
+                        column: x => x.CommonPlantId,
+                        principalTable: "CommonPlant",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "Wishlist_NurseryMaterialId_fkey",
+                        column: x => x.NurseryMaterialId,
+                        principalTable: "NurseryMaterial",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "Wishlist_NurseryPlantComboId_fkey",
+                        column: x => x.NurseryPlantComboId,
+                        principalTable: "NurseryPlantCombo",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "Wishlist_PlantInstanceId_fkey",
+                        column: x => x.PlantInstanceId,
+                        principalTable: "PlantInstance",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "Wishlist_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AILayoutResponseModeration",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    LayoutDesignId = table.Column<int>(type: "integer", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: true),
+                    Reason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("AILayoutResponseModeration_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "AILayoutResponseModeration_LayoutDesignId_fkey",
+                        column: x => x.LayoutDesignId,
+                        principalTable: "LayoutDesign",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LayoutDesignPlant",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    LayoutDesignId = table.Column<int>(type: "integer", nullable: false),
+                    CommonPlantId = table.Column<int>(type: "integer", nullable: true),
+                    PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
+                    PlantReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    PlacementPosition = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    PlacementReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("LayoutDesignPlant_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "LayoutDesignPlant_CommonPlantId_fkey",
+                        column: x => x.CommonPlantId,
+                        principalTable: "CommonPlant",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "LayoutDesignPlant_LayoutDesignId_fkey",
+                        column: x => x.LayoutDesignId,
+                        principalTable: "LayoutDesign",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "LayoutDesignPlant_PlantInstanceId_fkey",
+                        column: x => x.PlantInstanceId,
+                        principalTable: "PlantInstance",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Invoice",
                 columns: table => new
                 {
@@ -1295,7 +1317,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     IssuedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     TotalAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     Type = table.Column<int>(type: "integer", nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: true)
+                    Status = table.Column<int>(type: "integer", nullable: true),
+                    CustomerName = table.Column<string>(type: "text", nullable: true),
+                    CustomerEmail = table.Column<string>(type: "text", nullable: true),
+                    CustomerAddress = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1583,9 +1608,29 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "InvoiceId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesign_RoomImageId",
+                table: "LayoutDesign",
+                column: "RoomImageId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_LayoutDesign_UserId",
                 table: "LayoutDesign",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesignPlant_CommonPlantId",
+                table: "LayoutDesignPlant",
+                column: "CommonPlantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesignPlant_LayoutDesignId",
+                table: "LayoutDesignPlant",
+                column: "LayoutDesignId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesignPlant_PlantInstanceId",
+                table: "LayoutDesignPlant",
+                column: "PlantInstanceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MaterialCategory_CategoryId",
@@ -1699,31 +1744,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_OrderItem_CommonPlantId",
-                table: "OrderItem",
-                column: "CommonPlantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OrderItem_NurseryMaterialId",
-                table: "OrderItem",
-                column: "NurseryMaterialId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OrderItem_NurseryPlantComboId",
-                table: "OrderItem",
-                column: "NurseryPlantComboId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OrderItem_OrderId",
-                table: "OrderItem",
-                column: "OrderId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OrderItem_PlantInstanceId",
-                table: "OrderItem",
-                column: "PlantInstanceId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Payment_OrderId",
                 table: "Payment",
                 column: "OrderId");
@@ -1804,9 +1824,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoomImage_LayoutDesignId",
-                table: "RoomImage",
-                column: "LayoutDesignId");
+                name: "IX_RoomDesignPreferences_RoomImageId",
+                table: "RoomDesignPreferences",
+                column: "RoomImageId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomImage_UserId",
@@ -1872,11 +1892,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Shipping_OrderId",
-                table: "Shipping",
-                column: "OrderId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Transaction_PaymentId",
                 table: "Transaction",
                 column: "PaymentId");
@@ -1940,9 +1955,29 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Wishlist_PlantId",
+                name: "IX_Wishlist_CommonPlantId",
                 table: "Wishlist",
-                column: "PlantId");
+                column: "CommonPlantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wishlist_NurseryMaterialId",
+                table: "Wishlist",
+                column: "NurseryMaterialId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wishlist_NurseryPlantComboId",
+                table: "Wishlist",
+                column: "NurseryPlantComboId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wishlist_PlantInstanceId",
+                table: "Wishlist",
+                column: "PlantInstanceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Wishlist_UserId_IsDeleted",
+                table: "Wishlist",
+                columns: new[] { "UserId", "IsDeleted" });
         }
 
         /// <inheritdoc />
@@ -1973,6 +2008,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "InvoiceDetail");
 
             migrationBuilder.DropTable(
+                name: "LayoutDesignPlant");
+
+            migrationBuilder.DropTable(
                 name: "MaterialCategory");
 
             migrationBuilder.DropTable(
@@ -1983,9 +2021,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "NurseryOrderDetail");
-
-            migrationBuilder.DropTable(
-                name: "OrderItem");
 
             migrationBuilder.DropTable(
                 name: "PlantCategory");
@@ -2012,6 +2047,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "RefreshToken");
 
             migrationBuilder.DropTable(
+                name: "RoomDesignPreferences");
+
+            migrationBuilder.DropTable(
                 name: "RoomUploadModeration");
 
             migrationBuilder.DropTable(
@@ -2019,9 +2057,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "ServiceRating");
-
-            migrationBuilder.DropTable(
-                name: "Shipping");
 
             migrationBuilder.DropTable(
                 name: "Transaction");
@@ -2051,6 +2086,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "Invoice");
 
             migrationBuilder.DropTable(
+                name: "LayoutDesign");
+
+            migrationBuilder.DropTable(
+                name: "Category");
+
+            migrationBuilder.DropTable(
+                name: "Tag");
+
+            migrationBuilder.DropTable(
+                name: "ServiceRegistration");
+
+            migrationBuilder.DropTable(
+                name: "Payment");
+
+            migrationBuilder.DropTable(
                 name: "CommonPlant");
 
             migrationBuilder.DropTable(
@@ -2060,37 +2110,22 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "NurseryPlantCombo");
 
             migrationBuilder.DropTable(
-                name: "Category");
-
-            migrationBuilder.DropTable(
-                name: "Tag");
-
-            migrationBuilder.DropTable(
-                name: "RoomImage");
-
-            migrationBuilder.DropTable(
-                name: "ServiceRegistration");
-
-            migrationBuilder.DropTable(
-                name: "Payment");
-
-            migrationBuilder.DropTable(
                 name: "PlantInstance");
 
             migrationBuilder.DropTable(
                 name: "NurseryOrder");
 
             migrationBuilder.DropTable(
+                name: "RoomImage");
+
+            migrationBuilder.DropTable(
+                name: "NurseryCareService");
+
+            migrationBuilder.DropTable(
                 name: "Material");
 
             migrationBuilder.DropTable(
                 name: "PlantCombo");
-
-            migrationBuilder.DropTable(
-                name: "LayoutDesign");
-
-            migrationBuilder.DropTable(
-                name: "NurseryCareService");
 
             migrationBuilder.DropTable(
                 name: "Plant");
