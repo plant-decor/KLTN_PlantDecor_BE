@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
+using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
