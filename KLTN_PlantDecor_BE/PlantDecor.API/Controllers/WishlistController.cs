@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
@@ -39,13 +40,15 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Thêm cây vào wishlist
+        /// Thêm item vào wishlist (hỗ trợ nhiều loại: CommonPlant, PlantInstance, NurseryPlantCombo, NurseryMaterial)
         /// </summary>
-        [HttpPost("{plantId}")]
-        public async Task<IActionResult> AddToWishlist(int plantId)
+        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemId">ID của item</param>
+        [HttpPost("{itemType}/{itemId}")]
+        public async Task<IActionResult> AddToWishlist(WishlistItemType itemType, int itemId)
         {
             var userId = GetUserId();
-            var item = await _wishlistService.AddToWishlistAsync(userId, plantId);
+            var item = await _wishlistService.AddToWishlistAsync(userId, itemType, itemId);
             return StatusCode(StatusCodes.Status201Created, new ApiResponse<WishlistItemResponseDto>
             {
                 Success = true,
@@ -56,13 +59,15 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Xóa cây khỏi wishlist
+        /// Xóa item khỏi wishlist
         /// </summary>
-        [HttpDelete("{plantId}")]
-        public async Task<IActionResult> RemoveFromWishlist(int plantId)
+        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemId">ID của item</param>
+        [HttpDelete("{itemType}/{itemId}")]
+        public async Task<IActionResult> RemoveFromWishlist(WishlistItemType itemType, int itemId)
         {
             var userId = GetUserId();
-            await _wishlistService.RemoveFromWishlistAsync(userId, plantId);
+            await _wishlistService.RemoveFromWishlistAsync(userId, itemType, itemId);
             return Ok(new ApiResponse<object>
             {
                 Success = true,
@@ -72,13 +77,15 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Kiểm tra cây có trong wishlist không
+        /// Kiểm tra item có trong wishlist không
         /// </summary>
-        [HttpGet("{plantId}/check")]
-        public async Task<IActionResult> IsInWishlist(int plantId)
+        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemId">ID của item</param>
+        [HttpGet("{itemType}/{itemId}/check")]
+        public async Task<IActionResult> IsInWishlist(WishlistItemType itemType, int itemId)
         {
             var userId = GetUserId();
-            var exists = await _wishlistService.IsInWishlistAsync(userId, plantId);
+            var exists = await _wishlistService.IsInWishlistAsync(userId, itemType, itemId);
 
             if (exists)
             {
@@ -86,13 +93,13 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = true,
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "Plant is in wishlist",
+                    Message = "Item is in wishlist",
                     Payload = true
                 });
             }
             else
             {
-                throw new NotFoundException("Plant is not in wishlist");
+                throw new NotFoundException("Item is not in wishlist");
             }
         }
 

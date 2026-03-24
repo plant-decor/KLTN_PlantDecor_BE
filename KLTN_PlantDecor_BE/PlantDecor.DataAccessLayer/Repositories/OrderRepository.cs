@@ -12,7 +12,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<Order?> GetByIdWithDetailsAsync(int orderId)
         {
             return await _context.Orders
-                .Include(o => o.OrderItems)
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
                 .Include(o => o.Invoices)

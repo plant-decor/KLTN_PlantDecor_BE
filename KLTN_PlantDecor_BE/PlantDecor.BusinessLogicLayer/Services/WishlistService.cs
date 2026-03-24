@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -39,43 +40,95 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<WishlistItemResponseDto> AddToWishlistAsync(int userId, int plantId)
+        public async Task<WishlistItemResponseDto> AddToWishlistAsync(int userId, WishlistItemType itemType, int itemId)
         {
-            var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
-            if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} not exists");
+            // Validate item exists based on type
+            await ValidateItemExistsAsync(itemType, itemId);
 
-            if (await _unitOfWork.WishlistRepository.ExistsAsync(userId, plantId))
-                throw new BadRequestException("Plant existed already");
+            if (await _unitOfWork.WishlistRepository.ExistsAsync(userId, itemType, itemId))
+                throw new BadRequestException($"{itemType} already existed in wishlist");
 
             var wishlist = new Wishlist
             {
                 UserId = userId,
-                PlantId = plantId,
+                ItemType = itemType,
+                IsDeleted = false,
                 CreatedAt = DateTime.Now
             };
-            await _unitOfWork.WishlistRepository.CreateAsync(wishlist);
 
+            // Set the appropriate foreign key based on item type
+            switch (itemType)
+            {
+                case WishlistItemType.CommonPlant:
+                    wishlist.CommonPlantId = itemId;
+                    break;
+                case WishlistItemType.PlantInstance:
+                    wishlist.PlantInstanceId = itemId;
+                    break;
+                case WishlistItemType.NurseryPlantCombo:
+                    wishlist.NurseryPlantComboId = itemId;
+                    break;
+                case WishlistItemType.NurseryMaterial:
+                    wishlist.NurseryMaterialId = itemId;
+                    break;
+                default:
+                    throw new BadRequestException($"Invalid item type: {itemType}");
+            }
+
+            await _unitOfWork.WishlistRepository.CreateAsync(wishlist);
             await _cacheService.RemoveByPrefixAsync($"{ALL_WISHLISTS_KEY}_{userId}");
 
-            var created = await _unitOfWork.WishlistRepository.GetByUserAndPlantAsync(userId, plantId);
+            var created = await _unitOfWork.WishlistRepository.GetByUserAndItemAsync(userId, itemType, itemId);
             return created!.ToResponse();
         }
 
-        public async Task<bool> RemoveFromWishlistAsync(int userId, int plantId)
+        public async Task<bool> RemoveFromWishlistAsync(int userId, WishlistItemType itemType, int itemId)
         {
-            var item = await _unitOfWork.WishlistRepository.GetByUserAndPlantAsync(userId, plantId);
+            var item = await _unitOfWork.WishlistRepository.GetByUserAndItemAsync(userId, itemType, itemId);
             if (item == null)
-                throw new NotFoundException("Plant doesn't exist in wishlist");
+                throw new NotFoundException($"{itemType} doesn't exist in wishlist");
 
             var result = await _unitOfWork.WishlistRepository.RemoveAsync(item);
             await _cacheService.RemoveByPrefixAsync($"{ALL_WISHLISTS_KEY}_{userId}");
             return result;
         }
 
-        public async Task<bool> IsInWishlistAsync(int userId, int plantId)
+        public async Task<bool> IsInWishlistAsync(int userId, WishlistItemType itemType, int itemId)
         {
-            return await _unitOfWork.WishlistRepository.ExistsAsync(userId, plantId);
+            return await _unitOfWork.WishlistRepository.ExistsAsync(userId, itemType, itemId);
+        }
+
+        private async Task ValidateItemExistsAsync(WishlistItemType itemType, int itemId)
+        {
+            switch (itemType)
+            {
+                case WishlistItemType.CommonPlant:
+                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(itemId);
+                    if (commonPlant == null)
+                        throw new NotFoundException($"CommonPlant with ID {itemId} not exists");
+                    break;
+
+                case WishlistItemType.PlantInstance:
+                    var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(itemId);
+                    if (plantInstance == null)
+                        throw new NotFoundException($"PlantInstance with ID {itemId} not exists");
+                    break;
+
+                case WishlistItemType.NurseryPlantCombo:
+                    var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(itemId);
+                    if (nurseryPlantCombo == null)
+                        throw new NotFoundException($"NurseryPlantCombo with ID {itemId} not exists");
+                    break;
+
+                case WishlistItemType.NurseryMaterial:
+                    var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(itemId);
+                    if (nurseryMaterial == null)
+                        throw new NotFoundException($"NurseryMaterial with ID {itemId} not exists");
+                    break;
+
+                default:
+                    throw new BadRequestException($"Invalid item type: {itemType}");
+            }
         }
     }
 }

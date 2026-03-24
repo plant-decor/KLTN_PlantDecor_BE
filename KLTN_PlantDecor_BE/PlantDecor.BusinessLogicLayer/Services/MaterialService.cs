@@ -5,7 +5,6 @@ using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
-using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -152,7 +151,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Material với ID {id} không tồn tại");
 
                 // Check if material has any nursery materials with cart or orders
-                var hasActiveOrders = material.NurseryMaterials.Any(nm => nm.CartItems.Any() || nm.OrderItems.Any());
+                var hasActiveOrders = material.NurseryMaterials.Any(nm => nm.CartItems.Any());
                 if (hasActiveOrders)
                     throw new BadRequestException("Không thể xóa vật liệu đã có trong đơn hàng. Vui lòng vô hiệu hóa thay vì xóa.");
 
