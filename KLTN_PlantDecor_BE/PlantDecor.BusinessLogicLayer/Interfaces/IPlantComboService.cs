@@ -1,6 +1,7 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
@@ -13,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto?> GetComboByIdAsync(int id);
         Task<PlantComboResponseDto> CreateComboAsync(PlantComboRequestDto request);
         Task<PlantComboResponseDto> UpdateComboAsync(int id, PlantComboUpdateDto request);
+        Task<PlantComboResponseDto> UploadPlantComboImagesAsync(int comboId, List<IFormFile> files);
         Task<bool> DeleteComboAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 

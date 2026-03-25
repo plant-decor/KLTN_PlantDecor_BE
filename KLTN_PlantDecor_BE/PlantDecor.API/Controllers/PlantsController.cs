@@ -142,6 +142,22 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Đặt thumbnail cho plant theo imageId
+        /// </summary>
+        [HttpPatch("{id}/images/{imageId}/set-primary")]
+        public async Task<IActionResult> SetPrimaryPlantImage(int id, int imageId)
+        {
+            var plant = await _plantService.SetPrimaryPlantImageAsync(id, imageId);
+            return Ok(new ApiResponse<PlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Set primary plant image successfully",
+                Payload = plant
+            });
+        }
+
+        /// <summary>
         /// Bật/tắt trạng thái active của plant
         /// </summary>
         [HttpPatch("{id}/toggle-active")]

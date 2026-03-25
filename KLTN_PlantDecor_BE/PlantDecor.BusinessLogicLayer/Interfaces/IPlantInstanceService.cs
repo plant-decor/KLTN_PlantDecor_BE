@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
@@ -37,6 +38,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// PATCH /api/manager/plant-instances/batch-status
         /// </summary>
         Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request);
+
+        /// <summary>
+        /// Upload ảnh cho PlantInstance
+        /// POST /api/manager/plant-instances/{instanceId}/images
+        /// </summary>
+        Task<PlantInstanceResponseDto> UploadPlantInstanceImagesAsync(int instanceId, int managerId, List<IFormFile> files);
 
         #endregion
 

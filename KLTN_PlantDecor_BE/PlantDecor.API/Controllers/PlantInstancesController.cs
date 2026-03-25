@@ -120,6 +120,25 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Upload ảnh cho PlantInstance
+        /// POST /api/manager/plant-instances/{instanceId}/images
+        /// </summary>
+        [HttpPost("plant-instances/{instanceId}/images")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadPlantInstanceImages(int instanceId, [FromForm] List<IFormFile> files)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.UploadPlantInstanceImagesAsync(instanceId, managerId, files);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload plant instance images successfully",
+                Payload = result
+            });
+        }
+
         #endregion
 
         #region Shop Operations

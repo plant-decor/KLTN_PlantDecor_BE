@@ -244,6 +244,31 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedPlant!.ToResponse();
         }
 
+        public async Task<PlantResponseDto> SetPrimaryPlantImageAsync(int plantId, int imageId)
+        {
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId);
+            if (targetImage == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+
+            foreach (var image in plant.PlantImages)
+            {
+                image.IsPrimary = image.Id == imageId;
+            }
+
+            plant.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantRepository.PrepareUpdate(plant);
+            await _unitOfWork.SaveAsync();
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
+        }
+
         public async Task<bool> DeletePlantAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
