@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -87,6 +88,42 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get contextual recommendations successfully",
                 Payload = data
+            });
+        }
+
+        /// <summary>
+        /// Lấy survey cá nhân hóa của user hiện tại
+        /// </summary>
+        [HttpGet("survey")]
+        public async Task<IActionResult> GetMySurvey()
+        {
+            var userId = GetUserId();
+            var survey = await _userPreferenceService.GetCustomerSurveyAsync(userId);
+
+            return Ok(new ApiResponse<CustomerSurveyResponseDto?>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get customer survey successfully",
+                Payload = survey
+            });
+        }
+
+        /// <summary>
+        /// Tạo/cập nhật survey cá nhân hóa cho user hiện tại
+        /// </summary>
+        [HttpPut("survey")]
+        public async Task<IActionResult> UpsertMySurvey([FromBody] CustomerSurveyUpsertRequestDto request)
+        {
+            var userId = GetUserId();
+            var survey = await _userPreferenceService.UpsertCustomerSurveyAsync(userId, request);
+
+            return Ok(new ApiResponse<CustomerSurveyResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upsert customer survey successfully",
+                Payload = survey
             });
         }
 

@@ -58,7 +58,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (entity == null) return null!;
             return new PlantInstanceListResponseDto
             {
-                Id = entity.Id,
+                PlantInstanceId = entity.Id,
                 PlantId = entity.PlantId,
                 PlantName = entity.Plant?.Name,
                 SKU = entity.SKU,

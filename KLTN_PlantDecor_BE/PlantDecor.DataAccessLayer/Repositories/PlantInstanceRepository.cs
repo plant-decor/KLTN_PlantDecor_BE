@@ -74,13 +74,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
             await _context.PlantInstances.AddRangeAsync(instances);
         }
 
-        public async Task<PaginatedResult<PlantInstance>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination)
+        public async Task<PaginatedResult<PlantInstance>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination, int? plantId = null)
         {
             var query = _context.PlantInstances
                 .Where(pi => pi.CurrentNurseryId == nurseryId && pi.Status == (int)PlantInstanceStatusEnum.Available)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
-                .OrderByDescending(pi => pi.CreatedAt);
+                .AsQueryable();
+
+            if (plantId.HasValue)
+            {
+                query = query.Where(pi => pi.PlantId == plantId.Value);
+            }
+
+            query = query.OrderByDescending(pi => pi.CreatedAt);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -91,7 +98,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null)
+        public async Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null, int? plantId = null)
         {
             var query = _context.PlantInstances
                 .Where(pi => pi.Status == (int)PlantInstanceStatusEnum.Available)
@@ -102,6 +109,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (nurseryId.HasValue)
             {
                 query = query.Where(pi => pi.CurrentNurseryId == nurseryId.Value);
+            }
+
+            if (plantId.HasValue)
+            {
+                query = query.Where(pi => pi.PlantId == plantId.Value);
             }
 
             query = query.OrderByDescending(pi => pi.CreatedAt);
