@@ -16,13 +16,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly PlantDecorContext _context;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ICacheService _cacheService;
         private const decimal DepositRatio = 0.3m;
+        private const string ALL_CART_KEY = "cart_user";
 
-        public OrderService(IUnitOfWork unitOfWork, PlantDecorContext context, IBackgroundJobClient backgroundJobClient)
+        public OrderService(IUnitOfWork unitOfWork, PlantDecorContext context, IBackgroundJobClient backgroundJobClient, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _context = context;
             _backgroundJobClient = backgroundJobClient;
+            _cacheService = cacheService;
         }
 
         public async Task<OrderResponseDto> CreateOrderAsync(int userId, CreateOrderRequestDto request)
@@ -39,9 +42,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new BadRequestException("PlantInstanceId is required for PlantInstance order");
 
                 // Lấy thông tin PlantInstance từ DB - KHÔNG TIN CLIENT
-                var plantInstance = await _context.PlantInstances
-                    .Include(pi => pi.Plant)
-                    .FirstOrDefaultAsync(pi => pi.Id == request.PlantInstanceId.Value);
+                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(request.PlantInstanceId.Value);
 
                 if (plantInstance == null)
                     throw new NotFoundException($"PlantInstance {request.PlantInstanceId.Value} not found");
@@ -68,19 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             else
             {
                 // Get cart with items from database
-                var cartQuery = _context.Carts
-                    .Include(c => c.CartItems)
-                        .ThenInclude(ci => ci.CommonPlant)
-                            .ThenInclude(cp => cp!.Plant)
-                    .Include(c => c.CartItems)
-                        .ThenInclude(ci => ci.NurseryPlantCombo)
-                            .ThenInclude(npc => npc!.PlantCombo)
-                    .Include(c => c.CartItems)
-                        .ThenInclude(ci => ci.NurseryMaterial)
-                            .ThenInclude(nm => nm!.Material)
-                    .Where(c => c.UserId == userId);
-
-                var cart = await cartQuery.FirstOrDefaultAsync();
+                var cart = await _unitOfWork.CartRepository.GetByIdAsync(userId);
 
                 if (cart == null || !cart.CartItems.Any())
                     throw new BadRequestException("Cart is empty. Please add items to cart before creating order.");
@@ -166,6 +155,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                     _context.CartItems.RemoveRange(itemsToRemove);
                     await _context.SaveChangesAsync();
+
+                    // Invalidate cart cache in Redis so subsequent reads reflect DB changes
+                    await _cacheService.RemoveByPrefixAsync($"{ALL_CART_KEY}_{userId}");
                 }
             }
 
