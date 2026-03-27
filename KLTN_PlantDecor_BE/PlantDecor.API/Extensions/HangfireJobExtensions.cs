@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Extensions
@@ -77,6 +78,118 @@ namespace PlantDecor.API.Extensions
             return backgroundJobClient.Enqueue<IUserPreferenceService>(
                 service => service.CalculatedAllUserPreferenceAsync());
         }
+
+        #region Embedding Jobs
+
+        /// <summary>
+        /// Enqueue CommonPlant embedding processing
+        /// </summary>
+        public static string EnqueueCommonPlantEmbedding(
+            this IBackgroundJobClient backgroundJobClient,
+            CommonPlantEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.ProcessCommonPlantEmbeddingAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue PlantInstance embedding processing
+        /// </summary>
+        public static string EnqueuePlantInstanceEmbedding(
+            this IBackgroundJobClient backgroundJobClient,
+            PlantInstanceEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.ProcessPlantInstanceEmbeddingAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue NurseryPlantCombo embedding processing
+        /// </summary>
+        public static string EnqueueNurseryPlantComboEmbedding(
+            this IBackgroundJobClient backgroundJobClient,
+            NurseryPlantComboEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.ProcessNurseryPlantComboEmbeddingAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue NurseryMaterial embedding processing
+        /// </summary>
+        public static string EnqueueNurseryMaterialEmbedding(
+            this IBackgroundJobClient backgroundJobClient,
+            NurseryMaterialEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.ProcessNurseryMaterialEmbeddingAsync(dto, entityId, entityType));
+        }
+
+        #endregion
+
+        #region Langflow Ingestion Jobs
+
+        /// <summary>
+        /// Enqueue CommonPlant langflow ingestion
+        /// </summary>
+        public static string EnqueueCommonPlantLangflowIngestion(
+            this IBackgroundJobClient backgroundJobClient,
+            CommonPlantEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                service => service.ProcessCommonPlantIngestionAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue PlantInstance langflow ingestion
+        /// </summary>
+        public static string EnqueuePlantInstanceLangflowIngestion(
+            this IBackgroundJobClient backgroundJobClient,
+            PlantInstanceEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                service => service.ProcessPlantInstanceIngestionAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue NurseryPlantCombo langflow ingestion
+        /// </summary>
+        public static string EnqueueNurseryPlantComboLangflowIngestion(
+            this IBackgroundJobClient backgroundJobClient,
+            NurseryPlantComboEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                service => service.ProcessNurseryPlantComboIngestionAsync(dto, entityId, entityType));
+        }
+
+        /// <summary>
+        /// Enqueue NurseryMaterial langflow ingestion
+        /// </summary>
+        public static string EnqueueNurseryMaterialLangflowIngestion(
+            this IBackgroundJobClient backgroundJobClient,
+            NurseryMaterialEmbeddingDto dto,
+            Guid entityId,
+            string entityType)
+        {
+            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                service => service.ProcessNurseryMaterialIngestionAsync(dto, entityId, entityType));
+        }
+
+        #endregion
 
         /// <summary>
         /// Register all recurring Hangfire jobs

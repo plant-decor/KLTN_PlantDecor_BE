@@ -111,10 +111,11 @@ namespace PlantDecor.API
 
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
             dataSourceBuilder.EnableDynamicJson();
+            dataSourceBuilder.UseVector();
             var dataSource = dataSourceBuilder.Build();
 
             builder.Services.AddDbContext<PlantDecorContext>(options =>
-                options.UseNpgsql(dataSource));
+                options.UseNpgsql(dataSource, o => o.UseVector()));
 
             //ADD SCOPED HERE
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -156,6 +157,15 @@ namespace PlantDecor.API
 
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
+
+            // Embedding & AI Search Services
+            builder.Services.AddScoped<IEmbeddingTextSerializer, EmbeddingTextSerializer>();
+            builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+            builder.Services.AddScoped<IAISearchService, AISearchService>();
+            builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
+            builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
+            builder.Services.AddScoped<ILangflowService, LangflowService>();
 
             builder.Services.AddCors(options =>
             {

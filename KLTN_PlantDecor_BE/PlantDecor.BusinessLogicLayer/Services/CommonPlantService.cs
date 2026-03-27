@@ -1,3 +1,6 @@
+using Hangfire;
+using PlantDecor.BusinessLogicLayer.Constants;
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -14,16 +17,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
         private const string NURSERY_COMMON_PLANTS_KEY = "nursery_common_plants";
         private const string PLANT_NURSERIES_COMMON_KEY = "plant_nurseries_common";
         private const string PLANT_SHOP_SEARCH = "plants_shop_search";
 
-        public CommonPlantService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public CommonPlantService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            IBackgroundJobClient backgroundJobClient,
+            ILangflowService langflowService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _backgroundJobClient = backgroundJobClient;
+            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -85,6 +96,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Reload with details
                 var created = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(entity.Id);
+
+                // Queue embedding job (background)
+                QueueEmbeddingAsync(created!);
+
                 return created!.ToResponse();
             }
             catch (Exception)
@@ -118,7 +133,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await InvalidateCacheAsync(entity.NurseryId);
 
-                return entity.ToResponse();
+                // Reload and update embedding
+                var updated = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
+                QueueEmbeddingAsync(updated!);
+
+                return updated!.ToResponse();
             }
             catch (Exception)
             {
@@ -145,6 +164,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.NurseryId);
+
+                // Delete embedding
+                await DeleteEmbeddingAsync(id);
 
                 return true;
             }
@@ -256,6 +278,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await InvalidateCacheAsync(nurseryId);
 
                 var created = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(entity.Id);
+
+                // Queue embedding job
+                QueueEmbeddingAsync(created!);
+
                 return created!.ToResponse();
             }
             catch (Exception)
@@ -424,6 +450,77 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 paginatedEntities.PageSize
             );
         }
+
+        #endregion
+
+        #region Embedding Operations
+
+        private void QueueEmbeddingAsync(CommonPlant entity)
+        {
+            try
+            {
+                var plant = entity.Plant;
+
+                var embeddingDto = new CommonPlantEmbeddingDto
+                {
+                    CommonPlantId = entity.Id,
+                    IsActive = entity.IsActive,
+                    PlantName = plant?.Name ?? string.Empty,
+                    PlantSpecificName = plant?.SpecificName,
+                    PlantDescription = plant?.Description,
+                    PlantOrigin = plant?.Origin,
+                    FengShuiElement = plant?.FengShuiElement,
+                    FengShuiMeaning = plant?.FengShuiMeaning,
+                    Size = plant?.Size,
+                    PlacementType = plant?.PlacementType ?? 0,
+                    PetSafe = plant?.PetSafe,
+                    ChildSafe = plant?.ChildSafe,
+                    AirPurifying = plant?.AirPurifying,
+                    BasePrice = plant?.BasePrice,
+                    CategoryNames = plant?.Categories?
+                        .Select(c => c.Name)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    TagNames = plant?.Tags?
+                        .Select(t => t.TagName)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    NurseryId = entity.NurseryId,
+                    NurseryName = entity.Nursery?.Name,
+                    Price = plant?.BasePrice
+                };
+
+                var entityId = ConvertToGuid(entity.Id);
+
+                // Queue Hangfire background job for local PostgreSQL
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessCommonPlantEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
+
+                // Send to Langflow webhook via Hangfire
+                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                //    service => service.ProcessCommonPlantIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
+            }
+            catch
+            {
+                // Log but don't fail the main operation
+            }
+        }
+
+        private async Task DeleteEmbeddingAsync(int entityId)
+        {
+            try
+            {
+                var guid = ConvertToGuid(entityId);
+                await _unitOfWork.EmbeddingRepository.DeleteByEntityAsync(EmbeddingEntityTypes.CommonPlant, guid);
+            }
+            catch
+            {
+                // Log but don't fail
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         #endregion
     }

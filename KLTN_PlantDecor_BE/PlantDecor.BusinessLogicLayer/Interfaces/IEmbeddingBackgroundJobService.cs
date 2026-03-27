@@ -1,0 +1,22 @@
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
+
+namespace PlantDecor.BusinessLogicLayer.Interfaces
+{
+    /// <summary>
+    /// Service for processing embeddings in background using Hangfire
+    /// </summary>
+    public interface IEmbeddingBackgroundJobService
+    {
+        // CommonPlant embeddings
+        Task ProcessCommonPlantEmbeddingAsync(CommonPlantEmbeddingDto dto, Guid entityId, string entityType);
+
+        // PlantInstance embeddings
+        Task ProcessPlantInstanceEmbeddingAsync(PlantInstanceEmbeddingDto dto, Guid entityId, string entityType);
+
+        // NurseryPlantCombo embeddings
+        Task ProcessNurseryPlantComboEmbeddingAsync(NurseryPlantComboEmbeddingDto dto, Guid entityId, string entityType);
+
+        // NurseryMaterial embeddings
+        Task ProcessNurseryMaterialEmbeddingAsync(NurseryMaterialEmbeddingDto dto, Guid entityId, string entityType);
+    }
+}
