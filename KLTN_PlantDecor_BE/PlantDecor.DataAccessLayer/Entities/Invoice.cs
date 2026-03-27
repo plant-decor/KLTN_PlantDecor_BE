@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class Invoice
 {
     public int Id { get; set; }
 
     public int? OrderId { get; set; }
-
-    public int? NurseryOrderId { get; set; }
-
-    public int? NurseryId { get; set; }
 
     public DateTime? IssuedDate { get; set; }
 
@@ -21,11 +14,13 @@ public partial class Invoice
 
     public int? Status { get; set; }
 
+    public string? CustomerName { get; set; }
+
+    public string? CustomerEmail { get; set; }
+
+    public string? CustomerAddress { get; set; }
+
     public virtual ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
 
     public virtual Order? Order { get; set; }
-
-    public virtual NurseryOrder? NurseryOrder { get; set; }
-
-    public virtual Nursery? Nursery { get; set; }
 }

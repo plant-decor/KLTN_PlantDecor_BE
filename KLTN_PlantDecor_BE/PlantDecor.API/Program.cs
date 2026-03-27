@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
 using PlantDecor.API.Extensions;
+using PlantDecor.API.Hubs;
 using PlantDecor.API.Middlewares;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Services;
@@ -49,7 +50,7 @@ namespace PlantDecor.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "PlantDecor API",
+                    Title = "PlantDecor API - Tôi đã ở đây",
                     Version = "v1",
                     Description = "API for Plant Decoration System",
                     Contact = new OpenApiContact
@@ -61,7 +62,7 @@ namespace PlantDecor.API
 
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                //c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+                c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 
                 // JWT Authentication in Swagger
                 c.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
@@ -124,17 +125,21 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
 
-             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
+            builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IMaterialService, MaterialService>();
             builder.Services.AddScoped<ICommonPlantService, CommonPlantService>();
             builder.Services.AddScoped<IPlantComboService, PlantComboService>();
             builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
+            //builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IEmailService, ResendEmailService>();
             builder.Services.AddScoped<IEmailBackgroundJobService, EmailBackgroundJobService>();
             builder.Services.AddScoped<IOrderBackgroundJobService, OrderBackgroundJobService>();
             builder.Services.AddScoped<ITokenCleanupService, TokenCleanupService>();
             builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
+            builder.Services.AddScoped<IUserBehaviorLogService, UserBehaviorLogService>();
+            builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+            builder.Services.AddScoped<IChatService, ChatService>();
 
             // Cart & Wishlist
             builder.Services.AddScoped<ICartService, CartService>();
@@ -154,10 +159,39 @@ namespace PlantDecor.API
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAllOrigins",
-                    builder => builder.AllowAnyOrigin()
-                                      .AllowAnyMethod()
-                                      .AllowAnyHeader());
+                // Policy cho Development
+                options.AddPolicy("Development",
+                    policy => policy
+                        .WithOrigins(
+                            "http://localhost:3000",         // React dev
+                            "http://localhost:5173",         // Vite
+                            "http://localhost:5500",         // Live Server
+                            "http://localhost:7180",         // API dev port
+                            "https://localhost:7180",        // API dev port HTTPS
+                            "http://127.0.0.1:3000",         // React dev (127.0.0.1)
+                            "http://127.0.0.1:5173",         // Vite (127.0.0.1)
+                            "http://127.0.0.1:5500",         // Live Server (127.0.0.1)
+                            "http://127.0.0.1:7180",         // API dev (127.0.0.1)
+                            "https://127.0.0.1:7180",        // API dev HTTPS (127.0.0.1)
+                            "null",                          // file:// local HTML
+                            "https://www.plantdecor.io.vn",
+                            "https://api.plantdecor.io.vn"
+                        )
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
+
+                // Policy cho Production
+                options.AddPolicy("Production",
+                    policy => policy
+                        .WithOrigins(
+                    "https://www.plantdecor.io.vn",
+                    "https://plantdecor.io.vn",
+                    "https://api.plantdecor.io.vn"
+                        )
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
             });
 
             builder.Services.AddRateLimiter(options =>
@@ -240,6 +274,23 @@ namespace PlantDecor.API
                    };
                    // map "Role" claim về role cho ASP.NET Core
                    options.TokenValidationParameters.RoleClaimType = "Role";
+
+                   // ✅ SignalR Support: Read token from query string for WebSocket connections
+                   options.Events = new JwtBearerEvents
+                   {
+                       OnMessageReceived = context =>
+                       {
+                           var accessToken = context.Request.Query["access_token"];
+                           var path = context.HttpContext.Request.Path;
+
+                           // If the request is for SignalR hub and token is in query string
+                           if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                           {
+                               context.Token = accessToken;
+                           }
+                           return Task.CompletedTask;
+                       }
+                   };
                });
             builder.Services.AddHttpClient();
             builder.Services.AddOptions();
@@ -266,6 +317,15 @@ namespace PlantDecor.API
             });
 
             builder.Services.AddTransient<IResend, ResendClient>();
+
+            // SignalR for realtime features with extended options
+            builder.Services.AddSignalR(options =>
+            {
+                options.EnableDetailedErrors = true;
+                options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+            });
+
             builder.Services.AddHangfire(config =>
             {
                 config.UsePostgreSqlStorage(options => options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -288,19 +348,20 @@ namespace PlantDecor.API
                 options.ServerTimeout = TimeSpan.FromMinutes(5); // Nếu worker không phản hồi trong 5 phút, coi như bị treo và sẽ được đánh dấu là failed để có thể retry lại
             });
 
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-        //    if (app.Environment.IsDevelopment() )
-         //   {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-                app.UseHangfireDashboard(options: new DashboardOptions
-                {
-                    Authorization = [],
-                    DarkModeEnabled = true
-                });
-           // }
+            //    if (app.Environment.IsDevelopment() )
+            //   {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+            app.UseHangfireDashboard(options: new DashboardOptions
+            {
+                Authorization = [],
+                DarkModeEnabled = true
+            });
+            // }
             // dùng để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
             // nếu không có thì sẽ bị lỗi do tất cả request đều có cùng 1 IP (IP của proxy)
             app.UseForwardedHeaders();
@@ -308,13 +369,19 @@ namespace PlantDecor.API
             app.UseMiddleware<GlobalExceptionMiddleware>();
             app.UseHttpsRedirection();
             app.UseRouting();
-            app.UseCors("AllowAllOrigins");
+            // Tự động chọn theo môi trường
+            if (app.Environment.IsDevelopment())
+                app.UseCors("Development");
+            else
+                app.UseCors("Production");
             app.UseRateLimiter();
             app.UseAuthentication();
             // để sau authentication thay vì ở đầu pipeline để tránh việc phải check security stamp cho các request không cần authentication (như swagger, health check, static files...)
             app.UseMiddleware<SecurityStampValidationMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
+            // Map SignalR hubs
+            app.MapHub<ChatHub>("/hubs/chat");
             app.MapHealthChecks("/health");
             app.RegisterRecurringJobs();
             app.Run();

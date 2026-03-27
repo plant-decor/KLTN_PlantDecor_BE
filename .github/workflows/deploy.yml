@@ -1,0 +1,44 @@
+name: Build and Deploy PlantDecor API
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./KLTN_PlantDecor_BE
+          file: ./KLTN_PlantDecor_BE/PlantDecor.API/Dockerfile
+          push: true
+          tags: paul423/plantdecor-api:latest
+
+      - name: Deploy to Droplet
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_PORT }}
+          script: |
+            cd KLTN_PlantDecor_BE/KLTN_PlantDecor_BE
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f

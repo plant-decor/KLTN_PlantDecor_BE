@@ -167,11 +167,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
                 var keyword = filter.Keyword.Trim().ToLower();
+                var keywordCareLevelType = ParseCareLevelType(keyword);
                 query = query.Where(p =>
                     p.Name.ToLower().Contains(keyword)
                     || (p.SpecificName != null && p.SpecificName.ToLower().Contains(keyword))
                     || (p.Origin != null && p.Origin.ToLower().Contains(keyword))
-                    || (p.CareLevel != null && p.CareLevel.ToLower().Contains(keyword))
+                    || (keywordCareLevelType.HasValue && p.CareLevelType == keywordCareLevelType.Value)
                 );
             }
 
@@ -181,10 +182,17 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (filter.PlacementType.HasValue)
                 query = query.Where(p => p.PlacementType == filter.PlacementType.Value);
 
-            if (!string.IsNullOrWhiteSpace(filter.CareLevel))
+            if (filter.CareLevelType.HasValue)
             {
-                var careLevel = filter.CareLevel.Trim().ToLower();
-                query = query.Where(p => p.CareLevel != null && p.CareLevel.ToLower() == careLevel);
+                query = query.Where(p => p.CareLevelType == filter.CareLevelType.Value);
+            }
+            else if (!string.IsNullOrWhiteSpace(filter.CareLevel))
+            {
+                var careLevelType = ParseCareLevelType(filter.CareLevel);
+                if (careLevelType.HasValue)
+                {
+                    query = query.Where(p => p.CareLevelType == careLevelType.Value);
+                }
             }
 
             if (filter.Toxicity.HasValue)
@@ -211,6 +219,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (filter.MaxBasePrice.HasValue)
                 query = query.Where(p => p.BasePrice.HasValue && p.BasePrice.Value <= filter.MaxBasePrice.Value);
 
+            if (filter.Sizes != null && filter.Sizes.Count > 0)
+                query = query.Where(p => p.Size.HasValue && filter.Sizes.Contains(p.Size.Value));
+
+            if (!string.IsNullOrWhiteSpace(filter.FengShuiElement))
+            {
+                var fengShuiElement = filter.FengShuiElement.Trim().ToLower();
+                query = query.Where(p => p.FengShuiElement != null && p.FengShuiElement.ToLower() == fengShuiElement);
+            }
+
             if (filter.CategoryIds != null && filter.CategoryIds.Count > 0)
                 query = query.Where(p => p.Categories.Any(c => filter.CategoryIds.Contains(c.Id)));
 
@@ -218,6 +235,23 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 query = query.Where(p => p.Tags.Any(t => filter.TagIds.Contains(t.Id)));
 
             return query;
+        }
+
+        private static int? ParseCareLevelType(string? careLevel)
+        {
+            if (string.IsNullOrWhiteSpace(careLevel))
+            {
+                return null;
+            }
+
+            return careLevel.Trim().ToLowerInvariant() switch
+            {
+                "1" or "easy" or "de" => (int)CareLevelTypeEnum.Easy,
+                "2" or "medium" or "trungbinh" or "trung binh" => (int)CareLevelTypeEnum.Medium,
+                "3" or "hard" or "kho" => (int)CareLevelTypeEnum.Hard,
+                "4" or "expert" or "chuyengia" or "chuyen gia" => (int)CareLevelTypeEnum.Expert,
+                _ => null
+            };
         }
 
         private static IQueryable<Plant> ApplySorting(IQueryable<Plant> query, PlantSearchFilter filter, bool isShop)
@@ -230,6 +264,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
             {
                 "name" => isDesc ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
                 "price" => isDesc ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
+                "size" or "sizename" or "plantsize" => isDesc
+                    ? query.OrderByDescending(p => p.Size)
+                    : query.OrderBy(p => p.Size),
+                "fengshuielement" or "fengshui" or "menh" => isDesc
+                    ? query.OrderByDescending(p => p.FengShuiElement)
+                    : query.OrderBy(p => p.FengShuiElement),
                 "availableinstances" when isShop => isDesc
                     ? query.OrderByDescending(p =>
                         p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available

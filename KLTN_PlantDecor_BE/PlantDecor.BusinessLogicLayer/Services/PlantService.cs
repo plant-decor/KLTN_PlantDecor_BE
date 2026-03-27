@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -15,15 +17,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly ICloudinaryService _cloudinaryService;
+        private readonly ILogger<PlantService> _logger;
 
         private const string ALL_PLANTS_KEY = "plants_all";
         private const string ACTIVE_PLANTS_KEY = "plants_active";
         private const string SHOP_PLANTS_KEY = "plants_shop";
 
-        public PlantService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public PlantService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            ICloudinaryService cloudinaryService,
+            ILogger<PlantService> logger)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _cloudinaryService = cloudinaryService;
+            _logger = logger;
         }
 
         #region CRUD Operations
@@ -153,6 +163,110 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<PlantResponseDto> UploadPlantImagesAsync(int plantId, List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+                throw new BadRequestException("No files were uploaded");
+
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            foreach (var file in files)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+                if (!isValid)
+                {
+                    throw new BadRequestException(errorMessage);
+                }
+            }
+
+            var uploadedFiles = await _cloudinaryService.UploadFilesAsync(files, "PlantImages");
+            if (uploadedFiles == null || uploadedFiles.Count == 0)
+            {
+                throw new BadRequestException("Plant images upload failed");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var hasPrimary = plant.PlantImages.Any(i => i.IsPrimary == true);
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    plant.PlantImages.Add(new PlantImage
+                    {
+                        PlantId = plant.Id,
+                        ImageUrl = uploadedFile.SecureUrl,
+                        IsPrimary = !hasPrimary,
+                        CreatedAt = DateTime.Now
+                    });
+
+                    if (!hasPrimary)
+                    {
+                        hasPrimary = true;
+                    }
+                }
+
+                plant.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantRepository.PrepareUpdate(plant);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                        continue;
+
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to cleanup uploaded plant image: {PublicId}", uploadedFile.PublicId);
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
+        }
+
+        public async Task<PlantResponseDto> SetPrimaryPlantImageAsync(int plantId, int imageId)
+        {
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId);
+            if (targetImage == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+
+            foreach (var image in plant.PlantImages)
+            {
+                image.IsPrimary = image.Id == imageId;
+            }
+
+            plant.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantRepository.PrepareUpdate(plant);
+            await _unitOfWork.SaveAsync();
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
         }
 
         public async Task<bool> DeletePlantAsync(int id)
@@ -384,6 +498,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(SHOP_PLANTS_KEY);
             await _cacheService.RemoveByPrefixAsync("plants_system_search");
             await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+            await _cacheService.RemoveByPrefixAsync("common_plants_all");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
+            await _cacheService.RemoveByPrefixAsync("nursery_instances");
+            await _cacheService.RemoveByPrefixAsync("plant_nurseries");
+            await _cacheService.RemoveByPrefixAsync("combos_all");
+            await _cacheService.RemoveByPrefixAsync("combos_active");
+            await _cacheService.RemoveByPrefixAsync("combos_shop");
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
         }
 
         private static PlantSearchFilter BuildSearchFilter(PlantSearchRequestDto? request)
@@ -393,6 +516,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Keyword = request?.Keyword,
                 IsActive = request?.IsActive,
                 PlacementType = request?.PlacementType,
+                CareLevelType = request?.CareLevelType,
                 CareLevel = request?.CareLevel,
                 Toxicity = request?.Toxicity,
                 AirPurifying = request?.AirPurifying,
@@ -404,6 +528,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 MaxBasePrice = request?.MaxBasePrice,
                 CategoryIds = request?.CategoryIds,
                 TagIds = request?.TagIds,
+                Sizes = request?.Sizes,
+                FengShuiElement = request?.FengShuiElement,
                 NurseryId = request?.NurseryId,
                 SortBy = request?.SortBy,
                 SortDirection = request?.SortDirection
@@ -420,7 +546,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : string.Join("-", filter.TagIds.OrderBy(x => x));
 
-            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+            var sizePart = filter.Sizes == null || filter.Sizes.Count == 0
+                ? "none"
+                : string.Join("-", filter.Sizes.OrderBy(x => x));
+
+            var fengShuiPart = string.IsNullOrWhiteSpace(filter.FengShuiElement)
+                ? "none"
+                : filter.FengShuiElement.Trim().ToLowerInvariant();
+
+            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

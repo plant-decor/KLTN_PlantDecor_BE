@@ -19,7 +19,7 @@ public partial class Plant
 
     public int PlacementType { get; set; }
 
-    public string? Size { get; set; }
+    public int? Size { get; set; }
 
     public string? GrowthRate { get; set; }
 
@@ -43,7 +43,7 @@ public partial class Plant
 
     public bool? ChildSafe { get; set; }
 
-    public string? CareLevel { get; set; }
+    public int? CareLevelType { get; set; }
 
     public bool? IsActive { get; set; }
 
@@ -66,8 +66,6 @@ public partial class Plant
     public virtual ICollection<UserPlant> UserPlants { get; set; } = new List<UserPlant>();
 
     public virtual ICollection<UserPreference> UserPreferences { get; set; } = new List<UserPreference>();
-
-    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 
     public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
 

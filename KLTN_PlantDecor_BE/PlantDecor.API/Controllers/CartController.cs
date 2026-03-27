@@ -11,6 +11,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về giỏ hàng của user
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]

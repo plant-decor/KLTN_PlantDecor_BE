@@ -7,6 +7,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về thông tin người dùng
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase

@@ -16,6 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
 
         private const string ALL_NURSERY_MATERIALS_KEY = "nursery_materials_all";
+        private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
         public NurseryMaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
@@ -79,7 +80,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 // Reload with details
                 var created = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
@@ -111,7 +112,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return entity.ToResponse();
             }
@@ -139,7 +140,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return true;
             }
@@ -169,7 +170,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync();
+                await InvalidateCacheAsync(entity.MaterialId);
 
                 return entity.ToResponse();
             }
@@ -324,12 +325,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #endregion
 
+        #region Shop Operations
+
+        public async Task<PaginatedResult<NurseryMaterialListResponseDto>> SearchNurseryMaterialsForShopAsync(NurseryMaterialShopSearchRequestDto searchRequest, Pagination pagination)
+        {
+            var paginatedEntities = await _unitOfWork.NurseryMaterialRepository.SearchForShopAsync(
+                pagination,
+                searchRequest.SearchTerm,
+                searchRequest.CategoryIds,
+                searchRequest.TagIds,
+                searchRequest.MinPrice,
+                searchRequest.MaxPrice,
+                searchRequest.SortBy,
+                searchRequest.IsAscending);
+
+            return new PaginatedResult<NurseryMaterialListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+        }
+
+        #endregion
+
         #region Private Methods
 
         private async Task InvalidateCacheAsync()
         {
             await _cacheService.RemoveDataAsync(ALL_NURSERY_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERY_MATERIALS_KEY}_");
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+        }
+
+        private async Task InvalidateCacheAsync(int? materialId = null)
+        {
+            await _cacheService.RemoveByPrefixAsync(ALL_NURSERY_MATERIALS_KEY);
+            if (materialId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
+            }
         }
 
         #endregion

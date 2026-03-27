@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
@@ -38,6 +39,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// </summary>
         Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request);
 
+        /// <summary>
+        /// Upload ảnh cho PlantInstance
+        /// POST /api/manager/plant-instances/{instanceId}/images
+        /// </summary>
+        Task<PlantInstanceResponseDto> UploadPlantInstanceImagesAsync(int instanceId, int managerId, List<IFormFile> files);
+
         #endregion
 
         #region Shop Operations
@@ -52,7 +59,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// Lấy danh sách PlantInstance available theo nursery (Shop - phân trang)
         /// GET /api/nurseries/{nurseryId}/plant-instances
         /// </summary>
-        Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination);
+        Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination, int? plantId = null);
 
         /// <summary>
         /// Lấy chi tiết PlantInstance (Shop)
@@ -64,7 +71,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// Tìm kiếm PlantInstance available cho shop (toàn hệ thống hoặc theo vựa)
         /// POST /api/shop/plant-instances/search
         /// </summary>
-        Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null);
+        Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null, int? plantId = null);
 
         #endregion
     }

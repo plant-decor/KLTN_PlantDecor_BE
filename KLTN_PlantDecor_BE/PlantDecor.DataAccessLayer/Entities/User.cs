@@ -35,7 +35,7 @@ public partial class User
 
     public virtual ICollection<Order> CustomerOrders { get; set; } = new List<Order>();
 
-    public virtual ICollection<Order> ShipperOrders { get; set; } = new List<Order>();
+    public virtual ICollection<NurseryOrder> ShipperNurseryOrders { get; set; } = new List<NurseryOrder>();
 
     public virtual ICollection<PlantRating> PlantRatings { get; set; } = new List<PlantRating>();
 
@@ -62,6 +62,8 @@ public partial class User
     public virtual UserProfile? UserProfile { get; set; }
 
     public virtual ServiceRating? ServiceRating { get; set; }
+
+    public virtual CustomerSurvey? CustomerSurvey { get; set; }
 
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 }

@@ -196,6 +196,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ALL_CATEGORIES_KEY);
             await _cacheService.RemoveDataAsync(ROOT_CATEGORIES_KEY);
             await _cacheService.RemoveDataAsync(ROOT_ACTIVE_CATEGORIES_KEY);
+            await _cacheService.RemoveByPrefixAsync("plants_system_search");
+            await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            await _cacheService.RemoveByPrefixAsync("materials_shop");
+            await _cacheService.RemoveByPrefixAsync("combos_shop");
+            await _cacheService.RemoveByPrefixAsync("common_plants_all");
+            await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
         }
 
         public Task<List<CategoryResponseDto>> GetAllActiveCategoriesAsync()

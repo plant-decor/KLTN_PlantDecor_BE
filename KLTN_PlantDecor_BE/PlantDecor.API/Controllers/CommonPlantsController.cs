@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
@@ -88,6 +89,44 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = result.IsActive ? "Đã bật cây đại trà" : "Đã tắt cây đại trà",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Shop] Tìm kiếm danh sách cây đại trà đang bán
+        /// </summary>
+        [HttpPost("/api/shop/common-plants/search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchCommonPlantsForShop([FromBody] CommonPlantShopSearchRequestDto request)
+        {
+            var searchRequest = request ?? new CommonPlantShopSearchRequestDto();
+            var pagination = searchRequest.Pagination ?? new Pagination();
+            var result = await _commonPlantService.SearchCommonPlantsForShopAsync(searchRequest, pagination);
+
+            return Ok(new ApiResponse<PaginatedResult<CommonPlantListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Search shop common plants successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Shop] Lấy danh sách vựa đang có cây đại trà theo PlantId
+        /// </summary>
+        [HttpGet("/api/shop/plants/{plantId}/common-nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesWithCommonPlant(int plantId)
+        {
+            var result = await _commonPlantService.GetNurseriesWithCommonPlantAsync(plantId);
+
+            return Ok(new ApiResponse<List<PlantNurseryAvailabilityDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vựa có cây đại trà thành công",
                 Payload = result
             });
         }

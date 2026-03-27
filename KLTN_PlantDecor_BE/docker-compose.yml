@@ -1,4 +1,4 @@
-﻿version: '3.8'
+﻿
 
 services:
   api:
@@ -10,16 +10,14 @@ services:
     ports:
       - "5000:8080"
 
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=${DB_CONNECTION}
-      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
-      - JwtSettings__Key=${JwtSettings__Key}
-      - JwtSettings__Issuer=${JwtSettings__Issuer}
-      - JwtSettings__Audience=${JwtSettings__Audience}
 
-    depends_on:
-      - redis
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+
+    depends_on: 
+      redis:
+        condition: service_healthy
 
     restart: always
 
@@ -37,7 +35,11 @@ services:
     container_name: plant-redis
     command: redis-server --save 60 1
     restart: always
-
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - app-network
 

@@ -30,5 +30,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Shop Operations
         Task<PaginatedResult<CommonPlantListResponseDto>> GetActiveByNurseryIdAsync(int nurseryId, Pagination pagination);
         Task<List<PlantNurseryAvailabilityDto>> GetNurseriesWithCommonPlantAsync(int plantId);
+        Task<PaginatedResult<CommonPlantListResponseDto>> SearchCommonPlantsForShopAsync(CommonPlantShopSearchRequestDto searchRequest, Pagination pagination);
     }
 }

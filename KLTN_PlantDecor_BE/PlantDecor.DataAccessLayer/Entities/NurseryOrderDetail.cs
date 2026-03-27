@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class NurseryOrderDetail

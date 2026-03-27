@@ -25,6 +25,27 @@ namespace PlantDecor.API.Controllers
             _plantComboService = plantComboService;
         }
 
+        #region Shop
+
+        /// <summary>
+        /// [Shop] Lấy danh sách các vựa có bán plant combo cụ thể
+        /// </summary>
+        [HttpGet("/api/shop/plant-combos/{comboId}/nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesByCombo(int comboId)
+        {
+            var nurseries = await _plantComboService.GetNurseriesByComboAsync(comboId);
+            return Ok(new ApiResponse<List<NurseryListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = $"Get nurseries for plant combo {comboId} successfully",
+                Payload = nurseries
+            });
+        }
+
+        #endregion
+
         #region CRUD Operations
 
         [HttpGet]
@@ -98,6 +119,20 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Cập nhật combo thành công",
+                Payload = combo
+            });
+        }
+
+        [HttpPost("{id}/images")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadComboImages(int id, [FromForm] List<IFormFile> files)
+        {
+            var combo = await _plantComboService.UploadPlantComboImagesAsync(id, files);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload combo images successfully",
                 Payload = combo
             });
         }

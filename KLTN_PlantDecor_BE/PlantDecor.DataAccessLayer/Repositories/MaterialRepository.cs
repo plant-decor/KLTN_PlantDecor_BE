@@ -62,7 +62,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(m => m.NurseryMaterials)
                     .ThenInclude(nm => nm.CartItems)
                 .Include(m => m.NurseryMaterials)
-                    .ThenInclude(nm => nm.OrderItems)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 

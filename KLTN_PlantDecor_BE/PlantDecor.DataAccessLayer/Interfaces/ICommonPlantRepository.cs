@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
@@ -22,5 +23,15 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// Lấy danh sách CommonPlant active theo PlantId (Shop)
         /// </summary>
         Task<List<CommonPlant>> GetActiveByPlantIdAsync(int plantId);
+        Task<PaginatedResult<CommonPlant>> SearchForShopAsync(
+            Pagination pagination,
+            string? searchTerm,
+            List<int>? categoryIds,
+            List<int>? tagIds,
+            List<int>? sizes,
+            double? minPrice,
+            double? maxPrice,
+            string? sortBy,
+            bool isAscending);
     }
 }

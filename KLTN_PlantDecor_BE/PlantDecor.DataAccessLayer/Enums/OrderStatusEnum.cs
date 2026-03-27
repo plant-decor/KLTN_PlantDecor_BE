@@ -14,6 +14,7 @@
         Failed = 9,
         RefundRequested = 10,
         Refunded = 11,
-        Rejected = 12
+        Rejected = 12,
+        PendingConfirmation = 13
     }
 }

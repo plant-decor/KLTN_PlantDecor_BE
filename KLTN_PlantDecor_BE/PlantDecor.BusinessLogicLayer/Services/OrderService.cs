@@ -30,52 +30,100 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var strategy = (PaymentStrategiesEnum)request.PaymentStrategy;
             var orderType = (OrderTypeEnum)request.OrderType;
 
-            List<CreateOrderItemDto> orderItems;
+            List<OrderItemInfo> orderItems;
 
-            // Flow 1: PlantInstance Order (Buy Now - from request)
+            // Flow 1: PlantInstance Order (Buy Now - không qua Cart)
             if (orderType == OrderTypeEnum.PlantInstance)
             {
-                if (!request.Items.Any())
-                    throw new BadRequestException("PlantInstance order must have at least one item");
+                if (!request.PlantInstanceId.HasValue)
+                    throw new BadRequestException("PlantInstanceId is required for PlantInstance order");
 
-                if (request.Items.Count != 1)
-                    throw new BadRequestException("PlantInstance order must have exactly one item");
+                // Lấy thông tin PlantInstance từ DB - KHÔNG TIN CLIENT
+                var plantInstance = await _context.PlantInstances
+                    .Include(pi => pi.Plant)
+                    .FirstOrDefaultAsync(pi => pi.Id == request.PlantInstanceId.Value);
 
-                if (!request.Items[0].PlantInstanceId.HasValue)
-                    throw new BadRequestException("PlantInstance order must contain a PlantInstance item");
+                if (plantInstance == null)
+                    throw new NotFoundException($"PlantInstance {request.PlantInstanceId.Value} not found");
 
-                orderItems = request.Items;
+                if (!plantInstance.CurrentNurseryId.HasValue)
+                    throw new BadRequestException($"PlantInstance {request.PlantInstanceId.Value} does not belong to a nursery");
+
+                if (plantInstance.Status != (int)PlantInstanceStatusEnum.Available)
+                    throw new BadRequestException($"PlantInstance {request.PlantInstanceId.Value} is not available for purchase");
+
+                orderItems = new List<OrderItemInfo>
+                {
+                    new()
+                    {
+                        PlantInstanceId = plantInstance.Id,
+                        NurseryId = plantInstance.CurrentNurseryId.Value,
+                        ItemName = plantInstance.Plant?.Name ?? $"PlantInstance #{plantInstance.Id}",
+                        Quantity = 1, // PlantInstance luôn là 1
+                        Price = plantInstance.SpecificPrice ?? 0
+                    }
+                };
             }
             // Flow 2: OtherProducts Order (From Cart)
             else
             {
-                // Get cart items from database
-                var cart = await _context.Carts
+                // Get cart with items from database
+                var cartQuery = _context.Carts
                     .Include(c => c.CartItems)
                         .ThenInclude(ci => ci.CommonPlant)
-                            .ThenInclude(cp => cp.Plant)
+                            .ThenInclude(cp => cp!.Plant)
                     .Include(c => c.CartItems)
                         .ThenInclude(ci => ci.NurseryPlantCombo)
-                            .ThenInclude(npc => npc.PlantCombo)
+                            .ThenInclude(npc => npc!.PlantCombo)
                     .Include(c => c.CartItems)
                         .ThenInclude(ci => ci.NurseryMaterial)
-                            .ThenInclude(nm => nm.Material)
-                    .FirstOrDefaultAsync(c => c.UserId == userId);
+                            .ThenInclude(nm => nm!.Material)
+                    .Where(c => c.UserId == userId);
+
+                var cart = await cartQuery.FirstOrDefaultAsync();
 
                 if (cart == null || !cart.CartItems.Any())
                     throw new BadRequestException("Cart is empty. Please add items to cart before creating order.");
 
-                // Convert CartItems to CreateOrderItemDto
-                orderItems = cart.CartItems.Select(ci => new CreateOrderItemDto
+                // Xác định những CartItem nào sẽ checkout
+                IEnumerable<CartItem> cartItemsToCheckout;
+
+                if (request.CartItemIds != null && request.CartItemIds.Any())
+                {
+                    // Checkout selected items only
+                    cartItemsToCheckout = cart.CartItems
+                        .Where(ci => request.CartItemIds.Contains(ci.Id))
+                        .ToList();
+
+                    if (!cartItemsToCheckout.Any())
+                        throw new BadRequestException("No valid cart items found for the given CartItemIds");
+
+                    // Validate all requested CartItemIds exist
+                    var foundIds = cartItemsToCheckout.Select(ci => ci.Id).ToHashSet();
+                    var missingIds = request.CartItemIds.Where(id => !foundIds.Contains(id)).ToList();
+                    if (missingIds.Any())
+                        throw new BadRequestException($"CartItem(s) not found: {string.Join(", ", missingIds)}");
+                }
+                else
+                {
+                    // Checkout all items in cart
+                    cartItemsToCheckout = cart.CartItems;
+                }
+
+                // Convert CartItems to OrderItemInfo - LẤY GIÁ TỪ DB
+                orderItems = cartItemsToCheckout.Select(ci => new OrderItemInfo
                 {
                     CommonPlantId = ci.CommonPlantId,
                     NurseryPlantComboId = ci.NurseryPlantComboId,
                     NurseryMaterialId = ci.NurseryMaterialId,
+                    NurseryId = ResolveNurseryIdFromCartItem(ci),
                     ItemName = ci.CommonPlant?.Plant?.Name
                         ?? ci.NurseryPlantCombo?.PlantCombo?.ComboName
-                        ?? ci.NurseryMaterial?.Material?.Name,
+                        ?? ci.NurseryMaterial?.Material?.Name
+                        ?? "Unknown Item",
                     Quantity = ci.Quantity ?? 0,
-                    Price = ci.Price ?? 0
+                    // LẤY GIÁ TỪ DB - KHÔNG TIN CLIENT
+                    Price = GetPriceFromCartItem(ci)
                 }).ToList();
             }
 
@@ -83,16 +131,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (orderType != OrderTypeEnum.PlantInstance && strategy == PaymentStrategiesEnum.Deposit)
                 throw new BadRequestException("Deposit payment strategy is only available for PlantInstance orders");
 
-            // Resolve nursery for each item
-            var itemsWithNursery = new List<(CreateOrderItemDto Item, int NurseryId)>();
-            foreach (var item in orderItems)
-            {
-                var nurseryId = await ResolveNurseryIdForItemAsync(item);
-                itemsWithNursery.Add((item, nurseryId));
-            }
-
             // Group items by nursery
-            var groupedItems = itemsWithNursery
+            var groupedItems = orderItems
                 .GroupBy(x => x.NurseryId)
                 .ToList();
 
@@ -102,7 +142,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
-            // Clear cart after successful order creation (only for OtherProducts)
+            // Clear checked out cart items (only for OtherProducts)
             if (orderType != OrderTypeEnum.PlantInstance)
             {
                 var cart = await _context.Carts
@@ -111,7 +151,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (cart != null)
                 {
-                    _context.CartItems.RemoveRange(cart.CartItems);
+                    IEnumerable<CartItem> itemsToRemove;
+
+                    if (request.CartItemIds != null && request.CartItemIds.Any())
+                    {
+                        // Only remove selected items
+                        itemsToRemove = cart.CartItems.Where(ci => request.CartItemIds.Contains(ci.Id));
+                    }
+                    else
+                    {
+                        // Remove all items
+                        itemsToRemove = cart.CartItems;
+                    }
+
+                    _context.CartItems.RemoveRange(itemsToRemove);
                     await _context.SaveChangesAsync();
                 }
             }
@@ -120,6 +173,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var hydratedOrder = await _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .Include(o => o.Invoices)
                     .ThenInclude(i => i.InvoiceDetails)
                 .FirstOrDefaultAsync(o => o.Id == order.Id);
@@ -132,6 +189,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var order = await _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .Include(o => o.Invoices)
                     .ThenInclude(i => i.InvoiceDetails)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
@@ -150,6 +211,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var orders = await _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .Include(o => o.Invoices)
                     .ThenInclude(i => i.InvoiceDetails)
                 .Where(o => o.UserId == userId)
@@ -165,6 +230,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Include(o => o.Invoices)
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
             if (order == null)
@@ -207,6 +276,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Include(o => o.Invoices)
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
             if (order == null)
@@ -228,6 +301,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 nurseryOrder.UpdatedAt = DateTime.Now;
             }
 
+            // Update PlantInstance status to Sold for PlantInstance orders
+            if (order.OrderType == (int)OrderTypeEnum.PlantInstance)
+            {
+                foreach (var nurseryOrder in order.NurseryOrders)
+                {
+                    foreach (var detail in nurseryOrder.NurseryOrderDetails)
+                    {
+                        if (detail.PlantInstanceId.HasValue)
+                        {
+                            var plantInstance = await _context.PlantInstances
+                                .FirstOrDefaultAsync(pi => pi.Id == detail.PlantInstanceId.Value);
+
+                            if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved)
+                            {
+                                plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
+                            }
+                        }
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             // Enqueue background job to process order delivery (check strategy and create RemainingBalance invoice if needed)
@@ -239,53 +333,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Helpers
 
-        private async Task<int> ResolveNurseryIdForItemAsync(CreateOrderItemDto item)
+        /// <summary>
+        /// Internal class để chứa thông tin item đã được validate và lấy giá từ DB
+        /// </summary>
+        private class OrderItemInfo
         {
-            var referenceCount = 0;
-            if (item.CommonPlantId.HasValue) referenceCount++;
-            if (item.PlantInstanceId.HasValue) referenceCount++;
-            if (item.NurseryPlantComboId.HasValue) referenceCount++;
-            if (item.NurseryMaterialId.HasValue) referenceCount++;
-
-            if (referenceCount != 1)
-                throw new BadRequestException("Each order item must reference exactly one product source");
-
-            if (item.CommonPlantId.HasValue)
-            {
-                var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(item.CommonPlantId.Value)
-                    ?? throw new NotFoundException($"CommonPlant {item.CommonPlantId.Value} not found");
-                return commonPlant.NurseryId;
-            }
-
-            if (item.PlantInstanceId.HasValue)
-            {
-                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(item.PlantInstanceId.Value)
-                    ?? throw new NotFoundException($"PlantInstance {item.PlantInstanceId.Value} not found");
-
-                if (!plantInstance.CurrentNurseryId.HasValue)
-                    throw new BadRequestException($"PlantInstance {item.PlantInstanceId.Value} does not belong to a nursery");
-
-                return plantInstance.CurrentNurseryId.Value;
-            }
-
-            if (item.NurseryPlantComboId.HasValue)
-            {
-                var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(item.NurseryPlantComboId.Value)
-                    ?? throw new NotFoundException($"NurseryPlantCombo {item.NurseryPlantComboId.Value} not found");
-                return nurseryPlantCombo.NurseryId;
-            }
-
-            if (item.NurseryMaterialId.HasValue)
-            {
-                var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(item.NurseryMaterialId.Value)
-                    ?? throw new NotFoundException($"NurseryMaterial {item.NurseryMaterialId.Value} not found");
-                return nurseryMaterial.NurseryId;
-            }
-
-            throw new BadRequestException("Invalid order item source");
+            public int? CommonPlantId { get; set; }
+            public int? PlantInstanceId { get; set; }
+            public int? NurseryPlantComboId { get; set; }
+            public int? NurseryMaterialId { get; set; }
+            public int NurseryId { get; set; }
+            public string ItemName { get; set; } = string.Empty;
+            public int Quantity { get; set; }
+            public decimal Price { get; set; }
         }
 
-        private static Order BuildOrder(int userId, CreateOrderRequestDto request, List<IGrouping<int, (CreateOrderItemDto Item, int NurseryId)>> groupedItems)
+        /// <summary>
+        /// Lấy NurseryId từ CartItem dựa trên product type
+        /// </summary>
+        private static int ResolveNurseryIdFromCartItem(CartItem cartItem)
+        {
+            if (cartItem.CommonPlant != null)
+                return cartItem.CommonPlant.NurseryId;
+
+            if (cartItem.NurseryPlantCombo != null)
+                return cartItem.NurseryPlantCombo.NurseryId;
+
+            if (cartItem.NurseryMaterial != null)
+                return cartItem.NurseryMaterial.NurseryId;
+
+            throw new BadRequestException($"CartItem {cartItem.Id} does not reference any valid product");
+        }
+
+        /// <summary>
+        /// Lấy giá từ DB dựa trên product type - KHÔNG TIN CLIENT
+        /// </summary>
+        private static decimal GetPriceFromCartItem(CartItem cartItem)
+        {
+            if (cartItem.CommonPlant != null)
+                return cartItem.CommonPlant.Plant?.BasePrice ?? 0;
+
+            if (cartItem.NurseryPlantCombo != null)
+                return cartItem.NurseryPlantCombo.PlantCombo?.ComboPrice ?? 0;
+
+            if (cartItem.NurseryMaterial != null)
+                return cartItem.NurseryMaterial.Material?.BasePrice ?? 0;
+
+            return 0;
+        }
+
+        private static Order BuildOrder(int userId, CreateOrderRequestDto request, List<IGrouping<int, OrderItemInfo>> groupedItems)
         {
             var strategy = (PaymentStrategiesEnum)request.PaymentStrategy;
             var nurseryOrders = new List<NurseryOrder>();
@@ -295,7 +392,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             foreach (var group in groupedItems)
             {
                 var nurseryId = group.Key;
-                var items = group.Select(x => x.Item).ToList();
+                var items = group.ToList();
                 var subTotalAmount = items.Sum(i => i.Price * i.Quantity);
 
                 if (subTotalAmount <= 0)
@@ -353,12 +450,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var totalDepositAmount = nurseryOrders.Sum(no => no.DepositAmount ?? 0);
             var totalRemainingAmount = nurseryOrders.Sum(no => no.RemainingAmount ?? 0);
 
-            // Determine primary nursery (nursery with highest subtotal)
-            var primaryNurseryId = nurseryOrders
-                .OrderByDescending(no => no.SubTotalAmount)
-                .First()
-                .NurseryId;
-
             // Create single Invoice for Order (customer invoice)
             var invoiceType = strategy == PaymentStrategiesEnum.Deposit
                 ? InvoiceTypeEnum.Deposit
@@ -368,7 +459,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var orderInvoice = new Invoice
             {
-                NurseryId = null, // Order invoice is for customer, not specific to one nursery
                 Type = (int)invoiceType,
                 TotalAmount = invoiceAmount,
                 Status = (int)InvoiceStatusEnum.Pending,
@@ -379,7 +469,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return new Order
             {
                 UserId = userId,
-                NurseryId = primaryNurseryId,
                 Address = request.Address,
                 Phone = request.Phone,
                 CustomerName = request.CustomerName,
@@ -401,7 +490,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             Id = order.Id,
             UserId = order.UserId,
-            NurseryId = order.NurseryId,
             Address = order.Address,
             Phone = order.Phone,
             CustomerName = order.CustomerName,
@@ -418,19 +506,39 @@ namespace PlantDecor.BusinessLogicLayer.Services
             Items = order.NurseryOrders
                 .SelectMany(no => no.NurseryOrderDetails)
                 .Select(i => new OrderItemResponseDto
+                {
+                    Id = i.Id,
+                    ItemName = i.ItemName,
+                    Quantity = i.Quantity,
+                    Price = i.UnitPrice,
+                    Status = i.Status,
+                    StatusName = i.Status.HasValue ? ((OrderItemStatusEnum)i.Status.Value).ToString() : null
+                }).ToList(),
+            NurseryOrders = order.NurseryOrders.Select(no => new NurseryOrderResponseDto
             {
-                Id = i.Id,
-                ItemName = i.ItemName,
-                Quantity = i.Quantity,
-                Price = i.UnitPrice,
-                Status = i.Status,
-                StatusName = i.Status.HasValue ? ((OrderItemStatusEnum)i.Status.Value).ToString() : null
+                Id = no.Id,
+                NurseryId = no.NurseryId,
+                NurseryName = no.Nursery?.Name,
+                ShipperId = no.ShipperId,
+                ShipperName = no.Shipper?.Username ?? no.Shipper?.Email,
+                SubTotalAmount = no.SubTotalAmount,
+                Status = no.Status,
+                StatusName = no.Status.HasValue ? ((OrderStatusEnum)no.Status.Value).ToString() : null,
+                ShipperNote = no.ShipperNote,
+                Items = no.NurseryOrderDetails.Select(d => new OrderItemResponseDto
+                {
+                    Id = d.Id,
+                    ItemName = d.ItemName,
+                    Quantity = d.Quantity,
+                    Price = d.UnitPrice,
+                    Status = d.Status,
+                    StatusName = d.Status.HasValue ? ((OrderItemStatusEnum)d.Status.Value).ToString() : null
+                }).ToList()
             }).ToList(),
             Invoices = order.Invoices.Select(inv => new InvoiceResponseDto
             {
                 Id = inv.Id,
                 OrderId = inv.OrderId,
-                NurseryId = inv.NurseryId,
                 IssuedDate = inv.IssuedDate,
                 TotalAmount = inv.TotalAmount,
                 Type = inv.Type,

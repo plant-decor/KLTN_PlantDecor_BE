@@ -869,7 +869,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.BeginTransactionAsync();
                 // Xác thực email thành công
                 user.IsVerified = true;
-                user.InvalidateAllTokensAsync(_stampCacheService);
+                await user.InvalidateAllTokensAsync(_stampCacheService);
                 _unitOfWork.UserRepository.PrepareUpdate(user);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();

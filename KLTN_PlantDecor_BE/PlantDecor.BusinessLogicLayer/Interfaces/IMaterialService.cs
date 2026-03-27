@@ -1,6 +1,7 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
@@ -13,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<MaterialResponseDto?> GetMaterialByIdAsync(int id);
         Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request);
         Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
+        Task<MaterialResponseDto> UploadMaterialImagesAsync(int materialId, List<IFormFile> files);
         Task<bool> DeleteMaterialAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 
@@ -24,5 +26,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         // Shop Display
         Task<PaginatedResult<MaterialListResponseDto>> GetMaterialsForShopAsync(Pagination pagination);
+        Task<List<NurseryListResponseDto>> GetNurseriesByMaterialAsync(int materialId);
     }
 }

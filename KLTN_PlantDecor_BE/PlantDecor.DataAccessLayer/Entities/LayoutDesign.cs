@@ -9,7 +9,17 @@ public partial class LayoutDesign
 
     public int? UserId { get; set; }
 
+    public int? RoomImageId { get; set; }
+
     public string? PreviewImageUrl { get; set; }
+
+    public string? PlantCollageUrl { get; set; }
+
+    public string? FluxPromptUsed { get; set; }
+
+    public string? RawResponse { get; set; }
+
+    public string? AIResponseImageUrl { get; set; }
 
     public int? Status { get; set; }
 
@@ -19,7 +29,9 @@ public partial class LayoutDesign
 
     public virtual ICollection<AilayoutResponseModeration> AilayoutResponseModerations { get; set; } = new List<AilayoutResponseModeration>();
 
-    public virtual ICollection<RoomImage> RoomImages { get; set; } = new List<RoomImage>();
+    public virtual ICollection<LayoutDesignPlant> LayoutDesignPlants { get; set; } = new List<LayoutDesignPlant>();
+
+    public virtual RoomImage? RoomImage { get; set; }
 
     public virtual User? User { get; set; }
 }
