@@ -38,11 +38,11 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// <summary>
         /// Lấy danh sách PlantInstance available theo NurseryId (Shop - phân trang)
         /// </summary>
-        Task<PaginatedResult<PlantInstance>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination);
+        Task<PaginatedResult<PlantInstance>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination, int? plantId = null);
 
         /// <summary>
         /// Lấy danh sách PlantInstance available cho shop (toàn hệ thống hoặc theo nursery)
         /// </summary>
-        Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null);
+        Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null, int? plantId = null);
     }
 }

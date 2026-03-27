@@ -381,13 +381,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination)
+        public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetAvailableByNurseryIdAsync(int nurseryId, Pagination pagination, int? plantId = null)
         {
-            var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_available_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var plantPart = plantId.HasValue ? plantId.Value.ToString() : "all";
+            var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_available_pid{plantPart}_p{pagination.PageNumber}_s{pagination.PageSize}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
             if (cachedData != null) return cachedData;
 
-            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableByNurseryIdAsync(nurseryId, pagination);
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableByNurseryIdAsync(nurseryId, pagination, plantId);
             var result = new PaginatedResult<PlantInstanceListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
@@ -411,16 +412,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return instance.ToResponse();
         }
 
-        public async Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null)
+        public async Task<PaginatedResult<PlantInstanceListResponseDto>> SearchAvailableForShopAsync(Pagination pagination, int? nurseryId = null, int? plantId = null)
         {
-            var cacheKey = nurseryId.HasValue
-                ? $"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}_shop_search_p{pagination.PageNumber}_s{pagination.PageSize}"
-                : $"{NURSERY_INSTANCES_KEY}_shop_search_all_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var nurseryPart = nurseryId.HasValue ? nurseryId.Value.ToString() : "all";
+            var plantPart = plantId.HasValue ? plantId.Value.ToString() : "all";
+            var cacheKey = $"{NURSERY_INSTANCES_KEY}_shop_search_n{nurseryPart}_pid{plantPart}_p{pagination.PageNumber}_s{pagination.PageSize}";
 
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
             if (cachedData != null) return cachedData;
 
-            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableForShopAsync(pagination, nurseryId);
+            var paginatedEntities = await _unitOfWork.PlantInstanceRepository.GetAvailableForShopAsync(pagination, nurseryId, plantId);
             var result = new PaginatedResult<PlantInstanceListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,

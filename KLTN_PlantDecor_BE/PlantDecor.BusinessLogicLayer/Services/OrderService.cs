@@ -252,9 +252,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Update NurseryOrderDetails status to Cancelled (except already delivered items)
                 foreach (var detail in nurseryOrder.NurseryOrderDetails
-                             .Where(d => d.Status != (int)OrderItemStatusEnum.Delivered))
+                             .Where(d => d.Status != (int)NurseryOrderStatus.Delivered))
                 {
-                    detail.Status = (int)OrderItemStatusEnum.Cancelled;
+                    detail.Status = (int)NurseryOrderStatus.Cancelled;
                 }
             }
 
@@ -408,7 +408,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Quantity = i.Quantity,
                     UnitPrice = i.Price,
                     Amount = i.Price * i.Quantity,
-                    Status = (int)OrderItemStatusEnum.Pending
+                    Status = (int)NurseryOrderStatus.Pending
                 }).ToList();
 
                 // Add invoice details for Order invoice
@@ -504,7 +504,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Quantity = i.Quantity,
                     Price = i.UnitPrice,
                     Status = i.Status,
-                    StatusName = i.Status.HasValue ? ((OrderItemStatusEnum)i.Status.Value).ToString() : null
+                    StatusName = i.Status.HasValue ? ((NurseryOrderStatus)i.Status.Value).ToString() : null
                 }).ToList(),
             NurseryOrders = order.NurseryOrders.Select(no => new NurseryOrderResponseDto
             {
@@ -524,7 +524,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Quantity = d.Quantity,
                     Price = d.UnitPrice,
                     Status = d.Status,
-                    StatusName = d.Status.HasValue ? ((OrderItemStatusEnum)d.Status.Value).ToString() : null
+                    StatusName = d.Status.HasValue ? ((NurseryOrderStatus)d.Status.Value).ToString() : null
                 }).ToList()
             }).ToList(),
             Invoices = order.Invoices.Select(inv => new InvoiceResponseDto

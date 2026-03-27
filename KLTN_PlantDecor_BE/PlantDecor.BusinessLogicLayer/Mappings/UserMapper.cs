@@ -25,6 +25,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 IsVerified = user.IsVerified,
                 Role = (RoleEnum)user.RoleId,
                 AvatarUrl = user.AvatarUrl,
+                NurseryId = user.NurseryId,
+                NurseryName = user.WorkingNursery?.Name,
 
                 FullName = user.UserProfile?.FullName,
                 Address = user.UserProfile?.Address,
@@ -112,6 +114,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             if (request.Status.HasValue)
                 user.Status = (int)request.Status;
+
+            if (request.NurseryId.HasValue)
+                user.NurseryId = request.NurseryId;
 
             user.IsVerified = request.isVerified;
 

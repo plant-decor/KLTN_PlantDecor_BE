@@ -31,7 +31,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     /// </summary>
     public class PlantInstanceListResponseDto
     {
-        public int Id { get; set; }
+        public int PlantInstanceId { get; set; }
         public int? PlantId { get; set; }
         public string? PlantName { get; set; }
         public string? SKU { get; set; }

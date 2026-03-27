@@ -13,6 +13,7 @@ namespace PlantDecor.DataAccessLayer.Enums
         Staff = 3,
         Shipper = 4,
         Caretaker = 5,
-        Customer = 6
+        Customer = 6,
+        Consultant = 7
     }
 }

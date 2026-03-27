@@ -152,7 +152,7 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> SearchAvailablePlantInstancesForShop([FromBody] ShopPlantInstanceSearchRequestDto request)
         {
             var pagination = request?.Pagination ?? new Pagination();
-            var result = await _plantInstanceService.SearchAvailableForShopAsync(pagination, request?.NurseryId);
+            var result = await _plantInstanceService.SearchAvailableForShopAsync(pagination, request?.NurseryId, request?.PlantId);
             return Ok(new ApiResponse<PaginatedResult<PlantInstanceListResponseDto>>
             {
                 Success = true,

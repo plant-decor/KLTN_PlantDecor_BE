@@ -368,6 +368,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
             entity.Property(e => e.Note).HasMaxLength(255);
             entity.Property(e => e.ShipperNote).HasMaxLength(255);
+            entity.Property(e => e.DeliveryNote).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -551,9 +552,11 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
 
-            entity.HasOne(d => d.Manager).WithOne(p => p.Nursery)
-                .HasForeignKey<Nursery>(d => d.ManagerId)
-                .HasConstraintName("Nursery_ManagerId_fkey");
+            entity.HasOne(d => d.Manager)
+                    .WithOne(p => p.ManagedNursery)
+                    .HasForeignKey<Nursery>(d => d.ManagerId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("Nursery_ManagerId_fkey");
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -1012,6 +1015,12 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)
                 .HasConstraintName("User_RoleId_fkey");
+
+            entity.HasOne(d => d.WorkingNursery)
+                .WithMany(p => p.Users)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("User_NurseryId_fkey");
         });
 
         modelBuilder.Entity<UserBehaviorLog>(entity =>

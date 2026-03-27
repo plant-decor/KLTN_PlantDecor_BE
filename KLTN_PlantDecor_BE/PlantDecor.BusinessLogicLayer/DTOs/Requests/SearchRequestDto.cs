@@ -36,5 +36,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     {
         public Pagination Pagination { get; set; } = new Pagination();
         public int? NurseryId { get; set; }
+        public int? PlantId { get; set; }
     }
 }
