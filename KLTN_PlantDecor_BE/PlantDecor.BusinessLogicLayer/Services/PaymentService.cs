@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -17,11 +18,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IConfiguration _configuration;
         private const int PaymentTimeoutMinutes = 30;
         private const int MaxRetryAttempts = 3;
+        private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration)
+        public PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration, ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<CreatePaymentUrlResponseDto> CreatePaymentUrlAsync(int userId, CreatePaymentRequestDto request, HttpContext httpContext)
@@ -433,25 +436,74 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task AssignShippersForPaidOrderAsync(Order order)
         {
+            _logger.LogInformation("Start assigning shippers for OrderId={OrderId}", order.Id);
+
             var currentOrderNurseryOrderIds = order.NurseryOrders.Select(no => no.Id).ToHashSet();
+
+            _logger.LogInformation(
+                "Current order nursery order ids: {NurseryOrderIds}",
+                string.Join(", ", currentOrderNurseryOrderIds));
 
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
             var todayStart = now.Date;
             var tomorrowStart = todayStart.AddDays(1);
 
-            foreach (var nurseryOrder in order.NurseryOrders.Where(no => no.Status == (int)OrderStatusEnum.Paid))
+            _logger.LogInformation(
+                "Assign time window: Now={Now}, TodayStart={TodayStart}, TomorrowStart={TomorrowStart}",
+                now, todayStart, tomorrowStart);
+
+            var paidNurseryOrders = order.NurseryOrders
+                .Where(no => no.Status == (int)OrderStatusEnum.Paid)
+                .ToList();
+
+            _logger.LogInformation(
+                "Found {Count} paid nursery orders to assign for OrderId={OrderId}",
+                paidNurseryOrders.Count, order.Id);
+
+            foreach (var nurseryOrder in paidNurseryOrders)
             {
+                _logger.LogInformation(
+                    "Processing NurseryOrderId={NurseryOrderId}, NurseryId={NurseryId}, CurrentStatus={Status}, CurrentShipperId={ShipperId}",
+                    nurseryOrder.Id, nurseryOrder.NurseryId, nurseryOrder.Status, nurseryOrder.ShipperId);
+
                 var nurseryShippers = await _unitOfWork.UserRepository.GetShippersByNurseryIdAsync(nurseryOrder.NurseryId);
 
+                _logger.LogInformation(
+                    "Found {Count} shippers for NurseryId={NurseryId}. ShipperIds=[{ShipperIds}]",
+                    nurseryShippers.Count(),
+                    nurseryOrder.NurseryId,
+                    string.Join(", ", nurseryShippers.Select(s => s.Id)));
+
                 if (!nurseryShippers.Any())
+                {
+                    _logger.LogWarning(
+                        "No shipper found for NurseryOrderId={NurseryOrderId}, NurseryId={NurseryId}. Skip assigning.",
+                        nurseryOrder.Id, nurseryOrder.NurseryId);
                     continue;
+                }
 
                 var nurseryScopedExistingOrders = (await _unitOfWork.NurseryOrderRepository.GetByNurseryIdAsync(nurseryOrder.NurseryId))
                     .Where(no => !currentOrderNurseryOrderIds.Contains(no.Id))
                     .ToList();
 
-                var selectedShipper = nurseryShippers
+                _logger.LogInformation(
+                    "NurseryId={NurseryId} has {Count} existing nursery orders for workload calculation (excluding current order). ExistingNurseryOrderIds=[{ExistingIds}]",
+                    nurseryOrder.NurseryId,
+                    nurseryScopedExistingOrders.Count,
+                    string.Join(", ", nurseryScopedExistingOrders.Select(x => x.Id)));
+
+                foreach (var existingOrder in nurseryScopedExistingOrders)
+                {
+                    _logger.LogInformation(
+                        "Existing NurseryOrderId={NurseryOrderId}, ShipperId={ShipperId}, Status={Status}, AssignedAt={AssignedAt}",
+                        existingOrder.Id,
+                        existingOrder.ShipperId,
+                        existingOrder.Status,
+                        existingOrder.AssignedAt);
+                }
+
+                var shipperMetrics = nurseryShippers
                     .Select(shipper => new
                     {
                         Shipper = shipper,
@@ -464,18 +516,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             no.AssignedAt.Value >= todayStart &&
                             no.AssignedAt.Value < tomorrowStart)
                     })
+                    .ToList();
+
+                foreach (var metric in shipperMetrics)
+                {
+                    _logger.LogInformation(
+                        "ShipperId={ShipperId}, NurseryId={NurseryId}, CurrentLoad={CurrentLoad}, DailyAssignedCount={DailyAssignedCount}",
+                        metric.Shipper.Id,
+                        nurseryOrder.NurseryId,
+                        metric.CurrentLoad,
+                        metric.DailyAssignedCount);
+                }
+
+                var selectedShipper = shipperMetrics
                     .OrderBy(x => x.CurrentLoad)
                     .ThenBy(x => x.DailyAssignedCount)
                     .ThenBy(x => x.Shipper.Id)
-                    .First().Shipper;
+                    .First()
+                    .Shipper;
+
+                _logger.LogInformation(
+                    "Selected ShipperId={ShipperId} for NurseryOrderId={NurseryOrderId}, NurseryId={NurseryId}",
+                    selectedShipper.Id, nurseryOrder.Id, nurseryOrder.NurseryId);
 
                 nurseryOrder.ShipperId = selectedShipper.Id;
                 nurseryOrder.AssignedAt = now;
                 nurseryOrder.Status = (int)OrderStatusEnum.Assigned;
                 nurseryOrder.UpdatedAt = now;
 
+                _logger.LogInformation(
+                    "Updated NurseryOrderId={NurseryOrderId}: ShipperId={ShipperId}, AssignedAt={AssignedAt}, NewStatus={Status}, UpdatedAt={UpdatedAt}",
+                    nurseryOrder.Id,
+                    nurseryOrder.ShipperId,
+                    nurseryOrder.AssignedAt,
+                    nurseryOrder.Status,
+                    nurseryOrder.UpdatedAt);
+
                 _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             }
+
+            _logger.LogInformation("Finish assigning shippers for OrderId={OrderId}", order.Id);
         }
 
         #endregion
