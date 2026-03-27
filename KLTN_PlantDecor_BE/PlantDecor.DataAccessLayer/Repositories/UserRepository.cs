@@ -32,6 +32,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(u => u.Role)
                 .Include(u => u.UserProfile) // Include UserProfile for GetByIdAsync
                 .Include(u => u.RefreshTokens) // Include RefreshTokens for GetByIdAsync
+                .Include(u => u.WorkingNursery) // Include WorkingNursery for UserResponse
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
@@ -41,6 +42,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(u => u.Role)
                 .Include(u => u.UserProfile)
                 .Include(u => u.RefreshTokens)
+                .Include(u => u.WorkingNursery) // Include WorkingNursery for UserResponse
                 .ToListAsync();
         }
 
@@ -50,7 +52,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var query = _context.Users
                 .Include(u => u.Role)
                 .Include(u => u.UserProfile)
-                .Include(u => u.RefreshTokens);
+                .Include(u => u.RefreshTokens)
+                .Include(u => u.WorkingNursery); // Include WorkingNursery for UserResponse
             //.Where(u => u.Role.Name != "Admin");
 
             var totalCount = await query.CountAsync();
@@ -73,7 +76,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
             .Include(u => u.Role)
             .Include(u => u.UserProfile)
             .Include(u => u.RefreshTokens)
+            .Include(u => u.WorkingNursery) // Include WorkingNursery for UserResponse
             .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        }
+
+        // Get all shippers working in a specific nursery
+        public async Task<List<User>> GetShippersByNurseryIdAsync(int nurseryId)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.WorkingNursery)
+                .Where(u =>
+                    u.NurseryId == nurseryId &&
+                    u.RoleId == (int)RoleEnum.Shipper &&
+                    u.Status == (int)UserStatusEnum.Active &&
+                    u.IsVerified)
+                .ToListAsync();
         }
 
         public async Task<User?> GetByRefreshTokenAsync(string refreshToken)
@@ -85,6 +103,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             .Include(u => u.Role)
             .Include(u => u.UserProfile)
             .Include(u => u.RefreshTokens)
+            .Include(u => u.WorkingNursery) // Include WorkingNursery for UserResponse
             .FirstOrDefaultAsync(u =>
                     u.RefreshTokens.Any(rt => rt.Token.Equals(refreshToken) && rt.IsRevoked != true) &&
                     u.Status == (int)UserStatusEnum.Active
@@ -106,6 +125,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(u => u.Role)
                 .Include(u => u.UserProfile)
                 .Include(u => u.RefreshTokens)
+                .Include(u => u.WorkingNursery) // Include WorkingNursery for UserResponse
                 .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
         }
 

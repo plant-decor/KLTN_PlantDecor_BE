@@ -233,9 +233,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var order = await ResolveTargetOrderForPaymentAsync(payment);
 
                     // Update Transaction status to Completed
-                    dbTransaction.Status = (int)TransactionStatusEnum.Completed;
+                    dbTransaction.Status = (int)TransactionStatusEnum.Paid;
                     // Update Payment status to Success
-                    payment.Status = (int)PaymentStatusEnum.Success;
+                    payment.Status = (int)PaymentStatusEnum.Paid;
                     payment.PaidAt = DateTime.Now;
 
                     // Update Order status based on payment type and current order status
@@ -249,6 +249,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         nurseryOrder.Status = newOrderStatus;
                         nurseryOrder.UpdatedAt = DateTime.Now;
+                    }
+
+                    if (newOrderStatus == (int)OrderStatusEnum.Paid)
+                    {
+                        await AssignShippersForPaidOrderAsync(order);
                     }
 
                     // Update inventory for OtherProduct orders (CommonPlant, NurseryMaterial, NurseryPlantCombo)
@@ -423,6 +428,53 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         }
                     }
                 }
+            }
+        }
+
+        private async Task AssignShippersForPaidOrderAsync(Order order)
+        {
+            var currentOrderNurseryOrderIds = order.NurseryOrders.Select(no => no.Id).ToHashSet();
+
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+            var todayStart = now.Date;
+            var tomorrowStart = todayStart.AddDays(1);
+
+            foreach (var nurseryOrder in order.NurseryOrders.Where(no => no.Status == (int)OrderStatusEnum.Paid))
+            {
+                var nurseryShippers = await _unitOfWork.UserRepository.GetShippersByNurseryIdAsync(nurseryOrder.NurseryId);
+
+                if (!nurseryShippers.Any())
+                    continue;
+
+                var nurseryScopedExistingOrders = (await _unitOfWork.NurseryOrderRepository.GetByNurseryIdAsync(nurseryOrder.NurseryId))
+                    .Where(no => !currentOrderNurseryOrderIds.Contains(no.Id))
+                    .ToList();
+
+                var selectedShipper = nurseryShippers
+                    .Select(shipper => new
+                    {
+                        Shipper = shipper,
+                        CurrentLoad = nurseryScopedExistingOrders.Count(no =>
+                            no.ShipperId == shipper.Id &&
+                            (no.Status == (int)OrderStatusEnum.Assigned || no.Status == (int)OrderStatusEnum.Shipping)),
+                        DailyAssignedCount = nurseryScopedExistingOrders.Count(no =>
+                            no.ShipperId == shipper.Id &&
+                            no.AssignedAt.HasValue &&
+                            no.AssignedAt.Value >= todayStart &&
+                            no.AssignedAt.Value < tomorrowStart)
+                    })
+                    .OrderBy(x => x.CurrentLoad)
+                    .ThenBy(x => x.DailyAssignedCount)
+                    .ThenBy(x => x.Shipper.Id)
+                    .First().Shipper;
+
+                nurseryOrder.ShipperId = selectedShipper.Id;
+                nurseryOrder.AssignedAt = now;
+                nurseryOrder.Status = (int)OrderStatusEnum.Assigned;
+                nurseryOrder.UpdatedAt = now;
+
+                _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             }
         }
 

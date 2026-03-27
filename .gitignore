@@ -63,3 +63,4 @@ nunit-*.xml
 /KLTN_PlantDecor_BE/PlantDecor.API/appsettings.Development.json
 /KLTN_PlantDecor_BE/PlantDecor.API/appsettings.json
 /KLTN_PlantDecor_BE/PlantDecor.DataAccessLayer/Context/PlantDecorContextFactory.cs
+/KLTN_PlantDecor_BE/PlantDecor.DataAccessLayer/Context/PlantDecorContextFactory.cs
