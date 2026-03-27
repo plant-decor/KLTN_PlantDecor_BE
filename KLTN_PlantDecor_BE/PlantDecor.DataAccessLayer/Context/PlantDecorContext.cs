@@ -33,6 +33,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<CustomerSurvey> CustomerSurveys { get; set; }
 
+    public virtual DbSet<Embedding> Embeddings { get; set; }
+
     public virtual DbSet<Material> Materials { get; set; }
 
     public virtual DbSet<MaterialImage> MaterialImages { get; set; }
@@ -109,8 +111,12 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Wishlist> Wishlists { get; set; }
 
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Bật pgvector extension
+        modelBuilder.HasPostgresExtension("vector");
+
         modelBuilder.Entity<AilayoutResponseModeration>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("AILayoutResponseModeration_pkey");
@@ -1094,6 +1100,35 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.User).WithOne(p => p.UserProfile)
                 .HasForeignKey<UserProfile>(d => d.UserId)
                 .HasConstraintName("UserProfile_UserId_fkey");
+        });
+
+        modelBuilder.Entity<Embedding>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.EntityType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.EntityId)
+                .IsRequired();
+
+            entity.Property(e => e.Content)
+                .IsRequired();
+
+            entity.Property(e => e.EmbeddingVector)
+                .HasColumnType("vector(1536)") // text-embedding-3-small = 1536
+                .HasColumnName("embedding");
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
+
+            // Unique constraint
+            entity.HasIndex(e => new { e.EntityType, e.EntityId })
+                .IsUnique();
+
+            // Index filter theo type
+            entity.HasIndex(e => e.EntityType);
         });
 
         modelBuilder.Entity<Wishlist>(entity =>
