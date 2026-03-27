@@ -7,6 +7,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task SetActive(User user);
         Task DeActive(User user);
         Task<User?> GetByEmailAsync(string email);
+        Task<List<User>> GetShippersByNurseryIdAsync(int nurseryId);
         Task<User?> GetByRefreshTokenAsync(string refreshToken);
         Task<bool> VerifyPasswordAsync(User user, string password);
         Task<List<RefreshToken>> GetRefreshTokenAsync(int userId);
