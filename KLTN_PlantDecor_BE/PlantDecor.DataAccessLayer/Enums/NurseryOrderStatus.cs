@@ -13,7 +13,7 @@ namespace PlantDecor.DataAccessLayer.Enums
         DepositPaid = 2,// đã thanh toán tiền đặt cọc, chờ thanh toán phần còn lại
         Assigned = 3,// đã được phân công cho nhân viên xử lý, chờ xử lý đơn hàng
         Shipping = 4, // đang vận chuyển, chờ giao hàng
-        Delivered = 5, // đã giao hàng, chờ xác nhận đã nhận được hàng
+        Delivered = 5, // đã giao hàng tới
         Cancelled = 6 // đã hủy, có thể do khách hàng hủy trước khi thanh toán hoặc do nhân viên hủy sau khi thanh toán
     }
 }

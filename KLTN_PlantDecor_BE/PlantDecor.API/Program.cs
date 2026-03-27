@@ -149,6 +149,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<INurseryOrderService, NurseryOrderService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();
