@@ -16,13 +16,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly PlantDecorContext _context;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ICacheService _cacheService;
         private const decimal DepositRatio = 0.3m;
+        private const string ALL_CART_KEY = "cart_user";
 
-        public OrderService(IUnitOfWork unitOfWork, PlantDecorContext context, IBackgroundJobClient backgroundJobClient)
+        public OrderService(IUnitOfWork unitOfWork, PlantDecorContext context, IBackgroundJobClient backgroundJobClient, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _context = context;
             _backgroundJobClient = backgroundJobClient;
+            _cacheService = cacheService;
         }
 
         public async Task<OrderResponseDto> CreateOrderAsync(int userId, CreateOrderRequestDto request)
@@ -166,6 +169,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                     _context.CartItems.RemoveRange(itemsToRemove);
                     await _context.SaveChangesAsync();
+
+                    // Invalidate cart cache in Redis so subsequent reads reflect DB changes
+                    await _cacheService.RemoveByPrefixAsync($"{ALL_CART_KEY}_{userId}");
                 }
             }
 
