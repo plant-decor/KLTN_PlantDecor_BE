@@ -144,6 +144,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("combos_shop");
             await _cacheService.RemoveByPrefixAsync("common_plants_all");
             await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
     }
 }

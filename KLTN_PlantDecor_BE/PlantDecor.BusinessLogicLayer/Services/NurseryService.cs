@@ -348,6 +348,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("plant_nurseries");
             await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
             await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         #endregion

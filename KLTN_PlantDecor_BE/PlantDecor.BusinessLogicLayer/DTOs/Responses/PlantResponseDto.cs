@@ -54,7 +54,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? SizeName { get; set; }
         public int? CareLevelType { get; set; }
         public string? CareLevelTypeName { get; set; }
-        public string? CareLevel { get; set; }
         public bool? IsActive { get; set; }
         public string? PrimaryImageUrl { get; set; }
         public int TotalInstances { get; set; }

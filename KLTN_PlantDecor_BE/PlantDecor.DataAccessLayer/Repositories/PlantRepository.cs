@@ -50,6 +50,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<Plant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<PaginatedResult<Plant>> GetActivePlantsNotInNurseryAsync(int nurseryId, Pagination pagination)
+        {
+            var query = _context.Plants
+                .Where(p => p.IsActive == true && !p.CommonPlants.Any(cp => cp.NurseryId == nurseryId) && !p.IsUniqueInstance)
+                .Include(p => p.Categories)
+                .Include(p => p.Tags)
+                .Include(p => p.PlantImages)
+                .Include(p => p.PlantInstances)
+                .OrderByDescending(p => p.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<Plant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         public async Task<Plant?> GetByIdWithDetailsAsync(int id)
         {
             return await _context.Plants
@@ -167,13 +186,10 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
                 var keyword = filter.Keyword.Trim().ToLower();
-                var keywordCareLevelType = ParseCareLevelType(keyword);
+                // Keyword search cho cây: bao quát cả Name và SpecificName
                 query = query.Where(p =>
                     p.Name.ToLower().Contains(keyword)
-                    || (p.SpecificName != null && p.SpecificName.ToLower().Contains(keyword))
-                    || (p.Origin != null && p.Origin.ToLower().Contains(keyword))
-                    || (keywordCareLevelType.HasValue && p.CareLevelType == keywordCareLevelType.Value)
-                );
+                    || (p.SpecificName != null && p.SpecificName.ToLower().Contains(keyword)));
             }
 
             if (!isShop && filter.IsActive.HasValue)

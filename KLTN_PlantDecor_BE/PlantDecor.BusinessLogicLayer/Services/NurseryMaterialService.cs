@@ -356,11 +356,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveDataAsync(ALL_NURSERY_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERY_MATERIALS_KEY}_");
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task InvalidateCacheAsync(int? materialId = null)
         {
             await _cacheService.RemoveByPrefixAsync(ALL_NURSERY_MATERIALS_KEY);
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (materialId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");

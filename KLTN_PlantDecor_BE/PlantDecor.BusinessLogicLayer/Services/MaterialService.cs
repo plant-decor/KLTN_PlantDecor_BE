@@ -473,6 +473,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ACTIVE_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (materialId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");

@@ -403,6 +403,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_KEY);
             await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH_KEY);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (nurseryId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}");

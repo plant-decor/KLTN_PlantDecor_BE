@@ -507,6 +507,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("combos_active");
             await _cacheService.RemoveByPrefixAsync("combos_shop");
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private static PlantSearchFilter BuildSearchFilter(PlantSearchRequestDto? request)
@@ -554,7 +555,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : filter.FengShuiElement.Trim().ToLowerInvariant();
 
-            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+            return $"{prefix}_kwv2_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

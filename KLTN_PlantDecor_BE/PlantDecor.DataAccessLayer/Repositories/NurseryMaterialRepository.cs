@@ -115,11 +115,10 @@ namespace PlantDecor.DataAccessLayer.Repositories
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                var term = searchTerm.ToLower();
+                var term = searchTerm.Trim().ToLower();
+                // Name-only search: keyword chỉ áp dụng trên tên vật tư
                 query = query.Where(nm =>
-                    (nm.Material.Name != null && nm.Material.Name.ToLower().Contains(term)) ||
-                    (nm.Material.Description != null && nm.Material.Description.ToLower().Contains(term)) ||
-                    (nm.Nursery.Name != null && nm.Nursery.Name.ToLower().Contains(term)));
+                    nm.Material.Name != null && nm.Material.Name.ToLower().Contains(term));
             }
 
             // Category filter

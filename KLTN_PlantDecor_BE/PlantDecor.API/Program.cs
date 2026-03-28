@@ -124,6 +124,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
+            builder.Services.AddScoped<IShopSearchService, ShopSearchService>();
 
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IMaterialService, MaterialService>();

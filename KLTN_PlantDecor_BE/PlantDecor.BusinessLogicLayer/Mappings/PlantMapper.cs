@@ -83,7 +83,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 SizeName = GetPlantSizeName(plant.Size),
                 CareLevelType = plant.CareLevelType,
                 CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
-                CareLevel = GetCareLevelName(plant.CareLevelType),
                 IsActive = plant.IsActive,
                 PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
                     ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,

@@ -745,8 +745,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!string.IsNullOrWhiteSpace(searchDto.Keyword))
             {
                 var keyword = searchDto.Keyword.ToLower();
-                query = query.Where(npc => (npc.PlantCombo.ComboName != null && npc.PlantCombo.ComboName.ToLower().Contains(keyword)) ||
-                                           (npc.PlantCombo.Description != null && npc.PlantCombo.Description.ToLower().Contains(keyword)));
+                // Name-only search: keyword chỉ áp dụng trên tên combo
+                query = query.Where(npc =>
+                    npc.PlantCombo.ComboName != null && npc.PlantCombo.ComboName.ToLower().Contains(keyword));
             }
 
             // Price range
@@ -769,11 +770,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 query = query.Where(npc => npc.PlantCombo.ChildSafe == searchDto.ChildSafe.Value);
             }
 
-            // Category filter: combo is matched when any plant in the combo belongs to CategoryId
-            if (searchDto.CategoryId.HasValue)
+            var categoryIds = (searchDto.CategoryIds ?? new List<int>()).ToList();
+            if (searchDto.CategoryId.HasValue && !categoryIds.Contains(searchDto.CategoryId.Value))
+            {
+                categoryIds.Add(searchDto.CategoryId.Value);
+            }
+
+            // Category filter: combo is matched when any plant in the combo belongs to one of the categories
+            if (categoryIds.Any())
             {
                 query = query.Where(npc => npc.PlantCombo.PlantComboItems
-                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => c.Id == searchDto.CategoryId.Value)));
+                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => categoryIds.Contains(c.Id))));
             }
 
             // Tags
@@ -793,7 +800,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
                     ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
-                    AverageRating = 0,
                     Nurseries = g.Select(npc => new SellingNurseryResponseDto
                     {
                         NurseryId = npc.NurseryId,
@@ -802,10 +808,31 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }).ToList()
                 });
 
+            groupedByCombo = ApplySellingComboSort(groupedByCombo, searchDto);
+
             var totalCount = groupedByCombo.Count();
             var paginatedItems = groupedByCombo.Skip((pagination.PageNumber - 1) * pagination.PageSize).Take(pagination.PageSize).ToList();
 
             return new PaginatedResult<SellingPlantComboResponseDto>(paginatedItems, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static IEnumerable<SellingPlantComboResponseDto> ApplySellingComboSort(
+            IEnumerable<SellingPlantComboResponseDto> source,
+            PlantComboShopSearchRequestDto searchDto)
+        {
+            var sortBy = searchDto.SortBy?.Trim().ToLowerInvariant();
+            var isDescending = string.Equals(searchDto.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+            return sortBy switch
+            {
+                "price" => isDescending
+                    ? source.OrderByDescending(item => item.Price).ThenBy(item => item.Name)
+                    : source.OrderBy(item => item.Price).ThenBy(item => item.Name),
+                "name" => isDescending
+                    ? source.OrderByDescending(item => item.Name)
+                    : source.OrderBy(item => item.Name),
+                _ => source.OrderBy(item => item.Name)
+            };
         }
 
         #endregion
@@ -817,6 +844,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task InvalidateCacheAsync(int? comboId = null)
@@ -825,6 +853,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync("selling_combos_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (comboId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_COMBO_KEY}_{comboId.Value}");
