@@ -253,7 +253,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("/api/shop/nurseries/{nurseryId}/plant-instances/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> SearchAvailablePlantInstancesByNursery(int nurseryId, [FromBody] ShopPlantInstanceSearchRequestDto request)
+        public async Task<IActionResult> SearchAvailablePlantInstancesByNursery(int nurseryId, [FromBody] ShopPlantInstanceByNurserySearchRequestDto request)
         {
             var pagination = request?.Pagination ?? new Pagination();
             var result = await _plantInstanceService.GetAvailableByNurseryIdAsync(nurseryId, pagination, request?.PlantId);

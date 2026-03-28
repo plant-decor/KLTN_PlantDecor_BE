@@ -250,7 +250,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = instance.PlantImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     instance.PlantImages.Add(new PlantImage
@@ -258,12 +257,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         PlantId = instance.PlantId.Value,
                         PlantInstanceId = instance.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 instance.UpdatedAt = DateTime.Now;
@@ -281,6 +277,78 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+            var updatedInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            return updatedInstance!.ToResponse();
+        }
+
+        public async Task<PlantInstanceResponseDto> UploadPlantInstanceThumbnailAsync(int instanceId, int managerId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+            if (!instance.PlantId.HasValue)
+                throw new BadRequestException("PlantInstance chưa có PlantId hợp lệ");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantInstanceImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Plant instance thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in instance.PlantImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                instance.PlantImages.Add(new PlantImage
+                {
+                    PlantId = instance.PlantId.Value,
+                    PlantInstanceId = instance.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                instance.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);

@@ -38,4 +38,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int? NurseryId { get; set; }
         public int? PlantId { get; set; }
     }
+
+    public class ShopPlantInstanceByNurserySearchRequestDto
+    {
+        public Pagination Pagination { get; set; } = new Pagination();
+        public int? PlantId { get; set; }
+    }
 }

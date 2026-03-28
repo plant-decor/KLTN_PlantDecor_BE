@@ -170,19 +170,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = material.MaterialImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     material.MaterialImages.Add(new MaterialImage
                     {
                         MaterialId = material.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 material.UpdatedAt = DateTime.Now;
@@ -200,6 +196,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(materialId);
+
+            var updatedMaterial = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updatedMaterial!.ToResponse();
+        }
+
+        public async Task<MaterialResponseDto> UploadMaterialThumbnailAsync(int materialId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "MaterialImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Material thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in material.MaterialImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                material.MaterialImages.Add(new MaterialImage
+                {
+                    MaterialId = material.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                material.UpdatedAt = DateTime.Now;
+                _unitOfWork.MaterialRepository.PrepareUpdate(material);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);

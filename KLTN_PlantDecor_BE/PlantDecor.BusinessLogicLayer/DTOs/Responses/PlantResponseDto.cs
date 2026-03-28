@@ -50,6 +50,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Id { get; set; }
         public string Name { get; set; } = null!;
         public decimal? BasePrice { get; set; }
+        public bool? IsUniqueInstance { get; set; }
         public int? Size { get; set; }
         public string? SizeName { get; set; }
         public int? CareLevelType { get; set; }

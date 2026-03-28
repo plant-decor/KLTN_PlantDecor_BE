@@ -58,8 +58,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Unit = material.Unit,
                 Brand = material.Brand,
                 IsActive = material.IsActive,
-                PrimaryImageUrl = material.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? material.MaterialImages.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = material.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 CategoryNames = material.Categories.Select(c => c.Name).ToList(),
                 TagNames = material.Tags.Select(t => t.TagName).ToList()
             };

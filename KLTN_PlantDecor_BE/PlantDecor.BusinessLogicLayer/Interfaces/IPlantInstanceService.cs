@@ -43,6 +43,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// Upload ảnh cho PlantInstance
         /// POST /api/manager/plant-instances/{instanceId}/images
         /// </summary>
+        Task<PlantInstanceResponseDto> UploadPlantInstanceThumbnailAsync(int instanceId, int managerId, IFormFile file);
         Task<PlantInstanceResponseDto> UploadPlantInstanceImagesAsync(int instanceId, int managerId, List<IFormFile> files);
 
         #endregion

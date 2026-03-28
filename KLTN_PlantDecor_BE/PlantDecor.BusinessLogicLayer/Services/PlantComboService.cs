@@ -202,19 +202,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = combo.PlantComboImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     combo.PlantComboImages.Add(new PlantComboImage
                     {
                         PlantComboId = combo.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 combo.UpdatedAt = DateTime.Now;
@@ -232,6 +228,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(comboId);
+
+            var updatedCombo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            return updatedCombo!.ToResponse();
+        }
+
+        public async Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantComboImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Plant combo thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in combo.PlantComboImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                combo.PlantComboImages.Add(new PlantComboImage
+                {
+                    PlantComboId = combo.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                combo.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);

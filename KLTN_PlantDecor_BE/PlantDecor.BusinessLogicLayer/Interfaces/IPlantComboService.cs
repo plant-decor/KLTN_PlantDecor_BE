@@ -14,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto?> GetComboByIdAsync(int id);
         Task<PlantComboResponseDto> CreateComboAsync(PlantComboRequestDto request);
         Task<PlantComboResponseDto> UpdateComboAsync(int id, PlantComboUpdateDto request);
+        Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file);
         Task<PlantComboResponseDto> UploadPlantComboImagesAsync(int comboId, List<IFormFile> files);
         Task<bool> DeleteComboAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
