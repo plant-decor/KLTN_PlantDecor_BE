@@ -110,7 +110,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(nm => nm.Material).ThenInclude(m => m.Categories)
                 .Include(nm => nm.Material).ThenInclude(m => m.Tags)
                 .Include(nm => nm.Nursery)
-                .Where(nm => nm.IsActive && nm.Quantity > nm.ReservedQuantity && nm.Nursery.IsActive == true);
+                .Where(nm => nm.IsActive && nm.Quantity > 0 && nm.Nursery.IsActive == true);
 
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))

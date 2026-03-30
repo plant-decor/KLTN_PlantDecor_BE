@@ -584,7 +584,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         continue;
                     }
 
-                    var availableStock = commonPlant.Quantity - commonPlant.ReservedQuantity;
+                    var availableStock = commonPlant.Quantity;
                     if (availableStock < requiredQuantity)
                     {
                         var plantName = item.Plant?.Name ?? $"PlantId {item.PlantId.Value}";

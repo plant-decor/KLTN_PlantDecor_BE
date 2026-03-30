@@ -416,7 +416,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Phone = cp.Nursery.Phone,
                     Latitude = cp.Nursery.Latitude,
                     Longitude = cp.Nursery.Longitude,
-                    AvailableInstanceCount = cp.Quantity - cp.ReservedQuantity,
+                    AvailableInstanceCount = cp.Quantity,
                     MinPrice = 0,
                     MaxPrice = 0
                 })

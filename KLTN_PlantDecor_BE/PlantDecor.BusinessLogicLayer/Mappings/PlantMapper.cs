@@ -76,8 +76,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             var availableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available);
             var availableCommonQuantity = plant.CommonPlants
-                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity)
-                .Sum(cp => cp.Quantity - cp.ReservedQuantity);
+                .Where(cp => cp.IsActive && cp.Quantity > 0)
+                .Sum(cp => cp.Quantity);
             var primaryImageUrl = plant.PlantImages
                 .Where(i => i.PlantInstanceId == null && i.IsPrimary == true)
                 .Select(i => i.ImageUrl)
