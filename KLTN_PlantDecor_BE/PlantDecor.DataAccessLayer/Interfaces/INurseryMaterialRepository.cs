@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
@@ -20,8 +21,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             List<int>? tagIds,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending);
+            NurseryMaterialSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection);
 
         Task<int> CountForEmbeddingBackfillAsync();
         Task<List<NurseryMaterial>> GetEmbeddingBackfillBatchAsync(int skip, int take);

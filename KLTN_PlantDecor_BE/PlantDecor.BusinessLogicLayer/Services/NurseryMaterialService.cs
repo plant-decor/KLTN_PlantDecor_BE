@@ -363,7 +363,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 searchRequest.MinPrice,
                 searchRequest.MaxPrice,
                 searchRequest.SortBy,
-                searchRequest.IsAscending);
+                searchRequest.SortDirection);
 
             return new PaginatedResult<NurseryMaterialListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),

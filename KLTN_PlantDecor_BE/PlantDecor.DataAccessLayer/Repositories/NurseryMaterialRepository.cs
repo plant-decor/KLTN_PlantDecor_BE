@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
@@ -103,8 +104,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             List<int>? tagIds,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending)
+            NurseryMaterialSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection)
         {
             var query = _context.NurseryMaterials
                 .Include(nm => nm.Material).ThenInclude(m => m.Categories)
@@ -143,30 +144,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 query = query.Where(nm => (double?)nm.Material.BasePrice <= maxPrice.Value);
             }
 
-            // Sorting
-            if (!string.IsNullOrEmpty(sortBy))
+            var appliedSortBy = sortBy ?? NurseryMaterialSortByEnum.Newest;
+            var appliedSortDirection = sortDirection ?? (sortBy.HasValue ? SortDirectionEnum.Asc : SortDirectionEnum.Desc);
+            var isDesc = appliedSortDirection == SortDirectionEnum.Desc;
+
+            query = appliedSortBy switch
             {
-                switch (sortBy.ToLower())
-                {
-                    case "price":
-                        query = isAscending
-                            ? query.OrderBy(nm => nm.Material.BasePrice)
-                            : query.OrderByDescending(nm => nm.Material.BasePrice);
-                        break;
-                    case "name":
-                        query = isAscending
-                            ? query.OrderBy(nm => nm.Material.Name)
-                            : query.OrderByDescending(nm => nm.Material.Name);
-                        break;
-                    default:
-                        query = query.OrderByDescending(nm => nm.Id);
-                        break;
-                }
-            }
-            else
-            {
-                query = query.OrderByDescending(nm => nm.Id);
-            }
+                NurseryMaterialSortByEnum.Price => isDesc
+                    ? query.OrderByDescending(nm => nm.Material.BasePrice)
+                    : query.OrderBy(nm => nm.Material.BasePrice),
+                NurseryMaterialSortByEnum.Name => isDesc
+                    ? query.OrderByDescending(nm => nm.Material.Name)
+                    : query.OrderBy(nm => nm.Material.Name),
+                _ => isDesc
+                    ? query.OrderByDescending(nm => nm.Id)
+                    : query.OrderBy(nm => nm.Id)
+            };
 
             var totalCount = await query.CountAsync();
             var items = await query

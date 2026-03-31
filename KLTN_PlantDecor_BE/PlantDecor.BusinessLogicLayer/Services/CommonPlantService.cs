@@ -464,7 +464,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 searchRequest.MinPrice,
                 searchRequest.MaxPrice,
                 searchRequest.SortBy,
-                searchRequest.IsAscending);
+                searchRequest.SortDirection);
 
             return new PaginatedResult<CommonPlantListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),

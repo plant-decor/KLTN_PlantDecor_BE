@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Helpers;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -22,8 +23,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public List<int>? Sizes { get; set; }
         public string? FengShuiElement { get; set; }
         public int? NurseryId { get; set; }
-        public string? SortBy { get; set; }
-        public string? SortDirection { get; set; }
+        public UnifiedSearchSortByEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
         public bool IncludePlants { get; set; } = true;
         public bool IncludeMaterials { get; set; } = true;
         public bool IncludeCombos { get; set; } = true;

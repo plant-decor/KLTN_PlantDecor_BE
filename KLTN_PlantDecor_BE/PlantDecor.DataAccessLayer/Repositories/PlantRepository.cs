@@ -272,21 +272,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         private static IQueryable<Plant> ApplySorting(IQueryable<Plant> query, PlantSearchFilter filter, bool isShop)
         {
-            var sortBy = (filter.SortBy ?? "createdAt").Trim().ToLower();
-            var isDesc = string.Equals(filter.SortDirection, "desc", StringComparison.OrdinalIgnoreCase)
-                || string.IsNullOrWhiteSpace(filter.SortDirection);
+            var sortBy = filter.SortBy ?? PlantSortByEnum.CreatedAt;
+            var sortDirection = filter.SortDirection ?? SortDirectionEnum.Desc;
+            var isDesc = sortDirection == SortDirectionEnum.Desc;
 
             return sortBy switch
             {
-                "name" => isDesc ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
-                "price" => isDesc ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
-                "size" or "sizename" or "plantsize" => isDesc
+                PlantSortByEnum.Name => isDesc ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
+                PlantSortByEnum.Price => isDesc ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
+                PlantSortByEnum.Size => isDesc
                     ? query.OrderByDescending(p => p.Size)
                     : query.OrderBy(p => p.Size),
-                "fengshuielement" or "fengshui" or "menh" => isDesc
-                    ? query.OrderByDescending(p => p.FengShuiElement)
-                    : query.OrderBy(p => p.FengShuiElement),
-                "availableinstances" when isShop => isDesc
+                PlantSortByEnum.AvailableInstances when isShop => isDesc
                     ? query.OrderByDescending(p =>
                         p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available
                             && (!filter.NurseryId.HasValue || i.CurrentNurseryId == filter.NurseryId.Value))
@@ -307,7 +304,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                                 && cp.Nursery != null
                                 && cp.Nursery.IsActive == true)
                             .Sum(cp => cp.Quantity)),
-                "availableinstances" => isDesc
+                PlantSortByEnum.AvailableInstances => isDesc
                     ? query.OrderByDescending(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available))
                     : query.OrderBy(p => p.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available)),
                 _ => isDesc ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt)

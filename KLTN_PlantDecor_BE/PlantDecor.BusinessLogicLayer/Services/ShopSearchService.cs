@@ -1,6 +1,7 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Text;
 
@@ -67,7 +68,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Sizes = searchRequest.Sizes,
                     FengShuiElement = searchRequest.FengShuiElement,
                     NurseryId = searchRequest.NurseryId,
-                    SortBy = searchRequest.SortBy,
+                    SortBy = MapUnifiedToPlantSort(searchRequest.SortBy),
                     SortDirection = searchRequest.SortDirection
                 });
             }
@@ -83,8 +84,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         TagIds = searchRequest.TagIds,
                         MinPrice = searchRequest.MinPrice.HasValue ? (double?)searchRequest.MinPrice.Value : null,
                         MaxPrice = searchRequest.MaxPrice.HasValue ? (double?)searchRequest.MaxPrice.Value : null,
-                        SortBy = searchRequest.SortBy,
-                        IsAscending = !string.Equals(searchRequest.SortDirection, "desc", StringComparison.OrdinalIgnoreCase)
+                        SortBy = MapUnifiedToMaterialSort(searchRequest.SortBy),
+                        SortDirection = searchRequest.SortDirection
                     },
                     pagination);
             }
@@ -103,7 +104,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ChildSafe = searchRequest.ChildSafe,
                         CategoryIds = searchRequest.CategoryIds,
                         TagIds = searchRequest.TagIds,
-                        SortBy = searchRequest.SortBy,
+                        SortBy = MapUnifiedToComboSort(searchRequest.SortBy),
                         SortDirection = searchRequest.SortDirection
                     });
             }
@@ -124,7 +125,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             builder.Append($"_tx{request.Toxicity}_ap{request.AirPurifying}_hf{request.HasFlower}_ui{request.IsUniqueInstance}");
             builder.Append($"_sz{NormalizeList(request.Sizes)}_cat{NormalizeList(request.CategoryIds)}_tag{NormalizeList(request.TagIds)}");
             builder.Append($"_fe{Normalize(request.FengShuiElement)}_n{request.NurseryId}");
-            builder.Append($"_sb{Normalize(request.SortBy)}_sd{Normalize(request.SortDirection)}");
+            builder.Append($"_sb{NormalizeEnum(request.SortBy)}_sd{NormalizeEnum(request.SortDirection)}");
             builder.Append($"_ip{request.IncludePlants}_im{request.IncludeMaterials}_ic{request.IncludeCombos}");
             return builder.ToString();
         }
@@ -141,6 +142,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 : value.Trim().ToLowerInvariant();
         }
 
+        private static string NormalizeEnum<TEnum>(TEnum? value) where TEnum : struct, Enum
+        {
+            return value.HasValue
+                ? value.Value.ToString().ToLowerInvariant()
+                : "none";
+        }
+
         private static string NormalizeList(IEnumerable<int>? values)
         {
             if (values == null)
@@ -152,6 +160,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .ToList();
 
             return normalized.Count == 0 ? "none" : string.Join("-", normalized);
+        }
+
+        private static PlantSortByEnum? MapUnifiedToPlantSort(UnifiedSearchSortByEnum? sortBy)
+        {
+            return sortBy switch
+            {
+                UnifiedSearchSortByEnum.CreatedAt => PlantSortByEnum.CreatedAt,
+                UnifiedSearchSortByEnum.Name => PlantSortByEnum.Name,
+                UnifiedSearchSortByEnum.Price => PlantSortByEnum.Price,
+                UnifiedSearchSortByEnum.Size => PlantSortByEnum.Size,
+                UnifiedSearchSortByEnum.AvailableInstances => PlantSortByEnum.AvailableInstances,
+                _ => null
+            };
+        }
+
+        private static NurseryMaterialSortByEnum? MapUnifiedToMaterialSort(UnifiedSearchSortByEnum? sortBy)
+        {
+            return sortBy switch
+            {
+                UnifiedSearchSortByEnum.Name => NurseryMaterialSortByEnum.Name,
+                UnifiedSearchSortByEnum.Price => NurseryMaterialSortByEnum.Price,
+                UnifiedSearchSortByEnum.CreatedAt => NurseryMaterialSortByEnum.Newest,
+                _ => null
+            };
+        }
+
+        private static PlantComboSortByEnum? MapUnifiedToComboSort(UnifiedSearchSortByEnum? sortBy)
+        {
+            return sortBy switch
+            {
+                UnifiedSearchSortByEnum.Name => PlantComboSortByEnum.Name,
+                UnifiedSearchSortByEnum.Price => PlantComboSortByEnum.Price,
+                _ => null
+            };
         }
     }
 }

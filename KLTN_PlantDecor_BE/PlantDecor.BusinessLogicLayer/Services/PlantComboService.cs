@@ -10,6 +10,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -899,15 +900,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IEnumerable<SellingPlantComboResponseDto> source,
             PlantComboShopSearchRequestDto searchDto)
         {
-            var sortBy = searchDto.SortBy?.Trim().ToLowerInvariant();
-            var isDescending = string.Equals(searchDto.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            var sortBy = searchDto.SortBy ?? PlantComboSortByEnum.Name;
+            var isDescending = (searchDto.SortDirection ?? SortDirectionEnum.Asc) == SortDirectionEnum.Desc;
 
             return sortBy switch
             {
-                "price" => isDescending
+                PlantComboSortByEnum.Price => isDescending
                     ? source.OrderByDescending(item => item.Price).ThenBy(item => item.Name)
                     : source.OrderBy(item => item.Price).ThenBy(item => item.Name),
-                "name" => isDescending
+                PlantComboSortByEnum.Name => isDescending
                     ? source.OrderByDescending(item => item.Name)
                     : source.OrderBy(item => item.Name),
                 _ => source.OrderBy(item => item.Name)
