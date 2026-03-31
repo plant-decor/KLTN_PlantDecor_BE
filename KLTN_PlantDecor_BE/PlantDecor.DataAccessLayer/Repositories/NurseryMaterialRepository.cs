@@ -177,5 +177,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             return new PaginatedResult<NurseryMaterial>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.NurseryMaterials.CountAsync();
+        }
+
+        public async Task<List<NurseryMaterial>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.NurseryMaterials
+                .AsNoTracking()
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Categories)
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Tags)
+                .Include(nm => nm.Nursery)
+                .OrderBy(nm => nm.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
+        }
     }
 }

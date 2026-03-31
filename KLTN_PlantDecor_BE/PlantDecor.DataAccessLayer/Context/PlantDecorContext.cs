@@ -1115,12 +1115,27 @@ public partial class PlantDecorContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
+            entity.ToTable("Embeddings", table =>
+            {
+                table.HasCheckConstraint("CK_Embeddings_ChunkIndex_NonNegative", "\"ChunkIndex\" >= 0");
+                table.HasCheckConstraint("CK_Embeddings_ChunkCount_Positive", "\"ChunkCount\" >= 1");
+                table.HasCheckConstraint("CK_Embeddings_ChunkIndex_Lt_ChunkCount", "\"ChunkIndex\" < \"ChunkCount\"");
+            });
+
             entity.Property(e => e.EntityType)
                 .IsRequired()
                 .HasMaxLength(50);
 
             entity.Property(e => e.EntityId)
                 .IsRequired();
+
+            entity.Property(e => e.ChunkIndex)
+                .IsRequired()
+                .HasDefaultValue(0);
+
+            entity.Property(e => e.ChunkCount)
+                .IsRequired()
+                .HasDefaultValue(1);
 
             entity.Property(e => e.Content)
                 .IsRequired();
@@ -1132,8 +1147,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb");
 
-            // Unique constraint
-            entity.HasIndex(e => new { e.EntityType, e.EntityId })
+            // Unique per chunk of an entity
+            entity.HasIndex(e => new { e.EntityType, e.EntityId, e.ChunkIndex })
                 .IsUnique();
 
             // Index filter theo type

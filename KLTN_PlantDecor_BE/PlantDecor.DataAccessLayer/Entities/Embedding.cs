@@ -7,6 +7,8 @@ namespace PlantDecor.DataAccessLayer.Entities
         public Guid Id { get; set; }
         public string EntityType { get; set; } = null!;
         public Guid EntityId { get; set; }
+        public int ChunkIndex { get; set; } = 0;
+        public int ChunkCount { get; set; } = 1;
         public string Content { get; set; } = null!;
         public Vector? EmbeddingVector { get; set; }
         public Dictionary<string, object>? Metadata { get; set; }

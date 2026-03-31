@@ -33,5 +33,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             double? maxPrice,
             string? sortBy,
             bool isAscending);
+
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<CommonPlant>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }

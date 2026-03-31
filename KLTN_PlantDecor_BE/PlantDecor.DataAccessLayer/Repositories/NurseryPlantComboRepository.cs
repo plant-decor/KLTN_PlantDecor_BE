@@ -26,12 +26,31 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return _context.NurseryPlantCombos.AsQueryable();
         }
+
         public async Task<NurseryPlantCombo?> GetByIdWithComboItemsAsync(int id)
         {
             return await _context.NurseryPlantCombos
                 .Include(npc => npc.PlantCombo)
                     .ThenInclude(pc => pc.PlantComboItems)
                 .FirstOrDefaultAsync(npc => npc.Id == id);
+        }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.NurseryPlantCombos.CountAsync();
+        }
+
+        public async Task<List<NurseryPlantCombo>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.NurseryPlantCombos
+                .AsNoTracking()
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.TagsNavigation)
+                .Include(npc => npc.Nursery)
+                .OrderBy(npc => npc.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
     }
 }

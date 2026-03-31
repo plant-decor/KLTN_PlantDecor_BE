@@ -14,55 +14,90 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAzureOpenAIService _azureOpenAIService;
         private readonly IEmbeddingTextSerializer _textSerializer;
+        private readonly IEmbeddingTextPreprocessor _textPreprocessor;
+        private readonly IEmbeddingChunker _chunker;
         private readonly ILogger<EmbeddingService> _logger;
 
         public EmbeddingService(
             IUnitOfWork unitOfWork,
             IAzureOpenAIService azureOpenAIService,
             IEmbeddingTextSerializer textSerializer,
+            IEmbeddingTextPreprocessor textPreprocessor,
+            IEmbeddingChunker chunker,
             ILogger<EmbeddingService> logger)
         {
             _unitOfWork = unitOfWork;
             _azureOpenAIService = azureOpenAIService;
             _textSerializer = textSerializer;
+            _textPreprocessor = textPreprocessor;
+            _chunker = chunker;
             _logger = logger;
         }
 
-        public async Task<Embedding> CreateEmbeddingAsync<T>(T entity, Guid entityId, string entityType) where T : class
+        public async Task<List<Embedding>> CreateEmbeddingAsync<T>(T entity, Guid entityId, string entityType) where T : class
         {
             try
             {
-                // Chuyển entity thành text để embedding (entity-specific)
-                var content = SerializeEntityToText(entity, entityType);
-                var metadata = ExtractMetadataFromEntity(entity, entityType);
-
-                // Gọi Azure OpenAI để tạo embedding vector
-                var embeddingArray = await _azureOpenAIService.GenerateEmbeddingAsync(content);
-
-                if (embeddingArray == null || embeddingArray.Length == 0)
+                if (entity == null)
                 {
-                    throw new InvalidOperationException("Failed to generate embedding vector");
+                    throw new ArgumentNullException(nameof(entity));
                 }
 
-                // Tạo entity Embedding
-                var embedding = new Embedding
+                if (string.IsNullOrWhiteSpace(entityType))
                 {
-                    Id = Guid.NewGuid(),
-                    EntityType = entityType,
-                    EntityId = entityId,
-                    Content = content,
-                    EmbeddingVector = new Vector(embeddingArray),
-                    Metadata = metadata,
-                    CreatedAt = DateTime.UtcNow
-                };
+                    throw new ArgumentException("Entity type is required", nameof(entityType));
+                }
 
-                // Lưu vào database
-                await _unitOfWork.EmbeddingRepository.CreateAsync(embedding);
+                var rawContent = SerializeEntityToText(entity, entityType);
+                var cleanedContent = _textPreprocessor.Preprocess(rawContent);
+                var chunks = _chunker.Chunk(cleanedContent);
+                if (chunks.Count == 0)
+                {
+                    throw new InvalidOperationException("No content available after preprocessing/chunking");
+                }
+
+                var metadata = ExtractMetadataFromEntity(entity, entityType);
+                var chunkCount = chunks.Count;
+                var now = DateTime.UtcNow;
+                var embeddings = new List<Embedding>(chunkCount);
+                var embeddingVectors = await _azureOpenAIService.GenerateEmbeddingsAsync(chunks);
+
+                if (embeddingVectors.Count != chunkCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Embedding vector count mismatch: expected {chunkCount}, got {embeddingVectors.Count}");
+                }
+
+                for (var i = 0; i < chunkCount; i++)
+                {
+                    var chunkContent = chunks[i];
+                    var embeddingArray = embeddingVectors[i];
+
+                    if (embeddingArray == null || embeddingArray.Length == 0)
+                    {
+                        throw new InvalidOperationException($"Failed to generate embedding vector for chunk {i}");
+                    }
+
+                    embeddings.Add(new Embedding
+                    {
+                        Id = Guid.NewGuid(),
+                        EntityType = entityType,
+                        EntityId = entityId,
+                        ChunkIndex = i,
+                        ChunkCount = chunkCount,
+                        Content = chunkContent,
+                        EmbeddingVector = new Vector(embeddingArray),
+                        Metadata = CloneMetadataWithChunkInfo(metadata, i, chunkCount),
+                        CreatedAt = now
+                    });
+                }
+
+                await _unitOfWork.EmbeddingRepository.AddRangeAsync(embeddings);
                 await _unitOfWork.SaveAsync();
 
-                _logger.LogInformation($"Created embedding for {entityType}:{entityId}");
+                _logger.LogInformation($"Created {chunkCount} embedding chunk(s) for {entityType}:{entityId}");
 
-                return embedding;
+                return embeddings;
             }
             catch (Exception ex)
             {
@@ -167,6 +202,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Fallback for unknown types
                 _ => new Dictionary<string, object> { ["EntityTypeName"] = typeof(T).Name }
             };
+        }
+
+        private static Dictionary<string, object> CloneMetadataWithChunkInfo(
+            Dictionary<string, object>? baseMetadata,
+            int chunkIndex,
+            int chunkCount)
+        {
+            var metadata = baseMetadata != null
+                ? new Dictionary<string, object>(baseMetadata)
+                : new Dictionary<string, object>();
+
+            metadata["ChunkIndex"] = chunkIndex;
+            metadata["ChunkCount"] = chunkCount;
+
+            return metadata;
         }
     }
 }

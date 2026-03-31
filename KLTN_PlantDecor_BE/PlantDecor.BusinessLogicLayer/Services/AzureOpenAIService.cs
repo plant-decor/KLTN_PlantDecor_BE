@@ -61,6 +61,84 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<List<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts)
+        {
+            var inputs = texts?
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim())
+                .ToList() ?? new List<string>();
+
+            if (inputs.Count == 0)
+            {
+                _logger.LogWarning("No valid texts provided for batch embedding generation");
+                return new List<float[]>();
+            }
+
+            try
+            {
+                var embeddingClient = _client.GetEmbeddingClient(_embeddingDeploymentName);
+                // Mỗi batch = 32 phần tử
+                const int maxBatchSize = 32;
+                const int maxRetryAttempts = 3;
+
+                var allEmbeddings = new List<float[]>(inputs.Count);
+
+                // start += 32 → nhảy từng đoạn 32 phần tử
+                for (var start = 0; start < inputs.Count; start += maxBatchSize)
+                {
+                    var batch = inputs.Skip(start).Take(maxBatchSize).ToList();
+
+                    var attempt = 0;
+                    while (true)
+                    {
+                        try
+                        {
+                            var response = await embeddingClient.GenerateEmbeddingsAsync(batch);
+                            if (response?.Value == null)
+                            {
+                                throw new InvalidOperationException("Embedding API returned null response for batch");
+                            }
+
+                            var batchEmbeddings = new List<float[]>();
+                            foreach (var embedding in response.Value)
+                            {
+                                batchEmbeddings.Add(embedding.ToFloats().ToArray());
+                            }
+
+                            if (batchEmbeddings.Count != batch.Count)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Embedding count mismatch: expected {batch.Count}, got {batchEmbeddings.Count}");
+                            }
+
+                            allEmbeddings.AddRange(batchEmbeddings);
+                            break;
+                        }
+                        catch (Exception ex) when (IsRateLimitException(ex) && attempt < maxRetryAttempts)
+                        {
+                            attempt++;
+                            var delaySeconds = (int)Math.Pow(2, attempt);
+                            _logger.LogWarning(
+                                ex,
+                                "Rate limited while generating embeddings batch. Attempt {Attempt}/{MaxAttempts}, waiting {DelaySeconds}s",
+                                attempt,
+                                maxRetryAttempts,
+                                delaySeconds);
+                            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Generated {Count} embeddings in batch mode", allEmbeddings.Count);
+                return allEmbeddings;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating embeddings in batch mode");
+                throw;
+            }
+        }
+
         public async Task<string?> GenerateChatCompletionAsync(string systemPrompt, string userMessage, float temperature = 0.7f)
         {
             try
@@ -183,6 +261,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 _logger.LogError(ex, "Error analyzing image");
                 throw;
             }
+        }
+
+        private static bool IsRateLimitException(Exception ex)
+        {
+            var current = ex;
+            while (current != null)
+            {
+                var message = current.Message;
+                if (!string.IsNullOrWhiteSpace(message) &&
+                    (message.Contains("429", StringComparison.OrdinalIgnoreCase) ||
+                     message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) ||
+                     message.Contains("too many requests", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
         }
     }
 }

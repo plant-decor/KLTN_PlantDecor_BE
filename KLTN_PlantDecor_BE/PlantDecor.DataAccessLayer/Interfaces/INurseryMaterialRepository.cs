@@ -22,5 +22,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             double? maxPrice,
             string? sortBy,
             bool isAscending);
+
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<NurseryMaterial>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }

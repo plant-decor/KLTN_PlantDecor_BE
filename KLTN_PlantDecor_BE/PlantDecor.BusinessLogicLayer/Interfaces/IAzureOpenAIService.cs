@@ -10,6 +10,13 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<float[]?> GenerateEmbeddingAsync(string text);
 
         /// <summary>
+        /// Generate embeddings for multiple texts in batch requests.
+        /// </summary>
+        /// <param name="texts">Texts to generate embeddings for</param>
+        /// <returns>List of embedding vectors in the same order as input</returns>
+        Task<List<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts);
+
+        /// <summary>
         /// Generate chat completion using Azure OpenAI Chat API
         /// </summary>
         /// <param name="systemPrompt">System prompt to set context</param>
