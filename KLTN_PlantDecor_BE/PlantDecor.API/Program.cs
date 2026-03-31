@@ -160,6 +160,8 @@ namespace PlantDecor.API
 
             // Embedding & AI Search Services
             builder.Services.AddScoped<IEmbeddingTextSerializer, EmbeddingTextSerializer>();
+            builder.Services.AddScoped<IEmbeddingTextPreprocessor, EmbeddingTextPreprocessor>();
+            builder.Services.AddScoped<IEmbeddingChunker, EmbeddingChunker>();
             builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IAISearchService, AISearchService>();
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
