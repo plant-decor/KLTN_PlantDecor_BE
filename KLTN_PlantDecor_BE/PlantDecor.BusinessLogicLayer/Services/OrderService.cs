@@ -289,7 +289,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Update all NurseryOrder status to match parent Order status
             foreach (var nurseryOrder in order.NurseryOrders)
             {
-                nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
+                nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
                 nurseryOrder.UpdatedAt = DateTime.Now;
             }
 
@@ -427,7 +427,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     DepositAmount = depositAmount,
                     RemainingAmount = remainingAmount,
                     PaymentStrategy = request.PaymentStrategy,
-                    Status = (int)OrderStatusEnum.Pending,
+                    Status = (int)NurseryOrderStatus.Pending,
                     Note = request.Note,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now,
@@ -515,7 +515,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ShipperName = no.Shipper?.Username ?? no.Shipper?.Email,
                 SubTotalAmount = no.SubTotalAmount,
                 Status = no.Status,
-                StatusName = no.Status.HasValue ? ((OrderStatusEnum)no.Status.Value).ToString() : null,
+                StatusName = no.Status.HasValue ? ((NurseryOrderStatus)no.Status.Value).ToString() : null,
                 ShipperNote = no.ShipperNote,
                 Items = no.NurseryOrderDetails.Select(d => new OrderItemResponseDto
                 {

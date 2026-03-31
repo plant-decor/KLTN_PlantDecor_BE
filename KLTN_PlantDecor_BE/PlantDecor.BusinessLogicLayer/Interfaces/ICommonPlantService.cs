@@ -24,6 +24,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Manager Operations
         Task<CommonPlantResponseDto> CreateForNurseryAsync(int nurseryId, int managerId, CommonPlantRequestDto request);
         Task<PaginatedResult<CommonPlantListResponseDto>> GetByNurseryForManagerAsync(int nurseryId, int managerId, Pagination pagination);
+        Task<PaginatedResult<PlantListResponseDto>> GetPlantsNotInNurseryForManagerAsync(int nurseryId, int managerId, Pagination pagination);
         Task<CommonPlantResponseDto> UpdateForManagerAsync(int nurseryId, int commonPlantId, int managerId, CommonPlantUpdateDto request);
         Task<CommonPlantResponseDto> ToggleActiveAsync(int nurseryId, int commonPlantId, int managerId);
 

@@ -102,7 +102,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PaginatedResult<CommonPlant>> GetActiveByNurseryIdAsync(int nurseryId, Pagination pagination)
         {
             var query = _context.CommonPlants
-                .Where(cp => cp.NurseryId == nurseryId && cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Where(cp => cp.NurseryId == nurseryId && cp.IsActive && cp.Quantity > 0)
                 .Include(cp => cp.Plant)
                 .Include(cp => cp.Nursery)
                 .OrderByDescending(cp => cp.Id);
@@ -119,7 +119,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<CommonPlant>> GetActiveByPlantIdAsync(int plantId)
         {
             return await _context.CommonPlants
-                .Where(cp => cp.PlantId == plantId && cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Where(cp => cp.PlantId == plantId && cp.IsActive && cp.Quantity > 0)
                 .Include(cp => cp.Nursery)
                 .ToListAsync();
         }
@@ -139,7 +139,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(cp => cp.Plant).ThenInclude(p => p.Categories)
                 .Include(cp => cp.Plant).ThenInclude(p => p.Tags)
                 .Include(cp => cp.Nursery)
-                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity && cp.Nursery.IsActive == true);
+                .Where(cp => cp.IsActive && cp.Quantity > 0 && cp.Nursery.IsActive == true);
 
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))

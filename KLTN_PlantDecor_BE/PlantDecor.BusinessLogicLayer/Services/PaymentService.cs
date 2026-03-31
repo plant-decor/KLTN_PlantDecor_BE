@@ -15,14 +15,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class PaymentService : IPaymentService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICacheService _cacheService;
         private readonly IConfiguration _configuration;
         private const int PaymentTimeoutMinutes = 30;
         private const int MaxRetryAttempts = 3;
         private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration, ILogger<PaymentService> logger)
+        public PaymentService(IUnitOfWork unitOfWork, ICacheService cacheService, IConfiguration configuration, ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
+            _cacheService = cacheService;
             _configuration = configuration;
             _logger = logger;
         }
@@ -225,6 +227,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             dbTransaction.ResponseCode = responseCode;
 
             await _unitOfWork.BeginTransactionAsync();
+            var shouldInvalidateInventoryCaches = false;
             try
             {
                 if (responseCode == "00")
@@ -281,6 +284,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                     invoice.Status = (int)InvoiceStatusEnum.Paid;
                     _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
+
+                    shouldInvalidateInventoryCaches = true;
                 }
                 else
                 {
@@ -305,6 +310,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
+            }
+
+            if (shouldInvalidateInventoryCaches)
+            {
+                await InvalidateInventoryAndShopCachesAsync();
             }
 
             return new VnpayIpnResponseDto { RspCode = "00", Message = "Confirm Success" };
@@ -556,6 +566,39 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             _logger.LogInformation("Finish assigning shippers for OrderId={OrderId}", order.Id);
+        }
+
+        private async Task InvalidateInventoryAndShopCachesAsync()
+        {
+            try
+            {
+                // Keep this aligned with inventory/search cache keys in CommonPlant/Material/Combo/PlantInstance/ShopSearch services.
+                var cachePrefixes = new[]
+                {
+                    "common_plants_all",
+                    "nursery_common_plants",
+                    "plant_nurseries_common",
+                    "plants_shop_search",
+                    "nursery_materials_all",
+                    "materials_shop",
+                    "combos_shop",
+                    "selling_combos_",
+                    "nursery_instances",
+                    "plant_nurseries",
+                    "nurseries_all_",
+                    "shop_unified_search"
+                };
+
+                foreach (var prefix in cachePrefixes)
+                {
+                    await _cacheService.RemoveByPrefixAsync(prefix);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Payment was already committed successfully; avoid failing IPN response due to cache-layer issues.
+                _logger.LogError(ex, "Failed to invalidate inventory/shop caches after payment commit");
+            }
         }
 
         #endregion

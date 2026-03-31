@@ -239,6 +239,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_COMMON_KEY);
             await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (nurseryId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}");
@@ -303,6 +304,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var paginatedEntities = await _unitOfWork.CommonPlantRepository.GetByNurseryIdAsync(nurseryId, pagination);
             var result = new PaginatedResult<CommonPlantListResponseDto>(
+                paginatedEntities.Items.ToListResponseList(),
+                paginatedEntities.TotalCount,
+                paginatedEntities.PageNumber,
+                paginatedEntities.PageSize
+            );
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
+            return result;
+        }
+
+        public async Task<PaginatedResult<PlantListResponseDto>> GetPlantsNotInNurseryForManagerAsync(int nurseryId, int managerId, Pagination pagination)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != nurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var cacheKey = $"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId}_missing_plants_p{pagination.PageNumber}_s{pagination.PageSize}";
+            var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
+            if (cachedData != null) return cachedData;
+
+            var paginatedEntities = await _unitOfWork.PlantRepository.GetActivePlantsNotInNurseryAsync(nurseryId, pagination);
+            var result = new PaginatedResult<PlantListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
                 paginatedEntities.PageNumber,
@@ -419,7 +442,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Phone = cp.Nursery.Phone,
                     Latitude = cp.Nursery.Latitude,
                     Longitude = cp.Nursery.Longitude,
-                    AvailableInstanceCount = cp.Quantity - cp.ReservedQuantity,
+                    AvailableInstanceCount = cp.Quantity,
                     MinPrice = 0,
                     MaxPrice = 0
                 })

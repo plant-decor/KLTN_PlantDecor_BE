@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
@@ -123,9 +124,28 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("{id}/thumbnail")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadComboThumbnail(int id, IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new BadRequestException("No file was uploaded");
+            }
+
+            var combo = await _plantComboService.UploadPlantComboThumbnailAsync(id, file);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload combo thumbnail successfully",
+                Payload = combo
+            });
+        }
+
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadComboImages(int id, [FromForm] List<IFormFile> files)
+        public async Task<IActionResult> UploadComboImages(int id, List<IFormFile> files)
         {
             var combo = await _plantComboService.UploadPlantComboImagesAsync(id, files);
             return Ok(new ApiResponse<PlantComboResponseDto>

@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 
@@ -136,11 +137,33 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Upload ảnh thumbnail cho material
+        /// </summary>
+        [HttpPost("{id}/thumbnail")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadMaterialThumbnail(int id, IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new BadRequestException("No file was uploaded");
+            }
+
+            var material = await _materialService.UploadMaterialThumbnailAsync(id, file);
+            return Ok(new ApiResponse<MaterialResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload material thumbnail successfully",
+                Payload = material
+            });
+        }
+
+        /// <summary>
         /// Upload ảnh cho material
         /// </summary>
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadMaterialImages(int id, [FromForm] List<IFormFile> files)
+        public async Task<IActionResult> UploadMaterialImages(int id, List<IFormFile> files)
         {
             var material = await _materialService.UploadMaterialImagesAsync(id, files);
             return Ok(new ApiResponse<MaterialResponseDto>
