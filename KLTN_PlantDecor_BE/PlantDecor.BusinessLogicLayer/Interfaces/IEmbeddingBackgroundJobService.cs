@@ -18,5 +18,10 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         // NurseryMaterial embeddings
         Task ProcessNurseryMaterialEmbeddingAsync(NurseryMaterialEmbeddingDto dto, Guid entityId, string entityType);
+
+        // Backfill orchestration
+        Task QueueBackfillAllAsync(int batchSize);
+        Task QueueBackfillByEntityTypeAsync(string entityType, int batchSize);
+        Task ProcessBackfillBatchAsync(string entityType, int pageNumber, int pageSize);
     }
 }

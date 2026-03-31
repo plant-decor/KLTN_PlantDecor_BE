@@ -133,6 +133,29 @@ namespace PlantDecor.API.Extensions
                 service => service.ProcessNurseryMaterialEmbeddingAsync(dto, entityId, entityType));
         }
 
+        /// <summary>
+        /// Enqueue backfill jobs for all embedding entity types in batches
+        /// </summary>
+        public static string EnqueueEmbeddingBackfillAll(
+            this IBackgroundJobClient backgroundJobClient,
+            int batchSize)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.QueueBackfillAllAsync(batchSize));
+        }
+
+        /// <summary>
+        /// Enqueue backfill jobs for a specific embedding entity type in batches
+        /// </summary>
+        public static string EnqueueEmbeddingBackfillByType(
+            this IBackgroundJobClient backgroundJobClient,
+            string entityType,
+            int batchSize)
+        {
+            return backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                service => service.QueueBackfillByEntityTypeAsync(entityType, batchSize));
+        }
+
         #endregion
 
         #region Langflow Ingestion Jobs
