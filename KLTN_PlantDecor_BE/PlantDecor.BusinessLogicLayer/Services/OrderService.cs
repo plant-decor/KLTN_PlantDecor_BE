@@ -69,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             else
             {
                 // Get cart with items from database
-                var cart = await _unitOfWork.CartRepository.GetByIdAsync(userId);
+                var cart = await _unitOfWork.CartRepository.GetByUserIdAsync(userId);
 
                 if (cart == null || !cart.CartItems.Any())
                     throw new BadRequestException("Cart is empty. Please add items to cart before creating order.");
