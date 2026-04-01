@@ -95,10 +95,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Reload with details
                 var created = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
-
-                // Queue embedding job
-                QueueEmbeddingAsync(created!);
-
                 return created!.ToResponse();
             }
             catch (Exception)
@@ -346,7 +342,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nursery == null)
                 throw new NotFoundException("Bạn chưa có vựa nào");
 
-            return await ImportMaterialAsync(nursery.Id, request);
+            var imported = await ImportMaterialAsync(nursery.Id, request);
+
+            // Trigger embedding from manager import flow.
+            await QueueEmbeddingByIdAsync(imported.Id);
+
+            return imported;
         }
 
         #endregion
@@ -443,6 +444,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Log but don't fail the main operation
             }
+        }
+
+        private async Task QueueEmbeddingByIdAsync(int id)
+        {
+            var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
+            if (entity == null)
+            {
+                return;
+            }
+
+            QueueEmbeddingAsync(entity);
         }
 
         private async Task DeleteEmbeddingAsync(int entityId)
