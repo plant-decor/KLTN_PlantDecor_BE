@@ -44,5 +44,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// Lấy danh sách PlantInstance available cho shop (toàn hệ thống hoặc theo nursery)
         /// </summary>
         Task<PaginatedResult<PlantInstance>> GetAvailableForShopAsync(Pagination pagination, int? nurseryId = null, int? plantId = null);
+
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<PlantInstance>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }

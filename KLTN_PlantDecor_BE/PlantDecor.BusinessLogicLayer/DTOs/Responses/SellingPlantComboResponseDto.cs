@@ -14,7 +14,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Description { get; set; }
         public decimal Price { get; set; }
         public string? ImageUrl { get; set; }
-        public double AverageRating { get; set; }
         public List<SellingNurseryResponseDto> Nurseries { get; set; } = new();
     }
 }

@@ -1,5 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+using Hangfire;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using PlantDecor.BusinessLogicLayer.Constants;
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -7,6 +10,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -17,17 +21,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMBOS_KEY = "combos_all";
         private const string ACTIVE_COMBOS_KEY = "combos_active";
         private const string SHOP_COMBOS_KEY = "combos_shop";
         private const string NURSERIES_BY_COMBO_KEY = "nurseries_by_combo";
 
-        public PlantComboService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
+        public PlantComboService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
+            ILangflowService langflowService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
+            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -202,19 +215,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = combo.PlantComboImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     combo.PlantComboImages.Add(new PlantComboImage
                     {
                         PlantComboId = combo.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 combo.UpdatedAt = DateTime.Now;
@@ -232,6 +241,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(comboId);
+
+            var updatedCombo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            return updatedCombo!.ToResponse();
+        }
+
+        public async Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantComboImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Plant combo thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in combo.PlantComboImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                combo.PlantComboImages.Add(new PlantComboImage
+                {
+                    PlantComboId = combo.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                combo.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
@@ -524,7 +597,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         continue;
                     }
 
-                    var availableStock = commonPlant.Quantity - commonPlant.ReservedQuantity;
+                    var availableStock = commonPlant.Quantity;
                     if (availableStock < requiredQuantity)
                     {
                         var plantName = item.Plant?.Name ?? $"PlantId {item.PlantId.Value}";
@@ -580,6 +653,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(comboId);
+
+                // Queue embedding for NurseryPlantCombo
+                var reloadedNurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(nurseryCombo.Id);
+                if (reloadedNurseryCombo != null)
+                {
+                    QueueNurseryPlantComboEmbeddingAsync(reloadedNurseryCombo, combo);
+                }
 
                 return new NurseryComboStockOperationResponseDto
                 {
@@ -745,8 +825,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!string.IsNullOrWhiteSpace(searchDto.Keyword))
             {
                 var keyword = searchDto.Keyword.ToLower();
-                query = query.Where(npc => (npc.PlantCombo.ComboName != null && npc.PlantCombo.ComboName.ToLower().Contains(keyword)) ||
-                                           (npc.PlantCombo.Description != null && npc.PlantCombo.Description.ToLower().Contains(keyword)));
+                // Name-only search: keyword chỉ áp dụng trên tên combo
+                query = query.Where(npc =>
+                    npc.PlantCombo.ComboName != null && npc.PlantCombo.ComboName.ToLower().Contains(keyword));
             }
 
             // Price range
@@ -769,11 +850,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 query = query.Where(npc => npc.PlantCombo.ChildSafe == searchDto.ChildSafe.Value);
             }
 
-            // Category filter: combo is matched when any plant in the combo belongs to CategoryId
-            if (searchDto.CategoryId.HasValue)
+            var categoryIds = (searchDto.CategoryIds ?? new List<int>()).ToList();
+            if (searchDto.CategoryId.HasValue && !categoryIds.Contains(searchDto.CategoryId.Value))
+            {
+                categoryIds.Add(searchDto.CategoryId.Value);
+            }
+
+            // Category filter: combo is matched when any plant in the combo belongs to one of the categories
+            if (categoryIds.Any())
             {
                 query = query.Where(npc => npc.PlantCombo.PlantComboItems
-                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => c.Id == searchDto.CategoryId.Value)));
+                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => categoryIds.Contains(c.Id))));
             }
 
             // Tags
@@ -793,7 +880,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
                     ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
-                    AverageRating = 0,
                     Nurseries = g.Select(npc => new SellingNurseryResponseDto
                     {
                         NurseryId = npc.NurseryId,
@@ -802,10 +888,31 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }).ToList()
                 });
 
+            groupedByCombo = ApplySellingComboSort(groupedByCombo, searchDto);
+
             var totalCount = groupedByCombo.Count();
             var paginatedItems = groupedByCombo.Skip((pagination.PageNumber - 1) * pagination.PageSize).Take(pagination.PageSize).ToList();
 
             return new PaginatedResult<SellingPlantComboResponseDto>(paginatedItems, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static IEnumerable<SellingPlantComboResponseDto> ApplySellingComboSort(
+            IEnumerable<SellingPlantComboResponseDto> source,
+            PlantComboShopSearchRequestDto searchDto)
+        {
+            var sortBy = searchDto.SortBy ?? PlantComboSortByEnum.Name;
+            var isDescending = (searchDto.SortDirection ?? SortDirectionEnum.Asc) == SortDirectionEnum.Desc;
+
+            return sortBy switch
+            {
+                PlantComboSortByEnum.Price => isDescending
+                    ? source.OrderByDescending(item => item.Price).ThenBy(item => item.Name)
+                    : source.OrderBy(item => item.Price).ThenBy(item => item.Name),
+                PlantComboSortByEnum.Name => isDescending
+                    ? source.OrderByDescending(item => item.Name)
+                    : source.OrderBy(item => item.Name),
+                _ => source.OrderBy(item => item.Name)
+            };
         }
 
         #endregion
@@ -817,6 +924,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task InvalidateCacheAsync(int? comboId = null)
@@ -825,6 +933,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync("selling_combos_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (comboId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_COMBO_KEY}_{comboId.Value}");
@@ -869,6 +978,74 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
         }
+
+        #endregion
+
+        #region Embedding Operations
+
+        private void QueueNurseryPlantComboEmbeddingAsync(NurseryPlantCombo entity, PlantCombo? combo = null)
+        {
+            try
+            {
+                combo ??= entity.PlantCombo;
+                if (combo == null) return;
+
+                var embeddingDto = new NurseryPlantComboEmbeddingDto
+                {
+                    NurseryPlantComboId = entity.Id,
+                    IsActive = entity.IsActive,
+                    ComboName = combo.ComboName ?? string.Empty,
+                    Description = combo.Description,
+                    SuitableSpace = combo.SuitableSpace,
+                    SuitableRooms = combo.SuitableRooms?.ToList() ?? new List<string>(),
+                    FengShuiElement = combo.FengShuiElement,
+                    FengShuiPurpose = combo.FengShuiPurpose,
+                    ThemeName = combo.ThemeName,
+                    ThemeDescription = combo.ThemeDescription,
+                    Season = combo.Season,
+                    PetSafe = combo.PetSafe,
+                    ChildSafe = combo.ChildSafe,
+                    ComboPrice = combo.ComboPrice,
+                    TagNames = combo.TagsNavigation?
+                        .Select(t => t.TagName)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    NurseryId = entity.NurseryId,
+                    NurseryName = entity.Nursery?.Name,
+                    Price = combo.ComboPrice
+                };
+
+                var entityId = ConvertToGuid(entity.Id);
+
+                // Queue Hangfire background job for local PostgreSQL
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessNurseryPlantComboEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
+
+                // Send to Langflow webhook via Hangfire
+                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                //    service => service.ProcessNurseryPlantComboIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
+            }
+            catch
+            {
+                // Log but don't fail the main operation
+            }
+        }
+
+        private async Task DeleteNurseryPlantComboEmbeddingAsync(int entityId)
+        {
+            try
+            {
+                var guid = ConvertToGuid(entityId);
+                await _unitOfWork.EmbeddingRepository.DeleteByEntityAsync(EmbeddingEntityTypes.NurseryPlantCombo, guid);
+            }
+            catch
+            {
+                // Log but don't fail
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         #endregion
     }

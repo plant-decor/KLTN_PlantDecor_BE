@@ -193,7 +193,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             && m.ExpiredDate.HasValue
                             && m.ExpiredDate.Value >= today
                             && m.ExpiredDate.Value <= endDate
-                            && m.Quantity > m.ReservedQuantity)
+                            && m.Quantity > 0)
                 .OrderBy(m => m.ExpiredDate)
                 .Select(m => new NurseryMaterialExpiryAlertDto
                 {
@@ -236,7 +236,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ProductName = cp.Plant?.Name,
                     TotalQuantity = cp.Quantity,
                     ReservedQuantity = cp.ReservedQuantity,
-                    AvailableQuantity = cp.Quantity - cp.ReservedQuantity,
+                    AvailableQuantity = cp.Quantity,
                     Threshold = threshold
                 })
                 .Where(x => x.AvailableQuantity >= 0 && x.AvailableQuantity <= threshold)
@@ -299,8 +299,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     TotalProducts = activeCommonPlants.Count,
                     TotalQuantity = activeCommonPlants.Sum(cp => cp.Quantity),
                     TotalReservedQuantity = activeCommonPlants.Sum(cp => cp.ReservedQuantity),
-                    TotalAvailableQuantity = activeCommonPlants.Sum(cp => cp.Quantity - cp.ReservedQuantity),
-                    LowStockProducts = activeCommonPlants.Count(cp => (cp.Quantity - cp.ReservedQuantity) <= lowStockThreshold)
+                    TotalAvailableQuantity = activeCommonPlants.Sum(cp => cp.Quantity),
+                    LowStockProducts = activeCommonPlants.Count(cp => cp.Quantity <= lowStockThreshold)
                 },
                 PlantInstances = new NurseryPlantInstanceSummaryDto
                 {
@@ -320,12 +320,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     TotalProducts = activeMaterials.Count,
                     TotalQuantity = activeMaterials.Sum(m => m.Quantity),
                     TotalReservedQuantity = activeMaterials.Sum(m => m.ReservedQuantity),
-                    TotalAvailableQuantity = activeMaterials.Sum(m => m.Quantity - m.ReservedQuantity),
+                    TotalAvailableQuantity = activeMaterials.Sum(m => m.Quantity),
                     ExpiringSoonProducts = activeMaterials.Count(m => m.ExpiredDate.HasValue
                         && m.ExpiredDate.Value >= today
                         && m.ExpiredDate.Value <= expireEndDate
-                        && m.Quantity > m.ReservedQuantity),
-                    LowStockProducts = activeMaterials.Count(m => (m.Quantity - m.ReservedQuantity) <= lowStockThreshold)
+                        && m.Quantity > 0),
+                    LowStockProducts = activeMaterials.Count(m => m.Quantity <= lowStockThreshold)
                 }
             };
 
@@ -348,6 +348,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("plant_nurseries");
             await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
             await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         #endregion

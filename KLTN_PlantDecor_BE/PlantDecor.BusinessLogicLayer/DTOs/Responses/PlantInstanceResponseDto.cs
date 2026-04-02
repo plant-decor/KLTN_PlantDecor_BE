@@ -38,6 +38,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? SpecificPrice { get; set; }
         public decimal? Height { get; set; }
         public string? HealthStatus { get; set; }
+        public string? Description { get; set; }
         public int Status { get; set; }
         public string? StatusName { get; set; }
         public string? PrimaryImageUrl { get; set; }

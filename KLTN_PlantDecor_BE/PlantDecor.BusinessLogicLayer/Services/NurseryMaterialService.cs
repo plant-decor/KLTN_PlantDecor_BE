@@ -1,3 +1,6 @@
+using Hangfire;
+using PlantDecor.BusinessLogicLayer.Constants;
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -14,14 +17,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILangflowService _langflowService;
 
         private const string ALL_NURSERY_MATERIALS_KEY = "nursery_materials_all";
         private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
-        public NurseryMaterialService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public NurseryMaterialService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            IBackgroundJobClient backgroundJobClient,
+            ILangflowService langflowService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _backgroundJobClient = backgroundJobClient;
+            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -114,6 +125,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await InvalidateCacheAsync(entity.MaterialId);
 
+                // Update embedding
+                var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
+                QueueEmbeddingAsync(reloaded!);
+
                 return entity.ToResponse();
             }
             catch (Exception)
@@ -141,6 +156,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+
+                // Delete embedding
+                await DeleteEmbeddingAsync(id);
 
                 return true;
             }
@@ -171,6 +189,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+
+                // Update embedding
+                var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
+                QueueEmbeddingAsync(reloaded!);
 
                 return entity.ToResponse();
             }
@@ -320,7 +342,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nursery == null)
                 throw new NotFoundException("Bạn chưa có vựa nào");
 
-            return await ImportMaterialAsync(nursery.Id, request);
+            var imported = await ImportMaterialAsync(nursery.Id, request);
+
+            // Trigger embedding from manager import flow.
+            await QueueEmbeddingByIdAsync(imported.Id);
+
+            return imported;
         }
 
         #endregion
@@ -337,7 +364,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 searchRequest.MinPrice,
                 searchRequest.MaxPrice,
                 searchRequest.SortBy,
-                searchRequest.IsAscending);
+                searchRequest.SortDirection);
 
             return new PaginatedResult<NurseryMaterialListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
@@ -356,16 +383,95 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveDataAsync(ALL_NURSERY_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync($"{ALL_NURSERY_MATERIALS_KEY}_");
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task InvalidateCacheAsync(int? materialId = null)
         {
             await _cacheService.RemoveByPrefixAsync(ALL_NURSERY_MATERIALS_KEY);
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (materialId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
             }
         }
+
+        #endregion
+
+        #region Embedding Operations
+
+        private void QueueEmbeddingAsync(NurseryMaterial entity)
+        {
+            try
+            {
+                var material = entity.Material;
+
+                var embeddingDto = new NurseryMaterialEmbeddingDto
+                {
+                    NurseryMaterialId = entity.Id,
+                    IsActive = entity.IsActive,
+                    ExpiredDate = entity.ExpiredDate,
+                    MaterialName = material?.Name ?? string.Empty,
+                    Description = material?.Description,
+                    Brand = material?.Brand,
+                    Unit = material?.Unit,
+                    Specifications = material?.Specifications,
+                    BasePrice = material?.BasePrice,
+                    CategoryNames = material?.Categories?
+                        .Select(c => c.Name)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    TagNames = material?.Tags?
+                        .Select(t => t.TagName)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    NurseryId = entity.NurseryId,
+                    NurseryName = entity.Nursery?.Name,
+                    Price = material?.BasePrice
+                };
+
+                var entityId = ConvertToGuid(entity.Id);
+
+                // Queue Hangfire background job for local PostgreSQL
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessNurseryMaterialEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
+
+                // Send to Langflow webhook via Hangfire
+                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                //    service => service.ProcessNurseryMaterialIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
+            }
+            catch
+            {
+                // Log but don't fail the main operation
+            }
+        }
+
+        private async Task QueueEmbeddingByIdAsync(int id)
+        {
+            var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
+            if (entity == null)
+            {
+                return;
+            }
+
+            QueueEmbeddingAsync(entity);
+        }
+
+        private async Task DeleteEmbeddingAsync(int entityId)
+        {
+            try
+            {
+                var guid = ConvertToGuid(entityId);
+                await _unitOfWork.EmbeddingRepository.DeleteByEntityAsync(EmbeddingEntityTypes.NurseryMaterial, guid);
+            }
+            catch
+            {
+                // Log but don't fail
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         #endregion
     }

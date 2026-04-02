@@ -126,5 +126,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.PlantInstances.CountAsync();
+        }
+
+        public async Task<List<PlantInstance>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.PlantInstances
+                .AsNoTracking()
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Categories)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Tags)
+                .Include(pi => pi.CurrentNursery)
+                .OrderBy(pi => pi.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
+        }
     }
 }

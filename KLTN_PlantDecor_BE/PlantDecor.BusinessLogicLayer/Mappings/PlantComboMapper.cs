@@ -71,8 +71,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
-                PrimaryImageUrl = combo.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? combo.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = combo.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 TotalItems = combo.PlantComboItems.Count,
                 TagNames = combo.TagsNavigation.Select(t => t.TagName).ToList()
             };

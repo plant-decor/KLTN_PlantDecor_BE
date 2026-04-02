@@ -102,7 +102,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PaginatedResult<CommonPlant>> GetActiveByNurseryIdAsync(int nurseryId, Pagination pagination)
         {
             var query = _context.CommonPlants
-                .Where(cp => cp.NurseryId == nurseryId && cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Where(cp => cp.NurseryId == nurseryId && cp.IsActive && cp.Quantity > 0)
                 .Include(cp => cp.Plant)
                 .Include(cp => cp.Nursery)
                 .OrderByDescending(cp => cp.Id);
@@ -119,7 +119,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<CommonPlant>> GetActiveByPlantIdAsync(int plantId)
         {
             return await _context.CommonPlants
-                .Where(cp => cp.PlantId == plantId && cp.IsActive && cp.Quantity > cp.ReservedQuantity)
+                .Where(cp => cp.PlantId == plantId && cp.IsActive && cp.Quantity > 0)
                 .Include(cp => cp.Nursery)
                 .ToListAsync();
         }
@@ -132,23 +132,21 @@ namespace PlantDecor.DataAccessLayer.Repositories
             List<int>? sizes,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending)
+            CommonPlantSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection)
         {
             var query = _context.CommonPlants
                 .Include(cp => cp.Plant).ThenInclude(p => p.Categories)
                 .Include(cp => cp.Plant).ThenInclude(p => p.Tags)
                 .Include(cp => cp.Nursery)
-                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity && cp.Nursery.IsActive == true);
+                .Where(cp => cp.IsActive && cp.Quantity > 0 && cp.Nursery.IsActive == true);
 
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var term = searchTerm.ToLower();
                 query = query.Where(cp =>
-                    (cp.Plant.Name != null && cp.Plant.Name.ToLower().Contains(term)) ||
-                    (cp.Plant.Description != null && cp.Plant.Description.ToLower().Contains(term)) ||
-                    (cp.Nursery.Name != null && cp.Nursery.Name.ToLower().Contains(term)));
+                    (cp.Plant.Name != null && cp.Plant.Name.ToLower().Contains(term)));
             }
 
             // Category filter
@@ -179,30 +177,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 query = query.Where(cp => (double?)cp.Plant.BasePrice <= maxPrice.Value);
             }
 
-            // Sorting
-            if (!string.IsNullOrEmpty(sortBy))
+            var appliedSortBy = sortBy ?? CommonPlantSortByEnum.Newest;
+            var appliedSortDirection = sortDirection ?? (sortBy.HasValue ? SortDirectionEnum.Asc : SortDirectionEnum.Desc);
+            var isDesc = appliedSortDirection == SortDirectionEnum.Desc;
+
+            query = appliedSortBy switch
             {
-                switch (sortBy.ToLower())
-                {
-                    case "price":
-                        query = isAscending
-                            ? query.OrderBy(cp => cp.Plant.BasePrice)
-                            : query.OrderByDescending(cp => cp.Plant.BasePrice);
-                        break;
-                    case "name":
-                        query = isAscending
-                            ? query.OrderBy(cp => cp.Plant.Name)
-                            : query.OrderByDescending(cp => cp.Plant.Name);
-                        break;
-                    default:
-                        query = query.OrderByDescending(cp => cp.Id);
-                        break;
-                }
-            }
-            else
-            {
-                query = query.OrderByDescending(cp => cp.Id);
-            }
+                CommonPlantSortByEnum.Price => isDesc
+                    ? query.OrderByDescending(cp => cp.Plant.BasePrice)
+                    : query.OrderBy(cp => cp.Plant.BasePrice),
+                CommonPlantSortByEnum.Name => isDesc
+                    ? query.OrderByDescending(cp => cp.Plant.Name)
+                    : query.OrderBy(cp => cp.Plant.Name),
+                _ => isDesc
+                    ? query.OrderByDescending(cp => cp.Id)
+                    : query.OrderBy(cp => cp.Id)
+            };
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -211,6 +201,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return new PaginatedResult<CommonPlant>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.CommonPlants.CountAsync();
+        }
+
+        public async Task<List<CommonPlant>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.CommonPlants
+                .AsNoTracking()
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.Categories)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.Tags)
+                .Include(cp => cp.Nursery)
+                .OrderBy(cp => cp.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
     }
 }

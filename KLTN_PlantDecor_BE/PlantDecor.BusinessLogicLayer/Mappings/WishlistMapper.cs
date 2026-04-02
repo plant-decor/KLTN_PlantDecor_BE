@@ -29,7 +29,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ?? w.CommonPlant?.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl,
             Price = w.CommonPlant?.Plant?.BasePrice,
             Quantity = w.CommonPlant?.Quantity,
-            AdditionalInfo = $"Nursery: {w.CommonPlant?.Nursery?.Name}, Available: {w.CommonPlant?.Quantity - w.CommonPlant?.ReservedQuantity}",
+            AdditionalInfo = $"Nursery: {w.CommonPlant?.Nursery?.Name}, Available: {w.CommonPlant?.Quantity}",
             CreatedAt = w.CreatedAt
         };
 
@@ -74,7 +74,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ?? w.NurseryMaterial?.Material?.MaterialImages?.FirstOrDefault()?.ImageUrl,
             Price = w.NurseryMaterial?.Material?.BasePrice,
             Quantity = w.NurseryMaterial?.Quantity,
-            AdditionalInfo = $"Available: {w.NurseryMaterial?.Quantity - w.NurseryMaterial?.ReservedQuantity}, Expired: {w.NurseryMaterial?.ExpiredDate}",
+            AdditionalInfo = $"Available: {w.NurseryMaterial?.Quantity}, Expired: {w.NurseryMaterial?.ExpiredDate}",
             CreatedAt = w.CreatedAt
         };
 

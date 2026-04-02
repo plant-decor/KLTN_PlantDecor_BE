@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 using PlantDecor.DataAccessLayer.Context;
 
 #nullable disable
@@ -13,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260324121122_init")]
+    [Migration("20260331145500_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -24,6 +25,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 .HasAnnotation("ProductVersion", "9.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("ComboTag", b =>
@@ -480,6 +482,61 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("CustomerSurvey", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Embedding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChunkCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("ChunkIndex")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Vector>("EmbeddingVector")
+                        .HasColumnType("vector(1536)")
+                        .HasColumnName("embedding");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Dictionary<string, object>>("Metadata")
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntityType");
+
+                    b.HasIndex("EntityType", "EntityId", "ChunkIndex")
+                        .IsUnique();
+
+                    b.ToTable("Embeddings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Embeddings_ChunkCount_Positive", "\"ChunkCount\" >= 1");
+
+                            t.HasCheckConstraint("CK_Embeddings_ChunkIndex_Lt_ChunkCount", "\"ChunkIndex\" < \"ChunkCount\"");
+
+                            t.HasCheckConstraint("CK_Embeddings_ChunkIndex_NonNegative", "\"ChunkIndex\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
                     b.Property<int>("Id")
@@ -882,10 +939,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeliveryNote")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<decimal?>("DepositAmount")
                         .HasPrecision(18, 2)
@@ -914,6 +981,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("ShipperNote")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("ShippingStartedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -2020,6 +2090,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<bool>("IsVerified")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("NurseryId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -2052,6 +2125,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("User_pkey");
+
+                    b.HasIndex("NurseryId");
 
                     b.HasIndex("RoleId");
 
@@ -2607,8 +2682,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Manager")
-                        .WithOne("Nursery")
+                        .WithOne("ManagedNursery")
                         .HasForeignKey("PlantDecor.DataAccessLayer.Entities.Nursery", "ManagerId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("Nursery_ManagerId_fkey");
 
                     b.Navigation("Manager");
@@ -2990,12 +3066,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.User", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "WorkingNursery")
+                        .WithMany("Users")
+                        .HasForeignKey("NurseryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("User_NurseryId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .HasConstraintName("User_RoleId_fkey");
 
                     b.Navigation("Role");
+
+                    b.Navigation("WorkingNursery");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserBehaviorLog", b =>
@@ -3199,6 +3283,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("PlantInstances");
 
                     b.Navigation("ServiceRegistrations");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryCareService", b =>
@@ -3325,7 +3411,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("LayoutDesigns");
 
-                    b.Navigation("Nursery");
+                    b.Navigation("ManagedNursery");
 
                     b.Navigation("PlantRatings");
 

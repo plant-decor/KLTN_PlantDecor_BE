@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Helpers;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -11,7 +12,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public List<int>? Sizes { get; set; }
         public double? MinPrice { get; set; }
         public double? MaxPrice { get; set; }
-        public string? SortBy { get; set; }
-        public bool IsAscending { get; set; } = true;
+        public CommonPlantSortByEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 }

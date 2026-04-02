@@ -65,10 +65,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 SpecificPrice = entity.SpecificPrice,
                 Height = entity.Height,
                 HealthStatus = entity.HealthStatus,
+                Description = entity.Description,
                 Status = entity.Status,
                 StatusName = GetStatusName(entity.Status),
-                PrimaryImageUrl = entity.PlantImages?.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? entity.PlantImages?.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = entity.PlantImages?.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 CreatedAt = entity.CreatedAt
             };
         }

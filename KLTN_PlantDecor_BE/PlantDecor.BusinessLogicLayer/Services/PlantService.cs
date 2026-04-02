@@ -193,21 +193,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = plant.PlantImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     plant.PlantImages.Add(new PlantImage
                     {
                         PlantId = plant.Id,
+                        PlantInstanceId = null,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                    {
-                        hasPrimary = true;
-                    }
                 }
 
                 plant.UpdatedAt = DateTime.Now;
@@ -244,17 +239,83 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedPlant!.ToResponse();
         }
 
+        public async Task<PlantResponseDto> UploadPlantThumbnailAsync(int plantId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Plant thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in plant.PlantImages.Where(i => i.PlantInstanceId == null))
+                {
+                    image.IsPrimary = false;
+                }
+
+                plant.PlantImages.Add(new PlantImage
+                {
+                    PlantId = plant.Id,
+                    PlantInstanceId = null,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                plant.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantRepository.PrepareUpdate(plant);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to cleanup uploaded plant thumbnail: {PublicId}", uploadedFile.PublicId);
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
+        }
+
         public async Task<PlantResponseDto> SetPrimaryPlantImageAsync(int plantId, int imageId)
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
                 throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
-            var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId);
+            var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (targetImage == null)
                 throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
 
-            foreach (var image in plant.PlantImages)
+            foreach (var image in plant.PlantImages.Where(i => i.PlantInstanceId == null))
             {
                 image.IsPrimary = image.Id == imageId;
             }
@@ -507,6 +568,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("combos_active");
             await _cacheService.RemoveByPrefixAsync("combos_shop");
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private static PlantSearchFilter BuildSearchFilter(PlantSearchRequestDto? request)
@@ -554,7 +616,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : filter.FengShuiElement.Trim().ToLowerInvariant();
 
-            return $"{prefix}_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+            return $"{prefix}_kwv3_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }
 
         #endregion

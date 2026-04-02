@@ -10,7 +10,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; }
         public bool IsActive { get; set; }
-        public int AvailableQuantity => Quantity - ReservedQuantity;
+        public int AvailableQuantity => Quantity;
     }
 
     public class CommonPlantListResponseDto
@@ -23,6 +23,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; }
         public bool IsActive { get; set; }
-        public int AvailableQuantity => Quantity - ReservedQuantity;
+        public int AvailableQuantity => Quantity;
     }
 }

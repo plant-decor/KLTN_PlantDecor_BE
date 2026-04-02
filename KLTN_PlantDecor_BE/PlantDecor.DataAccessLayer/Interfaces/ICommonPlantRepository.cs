@@ -31,7 +31,10 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             List<int>? sizes,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending);
+            CommonPlantSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection);
+
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<CommonPlant>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }
