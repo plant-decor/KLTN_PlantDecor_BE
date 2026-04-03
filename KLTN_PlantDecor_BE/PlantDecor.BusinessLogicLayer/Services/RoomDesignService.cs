@@ -15,6 +15,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 {
     public class RoomDesignService : IRoomDesignService
     {
+        private const int DEFAULT_RECOMMENDATION_LIMIT = 3;
+
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAzureOpenAIService _azureOpenAIService;
         private readonly IAISearchService _aiSearchService;
@@ -95,15 +97,14 @@ Chỉ trả về JSON array, không có text khác.
 
             try
             {
-                // Normalize limit to avoid invalid or overly large ranking requests.
-                request.Limit = request.Limit <= 0 ? 3 : Math.Min(request.Limit, 20);
+                var fengShuiFilter = request.FengShuiElement?.ToString();
                 NormalizeRequestFilters(request);
 
                 _logger.LogInformation(
                     "Room design filters normalized. MaxBudget={MaxBudget}, PreferredNurseryIds={PreferredNurseryIds}, FengShuiElement={FengShuiElement}, PetSafe={PetSafe}, ChildSafe={ChildSafe}",
                     request.MaxBudget,
                     request.PreferredNurseryIds == null ? "null" : string.Join(",", request.PreferredNurseryIds),
-                    request.FengShuiElement,
+                    fengShuiFilter,
                     request.PetSafe,
                     request.ChildSafe);
 
@@ -122,7 +123,8 @@ Chỉ trả về JSON array, không có text khác.
                 var recommendations = await RankAndExplainRecommendationsAsync(
                     roomAnalysis,
                     candidatePlants,
-                    request);
+                    request,
+                    fengShuiFilter);
 
                 // Overwrite AI vision summary with a grounded summary based on DB-backed recommendations.
                 roomAnalysis.Summary = BuildGroundedSummary(roomAnalysis, recommendations);
@@ -195,6 +197,7 @@ Chỉ trả về JSON array, không có text khác.
         private string BuildSearchQuery(RoomAnalysisDto analysis, RoomDesignRequestDto request)
         {
             var queryParts = new List<string>();
+            var fengShuiFilter = request.FengShuiElement?.ToString();
 
             // Room-based criteria
             queryParts.Add($"Cây phù hợp cho {analysis.RoomType}");
@@ -229,9 +232,9 @@ Chỉ trả về JSON array, không có text khác.
             queryParts.Add(styleQuery);
 
             // Feng shui element
-            if (!string.IsNullOrEmpty(request.FengShuiElement))
+            if (!string.IsNullOrEmpty(fengShuiFilter))
             {
-                queryParts.Add($"phong thủy mệnh {request.FengShuiElement}");
+                queryParts.Add($"phong thủy mệnh {fengShuiFilter}");
             }
 
             // Safety
@@ -265,9 +268,11 @@ Chỉ trả về JSON array, không có text khác.
             }
 
             var vector = new Vector(queryVector);
+            var limit = DEFAULT_RECOMMENDATION_LIMIT;
+            var fengShuiFilter = request.FengShuiElement?.ToString();
 
             // Search for similar plants - get more than needed for filtering
-            var searchLimit = (request.Limit + 5) * 3;
+            var searchLimit = (limit + 5) * 3;
             var roomDesignEntityTypes = new[]
             {
                 EmbeddingEntityTypes.CommonPlant,
@@ -371,8 +376,8 @@ Chỉ trả về JSON array, không có text khác.
                 candidate.IsPurchasable = true;
 
                 // When user specifies feng shui element, enforce strict matching.
-                if (!string.IsNullOrWhiteSpace(request.FengShuiElement) &&
-                    !IsFengShuiMatch(candidate.FengShuiElement, request.FengShuiElement))
+                if (!string.IsNullOrWhiteSpace(fengShuiFilter) &&
+                    !IsFengShuiMatch(candidate.FengShuiElement, fengShuiFilter))
                 {
                     rejectedFengShui++;
                     continue;
@@ -412,8 +417,11 @@ Chỉ trả về JSON array, không có text khác.
         private async Task<List<PlantRecommendationDto>> RankAndExplainRecommendationsAsync(
             RoomAnalysisDto roomAnalysis,
             List<PlantRecommendationDto> candidates,
-            RoomDesignRequestDto request)
+            RoomDesignRequestDto request,
+            string? fengShuiFilter)
         {
+            var limit = DEFAULT_RECOMMENDATION_LIMIT;
+
             if (!candidates.Any())
             {
                 return new List<PlantRecommendationDto>();
@@ -435,8 +443,8 @@ Chỉ trả về JSON array, không có text khác.
                     c.CareDifficulty
                 }), new JsonSerializerOptions { WriteIndented = false });
 
-                var additionalCriteria = !string.IsNullOrEmpty(request.FengShuiElement)
-                    ? $"Ưu tiên cây phù hợp mệnh {request.FengShuiElement}"
+                var additionalCriteria = !string.IsNullOrEmpty(fengShuiFilter)
+                    ? $"Ưu tiên cây phù hợp mệnh {fengShuiFilter}"
                     : "Cân nhắc phong thủy nếu có thông tin";
 
                 var prompt = string.Format(
@@ -447,7 +455,7 @@ Chỉ trả về JSON array, không có text khác.
                     roomAnalysis.InteriorStyle,
                     roomAnalysis.AvailableSpace,
                     candidatesJson,
-                    request.Limit,
+                    limit,
                     additionalCriteria);
 
                 var response = await _azureOpenAIService.GenerateChatCompletionAsync(
@@ -473,7 +481,7 @@ Chỉ trả về JSON array, không có text khác.
                     if (rankings != null)
                     {
                         var result = new List<PlantRecommendationDto>();
-                        foreach (var ranking in rankings.Take(request.Limit))
+                        foreach (var ranking in rankings.Take(limit))
                         {
                             var candidate = !string.IsNullOrWhiteSpace(ranking.EntityType)
                                 ? hintPrioritizedCandidates.FirstOrDefault(c =>
@@ -496,8 +504,8 @@ Chỉ trả về JSON array, không có text khác.
                             result,
                             hintPrioritizedCandidates,
                             roomAnalysis,
-                            request.FengShuiElement,
-                            request.Limit);
+                            fengShuiFilter,
+                            limit);
                     }
                 }
             }
@@ -520,8 +528,8 @@ Chỉ trả về JSON array, không có text khác.
                 fallbackPrioritized,
                 hintPrioritizedCandidates,
                 roomAnalysis,
-                request.FengShuiElement,
-                request.Limit);
+                fengShuiFilter,
+                limit);
         }
 
         private static string BuildFallbackPlacementText(RoomAnalysisDto roomAnalysis)
@@ -869,9 +877,15 @@ Chỉ trả về JSON array, không có text khác.
                 return selected;
             }
 
-            var targetElement = ResolveTargetFengShuiElement(requestedFengShuiElement);
-            selected = EnsureHintCoverage(selected, fallbackPool, roomAnalysis, targetElement, limit);
-            selected = AlignToTargetFengShuiElement(selected, fallbackPool, targetElement, limit);
+            // Keep AI-ranked results stable when we already have enough items.
+            // Coverage/alignment replacement is only used to recover underfilled sets.
+            if (selected.Count < limit)
+            {
+                var targetElement = ResolveTargetFengShuiElement(requestedFengShuiElement);
+                selected = EnsureHintCoverage(selected, fallbackPool, roomAnalysis, targetElement, limit);
+                selected = AlignToTargetFengShuiElement(selected, fallbackPool, targetElement, limit);
+            }
+
             selected = EnsureUniquePlantNames(selected, fallbackPool, limit);
 
             return selected.Take(limit).ToList();
@@ -1205,10 +1219,6 @@ Chỉ trả về JSON array, không có text khác.
 
         private static void NormalizeRequestFilters(RoomDesignRequestDto request)
         {
-            request.FengShuiElement = string.IsNullOrWhiteSpace(request.FengShuiElement)
-                ? null
-                : request.FengShuiElement.Trim();
-
             if (request.MaxBudget.HasValue && request.MaxBudget.Value <= 0)
             {
                 request.MaxBudget = null;
