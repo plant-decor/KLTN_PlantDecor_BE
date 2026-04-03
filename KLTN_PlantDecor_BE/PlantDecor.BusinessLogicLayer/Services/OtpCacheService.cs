@@ -1,4 +1,4 @@
-using PlantDecor.BusinessLogicLayer.DTOs.Models;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.BusinessLogicLayer.Services

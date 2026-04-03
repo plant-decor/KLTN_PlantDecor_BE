@@ -4,6 +4,7 @@ using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
 using System.Globalization;
@@ -172,16 +173,7 @@ Chỉ trả về JSON array, không có text khác.
                     throw new InvalidOperationException("Failed to parse room analysis response");
                 }
 
-                return new RoomAnalysisDto
-                {
-                    RoomType = MapRoomType(analysisResult.RoomType),
-                    RoomSize = analysisResult.RoomSize ?? "medium",
-                    LightingCondition = analysisResult.LightingCondition ?? "medium",
-                    InteriorStyle = analysisResult.InteriorStyle ?? "modern",
-                    AvailableSpace = analysisResult.AvailableSpace ?? "floor",
-                    ColorPalette = analysisResult.ColorPalette ?? new List<string>(),
-                    Summary = analysisResult.Summary ?? "Không có thông tin phân tích"
-                };
+                return analysisResult.ToRoomAnalysisDto(MapRoomType);
             }
             catch (JsonException ex)
             {
@@ -284,16 +276,20 @@ Chỉ trả về JSON array, không có text khác.
 
             // Fetch a wider candidate set per type so named hints from room analysis can surface.
             var perTypeLimit = Math.Max(40, searchLimit * 2);
-            var embeddingsByType = new Dictionary<string, List<DataAccessLayer.Entities.Embedding>>(StringComparer.OrdinalIgnoreCase);
+            var embeddingsByType = new Dictionary<string, List<EmbeddingSearchItemDto>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var entityType in roomDesignEntityTypes)
             {
-                embeddingsByType[entityType] = await _unitOfWork.EmbeddingRepository
+                var rawEmbeddings = await _unitOfWork.EmbeddingRepository
                     .SearchSimilarAsync(vector, perTypeLimit, entityType);
+
+                embeddingsByType[entityType] = rawEmbeddings
+                    .Select(RoomDesignMapper.ToEmbeddingSearchItem)
+                    .ToList();
             }
 
             // Interleave per-type result lists so one type doesn't dominate candidate selection.
-            var embeddings = new List<DataAccessLayer.Entities.Embedding>();
+            var embeddings = new List<EmbeddingSearchItemDto>();
             for (var index = 0; index < perTypeLimit; index++)
             {
                 var added = false;
@@ -680,6 +676,7 @@ Chỉ trả về JSON array, không có text khác.
                     case EmbeddingEntityTypes.CommonPlant:
                         var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(entityId);
                         if (commonPlant?.Plant == null) return null;
+                        var commonPlantImageUrl = await _unitOfWork.CommonPlantRepository.GetPrimaryImageUrlAsync(entityId);
                         return new PlantRecommendationDto
                         {
                             EntityType = entityType,
@@ -688,8 +685,9 @@ Chỉ trả về JSON array, không có text khác.
                             Name = commonPlant.Plant.Name,
                             Description = commonPlant.Plant.Description,
                             Price = commonPlant.Plant.BasePrice,
-                            ImageUrl = commonPlant.Plant.PlantImages?.FirstOrDefault()?.ImageUrl,
+                            ImageUrl = commonPlantImageUrl,
                             FengShuiElement = commonPlant.Plant.FengShuiElement,
+                            CareDifficulty = MapCareDifficulty(commonPlant.Plant.CareLevelType),
                             NurseryId = commonPlant.NurseryId,
                             NurseryName = commonPlant.Nursery?.Name
                         };
@@ -697,6 +695,7 @@ Chỉ trả về JSON array, không có text khác.
                     case EmbeddingEntityTypes.PlantInstance:
                         var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(entityId);
                         if (instance?.Plant == null) return null;
+                        var instanceImageUrl = await _unitOfWork.PlantInstanceRepository.GetPrimaryImageUrlAsync(entityId);
                         return new PlantRecommendationDto
                         {
                             EntityType = entityType,
@@ -705,9 +704,9 @@ Chỉ trả về JSON array, không có text khác.
                             Name = instance.Plant.Name,
                             Description = instance.Description ?? instance.Plant.Description,
                             Price = instance.SpecificPrice ?? instance.Plant.BasePrice,
-                            ImageUrl = instance.PlantImages?.FirstOrDefault()?.ImageUrl
-                                ?? instance.Plant.PlantImages?.FirstOrDefault()?.ImageUrl,
+                            ImageUrl = instanceImageUrl,
                             FengShuiElement = instance.Plant.FengShuiElement,
+                            CareDifficulty = MapCareDifficulty(instance.Plant.CareLevelType),
                             NurseryId = instance.CurrentNurseryId ?? 0,
                             NurseryName = instance.CurrentNursery?.Name
                         };
@@ -736,6 +735,18 @@ Chỉ trả về JSON array, không có text khác.
             }
 
             return 0;
+        }
+
+        private static string MapCareDifficulty(int? careLevelType)
+        {
+            return careLevelType switch
+            {
+                1 => "Easy",
+                2 => "Medium",
+                3 => "Hard",
+                4 => "Expert",
+                _ => "Unknown"
+            };
         }
 
         private static bool IsFengShuiMatch(string? candidateElement, string? requestedElement)
@@ -1231,28 +1242,5 @@ Chỉ trả về JSON array, không có text khác.
             };
         }
 
-        #region Internal DTOs for JSON parsing
-
-        private class RoomAnalysisJsonDto
-        {
-            public string? RoomType { get; set; }
-            public string? RoomSize { get; set; }
-            public string? LightingCondition { get; set; }
-            public string? InteriorStyle { get; set; }
-            public string? AvailableSpace { get; set; }
-            public List<string>? ColorPalette { get; set; }
-            public string? Summary { get; set; }
-        }
-
-        private class RankingResultDto
-        {
-            public string? EntityType { get; set; }
-            public int EntityId { get; set; }
-            public string? ReasonForRecommendation { get; set; }
-            public string? SuggestedPlacement { get; set; }
-            public double MatchScore { get; set; }
-        }
-
-        #endregion
     }
 }

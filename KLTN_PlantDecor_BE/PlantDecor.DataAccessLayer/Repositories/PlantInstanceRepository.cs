@@ -40,8 +40,37 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.PlantInstances
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.CurrentNursery)
-                .Include(pi => pi.PlantImages)
                 .FirstOrDefaultAsync(pi => pi.Id == id);
+        }
+
+        // Dùng cho trường hợp PlantInstance không có ảnh riêng, fallback lấy ảnh từ Plant
+        public async Task<string?> GetPrimaryImageUrlAsync(int plantInstanceId)
+        {
+            var instanceImages = await _context.PlantImages
+                .Where(image => image.PlantInstanceId == plantInstanceId)
+                .ToListAsync();
+
+            var instanceImageUrl = SelectPrimaryImageUrl(instanceImages);
+            if (!string.IsNullOrWhiteSpace(instanceImageUrl))
+            {
+                return instanceImageUrl;
+            }
+
+            var plantId = await _context.PlantInstances
+                .Where(pi => pi.Id == plantInstanceId)
+                .Select(pi => (int?)pi.PlantId)
+                .FirstOrDefaultAsync();
+
+            if (!plantId.HasValue)
+            {
+                return null;
+            }
+
+            var plantImages = await _context.PlantImages
+                .Where(image => image.PlantId == plantId.Value && image.PlantInstanceId == null)
+                .ToListAsync();
+
+            return SelectPrimaryImageUrl(plantImages);
         }
 
         public async Task<List<PlantInstance>> GetByIdsAsync(List<int> ids)
@@ -125,6 +154,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static string? SelectPrimaryImageUrl(IEnumerable<PlantImage>? images)
+        {
+            if (images == null)
+            {
+                return null;
+            }
+
+            return images
+                .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.IsPrimary == true)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault();
         }
 
         public async Task<int> CountForEmbeddingBackfillAsync()
