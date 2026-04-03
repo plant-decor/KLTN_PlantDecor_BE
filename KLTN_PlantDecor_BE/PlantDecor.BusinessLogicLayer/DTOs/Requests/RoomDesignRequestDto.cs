@@ -1,3 +1,5 @@
+using PlantDecor.DataAccessLayer.Enums;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class RoomDesignRequestDto
@@ -8,19 +10,14 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string RoomImageBase64 { get; set; } = null!;
 
         /// <summary>
-        /// Optional feng shui element filter (Kim, Mộc, Thủy, Hỏa, Thổ)
+        /// Optional feng shui element filter
         /// </summary>
-        public string? FengShuiElement { get; set; }
+        public FengShuiElementEnum? FengShuiElement { get; set; }
 
         /// <summary>
         /// Maximum budget for plant recommendations
         /// </summary>
         public decimal? MaxBudget { get; set; }
-
-        /// <summary>
-        /// Number of plant recommendations to return (default: 3)
-        /// </summary>
-        public int Limit { get; set; } = 3;
 
         /// <summary>
         /// Filter for pet-safe plants only

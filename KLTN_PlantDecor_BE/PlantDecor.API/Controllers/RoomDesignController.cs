@@ -124,7 +124,6 @@ namespace PlantDecor.API.Controllers
                     RoomImageBase64 = Convert.ToBase64String(memoryStream.ToArray()),
                     FengShuiElement = request.FengShuiElement,
                     MaxBudget = request.MaxBudget,
-                    Limit = request.Limit,
                     PetSafe = request.PetSafe,
                     ChildSafe = request.ChildSafe,
                     PreferredNurseryIds = request.PreferredNurseryIds
