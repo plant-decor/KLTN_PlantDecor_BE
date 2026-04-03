@@ -12,6 +12,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             CommonPlantId = item.CommonPlantId,
             NurseryPlantComboId = item.NurseryPlantComboId,
             NurseryMaterialId = item.NurseryMaterialId,
+            NurseryId = item.CommonPlant?.NurseryId
+                ?? item.NurseryPlantCombo?.NurseryId
+                ?? item.NurseryMaterial?.NurseryId
+                ?? 0,
             ProductName = item.CommonPlant?.Plant?.Name
                 ?? item.NurseryPlantCombo?.PlantCombo?.ComboName
                 ?? item.NurseryMaterial?.Material?.Name,
