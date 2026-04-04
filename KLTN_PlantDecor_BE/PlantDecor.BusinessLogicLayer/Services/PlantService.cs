@@ -612,9 +612,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "none"
                 : string.Join("-", filter.Sizes.OrderBy(x => x));
 
-            var fengShuiPart = string.IsNullOrWhiteSpace(filter.FengShuiElement)
-                ? "none"
-                : filter.FengShuiElement.Trim().ToLowerInvariant();
+            var fengShuiPart = filter.FengShuiElement.HasValue
+                ? filter.FengShuiElement.Value.ToString()
+                : "none";
 
             return $"{prefix}_kwv3_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
         }

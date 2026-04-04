@@ -33,7 +33,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public bool? ChildSafe { get; set; }
 
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
 
         public string? FengShuiMeaning { get; set; }
 

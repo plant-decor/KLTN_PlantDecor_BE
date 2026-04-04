@@ -850,6 +850,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 query = query.Where(npc => npc.PlantCombo.ChildSafe == searchDto.ChildSafe.Value);
             }
 
+            // Season filter
+            if (searchDto.Season.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.Season.HasValue && npc.PlantCombo.Season.Value == searchDto.Season.Value);
+            }
+
+            // Combo type filter
+            if (searchDto.ComboType.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.ComboType.HasValue && npc.PlantCombo.ComboType.Value == searchDto.ComboType.Value);
+            }
+
             var categoryIds = (searchDto.CategoryIds ?? new List<int>()).ToList();
             if (searchDto.CategoryId.HasValue && !categoryIds.Contains(searchDto.CategoryId.Value))
             {
@@ -877,6 +889,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     Id = g.Key.Id,
                     Name = g.Key.ComboName ?? string.Empty,
+                    ComboType = g.Key.ComboType,
+                    ComboTypeName = MapComboTypeName(g.Key.ComboType),
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
                     ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
@@ -913,6 +927,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     : source.OrderBy(item => item.Name),
                 _ => source.OrderBy(item => item.Name)
             };
+        }
+
+        private static string? MapComboTypeName(int? comboType)
+        {
+            if (!comboType.HasValue || !Enum.IsDefined(typeof(ComboTypeEnum), comboType.Value))
+            {
+                return null;
+            }
+
+            return ((ComboTypeEnum)comboType.Value).ToString();
         }
 
         #endregion
@@ -1002,7 +1026,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     FengShuiPurpose = combo.FengShuiPurpose,
                     ThemeName = combo.ThemeName,
                     ThemeDescription = combo.ThemeDescription,
-                    Season = combo.Season,
+                    Season = combo.Season.HasValue && Enum.IsDefined(typeof(SeasonTypeEnum), combo.Season.Value)
+                        ? (SeasonTypeEnum?)combo.Season.Value
+                        : null,
                     PetSafe = combo.PetSafe,
                     ChildSafe = combo.ChildSafe,
                     ComboPrice = combo.ComboPrice,

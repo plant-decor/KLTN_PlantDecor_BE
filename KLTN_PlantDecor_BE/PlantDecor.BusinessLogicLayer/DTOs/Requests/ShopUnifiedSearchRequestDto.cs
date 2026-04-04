@@ -13,6 +13,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public List<int>? TagIds { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
+        public int? ComboSeason { get; set; }
+        public int? ComboType { get; set; }
         public int? PlacementType { get; set; }
         public int? CareLevelType { get; set; }
         public string? CareLevel { get; set; }
@@ -21,7 +23,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public bool? HasFlower { get; set; }
         public bool? IsUniqueInstance { get; set; }
         public List<int>? Sizes { get; set; }
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public int? NurseryId { get; set; }
         public UnifiedSearchSortByEnum? SortBy { get; set; }
         public SortDirectionEnum? SortDirection { get; set; }

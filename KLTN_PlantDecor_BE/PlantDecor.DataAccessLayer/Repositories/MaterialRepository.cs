@@ -76,6 +76,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .AnyAsync(m => m.MaterialCode == materialCode);
         }
 
+        public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+        {
+            var normalizedName = name.Trim().ToLower();
+
+            if (excludeId.HasValue)
+            {
+                return await _context.Materials
+                    .AnyAsync(m => m.Name != null && m.Name.ToLower() == normalizedName && m.Id != excludeId.Value);
+            }
+
+            return await _context.Materials
+                .AnyAsync(m => m.Name != null && m.Name.ToLower() == normalizedName);
+        }
+
         public async Task<PaginatedResult<Material>> GetMaterialsForShopAsync(Pagination pagination)
         {
             var query = _context.Materials
