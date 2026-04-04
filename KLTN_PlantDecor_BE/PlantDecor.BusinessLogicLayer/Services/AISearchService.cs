@@ -3,6 +3,7 @@ using Pgvector;
 using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -340,7 +341,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.Price = commonPlant.Plant?.BasePrice;
                         item.NurseryId = commonPlant.NurseryId;
                         item.NurseryName = commonPlant.Nursery?.Name;
-                        item.FengShuiElement = commonPlant.Plant?.FengShuiElement;
+                        item.FengShuiElement = MapFengShuiElement(commonPlant.Plant?.FengShuiElement);
                         item.ImageUrl = commonPlant.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -354,7 +355,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.Price = instance.SpecificPrice ?? instance.Plant?.BasePrice;
                         item.NurseryId = instance.CurrentNurseryId ?? 0;
                         item.NurseryName = instance.CurrentNursery?.Name;
-                        item.FengShuiElement = instance.Plant?.FengShuiElement;
+                        item.FengShuiElement = MapFengShuiElement(instance.Plant?.FengShuiElement);
                         item.ImageUrl = instance.PlantImages?.FirstOrDefault()?.ImageUrl ?? instance.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -368,7 +369,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.Price = combo.PlantCombo?.ComboPrice;
                         item.NurseryId = combo.NurseryId;
                         item.NurseryName = combo.Nursery?.Name;
-                        item.FengShuiElement = combo.PlantCombo?.FengShuiElement;
+                        item.FengShuiElement = MapFengShuiElement(combo.PlantCombo?.FengShuiElement);
                         item.ImageUrl = combo.PlantCombo?.PlantComboImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -437,6 +438,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (je.TryGetDouble(out var jDbl)) return (decimal)jDbl;
             }
             return 0;
+        }
+
+        private static string? MapFengShuiElement(int? fengShuiElement)
+        {
+            if (!fengShuiElement.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
+                ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
+                : null;
         }
 
         #endregion

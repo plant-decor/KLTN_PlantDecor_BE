@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
 using System.Globalization;
@@ -694,7 +695,7 @@ Chỉ trả về JSON array, không có text khác.
                             Description = commonPlant.Plant.Description,
                             Price = commonPlant.Plant.BasePrice,
                             ImageUrl = commonPlantImageUrl,
-                            FengShuiElement = commonPlant.Plant.FengShuiElement,
+                            FengShuiElement = MapFengShuiElement(commonPlant.Plant.FengShuiElement),
                             CareDifficulty = MapCareDifficulty(commonPlant.Plant.CareLevelType),
                             NurseryId = commonPlant.NurseryId,
                             NurseryName = commonPlant.Nursery?.Name
@@ -713,7 +714,7 @@ Chỉ trả về JSON array, không có text khác.
                             Description = instance.Description ?? instance.Plant.Description,
                             Price = instance.SpecificPrice ?? instance.Plant.BasePrice,
                             ImageUrl = instanceImageUrl,
-                            FengShuiElement = instance.Plant.FengShuiElement,
+                            FengShuiElement = MapFengShuiElement(instance.Plant.FengShuiElement),
                             CareDifficulty = MapCareDifficulty(instance.Plant.CareLevelType),
                             NurseryId = instance.CurrentNurseryId ?? 0,
                             NurseryName = instance.CurrentNursery?.Name
@@ -755,6 +756,18 @@ Chỉ trả về JSON array, không có text khác.
                 4 => "Expert",
                 _ => "Unknown"
             };
+        }
+
+        private static string? MapFengShuiElement(int? fengShuiElement)
+        {
+            if (!fengShuiElement.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
+                ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
+                : null;
         }
 
         private static bool IsFengShuiMatch(string? candidateElement, string? requestedElement)

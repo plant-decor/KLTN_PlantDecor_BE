@@ -12,7 +12,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// <summary>
         /// Optional feng shui element filter
         /// </summary>
-        public FengShuiElementEnum? FengShuiElement { get; set; }
+        public FengShuiElementTypeEnum? FengShuiElement { get; set; }
 
         /// <summary>
         /// Maximum budget for plant recommendations

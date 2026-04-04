@@ -6,7 +6,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     public class AnalyzeAndRecommendUploadRequest
     {
         public IFormFile Image { get; set; } = null!;
-        public FengShuiElementEnum? FengShuiElement { get; set; }
+        public FengShuiElementTypeEnum? FengShuiElement { get; set; }
         public decimal? MaxBudget { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
