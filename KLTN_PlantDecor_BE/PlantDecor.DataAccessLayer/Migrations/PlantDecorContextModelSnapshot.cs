@@ -1248,9 +1248,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<string>("FengShuiElement")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("FengShuiElement")
+                        .HasColumnType("integer");
 
                     b.Property<string>("FengShuiMeaning")
                         .HasColumnType("text");
@@ -1349,9 +1348,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<string>("FengShuiElement")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("FengShuiElement")
+                        .HasColumnType("integer");
 
                     b.Property<string>("FengShuiPurpose")
                         .HasMaxLength(255)
@@ -1370,9 +1368,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<string>("Season")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int?>("Season")
+                        .HasColumnType("integer");
 
                     b.PrimitiveCollection<List<string>>("SuitableRooms")
                         .HasColumnType("jsonb");
@@ -1490,15 +1487,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("Humidity")
+                        .HasColumnType("text");
+
                     b.Property<int?>("LightRequirement")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("PlantId")
+                    b.Property<int>("PlantId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Pruning")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Soil")
+                        .HasColumnType("text");
 
                     b.Property<string>("Temperature")
                         .HasMaxLength(255)
@@ -1635,17 +1638,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int?>("PlantId")
+                    b.Property<int>("PlantId")
                         .HasColumnType("integer");
 
                     b.Property<int?>("PlantInstanceId")
                         .HasColumnType("integer");
 
-                    b.Property<decimal?>("Rating")
-                        .HasPrecision(2, 1)
-                        .HasColumnType("numeric(2,1)");
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -1945,6 +1947,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("EstimatedDuration")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<int?>("MainCaretakerId")
                         .HasColumnType("integer");
@@ -2313,6 +2323,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("Gender")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<string>("NotificationPreferences")
                         .HasColumnType("jsonb");
@@ -2866,6 +2884,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("PlantGuides")
                         .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("PlantGuide_PlantId_fkey");
 
                     b.Navigation("Plant");
@@ -2912,6 +2932,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("PlantRatings")
                         .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("PlantRating_PlantId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
@@ -2922,6 +2944,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("PlantRatings")
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("PlantRating_UserId_fkey");
 
                     b.Navigation("Plant");

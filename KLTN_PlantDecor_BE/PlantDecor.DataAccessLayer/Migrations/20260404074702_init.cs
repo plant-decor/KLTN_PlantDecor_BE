@@ -139,7 +139,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Toxicity = table.Column<bool>(type: "boolean", nullable: true),
                     AirPurifying = table.Column<bool>(type: "boolean", nullable: true),
                     HasFlower = table.Column<bool>(type: "boolean", nullable: true),
-                    FengShuiElement = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    FengShuiElement = table.Column<int>(type: "integer", nullable: true),
                     FengShuiMeaning = table.Column<string>(type: "text", nullable: true),
                     PotIncluded = table.Column<bool>(type: "boolean", nullable: true),
                     PotSize = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
@@ -168,14 +168,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Description = table.Column<string>(type: "text", nullable: true),
                     SuitableSpace = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     SuitableRooms = table.Column<List<string>>(type: "jsonb", nullable: true),
-                    FengShuiElement = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    FengShuiElement = table.Column<int>(type: "integer", nullable: true),
                     FengShuiPurpose = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     PetSafe = table.Column<bool>(type: "boolean", nullable: true),
                     ChildSafe = table.Column<bool>(type: "boolean", nullable: true),
                     ThemeName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ThemeDescription = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     ComboPrice = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
-                    Season = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Season = table.Column<int>(type: "integer", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
                     ViewCount = table.Column<int>(type: "integer", nullable: true, defaultValue: 0),
                     PurchaseCount = table.Column<int>(type: "integer", nullable: true, defaultValue: 0),
@@ -307,12 +307,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PlantId = table.Column<int>(type: "integer", nullable: true),
+                    PlantId = table.Column<int>(type: "integer", nullable: false),
                     LightRequirement = table.Column<int>(type: "integer", nullable: true),
                     Watering = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Fertilizing = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Pruning = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Temperature = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Humidity = table.Column<string>(type: "text", nullable: true),
+                    Soil = table.Column<string>(type: "text", nullable: true),
                     CareNotes = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
@@ -323,7 +325,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         name: "PlantGuide_PlantId_fkey",
                         column: x => x.PlantId,
                         principalTable: "Plant",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -905,10 +908,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PlantId = table.Column<int>(type: "integer", nullable: true),
-                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    PlantId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
                     PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
-                    Rating = table.Column<decimal>(type: "numeric(2,1)", precision: 2, scale: 1, nullable: true),
+                    Rating = table.Column<int>(type: "integer", nullable: false),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
@@ -919,7 +922,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         name: "PlantRating_PlantId_fkey",
                         column: x => x.PlantId,
                         principalTable: "Plant",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "PlantRating_PlantInstanceId_fkey",
                         column: x => x.PlantInstanceId,
@@ -929,7 +933,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         name: "PlantRating_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1090,6 +1095,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     BirthYear = table.Column<int>(type: "integer", nullable: true),
                     FullName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Gender = table.Column<int>(type: "integer", nullable: true),
+                    Latitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
+                    Longitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
                     ReceiveNotifications = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
                     NotificationPreferences = table.Column<string>(type: "jsonb", nullable: true),
                     ProfileCompleteness = table.Column<int>(type: "integer", nullable: true),
@@ -1243,6 +1250,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ServiceDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ApprovedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Longitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
+                    Latitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     CancelReason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     EstimatedDuration = table.Column<int>(type: "integer", nullable: true),

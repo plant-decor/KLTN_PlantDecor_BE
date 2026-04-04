@@ -1,3 +1,5 @@
+using PlantDecor.DataAccessLayer.Enums;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
 {
     /// <summary>
@@ -13,7 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public string? PlantDescription { get; set; }
         public string? PlantOrigin { get; set; }
 
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public string? FengShuiMeaning { get; set; }
         public int? Size { get; set; }
         public int PlacementType { get; set; }
@@ -41,7 +43,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
 
         public string PlantName { get; set; } = string.Empty;
         public string? PlantSpecificName { get; set; }
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public string? FengShuiMeaning { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
@@ -76,11 +78,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public string? Description { get; set; }
         public string? SuitableSpace { get; set; }
         public List<string> SuitableRooms { get; set; } = new();
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public string? FengShuiPurpose { get; set; }
         public string? ThemeName { get; set; }
         public string? ThemeDescription { get; set; }
-        public string? Season { get; set; }
+        public SeasonTypeEnum? Season { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
 

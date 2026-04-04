@@ -102,6 +102,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         MaxPrice = searchRequest.MaxPrice,
                         PetSafe = searchRequest.PetSafe,
                         ChildSafe = searchRequest.ChildSafe,
+                        Season = searchRequest.ComboSeason,
+                        ComboType = searchRequest.ComboType,
                         CategoryIds = searchRequest.CategoryIds,
                         TagIds = searchRequest.TagIds,
                         SortBy = MapUnifiedToComboSort(searchRequest.SortBy),
@@ -121,10 +123,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             builder.Append($"_k{Normalize(request.Keyword)}");
             builder.Append($"_min{request.MinPrice}_max{request.MaxPrice}");
             builder.Append($"_ps{request.PetSafe}_cs{request.ChildSafe}");
+            builder.Append($"_cseason{NormalizeNullableInt(request.ComboSeason)}");
+            builder.Append($"_ctype{NormalizeNullableInt(request.ComboType)}");
             builder.Append($"_pt{request.PlacementType}_clt{request.CareLevelType}_cl{Normalize(request.CareLevel)}");
             builder.Append($"_tx{request.Toxicity}_ap{request.AirPurifying}_hf{request.HasFlower}_ui{request.IsUniqueInstance}");
             builder.Append($"_sz{NormalizeList(request.Sizes)}_cat{NormalizeList(request.CategoryIds)}_tag{NormalizeList(request.TagIds)}");
-            builder.Append($"_fe{Normalize(request.FengShuiElement)}_n{request.NurseryId}");
+            builder.Append($"_fe{NormalizeNullableInt(request.FengShuiElement)}_n{request.NurseryId}");
             builder.Append($"_sb{NormalizeEnum(request.SortBy)}_sd{NormalizeEnum(request.SortDirection)}");
             builder.Append($"_ip{request.IncludePlants}_im{request.IncludeMaterials}_ic{request.IncludeCombos}");
             return builder.ToString();
@@ -140,6 +144,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return string.IsNullOrWhiteSpace(value)
                 ? "none"
                 : value.Trim().ToLowerInvariant();
+        }
+
+        private static string NormalizeNullableInt(int? value)
+        {
+            return value.HasValue
+                ? value.Value.ToString()
+                : "none";
         }
 
         private static string NormalizeEnum<TEnum>(TEnum? value) where TEnum : struct, Enum

@@ -238,11 +238,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (filter.Sizes != null && filter.Sizes.Count > 0)
                 query = query.Where(p => p.Size.HasValue && filter.Sizes.Contains(p.Size.Value));
 
-            if (!string.IsNullOrWhiteSpace(filter.FengShuiElement))
-            {
-                var fengShuiElement = filter.FengShuiElement.Trim().ToLower();
-                query = query.Where(p => p.FengShuiElement != null && p.FengShuiElement.ToLower() == fengShuiElement);
-            }
+            if (filter.FengShuiElement.HasValue)
+                query = query.Where(p => p.FengShuiElement == filter.FengShuiElement.Value);
 
             if (filter.CategoryIds != null && filter.CategoryIds.Count > 0)
                 query = query.Where(p => p.Categories.Any(c => filter.CategoryIds.Contains(c.Id)));
