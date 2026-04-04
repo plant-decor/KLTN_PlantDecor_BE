@@ -7,13 +7,13 @@ public partial class PlantRating
 {
     public int Id { get; set; }
 
-    public int? PlantId { get; set; }
+    public int PlantId { get; set; }
 
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     public int? PlantInstanceId { get; set; }
 
-    public decimal? Rating { get; set; }
+    public int Rating { get; set; }
 
     public string? Description { get; set; }
 

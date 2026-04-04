@@ -15,6 +15,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         public string? Address { get; set; }
         public int? BirthYear { get; set; }
         public GenderEnum? Gender { get; set; }           // 0: Nữ, 1: Nam, 2: Khác
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
         public bool? ReceiveNotifications { get; set; }
     }
 }

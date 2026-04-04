@@ -19,7 +19,7 @@ public partial class PlantCombo
 
     public List<string>? SuitableRooms { get; set; }
 
-    public string? FengShuiElement { get; set; }
+    public int? FengShuiElement { get; set; }
 
     public string? FengShuiPurpose { get; set; }
 
@@ -33,7 +33,7 @@ public partial class PlantCombo
 
     public decimal? ComboPrice { get; set; }
 
-    public string? Season { get; set; }
+    public int? Season { get; set; }
 
     public bool? IsActive { get; set; }
 

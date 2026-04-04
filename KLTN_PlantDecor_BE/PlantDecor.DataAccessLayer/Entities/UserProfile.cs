@@ -17,6 +17,10 @@ public partial class UserProfile
 
     public int? Gender { get; set; }
 
+    public decimal? Latitude { get; set; }
+
+    public decimal? Longitude { get; set; }
+
     public bool? ReceiveNotifications { get; set; }
 
     public string? NotificationPreferences { get; set; }
