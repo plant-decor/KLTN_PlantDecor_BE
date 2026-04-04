@@ -15,6 +15,14 @@ namespace PlantDecor.API.Controllers
         private static readonly Dictionary<string, Type> EnumMap = new(StringComparer.OrdinalIgnoreCase)
         {
             ["CategoryType"] = typeof(CategoryTypeEnum),
+            ["OrderStatus"] = typeof(OrderStatusEnum),
+            ["OrderType"] = typeof(OrderTypeEnum),
+            ["InvoiceStatus"] = typeof(InvoiceStatusEnum),
+            ["InvoiceType"] = typeof(InvoiceTypeEnum),
+            ["PaymentStatus"] = typeof(PaymentStatusEnum),
+            ["PaymentType"] = typeof(PaymentTypeEnum),
+            ["PaymentStrategies"] = typeof(PaymentStrategiesEnum),
+            ["TransactionStatus"] = typeof(TransactionStatusEnum),
             ["ComboType"] = typeof(ComboTypeEnum),
             ["Gender"] = typeof(GenderEnum),
             ["PlacementType"] = typeof(PlacementTypeEnum),
@@ -346,6 +354,90 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("Role", typeof(RoleEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Order
+        /// GET /api/system/enums/orders
+        /// </summary>
+        [HttpGet("orders")]
+        [AllowAnonymous]
+        public IActionResult GetOrderEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get order enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("OrderStatus", typeof(OrderStatusEnum)),
+                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Invoice
+        /// GET /api/system/enums/invoices
+        /// </summary>
+        [HttpGet("invoices")]
+        [AllowAnonymous]
+        public IActionResult GetInvoiceEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get invoice enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("InvoiceStatus", typeof(InvoiceStatusEnum)),
+                    CreateEnumGroup("InvoiceType", typeof(InvoiceTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Payment
+        /// GET /api/system/enums/payments
+        /// </summary>
+        [HttpGet("payments")]
+        [AllowAnonymous]
+        public IActionResult GetPaymentEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get payment enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PaymentStatus", typeof(PaymentStatusEnum)),
+                    CreateEnumGroup("PaymentType", typeof(PaymentTypeEnum)),
+                    CreateEnumGroup("PaymentStrategies", typeof(PaymentStrategiesEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Transaction
+        /// GET /api/system/enums/transactions
+        /// </summary>
+        [HttpGet("transactions")]
+        [AllowAnonymous]
+        public IActionResult GetTransactionEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get transaction enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("TransactionStatus", typeof(TransactionStatusEnum))
                 }
             });
         }

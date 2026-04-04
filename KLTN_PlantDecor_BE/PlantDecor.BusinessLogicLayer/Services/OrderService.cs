@@ -198,9 +198,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(order);
         }
 
-        public async Task<List<OrderResponseDto>> GetMyOrdersAsync(int userId)
+        public async Task<List<OrderResponseDto>> GetMyOrdersAsync(int userId, OrderStatusEnum? orderStatus = null)
         {
-            var orders = await _context.Orders
+            var query = _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
                 .Include(o => o.NurseryOrders)
@@ -209,7 +209,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     .ThenInclude(no => no.Shipper)
                 .Include(o => o.Invoices)
                     .ThenInclude(i => i.InvoiceDetails)
-                .Where(o => o.UserId == userId)
+                .Where(o => o.UserId == userId);
+
+            if (orderStatus.HasValue)
+                query = query.Where(o => o.Status == (int)orderStatus.Value);
+
+            var orders = await query
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
 
