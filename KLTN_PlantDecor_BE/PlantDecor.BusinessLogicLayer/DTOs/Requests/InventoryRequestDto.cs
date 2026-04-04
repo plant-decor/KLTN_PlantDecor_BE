@@ -4,7 +4,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class MaterialRequestDto
     {
-        public string? MaterialCode { get; set; }
+        [Required(ErrorMessage = "MaterialCode là bắt buộc")]
+        public string MaterialCode { get; set; } = null!;
 
         [Required(ErrorMessage = "Tên vật liệu là bắt buộc")]
         [StringLength(200, ErrorMessage = "Tên vật liệu không được vượt quá 200 ký tự")]

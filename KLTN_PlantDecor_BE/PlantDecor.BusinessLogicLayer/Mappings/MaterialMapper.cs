@@ -114,12 +114,5 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             material.UpdatedAt = DateTime.Now;
         }
         #endregion
-
-        #region Helper
-        public static string GenerateMaterialCode()
-        {
-            return $"MAT{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";
-        }
-        #endregion
     }
 }
