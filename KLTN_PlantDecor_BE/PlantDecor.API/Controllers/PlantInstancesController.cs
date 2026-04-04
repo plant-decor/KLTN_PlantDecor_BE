@@ -193,11 +193,9 @@ namespace PlantDecor.API.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                return 1;
-            }
+                throw new UnauthorizedException("Unable to identify user from token");
             return userId;
         }
 
