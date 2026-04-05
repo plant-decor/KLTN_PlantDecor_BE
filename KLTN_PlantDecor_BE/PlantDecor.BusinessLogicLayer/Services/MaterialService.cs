@@ -103,6 +103,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var material = request.ToEntity();
                 material.MaterialCode = materialCode; // Ensure code is stored in uppercase
 
+                var categoryIds = (request.CategoryIds ?? new List<int>()).Distinct().ToList();
+                if (categoryIds.Any())
+                {
+                    var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
+                    var validCategories = categories.Where(c => categoryIds.Contains(c.Id)).ToList();
+
+                    if (validCategories.Count != categoryIds.Count)
+                    {
+                        var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
+                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var category in validCategories)
+                    {
+                        material.Categories.Add(category);
+                    }
+                }
+
+                var tagIds = (request.TagIds ?? new List<int>()).Distinct().ToList();
+                if (tagIds.Any())
+                {
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var tag in tags)
+                    {
+                        material.Tags.Add(tag);
+                    }
+                }
+
                 _unitOfWork.MaterialRepository.PrepareCreate(material);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -128,14 +163,57 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (material == null)
                     throw new NotFoundException($"Material với ID {id} không tồn tại");
 
+                var normalizedMaterialCode = string.IsNullOrWhiteSpace(request.MaterialCode)
+                    ? null
+                    : request.MaterialCode.Trim().ToUpper();
+
                 // Check if material code already exists (excluding current material)
-                if (!string.IsNullOrEmpty(request.MaterialCode))
+                if (!string.IsNullOrEmpty(normalizedMaterialCode))
                 {
-                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(request.MaterialCode, id))
-                        throw new BadRequestException($"Material với mã '{request.MaterialCode}' đã tồn tại");
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(normalizedMaterialCode, id))
+                        throw new BadRequestException($"Material với mã '{normalizedMaterialCode}' đã tồn tại");
                 }
 
+                request.MaterialCode = normalizedMaterialCode;
+
                 request.ToUpdate(material);
+
+                if (request.CategoryIds != null)
+                {
+                    var categoryIds = request.CategoryIds.Distinct().ToList();
+                    var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
+                    var validCategories = categories.Where(c => categoryIds.Contains(c.Id)).ToList();
+
+                    if (validCategories.Count != categoryIds.Count)
+                    {
+                        var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
+                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    material.Categories.Clear();
+                    foreach (var category in validCategories)
+                    {
+                        material.Categories.Add(category);
+                    }
+                }
+
+                if (request.TagIds != null)
+                {
+                    var tagIds = request.TagIds.Distinct().ToList();
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    material.Tags.Clear();
+                    foreach (var tag in tags)
+                    {
+                        material.Tags.Add(tag);
+                    }
+                }
 
                 _unitOfWork.MaterialRepository.PrepareUpdate(material);
                 await _unitOfWork.SaveAsync();
