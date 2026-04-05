@@ -2,6 +2,7 @@
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -188,6 +189,155 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     JoinedAt = p.JoinedAt
                 }).ToList()
             };
+        }
+
+        public async Task<ConversationResponseDto> StartSupportConversationAsync(int customerId, string firstMessage)
+        {
+            var existingConversation = await _unitOfWork.ChatSessionRepository
+                .FindOpenSupportConversationByCustomerAsync(customerId);
+
+            if (existingConversation == null)
+            {
+                existingConversation = await _unitOfWork.ChatSessionRepository
+                    .CreateSupportConversationAsync(customerId);
+            }
+
+            var message = new ChatMessage
+            {
+                ChatSessionId = existingConversation.Id,
+                Sender = customerId,
+                Content = firstMessage.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.ChatMessageRepository.CreateAsync(message);
+            await _unitOfWork.SaveAsync();
+
+            return await GetConversationDetailsAsync(customerId, existingConversation.Id)
+                   ?? throw new NotFoundException("Conversation not found");
+        }
+
+        public async Task<List<ConversationResponseDto>> GetWaitingSupportConversationsAsync()
+        {
+            var conversations = await _unitOfWork.ChatSessionRepository.GetWaitingSupportConversationsAsync();
+
+            var result = new List<ConversationResponseDto>();
+
+            foreach (var conv in conversations)
+            {
+                var latestMessage = await _unitOfWork.ChatMessageRepository.GetLatestMessageAsync(conv.Id);
+
+                result.Add(new ConversationResponseDto
+                {
+                    Id = conv.Id,
+                    Status = conv.Status,
+                    StartedAt = conv.StartedAt,
+                    EndedAt = conv.EndedAt,
+                    Participants = conv.ChatParticipants.Select(p => new ParticipantResponseDto
+                    {
+                        UserId = p.UserId,
+                        FullName = p.User?.UserProfile?.FullName,
+                        Email = p.User?.Email,
+                        PhoneNumber = p.User?.PhoneNumber,
+                        AvatarUrl = p.User?.AvatarUrl,
+                        JoinedAt = p.JoinedAt
+                    }).ToList(),
+                    LatestMessage = latestMessage != null ? new MessageResponseDto
+                    {
+                        Id = latestMessage.Id,
+                        ChatSessionId = latestMessage.ChatSessionId,
+                        SenderId = latestMessage.Sender,
+                        Content = latestMessage.Content,
+                        CreatedAt = latestMessage.CreatedAt
+                    } : null
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<List<ConversationResponseDto>> GetMyClaimedSupportConversationsAsync(int consultantId)
+        {
+            var conversations = await _unitOfWork.ChatSessionRepository.GetMyClaimedSupportConversationsAsync(consultantId);
+
+            var result = new List<ConversationResponseDto>();
+
+            foreach (var conv in conversations)
+            {
+                var latestMessage = await _unitOfWork.ChatMessageRepository.GetLatestMessageAsync(conv.Id);
+
+                result.Add(new ConversationResponseDto
+                {
+                    Id = conv.Id,
+                    Status = conv.Status,
+                    StartedAt = conv.StartedAt,
+                    EndedAt = conv.EndedAt,
+                    Participants = conv.ChatParticipants.Select(p => new ParticipantResponseDto
+                    {
+                        UserId = p.UserId,
+                        FullName = p.User?.UserProfile?.FullName,
+                        Email = p.User?.Email,
+                        PhoneNumber = p.User?.PhoneNumber,
+                        AvatarUrl = p.User?.AvatarUrl,
+                        JoinedAt = p.JoinedAt
+                    }).ToList(),
+                    LatestMessage = latestMessage != null ? new MessageResponseDto
+                    {
+                        Id = latestMessage.Id,
+                        ChatSessionId = latestMessage.ChatSessionId,
+                        SenderId = latestMessage.Sender,
+                        Content = latestMessage.Content,
+                        CreatedAt = latestMessage.CreatedAt
+                    } : null
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<bool> ClaimSupportConversationAsync(int consultantId, int conversationId)
+        {
+            var conversation = await _unitOfWork.ChatSessionRepository.GetConversationWithParticipantsAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException("Conversation not found");
+
+            if (conversation.Status != (int)ConversationStatus.Waiting)
+                return false;
+
+            var isAlreadyParticipant = conversation.ChatParticipants.Any(p => p.UserId == consultantId);
+            if (!isAlreadyParticipant)
+            {
+                await _unitOfWork.ChatParticipantRepository.CreateAsync(new ChatParticipant
+                {
+                    ChatSessionId = conversationId,
+                    UserId = consultantId,
+                    JoinedAt = DateTime.UtcNow
+                });
+            }
+
+            conversation.Status = (int)ConversationStatus.Active;
+
+            await _unitOfWork.ChatSessionRepository.UpdateAsync(conversation);
+            await _unitOfWork.SaveAsync();
+
+            return true;
+        }
+
+        public async Task CloseConversationAsync(int userId, int conversationId)
+        {
+            var isParticipant = await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
+            if (!isParticipant)
+                throw new ForbiddenException("You are not a participant of this conversation");
+
+            var conversation = await _unitOfWork.ChatSessionRepository.GetByIdAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException("Conversation not found");
+
+            conversation.Status = (int)ConversationStatus.Closed;
+            conversation.EndedAt = DateTime.UtcNow;
+
+            await _unitOfWork.ChatSessionRepository.UpdateAsync(conversation);
+            await _unitOfWork.SaveAsync();
         }
     }
 }

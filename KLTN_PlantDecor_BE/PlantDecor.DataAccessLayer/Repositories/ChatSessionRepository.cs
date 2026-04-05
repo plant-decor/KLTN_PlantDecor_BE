@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -46,7 +47,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             var chatSession = new ChatSession
             {
-                Status = 1,
+                Status = (int)ConversationStatus.Active,
                 StartedAt = DateTime.UtcNow
             };
 
@@ -63,6 +64,70 @@ namespace PlantDecor.DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
 
             return await GetConversationWithParticipantsAsync(chatSession.Id);
+        }
+
+        public async Task<ChatSession?> FindOpenSupportConversationByCustomerAsync(int customerId)
+        {
+            return await _context.ChatSessions
+                .Include(cs => cs.ChatParticipants)
+                    .ThenInclude(cp => cp.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(cs => (cs.Status == (int)ConversationStatus.Waiting || cs.Status == (int)ConversationStatus.Active)
+                            && cs.ChatParticipants.Any(cp => cp.UserId == customerId))
+                .OrderByDescending(cs => cs.StartedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<ChatSession> CreateSupportConversationAsync(int customerId)
+        {
+            var chatSession = new ChatSession
+            {
+                Status = (int)ConversationStatus.Waiting,
+                StartedAt = DateTime.UtcNow
+            };
+
+            _context.ChatSessions.Add(chatSession);
+            await _context.SaveChangesAsync();
+
+            _context.ChatParticipants.Add(new ChatParticipant
+            {
+                ChatSessionId = chatSession.Id,
+                UserId = customerId,
+                JoinedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return await GetConversationWithParticipantsAsync(chatSession.Id)
+                   ?? chatSession;
+        }
+
+        public async Task<List<ChatSession>> GetWaitingSupportConversationsAsync()
+        {
+            return await _context.ChatSessions
+                .Include(cs => cs.ChatParticipants)
+                    .ThenInclude(cp => cp.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(cs => cs.Status == (int)ConversationStatus.Waiting)
+                .OrderByDescending(cs => cs.StartedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<ChatSession>> GetMyClaimedSupportConversationsAsync(int consultantId)
+        {
+            return await _context.ChatSessions
+                .Include(cs => cs.ChatParticipants)
+                    .ThenInclude(cp => cp.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(cs => cs.Status == (int)ConversationStatus.Active
+                            && cs.ChatParticipants.Any(cp => cp.UserId == consultantId))
+                .OrderByDescending(cs => cs.StartedAt)
+                .ToListAsync();
+        }
+
+        public async Task UpdateAsync(ChatSession conversation)
+        {
+            await base.UpdateAsync(conversation);
         }
     }
 }
