@@ -43,6 +43,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public string? Tags { get; set; }
 
+        public List<int>? TagIds { get; set; }
+
         public int? Season { get; set; }
 
         public bool? IsActive { get; set; }

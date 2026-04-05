@@ -443,7 +443,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 HasChildren = survey.HasChildren,
                 MaxBudget = survey.MaxBudget,
                 ExperienceLevel = survey.ExperienceLevel,
-                ExperienceLevelName = ((DataAccessLayer.Enums.CareLevelTypeEnum)survey.ExperienceLevel).ToString(),
+                ExperienceLevelName = GetExperienceLevelName(survey.ExperienceLevel),
                 PreferredPlacement = survey.PreferredPlacement,
                 PreferredPlacementName = ((DataAccessLayer.Enums.PlacementTypeEnum)survey.PreferredPlacement).ToString(),
                 CreatedAt = survey.CreatedAt,
@@ -501,7 +501,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 HasChildren = survey.HasChildren,
                 MaxBudget = survey.MaxBudget,
                 ExperienceLevel = survey.ExperienceLevel,
-                ExperienceLevelName = ((DataAccessLayer.Enums.CareLevelTypeEnum)survey.ExperienceLevel).ToString(),
+                ExperienceLevelName = GetExperienceLevelName(survey.ExperienceLevel),
                 PreferredPlacement = survey.PreferredPlacement,
                 PreferredPlacementName = ((DataAccessLayer.Enums.PlacementTypeEnum)survey.PreferredPlacement).ToString(),
                 CreatedAt = survey.CreatedAt,
@@ -637,14 +637,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return 0m;
             }
 
-            return experienceLevel switch
+            if (!Enum.IsDefined(typeof(ExperienceLevelEnum), experienceLevel))
             {
-                1 => careLevelType == (int)CareLevelTypeEnum.Easy ? 3m : -1m,
-                2 => careLevelType == (int)CareLevelTypeEnum.Easy || careLevelType == (int)CareLevelTypeEnum.Medium ? 2m : 0m,
-                3 => careLevelType == (int)CareLevelTypeEnum.Hard || careLevelType == (int)CareLevelTypeEnum.Expert ? 2m : 0m,
-                4 => 1m,
+                return 0m;
+            }
+
+            var level = (ExperienceLevelEnum)experienceLevel;
+
+            return level switch
+            {
+                ExperienceLevelEnum.Beginner => careLevelType == (int)CareLevelTypeEnum.Easy ? 3m : -1m,
+                ExperienceLevelEnum.Basic =>
+                    careLevelType == (int)CareLevelTypeEnum.Easy || careLevelType == (int)CareLevelTypeEnum.Medium ? 2m : 0m,
+                ExperienceLevelEnum.Intermediate =>
+                    careLevelType == (int)CareLevelTypeEnum.Medium || careLevelType == (int)CareLevelTypeEnum.Hard ? 2m : 0m,
+                ExperienceLevelEnum.Expert =>
+                    careLevelType == (int)CareLevelTypeEnum.Hard || careLevelType == (int)CareLevelTypeEnum.Expert ? 2m : 0m,
                 _ => 0m
             };
+        }
+
+        private static string GetExperienceLevelName(int experienceLevel)
+        {
+            if (!Enum.IsDefined(typeof(ExperienceLevelEnum), experienceLevel))
+            {
+                return string.Empty;
+            }
+
+            return ((ExperienceLevelEnum)experienceLevel).ToString();
         }
 
         private static decimal ScoreBySurveyPlacement(int preferredPlacement, int? plantPlacement)

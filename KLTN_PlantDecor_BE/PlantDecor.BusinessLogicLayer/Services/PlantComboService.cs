@@ -98,14 +98,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
-                if (!string.IsNullOrEmpty(request.ComboCode))
+                var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
+                    ? null
+                    : request.ComboCode.Trim().ToUpper();
+
+                if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
-                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(request.ComboCode))
-                        throw new BadRequestException($"Combo với mã '{request.ComboCode}' đã tồn tại");
+                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode))
+                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
 
                 var combo = request.ToEntity();
-                combo.ComboCode ??= PlantComboMapper.GenerateComboCode();
+                combo.ComboCode = normalizedComboCode ?? PlantComboMapper.GenerateComboCode();
 
                 // Add combo items and determine safety
                 var plantsInCombo = new List<Plant>();
@@ -122,6 +126,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Recalculate safety based on plants
                 combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.PetSafe == true);
                 combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.ChildSafe == true);
+
+                var tagIds = (request.TagIds ?? new List<int>()).Distinct().ToList();
+                if (tagIds.Any())
+                {
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var tag in tags)
+                    {
+                        combo.TagsNavigation.Add(tag);
+                    }
+                }
 
                 _unitOfWork.PlantComboRepository.PrepareCreate(combo);
                 await _unitOfWork.SaveAsync();
@@ -161,13 +181,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (combo == null)
                     throw new NotFoundException($"Combo với ID {id} không tồn tại");
 
-                if (!string.IsNullOrEmpty(request.ComboCode))
+                var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
+                    ? null
+                    : request.ComboCode.Trim().ToUpper();
+
+                if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
-                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(request.ComboCode, id))
-                        throw new BadRequestException($"Combo với mã '{request.ComboCode}' đã tồn tại");
+                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode, id))
+                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
 
+                request.ComboCode = normalizedComboCode;
+
                 request.ToUpdate(combo);
+
+                if (request.TagIds != null)
+                {
+                    var tagIds = request.TagIds.Distinct().ToList();
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    combo.TagsNavigation.Clear();
+                    foreach (var tag in tags)
+                    {
+                        combo.TagsNavigation.Add(tag);
+                    }
+                }
 
                 // Recalculate safety based on existing plants in the combo
                 var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();

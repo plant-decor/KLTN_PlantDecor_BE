@@ -33,6 +33,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public bool IsActive { get; set; } = true;
 
+        public List<int> TagIds { get; set; } = new List<int>();
+
         /// <summary>
         /// Danh sách các cây trong combo
         /// </summary>
