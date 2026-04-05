@@ -132,15 +132,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (transactionCount >= MaxRetryAttempts)
                 throw new BadRequestException($"Payment retry limit exceeded. Maximum attempts: {MaxRetryAttempts}");
 
-            // Check if there's an active pending transaction
-            var activePendingTransaction = payment.Transactions.FirstOrDefault(t =>
-                t.Status == (int)TransactionStatusEnum.Pending &&
-                (!t.ExpiredAt.HasValue || t.ExpiredAt.Value > now));
-
-            if (activePendingTransaction != null)
-                throw new BadRequestException("An active transaction is pending. Please wait for it to expire or complete");
-
-            // Expire all pending transactions
+            // Always expire old pending transactions so the previous payment link becomes invalid immediately.
             foreach (var transaction in payment.Transactions.Where(t => t.Status == (int)TransactionStatusEnum.Pending))
             {
                 transaction.Status = (int)TransactionStatusEnum.TimedOut;
