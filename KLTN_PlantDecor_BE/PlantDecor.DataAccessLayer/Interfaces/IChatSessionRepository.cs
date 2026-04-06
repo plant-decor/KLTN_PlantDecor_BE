@@ -14,6 +14,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<int?> FindLeastBusyConsultantTodayAsync();
         Task<List<ChatSession>> GetWaitingSupportConversationsAsync();
         Task<List<ChatSession>> GetMyClaimedSupportConversationsAsync(int consultantId);
+        Task<ChatSession?> GetLatestActiveConversationAsync(int customerId);
         Task UpdateAsync(ChatSession conversation);
     }
 }

@@ -143,6 +143,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<ChatSession?> GetLatestActiveConversationAsync(int customerId)
+        {
+            return await _context.ChatSessions
+                .Include(cs => cs.ChatParticipants)
+                    .ThenInclude(cp => cp.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(cs => cs.Status == (int)ConversationStatus.Active
+                            && cs.ChatParticipants.Any(cp => cp.UserId == customerId))
+                .OrderByDescending(cs => cs.StartedAt)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task UpdateAsync(ChatSession conversation)
         {
             await base.UpdateAsync(conversation);

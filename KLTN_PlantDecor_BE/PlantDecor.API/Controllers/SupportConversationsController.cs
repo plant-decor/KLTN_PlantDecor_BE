@@ -42,13 +42,16 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Lấy thông tin chi tiết của một conversation
+        /// Lấy thông tin chi tiết của một conversation kèm 30 tin nhắn gần nhất (có thể phân trang để xem tin nhắn cũ hơn)
         /// </summary>
         [HttpGet("{conversationId:int}")]
-        public async Task<IActionResult> GetConversationDetails(int conversationId)
+        public async Task<IActionResult> GetConversationDetails(
+            int conversationId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 30)
         {
             var userId = GetUserId();
-            var conversation = await _chatService.GetConversationDetailsAsync(userId, conversationId);
+            var conversation = await _chatService.GetConversationDetailsAsync(userId, conversationId, pageNumber, pageSize);
             return Ok(new ApiResponse<ConversationResponseDto>
             {
                 Success = true,
@@ -144,6 +147,36 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get claimed conversations successfully",
                 Payload = conversations
+            });
+        }
+
+        /// <summary>
+        /// Lấy cuộc hội thoại active gần nhất của customer hiện tại
+        /// </summary>
+        [HttpGet("latest-active")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> GetLatestActive()
+        {
+            var userId = GetUserId();
+            var conversation = await _chatService.GetLatestActiveConversationAsync(userId);
+
+            if (conversation == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = "No active conversation found",
+                    Payload = null
+                });
+            }
+
+            return Ok(new ApiResponse<ConversationResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get latest active conversation successfully",
+                Payload = conversation
             });
         }
 

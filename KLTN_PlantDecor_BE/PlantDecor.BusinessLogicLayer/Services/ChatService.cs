@@ -89,7 +89,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return conversationDtos;
         }
 
-        public async Task<ConversationResponseDto?> GetConversationDetailsAsync(int userId, int conversationId)
+        public async Task<ConversationResponseDto?> GetConversationDetailsAsync(int userId, int conversationId, int pageNumber = 1, int pageSize = 30)
         {
             // Check if user is participant
             var isParticipant = await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
@@ -101,6 +101,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException("Conversation not found");
 
             var latestMessage = await _unitOfWork.ChatMessageRepository.GetLatestMessageAsync(conversationId);
+            var messages = await _unitOfWork.ChatMessageRepository.GetConversationMessagesAsync(conversationId, pageNumber, pageSize);
+            var totalCount = await _unitOfWork.ChatMessageRepository.GetTotalMessagesCountAsync(conversationId);
 
             return new ConversationResponseDto
             {
@@ -124,7 +126,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     SenderId = latestMessage.Sender,
                     Content = latestMessage.Content,
                     CreatedAt = latestMessage.CreatedAt
-                } : null
+                } : null,
+                Messages = messages.Select(m => new MessageResponseDto
+                {
+                    Id = m.Id,
+                    ChatSessionId = m.ChatSessionId,
+                    SenderId = m.Sender,
+                    Content = m.Content,
+                    CreatedAt = m.CreatedAt
+                }).ToList(),
+                TotalMessages = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
             };
         }
 
@@ -353,6 +367,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             return true;
+        }
+
+        public async Task<ConversationResponseDto?> GetLatestActiveConversationAsync(int customerId)
+        {
+            var conversation = await _unitOfWork.ChatSessionRepository.GetLatestActiveConversationAsync(customerId);
+            if (conversation == null)
+                return null;
+
+            var latestMessage = await _unitOfWork.ChatMessageRepository.GetLatestMessageAsync(conversation.Id);
+
+            return new ConversationResponseDto
+            {
+                Id = conversation.Id,
+                Status = conversation.Status,
+                StartedAt = conversation.StartedAt,
+                EndedAt = conversation.EndedAt,
+                Participants = conversation.ChatParticipants.Select(p => new ParticipantResponseDto
+                {
+                    UserId = p.UserId,
+                    FullName = p.User?.UserProfile?.FullName,
+                    Email = p.User?.Email,
+                    PhoneNumber = p.User?.PhoneNumber,
+                    AvatarUrl = p.User?.AvatarUrl,
+                    JoinedAt = p.JoinedAt
+                }).ToList(),
+                LatestMessage = latestMessage != null ? new MessageResponseDto
+                {
+                    Id = latestMessage.Id,
+                    ChatSessionId = latestMessage.ChatSessionId,
+                    SenderId = latestMessage.Sender,
+                    Content = latestMessage.Content,
+                    CreatedAt = latestMessage.CreatedAt
+                } : null
+            };
         }
 
         public async Task CloseConversationAsync(int userId, int conversationId)
