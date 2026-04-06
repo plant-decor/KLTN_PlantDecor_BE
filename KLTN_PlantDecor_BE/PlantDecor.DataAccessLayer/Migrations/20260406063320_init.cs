@@ -32,7 +32,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     AreaLimit = table.Column<int>(type: "integer", nullable: true),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -49,8 +49,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
                     CategoryType = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -69,8 +69,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Status = table.Column<int>(type: "integer", nullable: true),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    EndedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    StartedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    EndedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -89,7 +89,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Content = table.Column<string>(type: "text", nullable: false),
                     embedding = table.Column<Vector>(type: "vector(1536)", nullable: true),
                     Metadata = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -114,8 +114,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Specifications = table.Column<string>(type: "jsonb", nullable: true),
                     ExpiryMonths = table.Column<int>(type: "integer", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -148,8 +148,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ChildSafe = table.Column<bool>(type: "boolean", nullable: true),
                     CareLevelType = table.Column<int>(type: "integer", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -179,8 +179,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
                     ViewCount = table.Column<int>(type: "integer", nullable: true, defaultValue: 0),
                     PurchaseCount = table.Column<int>(type: "integer", nullable: true, defaultValue: 0),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -224,7 +224,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ChatSessionId = table.Column<int>(type: "integer", nullable: true),
                     Sender = table.Column<int>(type: "integer", nullable: true),
                     Content = table.Column<string>(type: "text", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -267,7 +267,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     MaterialId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IsPrimary = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -316,7 +316,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Humidity = table.Column<string>(type: "text", nullable: true),
                     Soil = table.Column<string>(type: "text", nullable: true),
                     CareNotes = table.Column<string>(type: "text", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -338,7 +338,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PlantComboId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IsPrimary = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -451,7 +451,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     LayoutDesignId = table.Column<int>(type: "integer", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     Reason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -469,7 +469,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Content = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     ReminderDate = table.Column<DateOnly>(type: "date", nullable: true),
                     ScheduledDate = table.Column<DateOnly>(type: "date", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -483,7 +483,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -502,7 +502,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NurseryMaterialId = table.Column<int>(type: "integer", nullable: true),
                     Quantity = table.Column<int>(type: "integer", nullable: true, defaultValue: 1),
                     Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -520,7 +520,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     ChatSessionId = table.Column<int>(type: "integer", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false),
-                    JoinedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    JoinedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -567,8 +567,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     MaxBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     ExperienceLevel = table.Column<int>(type: "integer", nullable: false),
                     PreferredPlacement = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -582,7 +582,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     OrderId = table.Column<int>(type: "integer", nullable: true),
-                    IssuedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    IssuedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     TotalAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     Type = table.Column<int>(type: "integer", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
@@ -632,7 +632,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     AIResponseImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     IsSaved = table.Column<bool>(type: "boolean", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -651,7 +651,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PlantReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     PlacementPosition = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     PlacementReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -683,7 +683,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Longitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -699,7 +699,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CareServicePackageId = table.Column<int>(type: "integer", nullable: false),
                     NurseryId = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -754,8 +754,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NurseryId = table.Column<int>(type: "integer", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -788,8 +788,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Age = table.Column<int>(type: "integer", nullable: true),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -821,8 +821,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     AvatarUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true, defaultValue: 1),
                     IsVerified = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     SecurityStamp = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
@@ -851,7 +851,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IsPrimary = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -886,9 +886,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     PaymentStrategy = table.Column<int>(type: "integer", nullable: true),
                     ReturnReason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     OrderType = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -913,7 +913,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
                     Rating = table.Column<int>(type: "integer", nullable: false),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -947,8 +947,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Token = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
                     DeviceId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     IsRevoked = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ExpiryDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ExpiryDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -968,7 +968,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UploadedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ViewAngle = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -992,7 +992,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PlantComboId = table.Column<int>(type: "integer", nullable: true),
                     ActionType = table.Column<int>(type: "integer", nullable: true),
                     Metadata = table.Column<string>(type: "jsonb", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -1032,8 +1032,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CurrentHeight = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
                     HealthStatus = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Age = table.Column<int>(type: "integer", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -1067,7 +1067,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ProfileMatchScore = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: true),
                     BehaviorScore = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: true),
                     PurchaseHistoryScore = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: true),
-                    LastCalculated = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    LastCalculated = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1100,8 +1100,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ReceiveNotifications = table.Column<bool>(type: "boolean", nullable: true, defaultValue: true),
                     NotificationPreferences = table.Column<string>(type: "jsonb", nullable: true),
                     ProfileCompleteness = table.Column<int>(type: "integer", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -1126,8 +1126,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NurseryPlantComboId = table.Column<int>(type: "integer", nullable: true),
                     NurseryMaterialId = table.Column<int>(type: "integer", nullable: true),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1173,9 +1173,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     OrderId = table.Column<int>(type: "integer", nullable: false),
                     NurseryId = table.Column<int>(type: "integer", nullable: false),
                     ShipperId = table.Column<int>(type: "integer", nullable: true),
-                    AssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ShippingStartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DeliveredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AssignedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ShippingStartedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    DeliveredAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     SubTotalAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     DepositAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     RemainingAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
@@ -1184,8 +1184,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     ShipperNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DeliveryNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -1220,8 +1220,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     PaymentType = table.Column<int>(type: "integer", nullable: true),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    PaidAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    PaidAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1246,9 +1246,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CurrentCaretakerId = table.Column<int>(type: "integer", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ServiceDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ApprovedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ServiceDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ApprovedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     Address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Longitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
                     Latitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
@@ -1330,7 +1330,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     RoomImageId = table.Column<int>(type: "integer", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     Reason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1402,8 +1402,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     TransactionId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ResponseCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     OrderInfo = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ExpiredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ExpiredAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1426,8 +1426,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Action = table.Column<int>(type: "integer", nullable: true),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     EvidenceImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    ActualStartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ActualEndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    ActualStartTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ActualEndTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1454,7 +1454,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     Rating = table.Column<decimal>(type: "numeric(2,1)", precision: 2, scale: 1, nullable: true),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
