@@ -89,4 +89,20 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int StockBefore { get; set; }
         public int StockAfter { get; set; }
     }
+
+    public class NurseryComboStockResponseDto
+    {
+        public int Id { get; set; }
+        public int PlantComboId { get; set; }
+        public string? ComboCode { get; set; }
+        public string? ComboName { get; set; }
+        public int? ComboType { get; set; }
+        public string? ComboTypeName { get; set; }
+        public decimal? Price { get; set; }
+        public int Quantity { get; set; }
+        public bool IsActive { get; set; }
+        public string? PrimaryImageUrl { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
 }

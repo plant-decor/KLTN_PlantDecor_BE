@@ -13,8 +13,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public bool? ChildSafe { get; set; }
         public int? Season { get; set; }
         public int? ComboType { get; set; }
-        public List<int>? CategoryIds { get; set; }
-        public int? CategoryId { get; set; }
         public List<int>? TagIds { get; set; }
         public PlantComboSortByEnum? SortBy { get; set; }
         public SortDirectionEnum? SortDirection { get; set; }

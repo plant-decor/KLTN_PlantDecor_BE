@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 {
     public class ShopSearchService : IShopSearchService
     {
-        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v4";
+        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v5";
 
         private readonly IPlantService _plantService;
         private readonly INurseryMaterialService _nurseryMaterialService;
@@ -38,19 +38,48 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (cachedResponse != null)
                 return cachedResponse;
 
-            var response = new ShopUnifiedSearchResponseDto
-            {
-                Keyword = searchRequest.Keyword,
-                Plants = CreateEmptyPaginatedResult<PlantListResponseDto>(pagination),
-                Materials = CreateEmptyPaginatedResult<NurseryMaterialListResponseDto>(pagination),
-                Combos = CreateEmptyPaginatedResult<SellingPlantComboResponseDto>(pagination)
-            };
+            // Count enabled categories and distribute pageSize among them
+            var enabledCount = (searchRequest.IncludePlants ? 1 : 0)
+                             + (searchRequest.IncludeMaterials ? 1 : 0)
+                             + (searchRequest.IncludeCombos ? 1 : 0);
 
-            if (searchRequest.IncludePlants)
+            if (enabledCount == 0)
             {
-                response.Plants = await _plantService.SearchPlantsForShopAsync(new PlantSearchRequestDto
+                var emptyResponse = new ShopUnifiedSearchResponseDto
                 {
-                    Pagination = pagination,
+                    Keyword = searchRequest.Keyword,
+                    Items = new PaginatedResult<ShopSearchItemDto>(
+                        Array.Empty<ShopSearchItemDto>(), 0, pagination.PageNumber, pagination.PageSize)
+                };
+                return emptyResponse;
+            }
+
+            int baseSlots = pagination.PageSize / enabledCount;
+            int remainder = pagination.PageSize % enabledCount;
+
+            int AllocateSlots(bool enabled)
+            {
+                if (!enabled) return 0;
+                int slots = baseSlots;
+                if (remainder > 0) { slots++; remainder--; }
+                return slots;
+            }
+
+            int plantPageSize = AllocateSlots(searchRequest.IncludePlants);
+            int materialPageSize = AllocateSlots(searchRequest.IncludeMaterials);
+            int comboPageSize = AllocateSlots(searchRequest.IncludeCombos);
+
+            // Fetch each category with its allocated page size
+            var plantItems = new List<ShopSearchItemDto>();
+            var materialItems = new List<ShopSearchItemDto>();
+            var comboItems = new List<ShopSearchItemDto>();
+            int plantTotal = 0, materialTotal = 0, comboTotal = 0;
+
+            if (searchRequest.IncludePlants && plantPageSize > 0)
+            {
+                var plantResult = await _plantService.SearchPlantsForShopAsync(new PlantSearchRequestDto
+                {
+                    Pagination = new Pagination(pagination.PageNumber, plantPageSize),
                     Keyword = searchRequest.Keyword,
                     PlacementType = searchRequest.PlacementType,
                     CareLevelType = searchRequest.CareLevelType,
@@ -71,14 +100,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     SortBy = MapUnifiedToPlantSort(searchRequest.SortBy),
                     SortDirection = searchRequest.SortDirection
                 });
+                plantTotal = plantResult.TotalCount;
+                plantItems.AddRange(plantResult.Items.Select(p => new ShopSearchItemDto
+                {
+                    Type = "Plant",
+                    Plant = p
+                }));
             }
 
-            if (searchRequest.IncludeMaterials)
+            if (searchRequest.IncludeMaterials && materialPageSize > 0)
             {
-                response.Materials = await _nurseryMaterialService.SearchNurseryMaterialsForShopAsync(
+                var materialPagination = new Pagination(pagination.PageNumber, materialPageSize);
+                var materialResult = await _nurseryMaterialService.SearchNurseryMaterialsForShopAsync(
                     new NurseryMaterialShopSearchRequestDto
                     {
-                        Pagination = pagination,
+                        Pagination = materialPagination,
                         SearchTerm = searchRequest.Keyword,
                         CategoryIds = searchRequest.CategoryIds,
                         TagIds = searchRequest.TagIds,
@@ -87,16 +123,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         SortBy = MapUnifiedToMaterialSort(searchRequest.SortBy),
                         SortDirection = searchRequest.SortDirection
                     },
-                    pagination);
+                    materialPagination);
+                materialTotal = materialResult.TotalCount;
+                materialItems.AddRange(materialResult.Items.Select(m => new ShopSearchItemDto
+                {
+                    Type = "Material",
+                    Material = m
+                }));
             }
 
-            if (searchRequest.IncludeCombos)
+            if (searchRequest.IncludeCombos && comboPageSize > 0)
             {
-                response.Combos = await _plantComboService.GetSellingCombosAsync(
-                    pagination,
+                var comboPagination = new Pagination(pagination.PageNumber, comboPageSize);
+                var comboResult = await _plantComboService.GetSellingCombosAsync(
+                    comboPagination,
                     new PlantComboShopSearchRequestDto
                     {
-                        Pagination = pagination,
+                        Pagination = comboPagination,
                         Keyword = searchRequest.Keyword,
                         MinPrice = searchRequest.MinPrice,
                         MaxPrice = searchRequest.MaxPrice,
@@ -104,16 +147,60 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ChildSafe = searchRequest.ChildSafe,
                         Season = searchRequest.ComboSeason,
                         ComboType = searchRequest.ComboType,
-                        CategoryIds = searchRequest.CategoryIds,
                         TagIds = searchRequest.TagIds,
                         SortBy = MapUnifiedToComboSort(searchRequest.SortBy),
                         SortDirection = searchRequest.SortDirection
                     });
+                comboTotal = comboResult.TotalCount;
+                comboItems.AddRange(comboResult.Items.Select(c => new ShopSearchItemDto
+                {
+                    Type = "Combo",
+                    Combo = c
+                }));
             }
+
+            // Interleave items from different categories for visual variety
+            var interleaved = InterleaveItems(plantItems, materialItems, comboItems);
+            var grandTotal = plantTotal + materialTotal + comboTotal;
+
+            var response = new ShopUnifiedSearchResponseDto
+            {
+                Keyword = searchRequest.Keyword,
+                Items = new PaginatedResult<ShopSearchItemDto>(
+                    interleaved, grandTotal, pagination.PageNumber, pagination.PageSize),
+                PlantTotalCount = plantTotal,
+                MaterialTotalCount = materialTotal,
+                ComboTotalCount = comboTotal
+            };
 
             await _cacheService.SetDataAsync(cacheKey, response, DateTimeOffset.Now.AddMinutes(10));
 
             return response;
+        }
+
+        private static List<ShopSearchItemDto> InterleaveItems(
+            List<ShopSearchItemDto> plantItems,
+            List<ShopSearchItemDto> materialItems,
+            List<ShopSearchItemDto> comboItems)
+        {
+            var result = new List<ShopSearchItemDto>();
+            var lists = new[] { plantItems, materialItems, comboItems }
+                .Where(l => l.Count > 0)
+                .ToList();
+
+            if (lists.Count == 0) return result;
+
+            int maxLen = lists.Max(l => l.Count);
+            for (int i = 0; i < maxLen; i++)
+            {
+                foreach (var list in lists)
+                {
+                    if (i < list.Count)
+                        result.Add(list[i]);
+                }
+            }
+
+            return result;
         }
 
         private static string BuildCacheKey(ShopUnifiedSearchRequestDto request, Pagination pagination)
@@ -132,11 +219,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             builder.Append($"_sb{NormalizeEnum(request.SortBy)}_sd{NormalizeEnum(request.SortDirection)}");
             builder.Append($"_ip{request.IncludePlants}_im{request.IncludeMaterials}_ic{request.IncludeCombos}");
             return builder.ToString();
-        }
-
-        private static PaginatedResult<T> CreateEmptyPaginatedResult<T>(Pagination pagination)
-        {
-            return new PaginatedResult<T>(Array.Empty<T>(), 0, pagination.PageNumber, pagination.PageSize);
         }
 
         private static string Normalize(string? value)
