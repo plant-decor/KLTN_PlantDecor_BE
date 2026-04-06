@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -92,7 +93,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiPurpose = combo?.FengShuiPurpose,
                 ThemeName = combo?.ThemeName,
                 ThemeDescription = combo?.ThemeDescription,
-                Season = combo?.Season,
+                Season = combo?.Season.HasValue == true && Enum.IsDefined(typeof(SeasonTypeEnum), combo.Season.Value)
+                    ? (SeasonTypeEnum?)combo.Season.Value
+                    : null,
                 PetSafe = combo?.PetSafe,
                 ChildSafe = combo?.ChildSafe,
                 ComboPrice = combo?.ComboPrice,

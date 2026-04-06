@@ -37,6 +37,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(cp => cp.Id == id);
         }
 
+        public async Task<string?> GetPrimaryImageUrlAsync(int commonPlantId)
+        {
+            var images = await _context.CommonPlants
+                .Where(cp => cp.Id == commonPlantId)
+                .SelectMany(cp => cp.Plant.PlantImages)
+                .ToListAsync();
+
+            return SelectPrimaryImageUrl(images);
+        }
+
         public async Task<PaginatedResult<CommonPlant>> GetByPlantIdAsync(int plantId, Pagination pagination)
         {
             var query = _context.CommonPlants
@@ -122,6 +132,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(cp => cp.PlantId == plantId && cp.IsActive && cp.Quantity > 0)
                 .Include(cp => cp.Nursery)
                 .ToListAsync();
+        }
+
+        private static string? SelectPrimaryImageUrl(IEnumerable<PlantImage>? images)
+        {
+            if (images == null)
+            {
+                return null;
+            }
+
+            return images
+                .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.IsPrimary == true)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault();
         }
 
         public async Task<PaginatedResult<CommonPlant>> SearchForShopAsync(

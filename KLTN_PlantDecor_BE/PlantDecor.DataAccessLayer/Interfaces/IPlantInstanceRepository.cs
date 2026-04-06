@@ -14,6 +14,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// Lấy PlantInstance theo Id (include Plant, Nursery, Images)
         /// </summary>
         Task<PlantInstance?> GetByIdWithDetailsAsync(int id);
+        Task<string?> GetPrimaryImageUrlAsync(int plantInstanceId);
 
         /// <summary>
         /// Lấy danh sách PlantInstance theo nhiều Ids

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -10,7 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Range(0, double.MaxValue, ErrorMessage = "MaxBudget must be greater than or equal to 0")]
         public decimal? MaxBudget { get; set; }
 
-        [Range(1, 4, ErrorMessage = "ExperienceLevel must be between 1 and 4")]
+        [Range((int)ExperienceLevelEnum.Beginner, (int)ExperienceLevelEnum.Expert, ErrorMessage = "ExperienceLevel must be between 1 and 4")]
         public int ExperienceLevel { get; set; }
 
         [Range(1, 3, ErrorMessage = "PreferredPlacement must be between 1 and 3")]

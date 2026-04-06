@@ -1,4 +1,4 @@
-namespace PlantDecor.BusinessLogicLayer.DTOs.Models
+namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class OtpCacheModel
     {

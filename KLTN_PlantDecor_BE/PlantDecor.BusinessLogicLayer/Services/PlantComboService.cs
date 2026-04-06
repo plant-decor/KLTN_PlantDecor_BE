@@ -98,14 +98,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
-                if (!string.IsNullOrEmpty(request.ComboCode))
+                var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
+                    ? null
+                    : request.ComboCode.Trim().ToUpper();
+
+                if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
-                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(request.ComboCode))
-                        throw new BadRequestException($"Combo với mã '{request.ComboCode}' đã tồn tại");
+                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode))
+                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
 
                 var combo = request.ToEntity();
-                combo.ComboCode ??= PlantComboMapper.GenerateComboCode();
+                combo.ComboCode = normalizedComboCode ?? PlantComboMapper.GenerateComboCode();
 
                 // Add combo items and determine safety
                 var plantsInCombo = new List<Plant>();
@@ -122,6 +126,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Recalculate safety based on plants
                 combo.PetSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.PetSafe == true);
                 combo.ChildSafe = !plantsInCombo.Any() || plantsInCombo.All(p => p.ChildSafe == true);
+
+                var tagIds = (request.TagIds ?? new List<int>()).Distinct().ToList();
+                if (tagIds.Any())
+                {
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var tag in tags)
+                    {
+                        combo.TagsNavigation.Add(tag);
+                    }
+                }
 
                 _unitOfWork.PlantComboRepository.PrepareCreate(combo);
                 await _unitOfWork.SaveAsync();
@@ -161,13 +181,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (combo == null)
                     throw new NotFoundException($"Combo với ID {id} không tồn tại");
 
-                if (!string.IsNullOrEmpty(request.ComboCode))
+                var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
+                    ? null
+                    : request.ComboCode.Trim().ToUpper();
+
+                if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
-                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(request.ComboCode, id))
-                        throw new BadRequestException($"Combo với mã '{request.ComboCode}' đã tồn tại");
+                    if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode, id))
+                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
 
+                request.ComboCode = normalizedComboCode;
+
                 request.ToUpdate(combo);
+
+                if (request.TagIds != null)
+                {
+                    var tagIds = request.TagIds.Distinct().ToList();
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    combo.TagsNavigation.Clear();
+                    foreach (var tag in tags)
+                    {
+                        combo.TagsNavigation.Add(tag);
+                    }
+                }
 
                 // Recalculate safety based on existing plants in the combo
                 var plantsInCombo = combo.PlantComboItems.Select(ci => ci.Plant).ToList();
@@ -850,6 +894,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 query = query.Where(npc => npc.PlantCombo.ChildSafe == searchDto.ChildSafe.Value);
             }
 
+            // Season filter
+            if (searchDto.Season.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.Season.HasValue && npc.PlantCombo.Season.Value == searchDto.Season.Value);
+            }
+
+            // Combo type filter
+            if (searchDto.ComboType.HasValue)
+            {
+                query = query.Where(npc => npc.PlantCombo.ComboType.HasValue && npc.PlantCombo.ComboType.Value == searchDto.ComboType.Value);
+            }
+
             var categoryIds = (searchDto.CategoryIds ?? new List<int>()).ToList();
             if (searchDto.CategoryId.HasValue && !categoryIds.Contains(searchDto.CategoryId.Value))
             {
@@ -877,6 +933,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     Id = g.Key.Id,
                     Name = g.Key.ComboName ?? string.Empty,
+                    ComboType = g.Key.ComboType,
+                    ComboTypeName = MapComboTypeName(g.Key.ComboType),
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
                     ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
@@ -913,6 +971,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     : source.OrderBy(item => item.Name),
                 _ => source.OrderBy(item => item.Name)
             };
+        }
+
+        private static string? MapComboTypeName(int? comboType)
+        {
+            if (!comboType.HasValue || !Enum.IsDefined(typeof(ComboTypeEnum), comboType.Value))
+            {
+                return null;
+            }
+
+            return ((ComboTypeEnum)comboType.Value).ToString();
         }
 
         #endregion
@@ -1002,7 +1070,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     FengShuiPurpose = combo.FengShuiPurpose,
                     ThemeName = combo.ThemeName,
                     ThemeDescription = combo.ThemeDescription,
-                    Season = combo.Season,
+                    Season = combo.Season.HasValue && Enum.IsDefined(typeof(SeasonTypeEnum), combo.Season.Value)
+                        ? (SeasonTypeEnum?)combo.Season.Value
+                        : null,
                     PetSafe = combo.PetSafe,
                     ChildSafe = combo.ChildSafe,
                     ComboPrice = combo.ComboPrice,

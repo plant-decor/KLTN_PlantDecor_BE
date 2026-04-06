@@ -35,6 +35,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Gender { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? Latitude { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? Longitude { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? ReceiveNotifications { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? ProfileCompleteness { get; set; }

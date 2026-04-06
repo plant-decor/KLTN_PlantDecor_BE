@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using System.Text;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -24,8 +25,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 sb.AppendLine($"Nguồn gốc: {dto.PlantOrigin}");
 
             // Feng Shui info
-            if (!string.IsNullOrEmpty(dto.FengShuiElement))
-                sb.AppendLine($"Mệnh phong thủy: {dto.FengShuiElement}");
+            if (dto.FengShuiElement.HasValue)
+                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiMeaning))
                 sb.AppendLine($"Ý nghĩa phong thủy: {dto.FengShuiMeaning}");
@@ -75,8 +76,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 sb.AppendLine($"Tên khoa học: {dto.PlantSpecificName}");
 
             // Feng Shui
-            if (!string.IsNullOrEmpty(dto.FengShuiElement))
-                sb.AppendLine($"Mệnh phong thủy: {dto.FengShuiElement}");
+            if (dto.FengShuiElement.HasValue)
+                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiMeaning))
                 sb.AppendLine($"Ý nghĩa phong thủy: {dto.FengShuiMeaning}");
@@ -146,8 +147,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 sb.AppendLine($"Phòng phù hợp: {string.Join(", ", dto.SuitableRooms)}");
 
             // Feng Shui
-            if (!string.IsNullOrEmpty(dto.FengShuiElement))
-                sb.AppendLine($"Mệnh phong thủy: {dto.FengShuiElement}");
+            if (dto.FengShuiElement.HasValue)
+                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiPurpose))
                 sb.AppendLine($"Mục đích phong thủy: {dto.FengShuiPurpose}");
@@ -160,8 +161,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 sb.AppendLine($"Mô tả chủ đề: {dto.ThemeDescription}");
 
             // Season
-            if (!string.IsNullOrEmpty(dto.Season))
-                sb.AppendLine($"Mùa: {dto.Season}");
+            if (dto.Season.HasValue)
+                sb.AppendLine($"Mùa: {GetSeasonName(dto.Season.Value)}");
 
             // Safety
             var safetyFeatures = new List<string>();
@@ -260,6 +261,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 1 => "Trong nhà",
                 2 => "Ngoài trời",
                 3 => "Cả hai (trong nhà và ngoài trời)",
+                _ => "Không xác định"
+            };
+        }
+
+        private static string GetFengShuiElementName(int fengShuiElement)
+        {
+            return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement)
+                ? ((FengShuiElementTypeEnum)fengShuiElement).ToString()
+                : "Không xác định";
+        }
+
+        private static string GetSeasonName(SeasonTypeEnum season)
+        {
+            return season switch
+            {
+                SeasonTypeEnum.All => "Quanh năm",
+                SeasonTypeEnum.Spring => "Mùa xuân",
+                SeasonTypeEnum.Summer => "Mùa hè",
+                SeasonTypeEnum.Autumn => "Mùa thu",
+                SeasonTypeEnum.Winter => "Mùa đông",
+                SeasonTypeEnum.Tet => "Tết",
                 _ => "Không xác định"
             };
         }

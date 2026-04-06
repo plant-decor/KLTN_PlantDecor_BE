@@ -32,6 +32,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Address = user.UserProfile?.Address,
                 BirthYear = user.UserProfile?.BirthYear,
                 Gender = user.UserProfile?.Gender,
+                Latitude = user.UserProfile?.Latitude,
+                Longitude = user.UserProfile?.Longitude,
                 ReceiveNotifications = user.UserProfile?.ReceiveNotifications,
                 ProfileCompleteness = user.UserProfile?.ProfileCompleteness
             };
@@ -93,6 +95,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             if (request.Gender.HasValue)
                 user.UserProfile.Gender = (int)request.Gender;
+
+            if (request.Latitude.HasValue)
+                user.UserProfile.Latitude = request.Latitude;
+
+            if (request.Longitude.HasValue)
+                user.UserProfile.Longitude = request.Longitude;
 
             if (request.ReceiveNotifications.HasValue)
                 user.UserProfile.ReceiveNotifications = request.ReceiveNotifications;

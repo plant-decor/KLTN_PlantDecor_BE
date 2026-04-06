@@ -27,7 +27,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public List<int>? CategoryIds { get; set; }
         public List<int>? TagIds { get; set; }
         public List<int>? Sizes { get; set; }
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public int? NurseryId { get; set; }
         public PlantSortByEnum? SortBy { get; set; }
         public SortDirectionEnum? SortDirection { get; set; }

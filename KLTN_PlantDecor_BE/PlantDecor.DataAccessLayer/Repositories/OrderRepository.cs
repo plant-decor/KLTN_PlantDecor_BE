@@ -11,12 +11,35 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<Order?> GetByIdWithDetailsAsync(int orderId)
         {
-            return await _context.Orders
+            return await BuildDetailedQuery()
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+        }
+
+        public async Task<List<Order>> GetByUserIdWithDetailsAsync(int userId, int? orderStatus = null)
+        {
+            var query = BuildDetailedQuery()
+                .Where(o => o.UserId == userId);
+
+            if (orderStatus.HasValue)
+                query = query.Where(o => o.Status == orderStatus.Value);
+
+            return await query
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+        }
+
+        private IQueryable<Order> BuildDetailedQuery()
+        {
+            return _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Nursery)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.Shipper)
                 .Include(o => o.Invoices)
-                .Include(o => o.Payments)
-                .FirstOrDefaultAsync(o => o.Id == orderId);
+                    .ThenInclude(i => i.InvoiceDetails)
+                .Include(o => o.Payments);
         }
     }
 }

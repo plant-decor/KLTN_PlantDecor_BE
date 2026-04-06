@@ -7,7 +7,7 @@ public partial class PlantGuide
 {
     public int Id { get; set; }
 
-    public int? PlantId { get; set; }
+    public int PlantId { get; set; }
 
     public int? LightRequirement { get; set; }
 
@@ -18,6 +18,10 @@ public partial class PlantGuide
     public string? Pruning { get; set; }
 
     public string? Temperature { get; set; }
+
+    public string? Humidity { get; set; }
+
+    public string? Soil { get; set; }
 
     public string? CareNotes { get; set; }
 

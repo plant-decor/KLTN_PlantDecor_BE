@@ -18,7 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public List<string>? SuitableRooms { get; set; }
 
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
 
         public string? FengShuiPurpose { get; set; }
 
@@ -29,9 +29,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Range(0, double.MaxValue, ErrorMessage = "Giá combo phải lớn hơn hoặc bằng 0")]
         public decimal? ComboPrice { get; set; }
 
-        public string? Season { get; set; }
+        public int? Season { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        public List<int> TagIds { get; set; } = new List<int>();
 
         /// <summary>
         /// Danh sách các cây trong combo

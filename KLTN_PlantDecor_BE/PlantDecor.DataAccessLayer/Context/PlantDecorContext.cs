@@ -607,7 +607,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.FengShuiElement).HasMaxLength(50);
             entity.Property(e => e.GrowthRate).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
@@ -660,12 +659,10 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.ComboCode).HasMaxLength(50);
             entity.Property(e => e.ComboName).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.FengShuiElement).HasMaxLength(50);
             entity.Property(e => e.FengShuiPurpose).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.PurchaseCount).HasDefaultValue(0);
             entity.Property(e => e.ComboPrice).HasPrecision(18, 2);
-            entity.Property(e => e.Season).HasMaxLength(50);
             entity.Property(e => e.SuitableRooms).HasColumnType("jsonb");
             entity.Property(e => e.SuitableSpace).HasMaxLength(100);
             entity.Property(e => e.ThemeDescription).HasMaxLength(500);
@@ -812,7 +809,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
-            entity.Property(e => e.Rating).HasPrecision(2, 1);
 
             entity.HasOne(d => d.Plant).WithMany(p => p.PlantRatings)
                 .HasForeignKey(d => d.PlantId)
@@ -945,6 +941,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Address).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.Latitude).HasPrecision(10, 7);
+            entity.Property(e => e.Longitude).HasPrecision(10, 7);
             entity.Property(e => e.Note).HasMaxLength(255);
 
             entity.HasOne(d => d.CurrentCaretaker).WithMany(p => p.ServiceRegistrationCurrentCaretakers)
@@ -1103,6 +1101,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.NotificationPreferences).HasColumnType("jsonb");
+            entity.Property(e => e.Latitude).HasPrecision(10, 7);
+            entity.Property(e => e.Longitude).HasPrecision(10, 7);
             entity.Property(e => e.ReceiveNotifications).HasDefaultValue(true);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 

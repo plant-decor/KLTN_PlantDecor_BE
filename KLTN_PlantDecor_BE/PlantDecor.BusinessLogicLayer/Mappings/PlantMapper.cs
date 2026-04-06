@@ -36,6 +36,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PetSafe = plant.PetSafe,
                 ChildSafe = plant.ChildSafe,
                 FengShuiElement = plant.FengShuiElement,
+                FengShuiElementName = GetFengShuiElementName(plant.FengShuiElement),
                 FengShuiMeaning = plant.FengShuiMeaning,
                 PotIncluded = plant.PotIncluded,
                 PotSize = plant.PotSize,
@@ -93,6 +94,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 SizeName = GetPlantSizeName(plant.Size),
                 CareLevelType = plant.CareLevelType,
                 CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
+                FengShuiElement = plant.FengShuiElement,
+                FengShuiElementName = GetFengShuiElementName(plant.FengShuiElement),
                 IsActive = plant.IsActive,
                 PrimaryImageUrl = primaryImageUrl,
                 TotalInstances = plant.PlantInstances.Count,
@@ -260,6 +263,18 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             return Enum.IsDefined(typeof(PlantSizeEnum), size.Value)
                 ? ((PlantSizeEnum)size.Value).ToString()
+                : null;
+        }
+
+        private static string? GetFengShuiElementName(int? fengShuiElement)
+        {
+            if (!fengShuiElement.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
+                ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
                 : null;
         }
 

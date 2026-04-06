@@ -12,15 +12,6 @@ namespace PlantDecor.API.Controllers
     [ApiController]
     public class SearchConfigController : ControllerBase
     {
-        private static readonly string[] FengShuiElements =
-        {
-            "kim",
-            "moc",
-            "thuy",
-            "hoa",
-            "tho"
-        };
-
         /// <summary>
         /// Metadata cho Plant search
         /// GET /api/system/search-config/plants
@@ -35,12 +26,11 @@ namespace PlantDecor.API.Controllers
                 {
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
-                    CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                    CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum)),
+                    CreateEnumGroup("SeasonType", typeof(SeasonTypeEnum))
                 },
-                FilterOptions = new List<StringOptionGroupResponseDto>
-                {
-                    CreateStringOptionGroup("FengShuiElement", FengShuiElements)
-                },
+                FilterOptions = new List<StringOptionGroupResponseDto>(),
                 SortEnums = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("PlantSortBy", typeof(PlantSortByEnum)),
@@ -71,12 +61,12 @@ namespace PlantDecor.API.Controllers
                 {
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
-                    CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                    CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum)),
+                    CreateEnumGroup("SeasonType", typeof(SeasonTypeEnum)),
+                    CreateEnumGroup("ComboType", typeof(ComboTypeEnum))
                 },
-                FilterOptions = new List<StringOptionGroupResponseDto>
-                {
-                    CreateStringOptionGroup("FengShuiElement", FengShuiElements)
-                },
+                FilterOptions = new List<StringOptionGroupResponseDto>(),
                 SortEnums = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("UnifiedSearchSortBy", typeof(UnifiedSearchSortByEnum)),
@@ -162,7 +152,11 @@ namespace PlantDecor.API.Controllers
         {
             var payload = new SearchConfigResponseDto
             {
-                FilterEnums = new List<EnumGroupResponseDto>(),
+                FilterEnums = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("SeasonType", typeof(SeasonTypeEnum)),
+                    CreateEnumGroup("ComboType", typeof(ComboTypeEnum))
+                },
                 FilterOptions = new List<StringOptionGroupResponseDto>
                 {
                     CreateBooleanOptionGroup("PetSafe"),
@@ -197,21 +191,6 @@ namespace PlantDecor.API.Controllers
                         Name = value.ToString() ?? string.Empty
                     })
                     .OrderBy(item => item.Value)
-                    .ToList()
-            };
-        }
-
-        private static StringOptionGroupResponseDto CreateStringOptionGroup(string groupName, IEnumerable<string> values)
-        {
-            return new StringOptionGroupResponseDto
-            {
-                GroupName = groupName,
-                Values = values
-                    .Select(value => new StringOptionResponseDto
-                    {
-                        Value = value,
-                        Name = value
-                    })
                     .ToList()
             };
         }
