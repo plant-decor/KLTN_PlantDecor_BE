@@ -10,26 +10,25 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             return w.ItemType switch
             {
-                WishlistItemType.CommonPlant => MapCommonPlant(w),
+                WishlistItemType.Plant => MapPlant(w),
                 WishlistItemType.PlantInstance => MapPlantInstance(w),
-                WishlistItemType.NurseryPlantCombo => MapNurseryPlantCombo(w),
-                WishlistItemType.NurseryMaterial => MapNurseryMaterial(w),
+                WishlistItemType.PlantCombo => MapPlantCombo(w),
+                WishlistItemType.Material => MapMaterial(w),
                 _ => throw new InvalidOperationException($"Unknown item type: {w.ItemType}")
             };
         }
 
-        private static WishlistItemResponseDto MapCommonPlant(Wishlist w) => new()
+        private static WishlistItemResponseDto MapPlant(Wishlist w) => new()
         {
             Id = w.Id,
             ItemType = w.ItemType,
-            ItemId = w.CommonPlantId ?? 0,
-            ItemName = w.CommonPlant?.Plant?.Name ?? string.Empty,
-            ItemImageUrl = w.CommonPlant?.Plant?.PlantImages?
+            ItemId = w.PlantId ?? 0,
+            ItemName = w.Plant?.Name ?? string.Empty,
+            ItemImageUrl = w.Plant?.PlantImages?
                 .FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                ?? w.CommonPlant?.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl,
-            Price = w.CommonPlant?.Plant?.BasePrice,
-            Quantity = w.CommonPlant?.Quantity,
-            AdditionalInfo = $"Nursery: {w.CommonPlant?.Nursery?.Name}, Available: {w.CommonPlant?.Quantity}",
+                ?? w.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl,
+            Price = w.Plant?.BasePrice,
+            AdditionalInfo = w.Plant?.Description,
             CreatedAt = w.CreatedAt
         };
 
@@ -48,33 +47,31 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             CreatedAt = w.CreatedAt
         };
 
-        private static WishlistItemResponseDto MapNurseryPlantCombo(Wishlist w) => new()
+        private static WishlistItemResponseDto MapPlantCombo(Wishlist w) => new()
         {
             Id = w.Id,
             ItemType = w.ItemType,
-            ItemId = w.NurseryPlantComboId ?? 0,
-            ItemName = w.NurseryPlantCombo?.PlantCombo?.ComboName ?? string.Empty,
-            ItemImageUrl = w.NurseryPlantCombo?.PlantCombo?.PlantComboImages?
+            ItemId = w.PlantComboId ?? 0,
+            ItemName = w.PlantCombo?.ComboName ?? string.Empty,
+            ItemImageUrl = w.PlantCombo?.PlantComboImages?
                 .FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                ?? w.NurseryPlantCombo?.PlantCombo?.PlantComboImages?.FirstOrDefault()?.ImageUrl,
-            Price = w.NurseryPlantCombo?.PlantCombo?.ComboPrice,
-            Quantity = w.NurseryPlantCombo?.Quantity,
-            AdditionalInfo = w.NurseryPlantCombo?.PlantCombo?.Description,
+                ?? w.PlantCombo?.PlantComboImages?.FirstOrDefault()?.ImageUrl,
+            Price = w.PlantCombo?.ComboPrice,
+            AdditionalInfo = w.PlantCombo?.Description,
             CreatedAt = w.CreatedAt
         };
 
-        private static WishlistItemResponseDto MapNurseryMaterial(Wishlist w) => new()
+        private static WishlistItemResponseDto MapMaterial(Wishlist w) => new()
         {
             Id = w.Id,
             ItemType = w.ItemType,
-            ItemId = w.NurseryMaterialId ?? 0,
-            ItemName = w.NurseryMaterial?.Material?.Name ?? string.Empty,
-            ItemImageUrl = w.NurseryMaterial?.Material?.MaterialImages?
+            ItemId = w.MaterialId ?? 0,
+            ItemName = w.Material?.Name ?? string.Empty,
+            ItemImageUrl = w.Material?.MaterialImages?
                 .FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                ?? w.NurseryMaterial?.Material?.MaterialImages?.FirstOrDefault()?.ImageUrl,
-            Price = w.NurseryMaterial?.Material?.BasePrice,
-            Quantity = w.NurseryMaterial?.Quantity,
-            AdditionalInfo = $"Available: {w.NurseryMaterial?.Quantity}, Expired: {w.NurseryMaterial?.ExpiredDate}",
+                ?? w.Material?.MaterialImages?.FirstOrDefault()?.ImageUrl,
+            Price = w.Material?.BasePrice,
+            AdditionalInfo = w.Material?.Description,
             CreatedAt = w.CreatedAt
         };
 
