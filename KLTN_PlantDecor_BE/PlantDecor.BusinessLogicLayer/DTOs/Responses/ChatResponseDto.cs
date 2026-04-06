@@ -8,6 +8,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public DateTime? EndedAt { get; set; }
         public List<ParticipantResponseDto> Participants { get; set; } = new();
         public MessageResponseDto? LatestMessage { get; set; }
+        public List<MessageResponseDto>? Messages { get; set; }
+        public int? TotalMessages { get; set; }
+        public int? TotalPages { get; set; }
+        public int? PageNumber { get; set; }
+        public int? PageSize { get; set; }
     }
 
     public class ParticipantResponseDto
