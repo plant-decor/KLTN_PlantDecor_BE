@@ -58,11 +58,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Payment amount must be greater than 0");
 
             // Check if there's a pending payment with active transaction for this invoice
-            var existingPayments = await _unitOfWork.PaymentRepository.GetByOrderIdAsync(order.Id);
+            var existingPayments = await _unitOfWork.PaymentRepository.GetByInvoiceIdAsync(invoice.Id);
             var now = DateTime.Now;
 
             var activePendingPayment = existingPayments.FirstOrDefault(p =>
-                p.PaymentType == (int)paymentType &&
                 p.Status == (int)PaymentStatusEnum.Pending &&
                 p.Transactions.Any(t =>
                     t.Status == (int)TransactionStatusEnum.Pending &&
@@ -75,6 +74,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var payment = new Payment
             {
                 OrderId = order.Id,
+                InvoiceId = invoice.Id,
                 PaymentType = (int)paymentType,
                 Amount = amount,
                 Status = (int)PaymentStatusEnum.Pending,
@@ -114,9 +114,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException($"Payment {paymentId} not found");
 
             // Verify payment belongs to user's order
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(payment.OrderId!.Value);
-            if (order == null)
-                throw new NotFoundException("Order not found");
+            var order = await ResolveTargetOrderForPaymentAsync(payment);
 
             if (order.UserId != userId)
                 throw new ForbiddenException("You don't have access to this payment");
@@ -163,6 +161,63 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 PaymentId = payment.Id,
                 PaymentUrl = paymentUrl
             };
+        }
+
+        public async Task<CreatePaymentUrlResponseDto> ContinuePaymentByInvoiceAsync(int userId, int invoiceId, HttpContext httpContext)
+        {
+            var invoice = await _unitOfWork.InvoiceRepository.GetByIdWithDetailsAsync(invoiceId);
+            if (invoice == null)
+                throw new NotFoundException($"Invoice {invoiceId} not found");
+
+            if (!invoice.OrderId.HasValue)
+                throw new BadRequestException("Invoice is not associated with any order");
+
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(invoice.OrderId.Value);
+            if (order == null)
+                throw new NotFoundException("Order not found");
+
+            if (order.UserId != userId)
+                throw new ForbiddenException("You don't have access to this invoice");
+
+            if (invoice.Status != (int)InvoiceStatusEnum.Pending)
+                throw new BadRequestException($"Invoice is not in Pending status. Current status: {(InvoiceStatusEnum)invoice.Status!.Value}");
+
+            var existingPayments = await _unitOfWork.PaymentRepository.GetByInvoiceIdAsync(invoiceId);
+            var now = DateTime.Now;
+
+            var activePendingPayment = existingPayments
+                .Where(p => p.Status == (int)PaymentStatusEnum.Pending)
+                .OrderByDescending(p => p.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(p => p.Id)
+                .FirstOrDefault(p => p.Transactions.Any(t =>
+                    t.Status == (int)TransactionStatusEnum.Pending &&
+                    (!t.ExpiredAt.HasValue || t.ExpiredAt.Value > now)));
+
+            if (activePendingPayment != null)
+            {
+                if (activePendingPayment.Transactions.Count >= MaxRetryAttempts)
+                {
+                    // Reached retry limit on current active payment: close current pending transactions/payment,
+                    // then create a brand new payment so customer can continue checkout.
+                    foreach (var transaction in activePendingPayment.Transactions
+                        .Where(t => t.Status == (int)TransactionStatusEnum.Pending))
+                    {
+                        transaction.Status = (int)TransactionStatusEnum.TimedOut;
+                        transaction.ExpiredAt = now;
+                        _unitOfWork.TransactionRepository.PrepareUpdate(transaction);
+                    }
+
+                    activePendingPayment.Status = (int)PaymentStatusEnum.Failed;
+                    _unitOfWork.PaymentRepository.PrepareUpdate(activePendingPayment);
+                    await _unitOfWork.SaveAsync();
+
+                    return await CreatePaymentUrlAsync(userId, new CreatePaymentRequestDto { InvoiceId = invoiceId }, httpContext);
+                }
+
+                return await RetryPaymentAsync(userId, activePendingPayment.Id, httpContext);
+            }
+
+            return await CreatePaymentUrlAsync(userId, new CreatePaymentRequestDto { InvoiceId = invoiceId }, httpContext);
         }
 
         public async Task<PaymentResponse> ProcessVnpayCallbackAsync(IQueryCollection queryParams)
@@ -266,13 +321,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
                     }
 
-                    // PaymentType và InvoiceType dùng cùng giá trị số: Deposit=1, FullPayment=2, RemainingBalance=3
-                    // Dùng để xác định Invoice nào cần cập nhật trạng thái sang Paid sau khi thanh toán thành công, dựa trên loại thanh toán (Deposit, FullPayment, RemainingBalance).
-                    var invoice = await _unitOfWork.InvoiceRepository
-                        .GetPendingByOrderIdAndTypeAsync(order.Id, (int)paymentType);
-
-                    if (invoice == null)
-                        throw new NotFoundException($"Invoice not found for order {order.Id}");
+                    var invoice = await ResolveTargetInvoiceForPaymentAsync(payment);
 
                     invoice.Status = (int)InvoiceStatusEnum.Paid;
                     _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
@@ -349,10 +398,50 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task<Order> ResolveTargetOrderForPaymentAsync(Payment payment)
         {
-            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(payment.OrderId!.Value)
-                ?? throw new NotFoundException("Order not found");
+            if (payment.OrderId.HasValue)
+            {
+                var orderByOrderId = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(payment.OrderId.Value);
+                if (orderByOrderId != null)
+                    return orderByOrderId;
+            }
 
-            return order;
+            if (payment.InvoiceId.HasValue)
+            {
+                var invoice = await _unitOfWork.InvoiceRepository.GetByIdWithDetailsAsync(payment.InvoiceId.Value)
+                    ?? throw new NotFoundException("Invoice not found");
+
+                if (!invoice.OrderId.HasValue)
+                    throw new BadRequestException("Invoice is not associated with any order");
+
+                var orderByInvoice = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(invoice.OrderId.Value)
+                    ?? throw new NotFoundException("Order not found");
+
+                return orderByInvoice;
+            }
+
+            throw new BadRequestException("Payment is not associated with order or invoice");
+        }
+
+        private async Task<Invoice> ResolveTargetInvoiceForPaymentAsync(Payment payment)
+        {
+            if (payment.InvoiceId.HasValue)
+            {
+                var linkedInvoice = await _unitOfWork.InvoiceRepository.GetByIdWithDetailsAsync(payment.InvoiceId.Value)
+                    ?? throw new NotFoundException("Invoice not found");
+
+                return linkedInvoice;
+            }
+
+            if (payment.OrderId.HasValue && payment.PaymentType.HasValue)
+            {
+                var fallbackInvoice = await _unitOfWork.InvoiceRepository
+                    .GetPendingByOrderIdAndTypeAsync(payment.OrderId.Value, payment.PaymentType.Value)
+                    ?? throw new NotFoundException($"Invoice not found for order {payment.OrderId.Value}");
+
+                return fallbackInvoice;
+            }
+
+            throw new BadRequestException("Payment is not associated with any invoice");
         }
 
         /// <summary>

@@ -22,5 +22,7 @@ public partial class Invoice
 
     public virtual ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
 
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
     public virtual Order? Order { get; set; }
 }

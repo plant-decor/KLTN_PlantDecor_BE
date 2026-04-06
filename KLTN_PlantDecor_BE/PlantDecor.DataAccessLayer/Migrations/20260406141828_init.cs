@@ -1121,10 +1121,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: false),
                     ItemType = table.Column<int>(type: "integer", nullable: false),
-                    CommonPlantId = table.Column<int>(type: "integer", nullable: true),
+                    PlantId = table.Column<int>(type: "integer", nullable: true),
                     PlantInstanceId = table.Column<int>(type: "integer", nullable: true),
-                    NurseryPlantComboId = table.Column<int>(type: "integer", nullable: true),
-                    NurseryMaterialId = table.Column<int>(type: "integer", nullable: true),
+                    PlantComboId = table.Column<int>(type: "integer", nullable: true),
+                    MaterialId = table.Column<int>(type: "integer", nullable: true),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
                     DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -1133,21 +1133,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     table.PrimaryKey("PK_Wishlist", x => x.Id);
                     table.ForeignKey(
-                        name: "Wishlist_CommonPlantId_fkey",
-                        column: x => x.CommonPlantId,
-                        principalTable: "CommonPlant",
+                        name: "Wishlist_MaterialId_fkey",
+                        column: x => x.MaterialId,
+                        principalTable: "Material",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "Wishlist_NurseryMaterialId_fkey",
-                        column: x => x.NurseryMaterialId,
-                        principalTable: "NurseryMaterial",
+                        name: "Wishlist_PlantComboId_fkey",
+                        column: x => x.PlantComboId,
+                        principalTable: "PlantCombo",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "Wishlist_NurseryPlantComboId_fkey",
-                        column: x => x.NurseryPlantComboId,
-                        principalTable: "NurseryPlantCombo",
+                        name: "Wishlist_PlantId_fkey",
+                        column: x => x.PlantId,
+                        principalTable: "Plant",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -1217,6 +1217,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     OrderId = table.Column<int>(type: "integer", nullable: true),
+                    InvoiceId = table.Column<int>(type: "integer", nullable: true),
                     PaymentType = table.Column<int>(type: "integer", nullable: true),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
@@ -1226,6 +1227,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("Payment_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "Payment_InvoiceId_fkey",
+                        column: x => x.InvoiceId,
+                        principalTable: "Invoice",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "Payment_OrderId_fkey",
                         column: x => x.OrderId,
@@ -1695,6 +1701,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Payment_InvoiceId",
+                table: "Payment",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payment_OrderId",
                 table: "Payment",
                 column: "OrderId");
@@ -1911,19 +1922,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Wishlist_CommonPlantId",
+                name: "IX_Wishlist_MaterialId",
                 table: "Wishlist",
-                column: "CommonPlantId");
+                column: "MaterialId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Wishlist_NurseryMaterialId",
+                name: "IX_Wishlist_PlantComboId",
                 table: "Wishlist",
-                column: "NurseryMaterialId");
+                column: "PlantComboId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Wishlist_NurseryPlantComboId",
+                name: "IX_Wishlist_PlantId",
                 table: "Wishlist",
-                column: "NurseryPlantComboId");
+                column: "PlantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Wishlist_PlantInstanceId",
@@ -2147,13 +2158,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "ChatSession");
 
             migrationBuilder.DropTable(
-                name: "Invoice");
-
-            migrationBuilder.DropTable(
                 name: "LayoutDesign");
 
             migrationBuilder.DropTable(
+                name: "CommonPlant");
+
+            migrationBuilder.DropTable(
+                name: "NurseryMaterial");
+
+            migrationBuilder.DropTable(
                 name: "NurseryOrder");
+
+            migrationBuilder.DropTable(
+                name: "NurseryPlantCombo");
 
             migrationBuilder.DropTable(
                 name: "Category");
@@ -2168,25 +2185,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "Payment");
 
             migrationBuilder.DropTable(
-                name: "CommonPlant");
-
-            migrationBuilder.DropTable(
-                name: "NurseryMaterial");
-
-            migrationBuilder.DropTable(
-                name: "NurseryPlantCombo");
-
-            migrationBuilder.DropTable(
                 name: "PlantInstance");
 
             migrationBuilder.DropTable(
                 name: "RoomImage");
-
-            migrationBuilder.DropTable(
-                name: "NurseryCareService");
-
-            migrationBuilder.DropTable(
-                name: "Order");
 
             migrationBuilder.DropTable(
                 name: "Material");
@@ -2195,10 +2197,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "PlantCombo");
 
             migrationBuilder.DropTable(
+                name: "NurseryCareService");
+
+            migrationBuilder.DropTable(
+                name: "Invoice");
+
+            migrationBuilder.DropTable(
                 name: "Plant");
 
             migrationBuilder.DropTable(
                 name: "CareServicePackage");
+
+            migrationBuilder.DropTable(
+                name: "Order");
 
             migrationBuilder.DropTable(
                 name: "User");

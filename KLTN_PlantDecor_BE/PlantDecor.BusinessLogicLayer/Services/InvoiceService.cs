@@ -41,6 +41,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return invoices.Select(MapToDto).ToList();
         }
 
+        public async Task<List<InvoiceResponseDto>> GetPendingInvoicesAsync(int userId)
+        {
+            var invoices = await _unitOfWork.InvoiceRepository.GetPendingByUserIdAsync(userId);
+            return invoices.Select(MapToDto).ToList();
+        }
+
         public async Task<InvoiceResponseDto> GenerateRemainingInvoiceAsync(int orderId)
         {
             var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);

@@ -1199,6 +1199,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -1213,6 +1216,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("Payment_pkey");
+
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("OrderId");
 
@@ -2368,9 +2373,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CommonPlantId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -2387,10 +2389,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int>("ItemType")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("NurseryMaterialId")
+                    b.Property<int?>("MaterialId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("NurseryPlantComboId")
+                    b.Property<int?>("PlantComboId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PlantId")
                         .HasColumnType("integer");
 
                     b.Property<int?>("PlantInstanceId")
@@ -2401,11 +2406,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommonPlantId");
+                    b.HasIndex("MaterialId");
 
-                    b.HasIndex("NurseryMaterialId");
+                    b.HasIndex("PlantComboId");
 
-                    b.HasIndex("NurseryPlantComboId");
+                    b.HasIndex("PlantId");
 
                     b.HasIndex("PlantInstanceId");
 
@@ -2844,10 +2849,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Payment", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .HasConstraintName("Payment_InvoiceId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
                         .WithMany("Payments")
                         .HasForeignKey("OrderId")
                         .HasConstraintName("Payment_OrderId_fkey");
+
+                    b.Navigation("Invoice");
 
                     b.Navigation("Order");
                 });
@@ -3180,23 +3192,23 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Wishlist", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CommonPlant", "CommonPlant")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Material", "Material")
                         .WithMany("Wishlists")
-                        .HasForeignKey("CommonPlantId")
+                        .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("Wishlist_CommonPlantId_fkey");
+                        .HasConstraintName("Wishlist_MaterialId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryMaterial", "NurseryMaterial")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantCombo", "PlantCombo")
                         .WithMany("Wishlists")
-                        .HasForeignKey("NurseryMaterialId")
+                        .HasForeignKey("PlantComboId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("Wishlist_NurseryMaterialId_fkey");
+                        .HasConstraintName("Wishlist_PlantComboId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", "NurseryPlantCombo")
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("Wishlists")
-                        .HasForeignKey("NurseryPlantComboId")
+                        .HasForeignKey("PlantId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("Wishlist_NurseryPlantComboId_fkey");
+                        .HasConstraintName("Wishlist_PlantId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantInstance", "PlantInstance")
                         .WithMany("Wishlists")
@@ -3211,11 +3223,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsRequired()
                         .HasConstraintName("Wishlist_UserId_fkey");
 
-                    b.Navigation("CommonPlant");
+                    b.Navigation("Material");
 
-                    b.Navigation("NurseryMaterial");
+                    b.Navigation("Plant");
 
-                    b.Navigation("NurseryPlantCombo");
+                    b.Navigation("PlantCombo");
 
                     b.Navigation("PlantInstance");
 
@@ -3266,13 +3278,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("LayoutDesignPlants");
 
                     b.Navigation("NurseryOrderDetails");
-
-                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Invoice", b =>
                 {
                     b.Navigation("InvoiceDetails");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesign", b =>
@@ -3287,6 +3299,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("MaterialImages");
 
                     b.Navigation("NurseryMaterials");
+
+                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Nursery", b =>
@@ -3318,8 +3332,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("CartItems");
 
                     b.Navigation("NurseryOrderDetails");
-
-                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
@@ -3332,8 +3344,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("CartItems");
 
                     b.Navigation("NurseryOrderDetails");
-
-                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
@@ -3371,6 +3381,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("UserPlants");
 
                     b.Navigation("UserPreferences");
+
+                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantCombo", b =>
@@ -3382,6 +3394,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("PlantComboItems");
 
                     b.Navigation("UserBehaviorLogs");
+
+                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantInstance", b =>

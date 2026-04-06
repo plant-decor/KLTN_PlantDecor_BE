@@ -592,6 +592,10 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+            entity.HasOne(d => d.Invoice).WithMany(p => p.Payments)
+                .HasForeignKey(d => d.InvoiceId)
+                .HasConstraintName("Payment_InvoiceId_fkey");
+
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("Payment_OrderId_fkey");
@@ -1171,10 +1175,10 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("Wishlist_UserId_fkey")
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // CommonPlant relationship (nullable)
-            entity.HasOne(d => d.CommonPlant).WithMany(p => p.Wishlists)
-                .HasForeignKey(d => d.CommonPlantId)
-                .HasConstraintName("Wishlist_CommonPlantId_fkey")
+            // Plant relationship (nullable)
+            entity.HasOne(d => d.Plant).WithMany(p => p.Wishlists)
+                .HasForeignKey(d => d.PlantId)
+                .HasConstraintName("Wishlist_PlantId_fkey")
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired(false);
 
@@ -1185,17 +1189,17 @@ public partial class PlantDecorContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired(false);
 
-            // NurseryPlantCombo relationship (nullable)
-            entity.HasOne(d => d.NurseryPlantCombo).WithMany(p => p.Wishlists)
-                .HasForeignKey(d => d.NurseryPlantComboId)
-                .HasConstraintName("Wishlist_NurseryPlantComboId_fkey")
+            // PlantCombo relationship (nullable)
+            entity.HasOne(d => d.PlantCombo).WithMany(p => p.Wishlists)
+                .HasForeignKey(d => d.PlantComboId)
+                .HasConstraintName("Wishlist_PlantComboId_fkey")
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired(false);
 
-            // NurseryMaterial relationship (nullable)
-            entity.HasOne(d => d.NurseryMaterial).WithMany(p => p.Wishlists)
-                .HasForeignKey(d => d.NurseryMaterialId)
-                .HasConstraintName("Wishlist_NurseryMaterialId_fkey")
+            // Material relationship (nullable)
+            entity.HasOne(d => d.Material).WithMany(p => p.Wishlists)
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("Wishlist_MaterialId_fkey")
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired(false);
 

@@ -5,6 +5,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     public interface IPaymentRepository : IGenericRepository<Payment>
     {
         Task<Payment?> GetByIdWithTransactionsAsync(int paymentId);
+        Task<List<Payment>> GetByInvoiceIdAsync(int invoiceId);
         Task<List<Payment>> GetByOrderIdAsync(int orderId);
         Task<List<Payment>> GetPendingWithTransactionsAsync();
     }
