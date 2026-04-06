@@ -602,14 +602,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Manager - Nursery Combo Stock
 
-        public async Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int nurseryId, int managerId, int comboId, AssembleNurseryComboRequestDto request)
+        public async Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int managerId, int comboId, AssembleNurseryComboRequestDto request)
         {
             if (request.Quantity <= 0)
                 throw new BadRequestException("Số lượng combo tạo phải lớn hơn 0");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null || nursery.Id != nurseryId)
+            if (nursery == null)
                 throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+
+            var nurseryId = nursery.Id;
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
@@ -724,14 +726,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public async Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int nurseryId, int managerId, int comboId, DecomposeNurseryComboRequestDto request)
+        public async Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int managerId, int comboId, DecomposeNurseryComboRequestDto request)
         {
             if (request.Quantity <= 0)
                 throw new BadRequestException("Số lượng combo phân rã phải lớn hơn 0");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null || nursery.Id != nurseryId)
+            if (nursery == null)
                 throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+
+            var nurseryId = nursery.Id;
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
@@ -830,6 +834,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<PaginatedResult<NurseryComboStockResponseDto>> GetNurseryComboStockAsync(int managerId, Pagination pagination)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("Bạn không có quyền truy cập tài nguyên này");
+
+            var query = _unitOfWork.NurseryPlantComboRepository.GetQuery()
+                .Where(npc => npc.NurseryId == nursery.Id)
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.PlantComboImages);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(npc => npc.UpdatedAt ?? npc.CreatedAt)
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            var dtos = items.Select(npc => new NurseryComboStockResponseDto
+            {
+                Id = npc.Id,
+                PlantComboId = npc.PlantComboId,
+                ComboCode = npc.PlantCombo.ComboCode,
+                ComboName = npc.PlantCombo.ComboName,
+                ComboType = npc.PlantCombo.ComboType,
+                ComboTypeName = MapComboTypeName(npc.PlantCombo.ComboType),
+                Price = npc.PlantCombo.ComboPrice,
+                Quantity = npc.Quantity,
+                IsActive = npc.IsActive,
+                PrimaryImageUrl = npc.PlantCombo.PlantComboImages
+                    .FirstOrDefault(img => img.IsPrimary == true)?.ImageUrl
+                    ?? npc.PlantCombo.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                CreatedAt = npc.CreatedAt,
+                UpdatedAt = npc.UpdatedAt
+            }).ToList();
+
+            return new PaginatedResult<NurseryComboStockResponseDto>(dtos, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         #endregion
 
         #region Shop Display
@@ -904,19 +948,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (searchDto.ComboType.HasValue)
             {
                 query = query.Where(npc => npc.PlantCombo.ComboType.HasValue && npc.PlantCombo.ComboType.Value == searchDto.ComboType.Value);
-            }
-
-            var categoryIds = (searchDto.CategoryIds ?? new List<int>()).ToList();
-            if (searchDto.CategoryId.HasValue && !categoryIds.Contains(searchDto.CategoryId.Value))
-            {
-                categoryIds.Add(searchDto.CategoryId.Value);
-            }
-
-            // Category filter: combo is matched when any plant in the combo belongs to one of the categories
-            if (categoryIds.Any())
-            {
-                query = query.Where(npc => npc.PlantCombo.PlantComboItems
-                    .Any(ci => ci.Plant != null && ci.Plant.Categories.Any(c => categoryIds.Contains(c.Id))));
             }
 
             // Tags

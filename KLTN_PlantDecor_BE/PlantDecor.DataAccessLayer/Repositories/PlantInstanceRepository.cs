@@ -40,6 +40,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.PlantInstances
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.CurrentNursery)
+                .Include(pi => pi.PlantImages)
                 .FirstOrDefaultAsync(pi => pi.Id == id);
         }
 
