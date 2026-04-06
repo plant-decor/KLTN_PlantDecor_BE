@@ -8,6 +8,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
 {
     public class ChatSessionRepository : GenericRepository<ChatSession>, IChatSessionRepository
     {
+        private static readonly TimeZoneInfo _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        private static DateTime VnNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _vnTimeZone);
+
         public ChatSessionRepository(PlantDecorContext context) : base(context)
         {
         }
@@ -48,7 +51,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var chatSession = new ChatSession
             {
                 Status = (int)ConversationStatus.Active,
-                StartedAt = DateTime.UtcNow
+                StartedAt = VnNow
             };
 
             _context.ChatSessions.Add(chatSession);
@@ -56,8 +59,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             var participants = new List<ChatParticipant>
             {
-                new ChatParticipant { ChatSessionId = chatSession.Id, UserId = userId1, JoinedAt = DateTime.UtcNow },
-                new ChatParticipant { ChatSessionId = chatSession.Id, UserId = userId2, JoinedAt = DateTime.UtcNow }
+                new ChatParticipant { ChatSessionId = chatSession.Id, UserId = userId1, JoinedAt = VnNow },
+                new ChatParticipant { ChatSessionId = chatSession.Id, UserId = userId2, JoinedAt = VnNow }
             };
 
             _context.ChatParticipants.AddRange(participants);
@@ -83,7 +86,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var chatSession = new ChatSession
             {
                 Status = (int)ConversationStatus.Waiting,
-                StartedAt = DateTime.UtcNow
+                StartedAt = VnNow
             };
 
             _context.ChatSessions.Add(chatSession);
@@ -93,13 +96,28 @@ namespace PlantDecor.DataAccessLayer.Repositories
             {
                 ChatSessionId = chatSession.Id,
                 UserId = customerId,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = VnNow
             });
 
             await _context.SaveChangesAsync();
 
             return await GetConversationWithParticipantsAsync(chatSession.Id)
                    ?? chatSession;
+        }
+
+        public async Task<int?> FindLeastBusyConsultantTodayAsync()
+        {
+            var todayStart = VnNow.Date;
+            var todayEnd = todayStart.AddDays(1);
+
+            return await _context.Users
+                .Where(u => u.RoleId == (int)RoleEnum.Consultant
+                            && u.Status == (int)UserStatusEnum.Active)
+                .OrderBy(u => u.ChatParticipants
+                    .Count(cp => cp.ChatSession.StartedAt >= todayStart
+                                 && cp.ChatSession.StartedAt < todayEnd))
+                .Select(u => (int?)u.Id)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<List<ChatSession>> GetWaitingSupportConversationsAsync()

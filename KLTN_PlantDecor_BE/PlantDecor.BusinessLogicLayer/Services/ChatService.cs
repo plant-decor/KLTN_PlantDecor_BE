@@ -21,17 +21,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
         }
 
+        private static readonly TimeZoneInfo _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        private static DateTime VnNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _vnTimeZone);
+
         public async Task<ChatMessage> SendMessageAsync(int userId, int conversationId, string content)
         {
+            var isParticipant = await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
+            if (!isParticipant)
+                throw new ForbiddenException("You are not a participant of this conversation");
+
+            var conversation = await _unitOfWork.ChatSessionRepository.GetByIdAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException("Conversation not found");
+
+            if (conversation.Status == (int)ConversationStatus.Closed)
+                throw new BadRequestException("Cannot send message to a closed conversation");
+
             var message = new ChatMessage
             {
                 ChatSessionId = conversationId,
                 Sender = userId,
                 Content = content.Trim(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = VnNow
             };
 
             await _unitOfWork.ChatMessageRepository.CreateAsync(message);
+            await _unitOfWork.SaveAsync();
             return message;
         }
 
@@ -191,6 +206,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
+       // bắt đầu cuộc trò chuyện thì hệ thống sẽ tìm thằng consultant ít cuộc trò chuyện nhất trong ngày hôm đó rồi add consultant đó vào cuộc trò chuyện
         public async Task<ConversationResponseDto> StartSupportConversationAsync(int customerId, string firstMessage)
         {
             var existingConversation = await _unitOfWork.ChatSessionRepository
@@ -200,6 +216,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 existingConversation = await _unitOfWork.ChatSessionRepository
                     .CreateSupportConversationAsync(customerId);
+
+                var consultantId = await _unitOfWork.ChatSessionRepository
+                    .FindLeastBusyConsultantTodayAsync();
+
+                if (consultantId.HasValue)
+                {
+                    await _unitOfWork.ChatParticipantRepository.CreateAsync(new ChatParticipant
+                    {
+                        ChatSessionId = existingConversation.Id,
+                        UserId = consultantId.Value,
+                        JoinedAt = VnNow
+                    });
+
+                    existingConversation.Status = (int)ConversationStatus.Active;
+                    await _unitOfWork.ChatSessionRepository.UpdateAsync(existingConversation);
+                }
             }
 
             var message = new ChatMessage
@@ -207,7 +239,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ChatSessionId = existingConversation.Id,
                 Sender = customerId,
                 Content = firstMessage.Trim(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = VnNow
             };
 
             await _unitOfWork.ChatMessageRepository.CreateAsync(message);
@@ -307,11 +339,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var isAlreadyParticipant = conversation.ChatParticipants.Any(p => p.UserId == consultantId);
             if (!isAlreadyParticipant)
             {
-                await _unitOfWork.ChatParticipantRepository.CreateAsync(new ChatParticipant
+            await _unitOfWork.ChatParticipantRepository.CreateAsync(new ChatParticipant
                 {
                     ChatSessionId = conversationId,
                     UserId = consultantId,
-                    JoinedAt = DateTime.UtcNow
+                    JoinedAt = VnNow
                 });
             }
 
@@ -334,7 +366,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException("Conversation not found");
 
             conversation.Status = (int)ConversationStatus.Closed;
-            conversation.EndedAt = DateTime.UtcNow;
+            conversation.EndedAt = VnNow;
 
             await _unitOfWork.ChatSessionRepository.UpdateAsync(conversation);
             await _unitOfWork.SaveAsync();

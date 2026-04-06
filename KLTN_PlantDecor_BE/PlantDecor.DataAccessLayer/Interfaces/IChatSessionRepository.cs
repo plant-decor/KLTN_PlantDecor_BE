@@ -11,6 +11,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
 
         Task<ChatSession?> FindOpenSupportConversationByCustomerAsync(int customerId);
         Task<ChatSession> CreateSupportConversationAsync(int customerId);
+        Task<int?> FindLeastBusyConsultantTodayAsync();
         Task<List<ChatSession>> GetWaitingSupportConversationsAsync();
         Task<List<ChatSession>> GetMyClaimedSupportConversationsAsync(int consultantId);
         Task UpdateAsync(ChatSession conversation);

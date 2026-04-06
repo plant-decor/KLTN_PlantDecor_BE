@@ -95,6 +95,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Tạo conversation mới và hệ thống sẽ tìm consultant ít cuộc trò chuyện trong ngày nhất để kết nối với customer
+        /// </summary>
         [HttpPost("start")]
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Start([FromBody] StartSupportConversationRequestDto request)
@@ -125,6 +128,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Lấy danh sách các conversation mà consultant đang làm, tức là consultant đã claim vào các conversation đó rồi
+        /// </summary>
         [HttpGet("my-claimed")]
         [Authorize(Roles = "Consultant")]
         public async Task<IActionResult> GetMyClaimed()
@@ -141,6 +147,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Tham gia phòng chưa có consultant vào làm consultant cho phòng đó
+        /// </summary>
         [HttpPost("{conversationId:int}/claim")]
         [Authorize(Roles = "Consultant")]
         public async Task<IActionResult> Claim(int conversationId)
@@ -168,6 +177,34 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Nhắn tin nhắn trong conversation, cả consultant và customer đều có thể nhắn tin
+        /// </summary>
+        [HttpPost("{conversationId:int}/messages")]
+        [Authorize(Roles = "Consultant,Customer")]
+        public async Task<IActionResult> SendMessage(int conversationId, [FromBody] SendMessageRequestDto request)
+        {
+            var userId = GetUserId();
+            var message = await _chatService.SendMessageAsync(userId, conversationId, request.Content);
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<MessageResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Message sent successfully",
+                Payload = new MessageResponseDto
+                {
+                    Id = message.Id,
+                    ChatSessionId = message.ChatSessionId,
+                    SenderId = message.Sender,
+                    Content = message.Content,
+                    CreatedAt = message.CreatedAt
+                }
+            });
+        }
+
+        /// <summary>
+        /// Consultant hoặc customer có thể đóng conversation khi đã giải quyết xong vấn đề, sau khi đóng conversation sẽ không thể gửi tin nhắn mới vào conversation đó nữa
+        /// </summary>
         [HttpPost("{conversationId:int}/close")]
         public async Task<IActionResult> Close(int conversationId)
         {
