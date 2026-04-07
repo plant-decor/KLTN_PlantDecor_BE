@@ -43,6 +43,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ?? w.PlantInstance?.PlantImages?.FirstOrDefault()?.ImageUrl
                 ?? w.PlantInstance?.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl,
             Price = w.PlantInstance?.SpecificPrice,
+            NurseryName = w.PlantInstance?.CurrentNursery?.Name,
             AdditionalInfo = $"SKU: {w.PlantInstance?.SKU}, Height: {w.PlantInstance?.Height}cm, Status: {w.PlantInstance?.HealthStatus}",
             CreatedAt = w.CreatedAt
         };
