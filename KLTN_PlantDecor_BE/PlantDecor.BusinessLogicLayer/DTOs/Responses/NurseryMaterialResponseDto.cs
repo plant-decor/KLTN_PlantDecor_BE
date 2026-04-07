@@ -24,6 +24,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? MaterialName { get; set; }
         public string? MaterialCode { get; set; }
         public string? Unit { get; set; }
+        public decimal? BasePrice { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public int Quantity { get; set; }
