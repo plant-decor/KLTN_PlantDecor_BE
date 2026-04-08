@@ -35,6 +35,11 @@ namespace PlantDecor.API.Controllers
             ["UnifiedSearchSortBy"] = typeof(UnifiedSearchSortByEnum),
             ["SortDirection"] = typeof(SortDirectionEnum),
             ["PlantInstanceStatus"] = typeof(PlantInstanceStatusEnum),
+            ["RoomType"] = typeof(RoomTypeEnum),
+            ["RoomStyle"] = typeof(RoomStyleEnum),
+            ["LightRequirement"] = typeof(LightRequirementEnum),
+            ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
+            ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
             ["UserActionType"] = typeof(UserActionTypeEnum),
@@ -127,6 +132,30 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
                     CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Room Design
+        /// GET /api/system/enums/room-design
+        /// </summary>
+        [HttpGet("room-design")]
+        [AllowAnonymous]
+        public IActionResult GetRoomDesignEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get room design enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("RoomType", typeof(RoomTypeEnum)),
+                    CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
+                    CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
+                    CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
+                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum))
                 }
             });
         }
