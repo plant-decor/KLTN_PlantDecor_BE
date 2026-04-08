@@ -125,6 +125,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
+            builder.Services.AddScoped<IPlantGuideService, PlantGuideService>();
             builder.Services.AddScoped<IShopSearchService, ShopSearchService>();
 
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
@@ -294,6 +295,16 @@ namespace PlantDecor.API
                    {
                        OnMessageReceived = context =>
                        {
+                           // 1. Ưu tiên lấy từ COOKIE
+                           var token = context.Request.Cookies["accessToken"];
+
+                           if (!string.IsNullOrEmpty(token))
+                           {
+                               context.Token = token;
+                               return Task.CompletedTask;
+                           }
+
+                           // 2. SignalR (query string)
                            var accessToken = context.Request.Query["access_token"];
                            var path = context.HttpContext.Request.Path;
 
@@ -301,6 +312,15 @@ namespace PlantDecor.API
                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                            {
                                context.Token = accessToken;
+                               return Task.CompletedTask;
+                           }
+
+                           //  3. Fallback: Authorization header (Swagger)
+                           var authHeader = context.Request.Headers["Authorization"].ToString();
+
+                           if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                           {
+                               context.Token = authHeader.Substring("Bearer ".Length).Trim();
                            }
                            return Task.CompletedTask;
                        }

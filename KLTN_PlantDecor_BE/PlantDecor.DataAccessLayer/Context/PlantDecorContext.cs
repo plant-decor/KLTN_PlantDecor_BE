@@ -732,14 +732,16 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("PlantGuide");
 
+            entity.HasIndex(e => e.PlantId, "IX_PlantGuide_PlantId").IsUnique();
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Fertilizing).HasMaxLength(255);
             entity.Property(e => e.Pruning).HasMaxLength(255);
             entity.Property(e => e.Temperature).HasMaxLength(255);
             entity.Property(e => e.Watering).HasMaxLength(255);
 
-            entity.HasOne(d => d.Plant).WithMany(p => p.PlantGuides)
-                .HasForeignKey(d => d.PlantId)
+            entity.HasOne(d => d.Plant).WithOne(p => p.PlantGuide)
+                .HasForeignKey<PlantGuide>(d => d.PlantId)
                 .HasConstraintName("PlantGuide_PlantId_fkey");
         });
 

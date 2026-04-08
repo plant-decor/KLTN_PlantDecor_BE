@@ -53,7 +53,7 @@ public partial class Plant
 
     public virtual ICollection<PlantComboItem> PlantComboItems { get; set; } = new List<PlantComboItem>();
 
-    public virtual ICollection<PlantGuide> PlantGuides { get; set; } = new List<PlantGuide>();
+    public virtual PlantGuide? PlantGuide { get; set; }
 
     public virtual ICollection<PlantImage> PlantImages { get; set; } = new List<PlantImage>();
 
