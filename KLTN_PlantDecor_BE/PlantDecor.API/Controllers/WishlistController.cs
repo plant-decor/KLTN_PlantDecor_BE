@@ -102,7 +102,13 @@ namespace PlantDecor.API.Controllers
             }
             else
             {
-                throw new NotFoundException("Item is not in wishlist");
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Item is not in wishlist",
+                    Payload = false
+                });
             }
         }
 
