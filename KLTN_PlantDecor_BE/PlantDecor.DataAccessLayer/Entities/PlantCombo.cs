@@ -53,5 +53,7 @@ public partial class PlantCombo
 
     public virtual ICollection<Tag> TagsNavigation { get; set; } = new List<Tag>();
 
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+
     public virtual ICollection<NurseryPlantCombo> NurseryPlantCombos { get; set; } = new List<NurseryPlantCombo>();
 }

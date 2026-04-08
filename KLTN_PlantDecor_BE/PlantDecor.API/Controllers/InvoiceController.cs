@@ -58,6 +58,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Lấy danh sách hóa đơn đang chờ thanh toán của user hiện tại
+        /// </summary>
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPendingInvoices()
+        {
+            var userId = GetUserId();
+            var result = await _invoiceService.GetPendingInvoicesAsync(userId);
+            return Ok(new ApiResponse<List<InvoiceResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get pending invoices successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Manager] Tạo hóa đơn thanh toán phần còn lại cho đơn hàng Deposit
         /// </summary>
         [HttpPost("order/{orderId}/remaining")]

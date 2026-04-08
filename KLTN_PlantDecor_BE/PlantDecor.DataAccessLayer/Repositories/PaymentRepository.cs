@@ -14,7 +14,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.Payments
                 .Include(p => p.Transactions)
+                .Include(p => p.Invoice)
                 .FirstOrDefaultAsync(p => p.Id == paymentId);
+        }
+
+        public async Task<List<Payment>> GetByInvoiceIdAsync(int invoiceId)
+        {
+            return await _context.Payments
+                .Include(p => p.Transactions)
+                .Where(p => p.InvoiceId == invoiceId)
+                .ToListAsync();
         }
 
         public async Task<List<Payment>> GetByOrderIdAsync(int orderId)

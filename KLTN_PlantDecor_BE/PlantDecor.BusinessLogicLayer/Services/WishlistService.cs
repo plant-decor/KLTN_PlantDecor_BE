@@ -59,17 +59,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Set the appropriate foreign key based on item type
             switch (itemType)
             {
-                case WishlistItemType.CommonPlant:
-                    wishlist.CommonPlantId = itemId;
+                case WishlistItemType.Plant:
+                    wishlist.PlantId = itemId;
                     break;
                 case WishlistItemType.PlantInstance:
                     wishlist.PlantInstanceId = itemId;
                     break;
-                case WishlistItemType.NurseryPlantCombo:
-                    wishlist.NurseryPlantComboId = itemId;
+                case WishlistItemType.PlantCombo:
+                    wishlist.PlantComboId = itemId;
                     break;
-                case WishlistItemType.NurseryMaterial:
-                    wishlist.NurseryMaterialId = itemId;
+                case WishlistItemType.Material:
+                    wishlist.MaterialId = itemId;
                     break;
                 default:
                     throw new BadRequestException($"Invalid item type: {itemType}");
@@ -102,10 +102,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             switch (itemType)
             {
-                case WishlistItemType.CommonPlant:
-                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(itemId);
-                    if (commonPlant == null)
-                        throw new NotFoundException($"CommonPlant with ID {itemId} not exists");
+                case WishlistItemType.Plant:
+                    var plant = await _unitOfWork.PlantRepository.GetByIdAsync(itemId);
+                    if (plant == null)
+                        throw new NotFoundException($"Plant with ID {itemId} not exists");
                     break;
 
                 case WishlistItemType.PlantInstance:
@@ -114,16 +114,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         throw new NotFoundException($"PlantInstance with ID {itemId} not exists");
                     break;
 
-                case WishlistItemType.NurseryPlantCombo:
-                    var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(itemId);
-                    if (nurseryPlantCombo == null)
-                        throw new NotFoundException($"NurseryPlantCombo with ID {itemId} not exists");
+                case WishlistItemType.PlantCombo:
+                    var plantCombo = await _unitOfWork.PlantComboRepository.GetByIdAsync(itemId);
+                    if (plantCombo == null)
+                        throw new NotFoundException($"PlantCombo with ID {itemId} not exists");
                     break;
 
-                case WishlistItemType.NurseryMaterial:
-                    var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(itemId);
-                    if (nurseryMaterial == null)
-                        throw new NotFoundException($"NurseryMaterial with ID {itemId} not exists");
+                case WishlistItemType.Material:
+                    var material = await _unitOfWork.MaterialRepository.GetByIdAsync(itemId);
+                    if (material == null)
+                        throw new NotFoundException($"Material with ID {itemId} not exists");
                     break;
 
                 default:

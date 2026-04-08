@@ -43,9 +43,9 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Thêm item vào wishlist (hỗ trợ nhiều loại: CommonPlant, PlantInstance, NurseryPlantCombo, NurseryMaterial)
+        /// Thêm item vào wishlist (hỗ trợ nhiều loại: Plant, PlantInstance, PlantCombo, Material)
         /// </summary>
-        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemType">Loại item (0: Plant, 1: PlantInstance, 2: PlantCombo, 3: Material)</param>
         /// <param name="itemId">ID của item</param>
         [HttpPost("{itemType}/{itemId}")]
         public async Task<IActionResult> AddToWishlist(WishlistItemType itemType, int itemId)
@@ -64,7 +64,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Xóa item khỏi wishlist
         /// </summary>
-        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemType">Loại item (0: Plant, 1: PlantInstance, 2: PlantCombo, 3: Material)</param>
         /// <param name="itemId">ID của item</param>
         [HttpDelete("{itemType}/{itemId}")]
         public async Task<IActionResult> RemoveFromWishlist(WishlistItemType itemType, int itemId)
@@ -82,7 +82,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Kiểm tra item có trong wishlist không
         /// </summary>
-        /// <param name="itemType">Loại item (0: CommonPlant, 1: PlantInstance, 2: NurseryPlantCombo, 3: NurseryMaterial)</param>
+        /// <param name="itemType">Loại item (0: Plant, 1: PlantInstance, 2: PlantCombo, 3: Material)</param>
         /// <param name="itemId">ID của item</param>
         [HttpGet("{itemType}/{itemId}/check")]
         public async Task<IActionResult> IsInWishlist(WishlistItemType itemType, int itemId)
@@ -102,7 +102,13 @@ namespace PlantDecor.API.Controllers
             }
             else
             {
-                throw new NotFoundException("Item is not in wishlist");
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Item is not in wishlist",
+                    Payload = false
+                });
             }
         }
 

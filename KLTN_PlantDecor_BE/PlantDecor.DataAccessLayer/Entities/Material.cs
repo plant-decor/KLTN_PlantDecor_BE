@@ -31,6 +31,8 @@ public partial class Material
 
     public virtual ICollection<MaterialImage> MaterialImages { get; set; } = new List<MaterialImage>();
 
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+
     public virtual ICollection<NurseryMaterial> NurseryMaterials { get; set; } = new List<NurseryMaterial>();
 
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();

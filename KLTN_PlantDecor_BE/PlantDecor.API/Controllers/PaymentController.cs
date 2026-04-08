@@ -42,22 +42,40 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Retry thanh toán - tạo transaction mới cho payment đã tồn tại (dùng khi timeout hoặc lỗi)
+        /// Tiếp tục thanh toán theo Invoice đã chọn (BE tự xử lý create/retry)
         /// </summary>
-        [HttpPost("{paymentId}/retry")]
+        [HttpPost("invoice/{invoiceId}/continue")]
         [Authorize]
-        public async Task<IActionResult> RetryPayment([FromRoute] int paymentId)
+        public async Task<IActionResult> ContinuePaymentByInvoice([FromRoute] int invoiceId)
         {
             var userId = GetUserId();
-            var result = await _paymentService.RetryPaymentAsync(userId, paymentId, HttpContext);
+            var result = await _paymentService.ContinuePaymentByInvoiceAsync(userId, invoiceId, HttpContext);
             return Ok(new ApiResponse<CreatePaymentUrlResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Payment retry URL created successfully",
+                Message = "Continue payment URL created successfully",
                 Payload = result
             });
         }
+
+        /// <summary>
+        /// Retry thanh toán - tạo transaction mới cho payment đã tồn tại (dùng khi timeout hoặc lỗi)
+        /// </summary>
+        //[HttpPost("{paymentId}/retry")]
+        //[Authorize]
+        //public async Task<IActionResult> RetryPayment([FromRoute] int paymentId)
+        //{
+        //    var userId = GetUserId();
+        //    var result = await _paymentService.RetryPaymentAsync(userId, paymentId, HttpContext);
+        //    return Ok(new ApiResponse<CreatePaymentUrlResponseDto>
+        //    {
+        //        Success = true,
+        //        StatusCode = StatusCodes.Status200OK,
+        //        Message = "Payment retry URL created successfully",
+        //        Payload = result
+        //    });
+        //}
 
         /// <summary>
         /// Callback từ VNPay sau khi thanh toán - chỉ để redirect user về app (không cập nhật DB)

@@ -175,14 +175,32 @@ namespace PlantDecor.API.Controllers
         #region Manager - Nursery Combo Stock
 
         /// <summary>
-        /// Tạo số lượng combo cho vựa bằng cách trừ kho cây đại trà
-        /// POST /api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/assemble
+        /// [Manager] Lấy danh sách plant combo tồn kho của vựa (lấy nursery từ token)
+        /// GET /api/manager/plant-combos
         /// </summary>
-        [HttpPost("/api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/assemble")]
-        public async Task<IActionResult> AssembleComboStock(int nurseryId, int comboId, [FromBody] AssembleNurseryComboRequestDto request)
+        [HttpGet("/api/manager/plant-combos")]
+        public async Task<IActionResult> GetNurseryComboStock([FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();
-            var result = await _plantComboService.AssembleComboStockAsync(nurseryId, managerId, comboId, request);
+            var result = await _plantComboService.GetNurseryComboStockAsync(managerId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<NurseryComboStockResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách combo của vựa thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Tạo số lượng combo cho vựa bằng cách trừ kho cây đại trà
+        /// POST /api/manager/plant-combos/{comboId}/assemble
+        /// </summary>
+        [HttpPost("/api/manager/plant-combos/{comboId}/assemble")]
+        public async Task<IActionResult> AssembleComboStock(int comboId, [FromBody] AssembleNurseryComboRequestDto request)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantComboService.AssembleComboStockAsync(managerId, comboId, request);
             return Ok(new ApiResponse<NurseryComboStockOperationResponseDto>
             {
                 Success = true,
@@ -194,13 +212,13 @@ namespace PlantDecor.API.Controllers
 
         /// <summary>
         /// Phân rã số lượng combo của vựa để hoàn cây về kho cây đại trà
-        /// POST /api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/decompose
+        /// POST /api/manager/plant-combos/{comboId}/decompose
         /// </summary>
-        [HttpPost("/api/manager/nurseries/{nurseryId}/plant-combos/{comboId}/decompose")]
-        public async Task<IActionResult> DecomposeComboStock(int nurseryId, int comboId, [FromBody] DecomposeNurseryComboRequestDto request)
+        [HttpPost("/api/manager/plant-combos/{comboId}/decompose")]
+        public async Task<IActionResult> DecomposeComboStock(int comboId, [FromBody] DecomposeNurseryComboRequestDto request)
         {
             var managerId = GetCurrentUserId();
-            var result = await _plantComboService.DecomposeComboStockAsync(nurseryId, managerId, comboId, request);
+            var result = await _plantComboService.DecomposeComboStockAsync(managerId, comboId, request);
             return Ok(new ApiResponse<NurseryComboStockOperationResponseDto>
             {
                 Success = true,
@@ -301,7 +319,7 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpPost("shop/search")]
+        [HttpPost("/api/shop/plant-combos/search")]
         [AllowAnonymous]
         public async Task<IActionResult> SearchCombosForShop([FromBody] PlantComboShopSearchRequestDto request)
         {

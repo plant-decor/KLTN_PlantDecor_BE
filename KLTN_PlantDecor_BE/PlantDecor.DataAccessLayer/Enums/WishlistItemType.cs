@@ -2,9 +2,9 @@ namespace PlantDecor.DataAccessLayer.Enums
 {
     public enum WishlistItemType
     {
-        CommonPlant = 0,
+        Plant = 0,
         PlantInstance = 1,
-        NurseryPlantCombo = 2,
-        NurseryMaterial = 3
+        PlantCombo = 2,
+        Material = 3
     }
 }

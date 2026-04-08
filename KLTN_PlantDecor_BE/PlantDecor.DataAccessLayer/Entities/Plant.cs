@@ -69,6 +69,8 @@ public partial class Plant
 
     public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
 
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
