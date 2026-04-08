@@ -534,6 +534,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var embeddingDto = new PlantInstanceEmbeddingDto
                 {
                     PlantInstanceId = entity.Id,
+                    PlantId = entity.PlantId ?? 0,
                     Status = entity.Status,
                     PlantName = plant?.Name ?? string.Empty,
                     PlantSpecificName = plant?.SpecificName,

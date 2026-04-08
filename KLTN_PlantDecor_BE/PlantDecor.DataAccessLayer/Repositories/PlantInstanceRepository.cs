@@ -181,6 +181,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.PlantInstances
                 .AsNoTracking()
                 .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.Categories)
                 .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.Tags)
@@ -188,6 +190,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .OrderBy(pi => pi.Id)
                 .Skip(skip)
                 .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<List<PlantInstance>> GetByPlantIdForEmbeddingAsync(int plantId)
+        {
+            return await _context.PlantInstances
+                .AsNoTracking()
+                .Where(pi => pi.PlantId == plantId)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Categories)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Tags)
+                .Include(pi => pi.CurrentNursery)
+                .OrderBy(pi => pi.Id)
                 .ToListAsync();
         }
     }

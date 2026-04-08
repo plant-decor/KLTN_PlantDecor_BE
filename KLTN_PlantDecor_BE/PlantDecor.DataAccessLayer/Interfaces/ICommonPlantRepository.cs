@@ -37,5 +37,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
 
         Task<int> CountForEmbeddingBackfillAsync();
         Task<List<CommonPlant>> GetEmbeddingBackfillBatchAsync(int skip, int take);
+        Task<List<CommonPlant>> GetByPlantIdForEmbeddingAsync(int plantId);
     }
 }

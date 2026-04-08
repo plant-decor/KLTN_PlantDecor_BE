@@ -487,6 +487,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var embeddingDto = new CommonPlantEmbeddingDto
                 {
                     CommonPlantId = entity.Id,
+                    PlantId = entity.PlantId,
                     IsActive = entity.IsActive,
                     PlantName = plant?.Name ?? string.Empty,
                     PlantSpecificName = plant?.SpecificName,

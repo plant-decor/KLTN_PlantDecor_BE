@@ -1,3 +1,5 @@
+using Hangfire;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -13,14 +15,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         private const string ALL_PLANT_GUIDES_KEY = "plant_guides_all";
         private const string PLANT_GUIDES_BY_PLANT_KEY = "plant_guides_plant";
 
-        public PlantGuideService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public PlantGuideService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<PaginatedResult<PlantGuideResponseDto>> GetAllPlantGuidesAsync(Pagination pagination)
@@ -90,6 +97,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(request.PlantId);
+                await QueueReembeddingByPlantIdsAsync(request.PlantId);
 
                 var created = await _unitOfWork.PlantGuideRepository.GetByIdWithPlantAsync(entity.Id);
                 return created!.ToResponse();
@@ -129,6 +137,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(oldPlantId, entity.PlantId);
+                await QueueReembeddingByPlantIdsAsync(oldPlantId, entity.PlantId);
 
                 var updated = await _unitOfWork.PlantGuideRepository.GetByIdWithPlantAsync(id);
                 return updated!.ToResponse();
@@ -156,6 +165,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(plantId);
+                await QueueReembeddingByPlantIdsAsync(plantId);
 
                 return true;
             }
@@ -175,5 +185,39 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _cacheService.RemoveByPrefixAsync($"{PLANT_GUIDES_BY_PLANT_KEY}_{plantId}");
             }
         }
+
+        private async Task QueueReembeddingByPlantIdsAsync(params int[] plantIds)
+        {
+            foreach (var plantId in plantIds.Where(id => id > 0).Distinct())
+            {
+                try
+                {
+                    var commonPlants = await _unitOfWork.CommonPlantRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                    foreach (var commonPlant in commonPlants)
+                    {
+                        var dto = commonPlant.ToEmbeddingBackfillDto();
+                        var entityId = ConvertToGuid(commonPlant.Id);
+                        _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                            service => service.ProcessCommonPlantEmbeddingAsync(dto, entityId, EmbeddingEntityTypes.CommonPlant));
+                    }
+
+                    var plantInstances = await _unitOfWork.PlantInstanceRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                    foreach (var plantInstance in plantInstances)
+                    {
+                        var dto = plantInstance.ToEmbeddingBackfillDto();
+                        var entityId = ConvertToGuid(plantInstance.Id);
+                        _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                            service => service.ProcessPlantInstanceEmbeddingAsync(dto, entityId, EmbeddingEntityTypes.PlantInstance));
+                    }
+                }
+                catch
+                {
+                    // Re-embedding is best-effort and should not fail PlantGuide write operations.
+                }
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
     }
 }
