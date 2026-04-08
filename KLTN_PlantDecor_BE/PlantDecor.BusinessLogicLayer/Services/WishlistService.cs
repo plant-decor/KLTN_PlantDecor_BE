@@ -93,6 +93,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
+        public async Task<int> ClearWishlistAsync(int userId)
+        {
+            var removedCount = await _unitOfWork.WishlistRepository.ClearByUserIdAsync(userId);
+            await _cacheService.RemoveByPrefixAsync($"{ALL_WISHLISTS_KEY}_{userId}");
+            return removedCount;
+        }
+
         public async Task<bool> IsInWishlistAsync(int userId, WishlistItemType itemType, int itemId)
         {
             return await _unitOfWork.WishlistRepository.ExistsAsync(userId, itemType, itemId);

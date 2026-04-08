@@ -9,6 +9,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<PaginatedResult<Wishlist>> GetByUserIdWithPaginationAsync(int userId, Pagination pagination);
         Task<Wishlist?> GetByUserAndItemAsync(int userId, WishlistItemType itemType, int itemId);
         Task<bool> ExistsAsync(int userId, WishlistItemType itemType, int itemId);
+        Task<int> ClearByUserIdAsync(int userId);
         Task SoftDeletePlantInstanceWishlistsAsync(int plantInstanceId);
     }
 }

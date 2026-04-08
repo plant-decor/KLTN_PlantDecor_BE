@@ -42,6 +42,7 @@ namespace PlantDecor.API.Controllers
             ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
+            ["WishlistItemType"] = typeof(WishlistItemType),
             ["UserActionType"] = typeof(UserActionTypeEnum),
             ["UserStatus"] = typeof(UserStatusEnum)
         };
@@ -341,6 +342,26 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("TagType", typeof(TagTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Wishlist item type
+        /// GET /api/system/enums/wishlist-types
+        /// </summary>
+        [HttpGet("wishlist-types")]
+        [AllowAnonymous]
+        public IActionResult GetWishlistTypeEnum()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get wishlist enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("WishlistItemType", typeof(WishlistItemType))
                 }
             });
         }

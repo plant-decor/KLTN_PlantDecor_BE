@@ -77,6 +77,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
             };
         }
 
+        public async Task<int> ClearByUserIdAsync(int userId)
+        {
+            var wishlists = await _context.Wishlists
+                .Where(w => w.UserId == userId && !w.IsDeleted)
+                .ToListAsync();
+
+            if (wishlists.Count == 0)
+                return 0;
+
+            var now = DateTime.UtcNow;
+            foreach (var wishlist in wishlists)
+            {
+                wishlist.IsDeleted = true;
+                wishlist.DeletedAt = now;
+            }
+
+            await _context.SaveChangesAsync();
+            return wishlists.Count;
+        }
+
         public async Task SoftDeletePlantInstanceWishlistsAsync(int plantInstanceId)
         {
             var wishlists = await _context.Wishlists
