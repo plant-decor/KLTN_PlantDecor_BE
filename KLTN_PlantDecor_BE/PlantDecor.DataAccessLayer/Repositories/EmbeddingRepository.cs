@@ -37,6 +37,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             }
 
             var query = _context.Embeddings
+                .AsNoTracking()
                 .Where(e => e.EmbeddingVector != null);
 
             if (!string.IsNullOrEmpty(entityType))
@@ -46,7 +47,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             // Chunked embeddings can produce duplicate entities in top-k.
             // Use adaptive top-K expansion (without OFFSET) and dedupe by entity.
-            var orderedQuery = query.OrderBy(e => e.EmbeddingVector!.L2Distance(queryVector));
+            var scoredQuery = query
+                .Select(e => new
+                {
+                    Embedding = e,
+                    CosineSimilarity = 1.0 - e.EmbeddingVector!.CosineDistance(queryVector)
+                })
+                .OrderByDescending(x => x.CosineSimilarity);
+
+            // dùng để tính size của batch fetch, bắt đầu với một giá trị hợp lý (ví dụ: 4 lần limit) và tăng dần nếu cần thiết để tìm đủ kết quả duy nhất, nhưng không vượt quá một ngưỡng tối đa để tránh truy vấn quá lớn.
             var fetchSize = Math.Max(50, limit * 4);
             const int maxFetchSize = 4000;
             const int maxAttempts = 6;
@@ -55,25 +64,35 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
-                var candidates = await orderedQuery
+                var candidates = await scoredQuery
                     .Take(fetchSize)
                     .ToListAsync();
 
+                // nếu không còn kết quả nào để mở rộng, trả về kết quả tốt nhất hiện tại (có thể là trống)
                 if (candidates.Count == 0)
                 {
                     return bestResults;
                 }
 
+                // dedupe theo entity (EntityType + EntityId) vì một thực thể có thể được chia thành nhiều chunk và do đó có nhiều embedding.
+                // Chúng ta chỉ muốn một embedding đại diện cho mỗi thực thể trong kết quả cuối cùng.
                 var deduped = new List<Embedding>(Math.Min(limit, candidates.Count));
                 var seenEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                foreach (var embedding in candidates)
+                foreach (var candidate in candidates)
                 {
+                    var embedding = candidate.Embedding;
                     var key = $"{embedding.EntityType}:{embedding.EntityId}";
                     if (!seenEntities.Add(key))
                     {
                         continue;
                     }
+
+                    var metadata = embedding.Metadata != null
+                        ? new Dictionary<string, object>(embedding.Metadata)
+                        : new Dictionary<string, object>();
+                    metadata["CosineSimilarityScore"] = candidate.CosineSimilarity;
+                    embedding.Metadata = metadata;
 
                     deduped.Add(embedding);
                     if (deduped.Count >= limit)
