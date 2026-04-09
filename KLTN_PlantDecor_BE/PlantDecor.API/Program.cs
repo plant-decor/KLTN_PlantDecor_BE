@@ -219,7 +219,10 @@ namespace PlantDecor.API
                 {
                     // BỎ QUA RATE LIMIT CHO HANGFIRE DASHBOARD VÀ SWAGGER (Bỏ cả swagger vì có thể tốn nhiều request để lấy các file như .js, .css)
                     var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
-                    if (path.StartsWith("/hangfire") || path.StartsWith("/swagger") || path.StartsWith("/health"))
+                    if (path.StartsWith("/hangfire")
+                        || path.StartsWith("/swagger")
+                        || path.StartsWith("/health")
+                        || path.StartsWith("/api/Authentication"))
                     {
                         return RateLimitPartition.GetNoLimiter("BypassLimiter");
                     }
