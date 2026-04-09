@@ -38,7 +38,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PlantInstance?> GetByIdWithDetailsAsync(int id)
         {
             return await _context.PlantInstances
-                .Include(pi => pi.Plant)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
                 .Include(pi => pi.CurrentNursery)
                 .Include(pi => pi.PlantImages)
                 .FirstOrDefaultAsync(pi => pi.Id == id);
@@ -86,7 +87,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.PlantInstances
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
-                .Include(pi => pi.Plant)
+                .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.PlantImages)
                 .ToListAsync();
         }

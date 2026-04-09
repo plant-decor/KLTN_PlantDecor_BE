@@ -10,6 +10,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ICategoryRepository CategoryRepository { get; }
         ITagRepository TagRepository { get; }
         IPlantRepository PlantRepository { get; }
+        IPlantGuideRepository PlantGuideRepository { get; }
         IMaterialRepository MaterialRepository { get; }
         ICommonPlantRepository CommonPlantRepository { get; }
         IPlantComboRepository PlantComboRepository { get; }
@@ -29,6 +30,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IChatMessageRepository ChatMessageRepository { get; }
         IChatParticipantRepository ChatParticipantRepository { get; }
         IEmbeddingRepository EmbeddingRepository { get; }
+        IRoomImageRepository RoomImageRepository { get; }
+        IRoomDesignPreferencesRepository RoomDesignPreferencesRepository { get; }
+        ILayoutDesignRepository LayoutDesignRepository { get; }
+        ILayoutDesignPlantRepository LayoutDesignPlantRepository { get; }
+        IRoomUploadModerationRepository RoomUploadModerationRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

@@ -134,11 +134,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Filter by budget and convert to recommendations
                 var recommendations = new List<PlantRecommendationItemDto>();
+                var rejectedBudget = 0;
+                var rejectedPetSafe = 0;
+                var rejectedChildSafe = 0;
 
                 foreach (var item in searchResult.Results)
                 {
                     if (maxBudget.HasValue && item.Price.HasValue && item.Price > maxBudget)
+                    {
+                        rejectedBudget++;
                         continue;
+                    }
+
+                    if (petSafe == true && item.PetSafe != true)
+                    {
+                        rejectedPetSafe++;
+                        continue;
+                    }
+
+                    if (childSafe == true && item.ChildSafe != true)
+                    {
+                        rejectedChildSafe++;
+                        continue;
+                    }
 
                     var recommendation = new PlantRecommendationItemDto
                     {
@@ -160,6 +178,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (recommendations.Count >= limit)
                         break;
                 }
+
+                _logger.LogInformation(
+                    "AI room recommendations filtered. Query='{Query}', SourceResults={SourceResults}, Returned={Returned}, RejectedBudget={RejectedBudget}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RequestedPetSafe={RequestedPetSafe}, RequestedChildSafe={RequestedChildSafe}",
+                    query,
+                    searchResult.Results.Count,
+                    recommendations.Count,
+                    rejectedBudget,
+                    rejectedPetSafe,
+                    rejectedChildSafe,
+                    petSafe,
+                    childSafe);
 
                 return new RoomRecommendationResponseDto
                 {
@@ -342,6 +371,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.NurseryId = commonPlant.NurseryId;
                         item.NurseryName = commonPlant.Nursery?.Name;
                         item.FengShuiElement = MapFengShuiElement(commonPlant.Plant?.FengShuiElement);
+                        item.PetSafe = commonPlant.Plant?.PetSafe;
+                        item.ChildSafe = commonPlant.Plant?.ChildSafe;
                         item.ImageUrl = commonPlant.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -356,6 +387,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.NurseryId = instance.CurrentNurseryId ?? 0;
                         item.NurseryName = instance.CurrentNursery?.Name;
                         item.FengShuiElement = MapFengShuiElement(instance.Plant?.FengShuiElement);
+                        item.PetSafe = instance.Plant?.PetSafe;
+                        item.ChildSafe = instance.Plant?.ChildSafe;
                         item.ImageUrl = instance.PlantImages?.FirstOrDefault()?.ImageUrl ?? instance.Plant?.PlantImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -370,6 +403,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         item.NurseryId = combo.NurseryId;
                         item.NurseryName = combo.Nursery?.Name;
                         item.FengShuiElement = MapFengShuiElement(combo.PlantCombo?.FengShuiElement);
+                        item.PetSafe = combo.PlantCombo?.PetSafe;
+                        item.ChildSafe = combo.PlantCombo?.ChildSafe;
                         item.ImageUrl = combo.PlantCombo?.PlantComboImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;

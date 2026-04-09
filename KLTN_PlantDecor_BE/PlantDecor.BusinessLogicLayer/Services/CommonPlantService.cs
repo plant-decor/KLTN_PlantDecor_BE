@@ -483,6 +483,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             try
             {
                 var plant = entity.Plant;
+                var guide = plant?.PlantGuide;
 
                 var embeddingDto = new CommonPlantEmbeddingDto
                 {
@@ -511,7 +512,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .ToList() ?? new List<string>(),
                     NurseryId = entity.NurseryId,
                     NurseryName = entity.Nursery?.Name,
-                    Price = plant?.BasePrice
+                    Price = plant?.BasePrice,
+                    GuideLightRequirement = guide?.LightRequirement
                 };
 
                 var entityId = ConvertToGuid(entity.Id);

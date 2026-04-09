@@ -33,6 +33,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.CommonPlants
                 .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantGuide)
                 .Include(cp => cp.Nursery)
                 .FirstOrDefaultAsync(cp => cp.Id == id);
         }

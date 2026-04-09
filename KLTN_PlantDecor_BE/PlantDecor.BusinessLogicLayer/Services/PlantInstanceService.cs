@@ -530,6 +530,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             try
             {
                 var plant = entity.Plant;
+                var guide = plant?.PlantGuide;
 
                 var embeddingDto = new PlantInstanceEmbeddingDto
                 {
@@ -561,7 +562,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToList() ?? new List<string>(),
                     NurseryId = entity.CurrentNurseryId ?? 0,
-                    NurseryName = entity.CurrentNursery?.Name
+                    NurseryName = entity.CurrentNursery?.Name,
+                    GuideLightRequirement = guide?.LightRequirement
                 };
 
                 var entityId = ConvertToGuid(entity.Id);

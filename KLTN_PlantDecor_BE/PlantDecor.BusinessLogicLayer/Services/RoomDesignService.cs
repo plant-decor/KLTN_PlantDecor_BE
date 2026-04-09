@@ -3,8 +3,10 @@ using Pgvector;
 using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
+using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
@@ -17,19 +19,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class RoomDesignService : IRoomDesignService
     {
         private const int DEFAULT_RECOMMENDATION_LIMIT = 3;
+        private static readonly HashSet<string> AllergyNoiseTokens = new(StringComparer.Ordinal)
+        {
+            "toi", "bi", "di", "ung", "voi", "cay", "nhung", "cac", "loai", "la", "va", "and", "khong"
+        };
 
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAzureOpenAIService _azureOpenAIService;
         private readonly IAISearchService _aiSearchService;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly ILogger<RoomDesignService> _logger;
 
         private const string ROOM_ANALYSIS_PROMPT = @"
 Bạn là chuyên gia thiết kế nội thất và cây cảnh. Hãy phân tích ảnh căn phòng này và trả về JSON với cấu trúc sau:
 {
-    ""roomType"": ""living_room|bedroom|office|kitchen|bathroom|balcony|garden|other"",
+    ""roomType"": ""LivingRoom|Bedroom|Kitchen|Bathroom|HomeOffice|Balcony|Corridor|DiningRoom"",
     ""roomSize"": ""small|medium|large"",
-    ""lightingCondition"": ""low|medium|high|natural"",
-    ""interiorStyle"": ""modern|minimalist|tropical|classic|industrial|scandinavian|bohemian|other"",
+    ""lightingCondition"": ""LowLight|IndirectLight|PartialSun|FullSun"",
+    ""interiorStyle"": ""Minimalist|Scandinavian|Tropical|Industrial|Bohemian|Modern|Japanese|Mediterranean|Rustic"",
     ""availableSpace"": ""floor|table|shelf|hanging|windowsill|corner"",
     ""colorPalette"": [""color1"", ""color2"", ""color3""],
     ""placementSuggestions"": [""suggestion1"", ""suggestion2""],
@@ -40,6 +47,8 @@ Lưu ý:
 - Đánh giá ánh sáng dựa trên cửa sổ, đèn, góc chụp
 - Xác định không gian trống có thể đặt cây
 - Đề xuất vị trí đặt cây phù hợp với phong thủy và thẩm mỹ
+- Trường roomType, interiorStyle, lightingCondition PHẢI dùng đúng các giá trị enum đã liệt kê ở trên
+- Hệ thống dùng trạng thái theo enum: LayoutDesignStatus(Processing|Completed|Failed) và RoomUploadModerationStatus(Pending|Approved|Rejected), không cần trả về 2 field này
 - Trả lời bằng tiếng Việt cho summary và placementSuggestions
 ";
 
@@ -84,12 +93,163 @@ Chỉ trả về JSON array, không có text khác.
             IUnitOfWork unitOfWork,
             IAzureOpenAIService azureOpenAIService,
             IAISearchService aiSearchService,
+            ICloudinaryService cloudinaryService,
             ILogger<RoomDesignService> logger)
         {
             _unitOfWork = unitOfWork;
             _azureOpenAIService = azureOpenAIService;
             _aiSearchService = aiSearchService;
+            _cloudinaryService = cloudinaryService;
             _logger = logger;
+        }
+
+        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int? userId = null)
+        {
+            if (request == null)
+            {
+                const string message = "Request body is required";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            if (!Enum.IsDefined(typeof(RoomTypeEnum), request.RoomType))
+            {
+                const string message = "RoomType is required";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            if (!Enum.IsDefined(typeof(RoomStyleEnum), request.RoomStyle))
+            {
+                const string message = "RoomStyle is required";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            if (request.HasAllergy != true && !string.IsNullOrWhiteSpace(request.AllergyNote))
+            {
+                const string message = "AllergyNote is only allowed when HasAllergy is true";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            if (request.HasAllergy != true && request.AllergicPlantIds?.Any() == true)
+            {
+                const string message = "AllergicPlantIds is only allowed when HasAllergy is true";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            if (request.Image == null)
+            {
+                const string message = "Room image file is required";
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(request.Image);
+            if (!isValid)
+            {
+                var message = string.IsNullOrWhiteSpace(errorMessage)
+                    ? "Invalid room image file"
+                    : errorMessage;
+                var status = IsImageRelatedError(message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(null, status, message);
+                throw new BadRequestException(message);
+            }
+
+            RoomImage? roomImage = null;
+            try
+            {
+                var uploadedImage = await _cloudinaryService.UploadFileAsync(request.Image, "RoomImages");
+
+                roomImage = new RoomImage
+                {
+                    UserId = userId,
+                    ImageUrl = uploadedImage.SecureUrl,
+                    UploadedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.RoomImageRepository.PrepareCreate(roomImage);
+                await _unitOfWork.SaveAsync();
+
+                await using var stream = request.Image.OpenReadStream();
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+
+                var dto = new RoomDesignRequestDto
+                {
+                    RoomImageBase64 = Convert.ToBase64String(memoryStream.ToArray()),
+                    FengShuiElement = request.FengShuiElement,
+                    RoomType = request.RoomType,
+                    RoomStyle = request.RoomStyle,
+                    RoomArea = request.RoomArea,
+                    MinBudget = request.MinBudget,
+                    MaxBudget = request.MaxBudget,
+                    CareLevelType = request.CareLevelType,
+                    IsOftenAway = request.IsOftenAway,
+                    NaturalLightLevel = request.NaturalLightLevel,
+                    HasAllergy = request.HasAllergy,
+                    AllergyNote = request.AllergyNote,
+                    AllergicPlantIds = request.AllergicPlantIds,
+                    PetSafe = request.PetSafe,
+                    ChildSafe = request.ChildSafe,
+                    PreferredNurseryIds = request.PreferredNurseryIds,
+                    RoomImageId = roomImage.Id,
+                    UserId = userId,
+                    UploadedImageUrl = uploadedImage.SecureUrl
+                };
+
+                var result = await AnalyzeAndRecommendAsync(dto);
+                await SaveRoomUploadModerationAsync(roomImage.Id, RoomUploadModerationStatusEnum.Approved, "Image validated successfully");
+                return result;
+            }
+            catch (BadRequestException ex)
+            {
+                var moderationStatus = IsImageRelatedError(ex.Message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(roomImage?.Id, moderationStatus, ex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while processing room image upload");
+                var moderationStatus = IsImageRelatedError(ex.Message)
+                    ? RoomUploadModerationStatusEnum.Rejected
+                    : RoomUploadModerationStatusEnum.Approved;
+
+                await SaveRoomUploadModerationAsync(roomImage?.Id, moderationStatus, ex.Message);
+                throw;
+            }
         }
 
         public async Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(RoomDesignRequestDto request)
@@ -98,11 +258,14 @@ Chỉ trả về JSON array, không có text khác.
 
             try
             {
+                ValidateRoomDesignRequest(request);
+
                 var fengShuiFilter = request.FengShuiElement?.ToString();
                 NormalizeRequestFilters(request);
 
                 _logger.LogInformation(
-                    "Room design filters normalized. MaxBudget={MaxBudget}, PreferredNurseryIds={PreferredNurseryIds}, FengShuiElement={FengShuiElement}, PetSafe={PetSafe}, ChildSafe={ChildSafe}",
+                    "Room design filters normalized. MinBudget={MinBudget}, MaxBudget={MaxBudget}, PreferredNurseryIds={PreferredNurseryIds}, FengShuiElement={FengShuiElement}, PetSafe={PetSafe}, ChildSafe={ChildSafe}",
+                    request.MinBudget,
                     request.MaxBudget,
                     request.PreferredNurseryIds == null ? "null" : string.Join(",", request.PreferredNurseryIds),
                     fengShuiFilter,
@@ -112,23 +275,29 @@ Chỉ trả về JSON array, không có text khác.
                 // Step 1: Analyze room image using Vision API
                 _logger.LogInformation("Starting room analysis...");
                 var roomAnalysis = await AnalyzeRoomAsync(request.RoomImageBase64);
+                ApplyRequestPreferencesToRoomAnalysis(roomAnalysis, request);
 
                 // Step 2: Build search query based on room analysis
                 var searchQuery = BuildSearchQuery(roomAnalysis, request);
                 _logger.LogInformation("Search query: {Query}", searchQuery);
 
+                var allergyExclusionContext = await BuildAllergyExclusionContextAsync(request);
+
                 // Step 3: Search for plants in database using embeddings
-                var candidatePlants = await SearchCandidatePlantsAsync(searchQuery, request);
+                var candidatePlants = await SearchCandidatePlantsAsync(searchQuery, request, allergyExclusionContext);
 
                 // Step 4: If we have enough candidates, use AI to re-rank and explain
                 var recommendations = await RankAndExplainRecommendationsAsync(
                     roomAnalysis,
                     candidatePlants,
                     request,
-                    fengShuiFilter);
+                    fengShuiFilter,
+                    allergyExclusionContext);
 
                 // Overwrite AI vision summary with a grounded summary based on DB-backed recommendations.
                 roomAnalysis.Summary = BuildGroundedSummary(roomAnalysis, recommendations);
+
+                await PersistDesignArtifactsAsync(request, roomAnalysis, recommendations, searchQuery);
 
                 stopwatch.Stop();
 
@@ -186,13 +355,33 @@ Chỉ trả về JSON array, không có text khác.
                 {
                     RoomType = "Phòng khách",
                     RoomSize = "medium",
-                    LightingCondition = "medium",
-                    InteriorStyle = "modern",
+                    LightingCondition = "IndirectLight",
+                    InteriorStyle = "Modern",
                     AvailableSpace = "floor",
                     ColorPalette = new List<string>(),
                     Summary = "Không thể phân tích chi tiết, đề xuất cây phù hợp chung"
                 };
             }
+        }
+
+        public async Task<List<AllergyPlantOptionDto>> GetAllergyPlantOptionsAsync(string? keyword = null, int take = 50)
+        {
+            var normalizedKeyword = NormalizeTextForHintMatch(keyword);
+            var normalizedTake = Math.Clamp(take, 1, 200);
+
+            var activePlantCatalog = await GetActivePlantCatalogAsync();
+
+            return activePlantCatalog
+                .Where(item => string.IsNullOrWhiteSpace(normalizedKeyword) ||
+                               item.NormalizedAliases.Any(alias => alias.Contains(normalizedKeyword, StringComparison.Ordinal)))
+                .OrderBy(item => item.PlantName, StringComparer.OrdinalIgnoreCase)
+                .Take(normalizedTake)
+                .Select(item => new AllergyPlantOptionDto
+                {
+                    PlantId = item.PlantId,
+                    PlantName = item.PlantName
+                })
+                .ToList();
         }
 
         private string BuildSearchQuery(RoomAnalysisDto analysis, RoomDesignRequestDto request)
@@ -206,8 +395,10 @@ Chỉ trả về JSON array, không có text khác.
             // Lighting
             var lightingQuery = analysis.LightingCondition switch
             {
-                "low" => "cây chịu bóng, ít ánh sáng",
-                "high" or "natural" => "cây ưa sáng, cần nhiều ánh sáng",
+                "LowLight" or "low" => "cây chịu bóng, ít ánh sáng",
+                "IndirectLight" or "medium" => "cây bán bóng",
+                "PartialSun" or "high" => "cây ưa sáng nhẹ, cần nắng một phần",
+                "FullSun" or "natural" => "cây ưa nắng trực tiếp, cần nhiều ánh sáng",
                 _ => "cây bán bóng"
             };
             queryParts.Add(lightingQuery);
@@ -224,10 +415,14 @@ Chỉ trả về JSON array, không có text khác.
             // Style
             var styleQuery = analysis.InteriorStyle switch
             {
-                "minimalist" or "scandinavian" => "cây đơn giản, thanh lịch",
-                "tropical" => "cây nhiệt đới, lá lớn",
-                "industrial" => "cây công nghiệp, xương rồng, sen đá",
-                "bohemian" => "cây dây leo, cây treo",
+                "Minimalist" or "minimalist" or "Scandinavian" or "scandinavian" => "cây đơn giản, thanh lịch",
+                "Tropical" or "tropical" => "cây nhiệt đới, lá lớn",
+                "Industrial" or "industrial" => "cây công nghiệp, xương rồng, sen đá",
+                "Bohemian" or "bohemian" => "cây dây leo, cây treo",
+                "Modern" or "modern" => "cây dáng gọn, hiện đại, tông xanh trung tính",
+                "Japanese" or "japanese" => "cây phong cách zen, bố cục gọn gàng",
+                "Mediterranean" or "mediterranean" => "cây thảo mộc, cây ưa sáng, phong cách địa trung hải",
+                "Rustic" or "rustic" => "cây mộc mạc, tự nhiên, dễ chăm sóc",
                 _ => "cây cảnh đẹp"
             };
             queryParts.Add(styleQuery);
@@ -258,7 +453,8 @@ Chỉ trả về JSON array, không có text khác.
 
         private async Task<List<PlantRecommendationDto>> SearchCandidatePlantsAsync(
             string searchQuery,
-            RoomDesignRequestDto request)
+            RoomDesignRequestDto request,
+            AllergyExclusionContext allergyExclusionContext)
         {
             // Generate embedding for search query
             var queryVector = await _azureOpenAIService.GenerateEmbeddingAsync(searchQuery);
@@ -326,6 +522,16 @@ Chỉ trả về JSON array, không có text khác.
             var rejectedBudget = 0;
             var rejectedPreferredNursery = 0;
             var rejectedFengShui = 0;
+            var rejectedLightRequirement = 0;
+            var rejectedLightRequirementFromMetadata = 0;
+            var rejectedLightRequirementFromEntity = 0;
+            var deferredLightRequirementChecks = 0;
+            var rejectedCareLevel = 0;
+            var rejectedPetSafe = 0;
+            var rejectedChildSafe = 0;
+            var rejectedAllergy = 0;
+            var boostedLightMatch = 0;
+            var penalizedMissingLightMetadata = 0;
 
             foreach (var embedding in embeddings)
             {
@@ -344,6 +550,35 @@ Chỉ trả về JSON array, không có text khác.
                     continue;
                 }
 
+                var guideLightRequirement = ExtractGuideLightRequirement(embedding.Metadata);
+                if (request.NaturalLightLevel.HasValue && !guideLightRequirement.HasValue)
+                {
+                    deferredLightRequirementChecks++;
+                }
+
+                if (!IsEmbeddingLightRequirementMatch(embedding.Metadata, request.NaturalLightLevel))
+                {
+                    rejectedLightRequirement++;
+                    rejectedLightRequirementFromMetadata++;
+                    continue;
+                }
+
+                var adjustedScore = CalculateEmbeddingSearchScore(
+                    embedding.Metadata,
+                    request.NaturalLightLevel,
+                    out var isLightMatched,
+                    out var isMissingLightMetadata);
+
+                if (isLightMatched)
+                {
+                    boostedLightMatch++;
+                }
+
+                if (isMissingLightMetadata)
+                {
+                    penalizedMissingLightMetadata++;
+                }
+
                 // Check if purchasable
                 var isPurchasable = await _aiSearchService.CheckPurchasableAsync(embedding.EntityType, originalEntityId);
                 if (!isPurchasable)
@@ -360,7 +595,20 @@ Chỉ trả về JSON array, không có text khác.
                     continue;
                 }
 
+                if (!IsCandidateLightRequirementMatch(candidate.LightRequirement, request.NaturalLightLevel))
+                {
+                    rejectedLightRequirement++;
+                    rejectedLightRequirementFromEntity++;
+                    continue;
+                }
+
                 // Apply filters
+                if (request.MinBudget.HasValue && candidate.Price < request.MinBudget)
+                {
+                    rejectedBudget++;
+                    continue;
+                }
+
                 if (request.MaxBudget.HasValue && candidate.Price > request.MaxBudget)
                 {
                     rejectedBudget++;
@@ -371,6 +619,30 @@ Chỉ trả về JSON array, không có text khác.
                     !request.PreferredNurseryIds.Contains(candidate.NurseryId))
                 {
                     rejectedPreferredNursery++;
+                    continue;
+                }
+
+                if (!IsCareLevelMatch(candidate.CareDifficulty, request.CareLevelType))
+                {
+                    rejectedCareLevel++;
+                    continue;
+                }
+
+                if (request.PetSafe == true && candidate.PetSafe != true)
+                {
+                    rejectedPetSafe++;
+                    continue;
+                }
+
+                if (request.ChildSafe == true && candidate.ChildSafe != true)
+                {
+                    rejectedChildSafe++;
+                    continue;
+                }
+
+                if (IsCandidateExcludedByAllergy(candidate, allergyExclusionContext))
+                {
+                    rejectedAllergy++;
                     continue;
                 }
 
@@ -392,14 +664,20 @@ Chỉ trả về JSON array, không có text khác.
                     continue;
                 }
 
+                candidate.MatchScore = adjustedScore;
+
                 candidates.Add(candidate);
 
                 if (candidates.Count >= searchLimit)
                     break;
             }
 
+            candidates = candidates
+                .OrderByDescending(c => c.MatchScore)
+                .ToList();
+
             _logger.LogInformation(
-                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedFengShui={RejectedFengShui}",
+                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedCareLevel={RejectedCareLevel}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RejectedAllergy={RejectedAllergy}, RejectedFengShui={RejectedFengShui}, RejectedLightRequirement={RejectedLightRequirement}, RejectedLightRequirementFromMetadata={RejectedLightRequirementFromMetadata}, RejectedLightRequirementFromEntity={RejectedLightRequirementFromEntity}, DeferredLightRequirementChecks={DeferredLightRequirementChecks}, BoostedLightMatch={BoostedLightMatch}, PenalizedMissingLightMetadata={PenalizedMissingLightMetadata}",
                 searchQuery,
                 embeddings.Count,
                 candidates.Count,
@@ -410,7 +688,17 @@ Chỉ trả về JSON array, không có text khác.
                 rejectedNullCandidate,
                 rejectedBudget,
                 rejectedPreferredNursery,
-                rejectedFengShui);
+                rejectedCareLevel,
+                rejectedPetSafe,
+                rejectedChildSafe,
+                rejectedAllergy,
+                rejectedFengShui,
+                rejectedLightRequirement,
+                rejectedLightRequirementFromMetadata,
+                rejectedLightRequirementFromEntity,
+                deferredLightRequirementChecks,
+                boostedLightMatch,
+                penalizedMissingLightMetadata);
 
             return candidates;
         }
@@ -419,7 +707,8 @@ Chỉ trả về JSON array, không có text khác.
             RoomAnalysisDto roomAnalysis,
             List<PlantRecommendationDto> candidates,
             RoomDesignRequestDto request,
-            string? fengShuiFilter)
+            string? fengShuiFilter,
+            AllergyExclusionContext allergyExclusionContext)
         {
             var limit = DEFAULT_RECOMMENDATION_LIMIT;
 
@@ -447,6 +736,11 @@ Chỉ trả về JSON array, không có text khác.
                 var additionalCriteria = !string.IsNullOrEmpty(fengShuiFilter)
                     ? $"Ưu tiên cây phù hợp mệnh {fengShuiFilter}"
                     : "Cân nhắc phong thủy nếu có thông tin";
+
+                if (allergyExclusionContext.HasAnyExclusion)
+                {
+                    additionalCriteria += $". Tuyệt đối không đề xuất cây thuộc danh sách dị ứng người dùng đã chọn hoặc nêu trong ghi chú dị ứng";
+                }
 
                 var prompt = string.Format(
                     RECOMMENDATION_PROMPT_TEMPLATE,
@@ -650,12 +944,16 @@ Chỉ trả về JSON array, không có text khác.
 
         private static string MapLightingConditionToVietnamese(string? lightingCondition)
         {
-            return lightingCondition?.Trim().ToLowerInvariant() switch
+            return lightingCondition?.Trim() switch
             {
-                "low" => "thấp",
-                "medium" => "trung bình",
-                "high" => "cao",
-                "natural" => "tự nhiên",
+                "LowLight" => "yếu",
+                "IndirectLight" => "gián tiếp",
+                "PartialSun" => "nắng một phần",
+                "FullSun" => "nắng trực tiếp",
+                // "low" => "thấp",
+                // "medium" => "trung bình",
+                // "high" => "cao",
+                // "natural" => "tự nhiên",
                 _ => lightingCondition ?? "không xác định"
             };
         }
@@ -691,6 +989,10 @@ Chỉ trả về JSON array, không có text khác.
                             EntityType = entityType,
                             EntityId = entityId,
                             ProductId = commonPlant.Id,
+                            PlantId = commonPlant.PlantId,
+                            PetSafe = commonPlant.Plant.PetSafe,
+                            ChildSafe = commonPlant.Plant.ChildSafe,
+                            LightRequirement = commonPlant.Plant.PlantGuide?.LightRequirement,
                             Name = commonPlant.Plant.Name,
                             Description = commonPlant.Plant.Description,
                             Price = commonPlant.Plant.BasePrice,
@@ -710,6 +1012,10 @@ Chỉ trả về JSON array, không có text khác.
                             EntityType = entityType,
                             EntityId = entityId,
                             ProductId = instance.Id,
+                            PlantId = instance.PlantId,
+                            PetSafe = instance.Plant.PetSafe,
+                            ChildSafe = instance.Plant.ChildSafe,
+                            LightRequirement = instance.Plant.PlantGuide?.LightRequirement,
                             Name = instance.Plant.Name,
                             Description = instance.Description ?? instance.Plant.Description,
                             Price = instance.SpecificPrice ?? instance.Plant.BasePrice,
@@ -746,16 +1052,222 @@ Chỉ trả về JSON array, không có text khác.
             return 0;
         }
 
+        private static bool IsEmbeddingLightRequirementMatch(
+            Dictionary<string, object>? metadata,
+            LightRequirementEnum? requestedLightRequirement)
+        {
+            // Nếu người dùng không yêu cầu mức độ ánh sáng cụ thể, không cần so khớp
+            if (!requestedLightRequirement.HasValue)
+            {
+                return true;
+            }
+
+            // User has explicitly chosen light requirement => strict filtering.
+            // If metadata is missing, defer strict filtering to entity data.
+            var guideLightRequirement = ExtractGuideLightRequirement(metadata);
+            if (!guideLightRequirement.HasValue)
+            {
+                return true;
+            }
+
+            return guideLightRequirement.Value == requestedLightRequirement.Value;
+        }
+
+        private static bool IsCandidateLightRequirementMatch(
+            int? candidateLightRequirement,
+            LightRequirementEnum? requestedLightRequirement)
+        {
+            if (!requestedLightRequirement.HasValue)
+            {
+                return true;
+            }
+
+            if (!candidateLightRequirement.HasValue ||
+                !Enum.IsDefined(typeof(LightRequirementEnum), candidateLightRequirement.Value))
+            {
+                return false;
+            }
+
+            return (LightRequirementEnum)candidateLightRequirement.Value == requestedLightRequirement.Value;
+        }
+
+        private static double CalculateEmbeddingSearchScore(
+            Dictionary<string, object>? metadata,
+            LightRequirementEnum? requestedLightRequirement,
+            out bool isLightMatched,
+            out bool isMissingLightMetadata)
+        {
+            var score = ExtractCosineSimilarityScore(metadata);
+
+            isLightMatched = false;
+            isMissingLightMetadata = false;
+
+            if (!requestedLightRequirement.HasValue)
+            {
+                return score;
+            }
+
+            var guideLightRequirement = ExtractGuideLightRequirement(metadata);
+            if (!guideLightRequirement.HasValue)
+            {
+                isMissingLightMetadata = true;
+                return score - 0.05;
+            }
+
+            if (guideLightRequirement.Value == requestedLightRequirement.Value)
+            {
+                isLightMatched = true;
+                return score + 0.1;
+            }
+
+            return score;
+        }
+
+        private static double ExtractCosineSimilarityScore(Dictionary<string, object>? metadata)
+        {
+            if (metadata == null)
+            {
+                return 0;
+            }
+
+            return TryReadMetadataDouble(metadata, "CosineSimilarityScore", out var score)
+                ? score
+                : 0;
+        }
+
+        private static LightRequirementEnum? ExtractGuideLightRequirement(Dictionary<string, object>? metadata)
+        {
+            if (metadata == null)
+            {
+                return null;
+            }
+
+            if (TryReadMetadataInt(metadata, "GuideLightRequirement", out var rawValue) &&
+                Enum.IsDefined(typeof(LightRequirementEnum), rawValue))
+            {
+                return (LightRequirementEnum)rawValue;
+            }
+
+            if (TryReadMetadataInt(metadata, "LightRequirement", out rawValue) &&
+                Enum.IsDefined(typeof(LightRequirementEnum), rawValue))
+            {
+                return (LightRequirementEnum)rawValue;
+            }
+
+            if (metadata.TryGetValue("GuideLightRequirementName", out var nameObj) &&
+                nameObj is string name &&
+                Enum.TryParse<LightRequirementEnum>(name, true, out var parsedByName))
+            {
+                return parsedByName;
+            }
+
+            return null;
+        }
+
+        private static bool TryReadMetadataInt(Dictionary<string, object> metadata, string key, out int value)
+        {
+            value = 0;
+
+            if (!metadata.TryGetValue(key, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            switch (rawValue)
+            {
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue when longValue <= int.MaxValue && longValue >= int.MinValue:
+                    value = (int)longValue;
+                    return true;
+                case JsonElement jsonElement:
+                    if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out value))
+                    {
+                        return true;
+                    }
+
+                    if (jsonElement.ValueKind == JsonValueKind.String &&
+                        int.TryParse(jsonElement.GetString(), out value))
+                    {
+                        return true;
+                    }
+
+                    return false;
+                default:
+                    return int.TryParse(rawValue.ToString(), out value);
+            }
+        }
+
+        private static bool TryReadMetadataDouble(Dictionary<string, object> metadata, string key, out double value)
+        {
+            value = 0;
+
+            if (!metadata.TryGetValue(key, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            switch (rawValue)
+            {
+                case double doubleValue:
+                    value = doubleValue;
+                    return true;
+                case float floatValue:
+                    value = floatValue;
+                    return true;
+                case decimal decimalValue:
+                    value = (double)decimalValue;
+                    return true;
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue:
+                    value = longValue;
+                    return true;
+                case JsonElement jsonElement:
+                    if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetDouble(out value))
+                    {
+                        return true;
+                    }
+
+                    if (jsonElement.ValueKind == JsonValueKind.String &&
+                        double.TryParse(jsonElement.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out value))
+                    {
+                        return true;
+                    }
+
+                    return false;
+                default:
+                    return double.TryParse(rawValue.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+            }
+        }
+
         private static string MapCareDifficulty(int? careLevelType)
         {
-            return careLevelType switch
+            if (!careLevelType.HasValue)
             {
-                1 => "Easy",
-                2 => "Medium",
-                3 => "Hard",
-                4 => "Expert",
-                _ => "Unknown"
-            };
+                return "Unknown";
+            }
+
+            return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
+                ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
+                : "Unknown";
+        }
+
+        private static bool IsCareLevelMatch(string? candidateCareDifficulty, CareLevelTypeEnum? requestedCareLevelType)
+        {
+            if (!requestedCareLevelType.HasValue)
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(candidateCareDifficulty))
+            {
+                return false;
+            }
+
+            return candidateCareDifficulty.Equals(requestedCareLevelType.Value.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
         private static string? MapFengShuiElement(int? fengShuiElement)
@@ -1145,6 +1657,294 @@ Chỉ trả về JSON array, không có text khác.
             return sb.ToString();
         }
 
+        private static bool IsCandidateExcludedByAllergy(
+            PlantRecommendationDto candidate,
+            AllergyExclusionContext allergyExclusionContext)
+        {
+            if (allergyExclusionContext.ExcludedPlantIds.Count > 0 &&
+                candidate.PlantId.HasValue &&
+                allergyExclusionContext.ExcludedPlantIds.Contains(candidate.PlantId.Value))
+            {
+                return true;
+            }
+
+            return IsCandidateNameExcludedByAllergyAliases(candidate.Name, allergyExclusionContext.ExcludedPlantAliases);
+        }
+
+        private static bool IsCandidateNameExcludedByAllergyAliases(
+            string? candidateName,
+            HashSet<string> excludedPlantAliases)
+        {
+            if (string.IsNullOrWhiteSpace(candidateName) || excludedPlantAliases.Count == 0)
+            {
+                return false;
+            }
+
+            var baseName = candidateName.Split('(')[0].Trim();
+            var normalizedBaseName = NormalizeTextForHintMatch(baseName);
+            if (string.IsNullOrWhiteSpace(normalizedBaseName))
+            {
+                return false;
+            }
+
+            if (excludedPlantAliases.Contains(normalizedBaseName))
+            {
+                return true;
+            }
+
+            var tokens = normalizedBaseName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length >= 2)
+            {
+                var firstTwoWords = string.Join(' ', tokens.Take(2));
+                if (firstTwoWords.Length >= 4 && excludedPlantAliases.Contains(firstTwoWords))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var excludedAlias in excludedPlantAliases)
+            {
+                if (excludedAlias.Length < 3)
+                {
+                    continue;
+                }
+
+                if (normalizedBaseName.Contains(excludedAlias, StringComparison.Ordinal) ||
+                    excludedAlias.Contains(normalizedBaseName, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task<AllergyExclusionContext> BuildAllergyExclusionContextAsync(RoomDesignRequestDto request)
+        {
+            var context = new AllergyExclusionContext();
+            if (request.HasAllergy != true)
+            {
+                return context;
+            }
+
+            var activePlantCatalog = await GetActivePlantCatalogAsync();
+            var activePlantById = activePlantCatalog
+                .ToDictionary(item => item.PlantId, item => item);
+
+            var selectedAllergicPlantIds = request.AllergicPlantIds?
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList() ?? new List<int>();
+
+            if (selectedAllergicPlantIds.Count > 0)
+            {
+                var invalidPlantIds = selectedAllergicPlantIds
+                    .Where(id => !activePlantById.ContainsKey(id))
+                    .ToList();
+
+                if (invalidPlantIds.Count > 0)
+                {
+                    throw new BadRequestException("AllergicPlantIds must contain active Plant IDs only");
+                }
+
+                foreach (var plantId in selectedAllergicPlantIds)
+                {
+                    context.ExcludedPlantIds.Add(plantId);
+                    foreach (var alias in activePlantById[plantId].NormalizedAliases)
+                    {
+                        context.ExcludedPlantAliases.Add(alias);
+                    }
+                }
+            }
+
+            var allergyNameTerms = ParseAllergyNameTerms(request.AllergyNote);
+            foreach (var term in allergyNameTerms)
+            {
+                context.ExcludedPlantAliases.Add(term);
+            }
+
+            if (allergyNameTerms.Count == 0)
+            {
+                return context;
+            }
+
+            foreach (var plant in activePlantCatalog)
+            {
+                var matched = plant.NormalizedAliases
+                    .Any(alias => allergyNameTerms.Any(term => IsAllergyTermMatchAlias(term, alias)));
+
+                if (!matched)
+                {
+                    continue;
+                }
+
+                context.ExcludedPlantIds.Add(plant.PlantId);
+                foreach (var alias in plant.NormalizedAliases)
+                {
+                    context.ExcludedPlantAliases.Add(alias);
+                }
+            }
+
+            return context;
+        }
+
+        private async Task<List<AllergyPlantCatalogItem>> GetActivePlantCatalogAsync()
+        {
+            var plants = await _unitOfWork.PlantRepository.GetAllAsync();
+
+            return plants
+                .Where(plant => plant.IsActive == true && !string.IsNullOrWhiteSpace(plant.Name))
+                .Select(plant => new AllergyPlantCatalogItem
+                {
+                    PlantId = plant.Id,
+                    PlantName = plant.Name.Trim(),
+                    NormalizedAliases = BuildPlantAliasSet(plant.Name, plant.SpecificName)
+                })
+                .ToList();
+        }
+
+        private static HashSet<string> BuildPlantAliasSet(string? plantName, string? specificName)
+        {
+            var aliases = new HashSet<string>(StringComparer.Ordinal);
+
+            void AddAlias(string? rawAlias)
+            {
+                var normalizedAlias = NormalizeTextForHintMatch(rawAlias);
+                if (string.IsNullOrWhiteSpace(normalizedAlias))
+                {
+                    return;
+                }
+
+                aliases.Add(normalizedAlias);
+
+                var tokens = normalizedAlias.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length >= 2)
+                {
+                    aliases.Add(string.Join(' ', tokens.Take(2)));
+                }
+            }
+
+            AddAlias(plantName);
+            AddAlias(specificName);
+
+            return aliases;
+        }
+
+        private static HashSet<string> ParseAllergyNameTerms(string? allergyNote)
+        {
+            var terms = new HashSet<string>(StringComparer.Ordinal);
+            if (string.IsNullOrWhiteSpace(allergyNote))
+            {
+                return terms;
+            }
+
+            var normalizedNote = NormalizeTextForHintMatch(allergyNote)
+                .Replace(" and ", ",", StringComparison.Ordinal)
+                .Replace(" va ", ",", StringComparison.Ordinal);
+
+            var segments = normalizedNote
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(segment => segment.Trim())
+                .Where(segment => !string.IsNullOrWhiteSpace(segment))
+                .ToList();
+
+            if (segments.Count == 0)
+            {
+                segments.Add(normalizedNote);
+            }
+
+            foreach (var segment in segments)
+            {
+                var tokens = segment
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Where(token => !AllergyNoiseTokens.Contains(token))
+                    .ToList();
+
+                if (tokens.Count == 0)
+                {
+                    continue;
+                }
+
+                var cleaned = string.Join(' ', tokens);
+                if (cleaned.Length >= 3)
+                {
+                    terms.Add(cleaned);
+                }
+
+                if (tokens.Count >= 2)
+                {
+                    var firstTwoWords = string.Join(' ', tokens.Take(2));
+                    if (firstTwoWords.Length >= 4)
+                    {
+                        terms.Add(firstTwoWords);
+                    }
+                }
+            }
+
+            return terms;
+        }
+
+        private static bool IsAllergyTermMatchAlias(string term, string alias)
+        {
+            if (string.IsNullOrWhiteSpace(term) || string.IsNullOrWhiteSpace(alias))
+            {
+                return false;
+            }
+
+            if (term.Equals(alias, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if ((term.Length >= 3 && alias.Contains(term, StringComparison.Ordinal)) ||
+                (alias.Length >= 3 && term.Contains(alias, StringComparison.Ordinal)))
+            {
+                return true;
+            }
+
+            var termTokens = term.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var aliasTokens = alias.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (termTokens.Length == 0 || aliasTokens.Length == 0)
+            {
+                return false;
+            }
+
+            var aliasTokenSet = new HashSet<string>(aliasTokens, StringComparer.Ordinal);
+            return termTokens.All(token => aliasTokenSet.Contains(token));
+        }
+
+        private sealed class AllergyExclusionContext
+        {
+            public HashSet<int> ExcludedPlantIds { get; } = new();
+            public HashSet<string> ExcludedPlantAliases { get; } = new(StringComparer.Ordinal);
+            public bool HasAnyExclusion => ExcludedPlantIds.Count > 0 || ExcludedPlantAliases.Count > 0;
+        }
+
+        private sealed class AllergyPlantCatalogItem
+        {
+            public int PlantId { get; init; }
+            public string PlantName { get; init; } = string.Empty;
+            public HashSet<string> NormalizedAliases { get; init; } = new(StringComparer.Ordinal);
+        }
+
+        private void ApplyRequestPreferencesToRoomAnalysis(RoomAnalysisDto roomAnalysis, RoomDesignRequestDto request)
+        {
+            roomAnalysis.RoomType = MapRoomType(request.RoomType.ToString());
+            roomAnalysis.InteriorStyle = request.RoomStyle.ToString();
+
+            if (request.NaturalLightLevel.HasValue)
+            {
+                roomAnalysis.LightingCondition = request.NaturalLightLevel.Value switch
+                {
+                    LightRequirementEnum.LowLight => "LowLight",
+                    LightRequirementEnum.IndirectLight => "IndirectLight",
+                    LightRequirementEnum.PartialSun => "PartialSun",
+                    LightRequirementEnum.FullSun => "FullSun",
+                    _ => roomAnalysis.LightingCondition
+                };
+            }
+        }
+
         private static List<PlantRecommendationDto> PrioritizeCandidatesByRoomHints(
             IEnumerable<PlantRecommendationDto> candidates,
             RoomAnalysisDto roomAnalysis)
@@ -1230,11 +2030,205 @@ Chỉ trả về JSON array, không có text khác.
             return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
+        private async Task PersistDesignArtifactsAsync(
+            RoomDesignRequestDto request,
+            RoomAnalysisDto roomAnalysis,
+            IReadOnlyCollection<PlantRecommendationDto> recommendations,
+            string searchQuery)
+        {
+            if (!request.RoomImageId.HasValue)
+            {
+                return;
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var preferences = new RoomDesignPreferences
+                {
+                    RoomImageId = request.RoomImageId.Value,
+                    RoomType = (int)request.RoomType,
+                    RoomStyle = (int)request.RoomStyle,
+                    RoomArea = request.RoomArea,
+                    MinBudget = request.MinBudget,
+                    MaxBudget = request.MaxBudget,
+                    CareLevel = request.CareLevelType.HasValue ? (int)request.CareLevelType.Value : null,
+                    IsOftenAway = request.IsOftenAway,
+                    NaturalLightLevel = request.NaturalLightLevel.HasValue ? (int)request.NaturalLightLevel.Value : null,
+                    HasAllergy = request.HasAllergy,
+                    AllergyNote = TrimAndLimit(request.AllergyNote, 500)
+                };
+
+                _unitOfWork.RoomDesignPreferencesRepository.PrepareCreate(preferences);
+
+                var layoutDesign = new LayoutDesign
+                {
+                    UserId = request.UserId,
+                    RoomImageId = request.RoomImageId.Value,
+                    PreviewImageUrl = TrimAndLimit(request.UploadedImageUrl, 512),
+                    FluxPromptUsed = searchQuery,
+                    RawResponse = JsonSerializer.Serialize(new
+                    {
+                        roomAnalysis,
+                        recommendations
+                    }),
+                    Status = (int)LayoutDesignStatusEnum.Completed,
+                    IsSaved = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.LayoutDesignRepository.PrepareCreate(layoutDesign);
+                await _unitOfWork.SaveAsync();
+
+                foreach (var recommendation in recommendations)
+                {
+                    var layoutDesignPlant = new LayoutDesignPlant
+                    {
+                        LayoutDesignId = layoutDesign.Id,
+                        CommonPlantId = ResolveCommonPlantId(recommendation),
+                        PlantInstanceId = ResolvePlantInstanceId(recommendation),
+                        PlantReason = TrimAndLimit(recommendation.ReasonForRecommendation, 500),
+                        PlacementPosition = TrimAndLimit(recommendation.SuggestedPlacement, 255),
+                        PlacementReason = TrimAndLimit(recommendation.ReasonForRecommendation, 500),
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _unitOfWork.LayoutDesignPlantRepository.PrepareCreate(layoutDesignPlant);
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist room design artifacts for RoomImageId={RoomImageId}", request.RoomImageId);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        private async Task SaveRoomUploadModerationAsync(
+            int? roomImageId,
+            RoomUploadModerationStatusEnum status,
+            string? reason)
+        {
+            try
+            {
+                var defaultReason = status == RoomUploadModerationStatusEnum.Approved
+                    ? "Image validated successfully"
+                    : "Invalid room image";
+
+                var moderation = new RoomUploadModeration
+                {
+                    RoomImageId = roomImageId,
+                    Status = (int)status,
+                    Reason = TrimAndLimit(string.IsNullOrWhiteSpace(reason) ? defaultReason : reason, 255),
+                    ReviewedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.RoomUploadModerationRepository.PrepareCreate(moderation);
+                await _unitOfWork.SaveAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save room upload moderation. RoomImageId={RoomImageId}", roomImageId);
+            }
+        }
+
+        private static bool IsImageRelatedError(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            var normalized = message.Trim().ToLowerInvariant();
+            var imageErrorKeywords = new[]
+            {
+                "image",
+                "ảnh",
+                "file",
+                "upload",
+                "base64",
+                "format",
+                "size",
+                "extension",
+                "cloudinary"
+            };
+
+            return imageErrorKeywords.Any(keyword => normalized.Contains(keyword, StringComparison.Ordinal));
+        }
+
+        private static int? ResolveCommonPlantId(PlantRecommendationDto recommendation)
+        {
+            if (!recommendation.EntityType.Equals(EmbeddingEntityTypes.CommonPlant, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return recommendation.ProductId ?? recommendation.EntityId;
+        }
+
+        private static int? ResolvePlantInstanceId(PlantRecommendationDto recommendation)
+        {
+            if (!recommendation.EntityType.Equals(EmbeddingEntityTypes.PlantInstance, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return recommendation.ProductId ?? recommendation.EntityId;
+        }
+
+        private static string? TrimAndLimit(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength
+                ? trimmed
+                : trimmed[..maxLength];
+        }
+
+        private static void ValidateRoomDesignRequest(RoomDesignRequestDto request)
+        {
+            if (!Enum.IsDefined(typeof(RoomTypeEnum), request.RoomType))
+            {
+                throw new BadRequestException("RoomType is required");
+            }
+
+            if (!Enum.IsDefined(typeof(RoomStyleEnum), request.RoomStyle))
+            {
+                throw new BadRequestException("RoomStyle is required");
+            }
+
+            if (request.HasAllergy != true && !string.IsNullOrWhiteSpace(request.AllergyNote))
+            {
+                throw new BadRequestException("AllergyNote is only allowed when HasAllergy is true");
+            }
+
+            if (request.HasAllergy != true && request.AllergicPlantIds?.Any() == true)
+            {
+                throw new BadRequestException("AllergicPlantIds is only allowed when HasAllergy is true");
+            }
+        }
+
         private static void NormalizeRequestFilters(RoomDesignRequestDto request)
         {
+            if (request.MinBudget.HasValue && request.MinBudget.Value <= 0)
+            {
+                request.MinBudget = null;
+            }
+
             if (request.MaxBudget.HasValue && request.MaxBudget.Value <= 0)
             {
                 request.MaxBudget = null;
+            }
+
+            if (request.MinBudget.HasValue && request.MaxBudget.HasValue && request.MinBudget > request.MaxBudget)
+            {
+                (request.MinBudget, request.MaxBudget) = (request.MaxBudget, request.MinBudget);
             }
 
             if (request.PreferredNurseryIds != null)
@@ -1248,19 +2242,32 @@ Chỉ trả về JSON array, không có text khác.
                     ? normalizedNurseryIds
                     : null;
             }
+
+            if (request.AllergicPlantIds != null)
+            {
+                var normalizedAllergicPlantIds = request.AllergicPlantIds
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
+
+                request.AllergicPlantIds = normalizedAllergicPlantIds.Count > 0
+                    ? normalizedAllergicPlantIds
+                    : null;
+            }
         }
 
         private string MapRoomType(string? roomType)
         {
-            return roomType?.ToLower() switch
+            return roomType?.Trim() switch
             {
-                "living_room" => "Phòng khách",
-                "bedroom" => "Phòng ngủ",
-                "office" => "Văn phòng",
-                "kitchen" => "Nhà bếp",
-                "bathroom" => "Phòng tắm",
-                "balcony" => "Ban công",
-                "garden" => "Sân vườn",
+                "LivingRoom" or "living_room" => "Phòng khách",
+                "Bedroom" or "bedroom" => "Phòng ngủ",
+                "Kitchen" or "kitchen" => "Phòng bếp",
+                "Bathroom" or "bathroom" => "Phòng tắm",
+                "HomeOffice" or "office" => "Phòng làm việc tại nhà",
+                "Balcony" or "balcony" => "Ban công",
+                "Corridor" or "corridor" => "Hành lang",
+                "DiningRoom" or "dining_room" => "Phòng ăn",
                 _ => roomType ?? "Phòng"
             };
         }

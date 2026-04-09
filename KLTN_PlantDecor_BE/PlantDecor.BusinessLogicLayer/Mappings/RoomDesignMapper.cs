@@ -11,8 +11,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             {
                 RoomType = mapRoomType(source.RoomType),
                 RoomSize = source.RoomSize ?? "medium",
-                LightingCondition = source.LightingCondition ?? "medium",
-                InteriorStyle = source.InteriorStyle ?? "modern",
+                LightingCondition = source.LightingCondition ?? "IndirectLight",
+                InteriorStyle = source.InteriorStyle ?? "Modern",
                 AvailableSpace = source.AvailableSpace ?? "floor",
                 ColorPalette = source.ColorPalette ?? new List<string>(),
                 Summary = source.Summary ?? "Không có thông tin phân tích"

@@ -16,6 +16,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ICategoryRepository? _categoryRepository;
         private ITagRepository? _tagRepository;
         private IPlantRepository? _plantRepository;
+        private IPlantGuideRepository? _plantGuideRepository;
         private IMaterialRepository? _materialRepository;
         private IRoleRepository? _roleRepository;
         private ICommonPlantRepository? _commonPlantRepository;
@@ -36,6 +37,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IChatMessageRepository? _chatMessageRepository;
         private IChatParticipantRepository? _chatParticipantRepository;
         private IEmbeddingRepository? _embeddingRepository;
+        private IRoomImageRepository? _roomImageRepository;
+        private IRoomDesignPreferencesRepository? _roomDesignPreferencesRepository;
+        private ILayoutDesignRepository? _layoutDesignRepository;
+        private ILayoutDesignPlantRepository? _layoutDesignPlantRepository;
+        private IRoomUploadModerationRepository? _roomUploadModerationRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -61,6 +67,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IPlantRepository PlantRepository
         {
             get { return _plantRepository ??= new PlantRepository(_context); }
+        }
+
+        public IPlantGuideRepository PlantGuideRepository
+        {
+            get { return _plantGuideRepository ??= new PlantGuideRepository(_context); }
         }
 
         public IMaterialRepository MaterialRepository
@@ -160,6 +171,31 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IEmbeddingRepository EmbeddingRepository
         {
             get { return _embeddingRepository ??= new EmbeddingRepository(_context); }
+        }
+
+        public IRoomImageRepository RoomImageRepository
+        {
+            get { return _roomImageRepository ??= new RoomImageRepository(_context); }
+        }
+
+        public IRoomDesignPreferencesRepository RoomDesignPreferencesRepository
+        {
+            get { return _roomDesignPreferencesRepository ??= new RoomDesignPreferencesRepository(_context); }
+        }
+
+        public ILayoutDesignRepository LayoutDesignRepository
+        {
+            get { return _layoutDesignRepository ??= new LayoutDesignRepository(_context); }
+        }
+
+        public ILayoutDesignPlantRepository LayoutDesignPlantRepository
+        {
+            get { return _layoutDesignPlantRepository ??= new LayoutDesignPlantRepository(_context); }
+        }
+
+        public IRoomUploadModerationRepository RoomUploadModerationRepository
+        {
+            get { return _roomUploadModerationRepository ??= new RoomUploadModerationRepository(_context); }
         }
 
         // Transaction Management

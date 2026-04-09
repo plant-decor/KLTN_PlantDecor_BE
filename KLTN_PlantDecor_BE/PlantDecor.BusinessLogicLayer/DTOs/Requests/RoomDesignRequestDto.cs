@@ -68,6 +68,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string? AllergyNote { get; set; }
 
         /// <summary>
+        /// Optional selected active Plant IDs that the user is allergic to
+        /// </summary>
+        public List<int>? AllergicPlantIds { get; set; }
+
+        /// <summary>
         /// Filter for pet-safe plants only
         /// </summary>
         public bool? PetSafe { get; set; }

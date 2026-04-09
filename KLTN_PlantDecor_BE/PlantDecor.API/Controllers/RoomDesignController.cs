@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
@@ -21,6 +23,22 @@ namespace PlantDecor.API.Controllers
         {
             _roomDesignService = roomDesignService;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Get active Plant options for allergy selection.
+        /// </summary>
+        [HttpGet("allergy-plants")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllergyPlantOptions([FromQuery] string? keyword = null, [FromQuery] int take = 50)
+        {
+            var options = await _roomDesignService.GetAllergyPlantOptionsAsync(keyword, take);
+            return Ok(new
+            {
+                success = true,
+                data = options,
+                message = $"Found {options.Count} active plants"
+            });
         }
 
         /// <summary>
@@ -80,6 +98,15 @@ namespace PlantDecor.API.Controllers
                     message = $"Found {result.TotalCount} plant recommendations"
                 });
             }
+            catch (BadRequestException ex)
+            {
+                _logger.LogWarning(ex, "Invalid room design request");
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in room design analysis");
@@ -103,39 +130,25 @@ namespace PlantDecor.API.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AnalyzeAndRecommendUpload([FromForm] AnalyzeAndRecommendUploadRequest request)
         {
-            if (request.Image == null || request.Image.Length == 0)
-            {
-                return BadRequest(new { success = false, message = "Room image file is required" });
-            }
-
-            if (request.Image.Length > 10 * 1024 * 1024) // 10MB limit
-            {
-                return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
-            }
-
             try
             {
-                await using var stream = request.Image.OpenReadStream();
-                using var memoryStream = new MemoryStream();
-                await stream.CopyToAsync(memoryStream);
-
-                var dto = new RoomDesignRequestDto
-                {
-                    RoomImageBase64 = Convert.ToBase64String(memoryStream.ToArray()),
-                    FengShuiElement = request.FengShuiElement,
-                    MaxBudget = request.MaxBudget,
-                    PetSafe = request.PetSafe,
-                    ChildSafe = request.ChildSafe,
-                    PreferredNurseryIds = request.PreferredNurseryIds
-                };
-
-                var result = await _roomDesignService.AnalyzeAndRecommendAsync(dto);
+                var userId = GetOptionalUserId();
+                var result = await _roomDesignService.AnalyzeAndRecommendUploadAsync(request, userId);
 
                 return Ok(new
                 {
                     success = true,
                     data = result,
                     message = $"Found {result.TotalCount} plant recommendations"
+                });
+            }
+            catch (BadRequestException ex)
+            {
+                _logger.LogWarning(ex, "Invalid room design upload request");
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
                 });
             }
             catch (Exception ex)
@@ -147,6 +160,12 @@ namespace PlantDecor.API.Controllers
                     message = "Failed to analyze room. Please try again."
                 });
             }
+        }
+
+        private int? GetOptionalUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.TryParse(userIdClaim, out var userId) ? userId : null;
         }
 
         /// <summary>
