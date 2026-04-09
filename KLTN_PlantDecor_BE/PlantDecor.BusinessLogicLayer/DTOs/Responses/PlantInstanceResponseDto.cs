@@ -34,6 +34,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int PlantInstanceId { get; set; }
         public int? PlantId { get; set; }
         public string? PlantName { get; set; }
+        public int? CurrentNurseryId { get; set; }
+        public string? NurseryName { get; set; }
         public string? SKU { get; set; }
         public decimal? SpecificPrice { get; set; }
         public decimal? Height { get; set; }
