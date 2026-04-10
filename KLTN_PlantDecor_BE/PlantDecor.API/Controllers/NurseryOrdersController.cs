@@ -25,6 +25,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lay ra danh sach nursery order cua shipper hien tai (co phan trang va loc theo trang thai)
         /// </summary>
+        /// <param name="status">Lọc theo trạng thái:  3=Assigned, 4=Shipping, 5=Delivered, 7=DeliveryFailed</param>
         [HttpGet("my")]
         public async Task<IActionResult> GetMyNurseryOrders([FromQuery] int? status, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -36,7 +37,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lay danh sach don giao hang thanh cong",
+                Message = "Lấy danh sách đơn hàng của shipper thành công",
                 Payload = result
             });
         }

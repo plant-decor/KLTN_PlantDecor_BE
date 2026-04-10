@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
@@ -22,11 +22,11 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// L?y danh s�ch ??n h�ng c?a v?a (c� ph�n trang v� l?c theo tr?ng th�i)
+        /// Lấy danh sách đơn hàng của vườn (có phân trang và lọc theo trạng thái)
         /// </summary>
-        /// <param name="status">L?c theo tr?ng th�i: 0=Pending, 1=Paid, 2=DepositPaid, 3=Assigned, 4=Shipping, 5=Delivered, 6=Cancelled</param>
-        /// <param name="pageNumber">S? trang (m?c ??nh: 1)</param>
-        /// <param name="pageSize">S? item m?i trang (m?c ??nh: 10, t?i ?a: 100)</param>
+        /// <param name="status">Lọc theo trạng thái: 0=Pending, 1=Paid, 2=DepositPaid, 3=Assigned, 4=Shipping, 5=Delivered, 6=Cancelled, 7=DeliveryFailed</param>
+        /// <param name="pageNumber">Số trang (mặc định: 1)</param>
+        /// <param name="pageSize">Số item mỗi trang (mặc định: 10, tối đa: 100)</param>
         [HttpGet]
         public async Task<IActionResult> GetNurseryOrders([FromQuery] int? status, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -38,7 +38,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "L?y danh s�ch ??n h�ng c?a v?a th�nh c�ng",
+                Message = "Lấy danh sách đơn hàng của vườn thành công",
                 Payload = result
             });
         }

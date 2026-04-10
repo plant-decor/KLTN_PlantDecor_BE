@@ -163,6 +163,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             Status = order.Status,
             StatusName = order.Status.HasValue ? ((NurseryOrderStatus)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
+            DeliveryNote = order.DeliveryNote,
+            Note = order.Note,
             Items = order.NurseryOrderDetails.Select(d => new OrderItemResponseDto
             {
                 Id = d.Id,
