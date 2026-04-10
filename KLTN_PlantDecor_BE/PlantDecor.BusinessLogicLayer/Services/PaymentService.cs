@@ -309,8 +309,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         await AssignShippersForPaidOrderAsync(order);
                     }
 
-                    // Update inventory for OtherProduct orders (CommonPlant, NurseryMaterial, NurseryPlantCombo)
-                    if (order.OrderType == (int)OrderTypeEnum.OtherProduct)
+                    // Update inventory for OtherProduct orders (cart + buy-now)
+                    if (order.OrderType == (int)OrderTypeEnum.OtherProduct
+                        || order.OrderType == (int)OrderTypeEnum.OtherProductBuyNow)
                     {
                         await UpdateInventoryForOrderAsync(order);
                     }

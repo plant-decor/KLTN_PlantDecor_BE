@@ -17,6 +17,7 @@ namespace PlantDecor.API.Controllers
             ["CategoryType"] = typeof(CategoryTypeEnum),
             ["OrderStatus"] = typeof(OrderStatusEnum),
             ["OrderType"] = typeof(OrderTypeEnum),
+            ["BuyNowItemType"] = typeof(BuyNowItemTypeEnum),
             ["InvoiceStatus"] = typeof(InvoiceStatusEnum),
             ["InvoiceType"] = typeof(InvoiceTypeEnum),
             ["PaymentStatus"] = typeof(PaymentStatusEnum),
@@ -424,7 +425,8 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("OrderStatus", typeof(OrderStatusEnum)),
-                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum))
+                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum)),
+                    CreateEnumGroup("BuyNowItemType", typeof(BuyNowItemTypeEnum))
                 }
             });
         }

@@ -4,6 +4,7 @@
     {
         OtherProduct = 1,
         PlantInstance = 2,
-        Service = 3
+        OtherProductBuyNow = 3,
+        Service = 4
     }
 }
