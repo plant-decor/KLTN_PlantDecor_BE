@@ -8,5 +8,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<NurseryOrder>> GetByShipperAndNurseryAsync(int shipperId, int nurseryId, List<int>? statuses = null);
         Task<NurseryOrder?> GetByIdWithDetailsAsync(int nurseryOrderId);
         Task<(List<NurseryOrder> Items, int TotalCount)> GetByShipperAndNurseryPagedAsync(int shipperId, int nurseryId, int? status, int skip, int take);
+        Task<(List<NurseryOrder> Items, int TotalCount)> GetByNurseryIdPagedAsync(int nurseryId, int? status, int skip, int take);
     }
 }
