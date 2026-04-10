@@ -29,7 +29,7 @@ public partial class Plant
 
     public bool? HasFlower { get; set; }
 
-    public string? FengShuiElement { get; set; }
+    public int? FengShuiElement { get; set; }
 
     public string? FengShuiMeaning { get; set; }
 
@@ -68,6 +68,8 @@ public partial class Plant
     public virtual ICollection<UserPreference> UserPreferences { get; set; } = new List<UserPreference>();
 
     public virtual ICollection<CommonPlant> CommonPlants { get; set; } = new List<CommonPlant>();
+
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 

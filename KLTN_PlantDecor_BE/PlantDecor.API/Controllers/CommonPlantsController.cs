@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
@@ -55,6 +56,23 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy danh sách cây đại trà thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách plant đang active mà vựa chưa có để nhập kho
+        /// </summary>
+        [HttpGet("available-import-plants")]
+        public async Task<IActionResult> GetAvailableImportPlants(int nurseryId, [FromQuery] Pagination pagination)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _commonPlantService.GetPlantsNotInNurseryForManagerAsync(nurseryId, managerId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách plant chưa có trong vựa thành công",
                 Payload = result
             });
         }
@@ -135,11 +153,9 @@ namespace PlantDecor.API.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                return 1;
-            }
+                throw new UnauthorizedException("Unable to identify user from token");
             return userId;
         }
 

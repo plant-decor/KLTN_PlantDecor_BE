@@ -25,11 +25,15 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 IsVerified = user.IsVerified,
                 Role = (RoleEnum)user.RoleId,
                 AvatarUrl = user.AvatarUrl,
+                NurseryId = user.NurseryId,
+                NurseryName = user.WorkingNursery?.Name,
 
                 FullName = user.UserProfile?.FullName,
                 Address = user.UserProfile?.Address,
                 BirthYear = user.UserProfile?.BirthYear,
                 Gender = user.UserProfile?.Gender,
+                Latitude = user.UserProfile?.Latitude,
+                Longitude = user.UserProfile?.Longitude,
                 ReceiveNotifications = user.UserProfile?.ReceiveNotifications,
                 ProfileCompleteness = user.UserProfile?.ProfileCompleteness
             };
@@ -92,6 +96,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request.Gender.HasValue)
                 user.UserProfile.Gender = (int)request.Gender;
 
+            if (request.Latitude.HasValue)
+                user.UserProfile.Latitude = request.Latitude;
+
+            if (request.Longitude.HasValue)
+                user.UserProfile.Longitude = request.Longitude;
+
             if (request.ReceiveNotifications.HasValue)
                 user.UserProfile.ReceiveNotifications = request.ReceiveNotifications;
 
@@ -112,6 +122,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             if (request.Status.HasValue)
                 user.Status = (int)request.Status;
+
+            if (request.NurseryId.HasValue)
+                user.NurseryId = request.NurseryId;
 
             user.IsVerified = request.isVerified;
 

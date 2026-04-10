@@ -6,6 +6,8 @@ public partial class User
 
     public int? RoleId { get; set; }
 
+    public int? NurseryId { get; set; } // nursery đang làm việc
+
     public string Email { get; set; } = null!;
 
     public string? PhoneNumber { get; set; }
@@ -31,7 +33,8 @@ public partial class User
 
     public virtual ICollection<LayoutDesign> LayoutDesigns { get; set; } = new List<LayoutDesign>();
 
-    public virtual Nursery? Nursery { get; set; }
+    public virtual Nursery? WorkingNursery { get; set; }
+    public virtual Nursery? ManagedNursery { get; set; }
 
     public virtual ICollection<Order> CustomerOrders { get; set; } = new List<Order>();
 

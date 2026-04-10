@@ -61,14 +61,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PlantInstanceId = entity.Id,
                 PlantId = entity.PlantId,
                 PlantName = entity.Plant?.Name,
+                CurrentNurseryId = entity.CurrentNurseryId,
+                NurseryName = entity.CurrentNursery?.Name,
                 SKU = entity.SKU,
                 SpecificPrice = entity.SpecificPrice,
                 Height = entity.Height,
                 HealthStatus = entity.HealthStatus,
+                Description = entity.Description,
                 Status = entity.Status,
                 StatusName = GetStatusName(entity.Status),
-                PrimaryImageUrl = entity.PlantImages?.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? entity.PlantImages?.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = entity.PlantImages?.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 CreatedAt = entity.CreatedAt
             };
         }

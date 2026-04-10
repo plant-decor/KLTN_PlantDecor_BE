@@ -19,7 +19,7 @@ public partial class PlantCombo
 
     public List<string>? SuitableRooms { get; set; }
 
-    public string? FengShuiElement { get; set; }
+    public int? FengShuiElement { get; set; }
 
     public string? FengShuiPurpose { get; set; }
 
@@ -33,7 +33,7 @@ public partial class PlantCombo
 
     public decimal? ComboPrice { get; set; }
 
-    public string? Season { get; set; }
+    public int? Season { get; set; }
 
     public bool? IsActive { get; set; }
 
@@ -52,6 +52,8 @@ public partial class PlantCombo
     public virtual ICollection<UserBehaviorLog> UserBehaviorLogs { get; set; } = new List<UserBehaviorLog>();
 
     public virtual ICollection<Tag> TagsNavigation { get; set; } = new List<Tag>();
+
+    public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 
     public virtual ICollection<NurseryPlantCombo> NurseryPlantCombos { get; set; } = new List<NurseryPlantCombo>();
 }

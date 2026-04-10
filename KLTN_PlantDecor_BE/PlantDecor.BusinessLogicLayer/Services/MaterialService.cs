@@ -85,15 +85,58 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
+                var materialCode = request.MaterialCode.Trim().ToUpper();
                 // Check if material code already exists
-                if (!string.IsNullOrEmpty(request.MaterialCode))
+                if (!string.IsNullOrEmpty(materialCode))
                 {
-                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(request.MaterialCode))
-                        throw new BadRequestException($"Material với mã '{request.MaterialCode}' đã tồn tại");
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(materialCode))
+                        throw new BadRequestException($"Material với mã '{materialCode}' đã tồn tại");
+                }
+
+                // Check if material name already exists
+                if (!string.IsNullOrWhiteSpace(request.Name))
+                {
+                    if (await _unitOfWork.MaterialRepository.ExistsByNameAsync(request.Name))
+                        throw new BadRequestException($"Material với tên '{request.Name}' đã tồn tại");
                 }
 
                 var material = request.ToEntity();
-                material.MaterialCode ??= MaterialMapper.GenerateMaterialCode();
+                material.MaterialCode = materialCode; // Ensure code is stored in uppercase
+
+                var categoryIds = (request.CategoryIds ?? new List<int>()).Distinct().ToList();
+                if (categoryIds.Any())
+                {
+                    var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
+                    var validCategories = categories.Where(c => categoryIds.Contains(c.Id)).ToList();
+
+                    if (validCategories.Count != categoryIds.Count)
+                    {
+                        var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
+                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var category in validCategories)
+                    {
+                        material.Categories.Add(category);
+                    }
+                }
+
+                var tagIds = (request.TagIds ?? new List<int>()).Distinct().ToList();
+                if (tagIds.Any())
+                {
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    foreach (var tag in tags)
+                    {
+                        material.Tags.Add(tag);
+                    }
+                }
 
                 _unitOfWork.MaterialRepository.PrepareCreate(material);
                 await _unitOfWork.SaveAsync();
@@ -120,14 +163,57 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (material == null)
                     throw new NotFoundException($"Material với ID {id} không tồn tại");
 
+                var normalizedMaterialCode = string.IsNullOrWhiteSpace(request.MaterialCode)
+                    ? null
+                    : request.MaterialCode.Trim().ToUpper();
+
                 // Check if material code already exists (excluding current material)
-                if (!string.IsNullOrEmpty(request.MaterialCode))
+                if (!string.IsNullOrEmpty(normalizedMaterialCode))
                 {
-                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(request.MaterialCode, id))
-                        throw new BadRequestException($"Material với mã '{request.MaterialCode}' đã tồn tại");
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(normalizedMaterialCode, id))
+                        throw new BadRequestException($"Material với mã '{normalizedMaterialCode}' đã tồn tại");
                 }
 
+                request.MaterialCode = normalizedMaterialCode;
+
                 request.ToUpdate(material);
+
+                if (request.CategoryIds != null)
+                {
+                    var categoryIds = request.CategoryIds.Distinct().ToList();
+                    var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
+                    var validCategories = categories.Where(c => categoryIds.Contains(c.Id)).ToList();
+
+                    if (validCategories.Count != categoryIds.Count)
+                    {
+                        var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
+                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    material.Categories.Clear();
+                    foreach (var category in validCategories)
+                    {
+                        material.Categories.Add(category);
+                    }
+                }
+
+                if (request.TagIds != null)
+                {
+                    var tagIds = request.TagIds.Distinct().ToList();
+                    var tags = await _unitOfWork.TagRepository.GetByIdsAsync(tagIds);
+
+                    if (tags.Count != tagIds.Count)
+                    {
+                        var invalidIds = tagIds.Except(tags.Select(t => t.Id));
+                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                    }
+
+                    material.Tags.Clear();
+                    foreach (var tag in tags)
+                    {
+                        material.Tags.Add(tag);
+                    }
+                }
 
                 _unitOfWork.MaterialRepository.PrepareUpdate(material);
                 await _unitOfWork.SaveAsync();
@@ -170,19 +256,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = material.MaterialImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     material.MaterialImages.Add(new MaterialImage
                     {
                         MaterialId = material.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 material.UpdatedAt = DateTime.Now;
@@ -200,6 +282,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(materialId);
+
+            var updatedMaterial = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updatedMaterial!.ToResponse();
+        }
+
+        public async Task<MaterialResponseDto> UploadMaterialThumbnailAsync(int materialId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "MaterialImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Material thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in material.MaterialImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                material.MaterialImages.Add(new MaterialImage
+                {
+                    MaterialId = material.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                material.UpdatedAt = DateTime.Now;
+                _unitOfWork.MaterialRepository.PrepareUpdate(material);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
@@ -473,6 +619,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(ACTIVE_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_MATERIALS_KEY);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (materialId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");

@@ -1,3 +1,5 @@
+using PlantDecor.DataAccessLayer.Enums;
+
 namespace PlantDecor.DataAccessLayer.Helpers
 {
     public class PlantSearchFilter
@@ -18,9 +20,9 @@ namespace PlantDecor.DataAccessLayer.Helpers
         public List<int>? CategoryIds { get; set; }
         public List<int>? TagIds { get; set; }
         public List<int>? Sizes { get; set; }
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
         public int? NurseryId { get; set; }
-        public string? SortBy { get; set; }
-        public string? SortDirection { get; set; }
+        public PlantSortByEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 }

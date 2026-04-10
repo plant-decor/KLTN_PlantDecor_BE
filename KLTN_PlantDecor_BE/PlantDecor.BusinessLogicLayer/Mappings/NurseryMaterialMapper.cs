@@ -38,6 +38,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 MaterialName = entity.Material?.Name,
                 MaterialCode = entity.Material?.MaterialCode,
                 Unit = entity.Material?.Unit,
+                BasePrice = entity.Material?.BasePrice,
                 ExpiredDate = entity.ExpiredDate,
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,

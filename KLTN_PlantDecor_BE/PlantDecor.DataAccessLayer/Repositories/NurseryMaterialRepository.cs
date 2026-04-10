@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
@@ -103,23 +104,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
             List<int>? tagIds,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending)
+            NurseryMaterialSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection)
         {
             var query = _context.NurseryMaterials
                 .Include(nm => nm.Material).ThenInclude(m => m.Categories)
                 .Include(nm => nm.Material).ThenInclude(m => m.Tags)
                 .Include(nm => nm.Nursery)
-                .Where(nm => nm.IsActive && nm.Quantity > nm.ReservedQuantity && nm.Nursery.IsActive == true);
+                .Where(nm => nm.IsActive && nm.Quantity > 0 && nm.Nursery.IsActive == true);
 
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                var term = searchTerm.ToLower();
+                var term = searchTerm.Trim().ToLower();
+                // Name-only search: keyword chỉ áp dụng trên tên vật tư
                 query = query.Where(nm =>
-                    (nm.Material.Name != null && nm.Material.Name.ToLower().Contains(term)) ||
-                    (nm.Material.Description != null && nm.Material.Description.ToLower().Contains(term)) ||
-                    (nm.Nursery.Name != null && nm.Nursery.Name.ToLower().Contains(term)));
+                    nm.Material.Name != null && nm.Material.Name.ToLower().Contains(term));
             }
 
             // Category filter
@@ -144,30 +144,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 query = query.Where(nm => (double?)nm.Material.BasePrice <= maxPrice.Value);
             }
 
-            // Sorting
-            if (!string.IsNullOrEmpty(sortBy))
+            var appliedSortBy = sortBy ?? NurseryMaterialSortByEnum.Newest;
+            var appliedSortDirection = sortDirection ?? (sortBy.HasValue ? SortDirectionEnum.Asc : SortDirectionEnum.Desc);
+            var isDesc = appliedSortDirection == SortDirectionEnum.Desc;
+
+            query = appliedSortBy switch
             {
-                switch (sortBy.ToLower())
-                {
-                    case "price":
-                        query = isAscending
-                            ? query.OrderBy(nm => nm.Material.BasePrice)
-                            : query.OrderByDescending(nm => nm.Material.BasePrice);
-                        break;
-                    case "name":
-                        query = isAscending
-                            ? query.OrderBy(nm => nm.Material.Name)
-                            : query.OrderByDescending(nm => nm.Material.Name);
-                        break;
-                    default:
-                        query = query.OrderByDescending(nm => nm.Id);
-                        break;
-                }
-            }
-            else
-            {
-                query = query.OrderByDescending(nm => nm.Id);
-            }
+                NurseryMaterialSortByEnum.Price => isDesc
+                    ? query.OrderByDescending(nm => nm.Material.BasePrice)
+                    : query.OrderBy(nm => nm.Material.BasePrice),
+                NurseryMaterialSortByEnum.Name => isDesc
+                    ? query.OrderByDescending(nm => nm.Material.Name)
+                    : query.OrderBy(nm => nm.Material.Name),
+                _ => isDesc
+                    ? query.OrderByDescending(nm => nm.Id)
+                    : query.OrderBy(nm => nm.Id)
+            };
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -176,6 +168,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return new PaginatedResult<NurseryMaterial>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.NurseryMaterials.CountAsync();
+        }
+
+        public async Task<List<NurseryMaterial>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.NurseryMaterials
+                .AsNoTracking()
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Categories)
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Tags)
+                .Include(nm => nm.Nursery)
+                .OrderBy(nm => nm.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
     }
 }

@@ -28,6 +28,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IChatSessionRepository ChatSessionRepository { get; }
         IChatMessageRepository ChatMessageRepository { get; }
         IChatParticipantRepository ChatParticipantRepository { get; }
+        IEmbeddingRepository EmbeddingRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

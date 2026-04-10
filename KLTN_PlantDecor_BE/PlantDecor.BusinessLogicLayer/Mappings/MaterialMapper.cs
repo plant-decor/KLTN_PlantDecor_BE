@@ -58,8 +58,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Unit = material.Unit,
                 Brand = material.Brand,
                 IsActive = material.IsActive,
-                PrimaryImageUrl = material.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? material.MaterialImages.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = material.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 CategoryNames = material.Categories.Select(c => c.Name).ToList(),
                 TagNames = material.Tags.Select(t => t.TagName).ToList()
             };
@@ -113,13 +112,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             material.ExpiryMonths = request.ExpiryMonths;
             material.IsActive = request.IsActive ?? material.IsActive;
             material.UpdatedAt = DateTime.Now;
-        }
-        #endregion
-
-        #region Helper
-        public static string GenerateMaterialCode()
-        {
-            return $"MAT{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";
         }
         #endregion
     }

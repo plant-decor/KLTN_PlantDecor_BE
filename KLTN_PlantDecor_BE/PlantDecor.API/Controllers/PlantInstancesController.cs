@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
@@ -121,12 +122,36 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Upload ảnh thumbnail cho PlantInstance
+        /// POST /api/manager/plant-instances/{instanceId}/thumbnail
+        /// </summary>
+        [HttpPost("plant-instances/{instanceId}/thumbnail")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadPlantInstanceThumbnail(int instanceId, IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new BadRequestException("No file was uploaded");
+            }
+
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.UploadPlantInstanceThumbnailAsync(instanceId, managerId, file);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload plant instance thumbnail successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Upload ảnh cho PlantInstance
         /// POST /api/manager/plant-instances/{instanceId}/images
         /// </summary>
         [HttpPost("plant-instances/{instanceId}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadPlantInstanceImages(int instanceId, [FromForm] List<IFormFile> files)
+        public async Task<IActionResult> UploadPlantInstanceImages(int instanceId, List<IFormFile> files)
         {
             var managerId = GetCurrentUserId();
             var result = await _plantInstanceService.UploadPlantInstanceImagesAsync(instanceId, managerId, files);
@@ -168,11 +193,9 @@ namespace PlantDecor.API.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                return 1;
-            }
+                throw new UnauthorizedException("Unable to identify user from token");
             return userId;
         }
 

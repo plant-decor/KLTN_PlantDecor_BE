@@ -8,9 +8,7 @@ using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -124,7 +122,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             foreach (var user in users)
             {
-                string userElement = "None";
+                int? userElement = null;
                 if (user.UserProfile?.BirthYear != null)
                 {
                     try
@@ -133,7 +131,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
                     catch
                     {
-                        userElement = "None";
+                        userElement = null;
                     }
                 }
 
@@ -313,8 +311,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .ToHashSet();
 
             var seedElements = seedPlants
-                .Select(p => NormalizeElement(p.FengShuiElement))
-                .Where(x => !string.IsNullOrEmpty(x))
+                .Where(p => p.FengShuiElement.HasValue)
+                .Select(p => p.FengShuiElement!.Value)
                 .ToHashSet();
 
             var seedCategoryIds = seedPlants
@@ -352,7 +350,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         contextualScore += 3m;
                     }
 
-                    if (seedElements.Contains(NormalizeElement(plant.FengShuiElement)))
+                    if (plant.FengShuiElement.HasValue && seedElements.Contains(plant.FengShuiElement.Value))
                     {
                         contextualScore += 3m;
                     }
@@ -445,7 +443,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 HasChildren = survey.HasChildren,
                 MaxBudget = survey.MaxBudget,
                 ExperienceLevel = survey.ExperienceLevel,
-                ExperienceLevelName = ((DataAccessLayer.Enums.CareLevelTypeEnum)survey.ExperienceLevel).ToString(),
+                ExperienceLevelName = GetExperienceLevelName(survey.ExperienceLevel),
                 PreferredPlacement = survey.PreferredPlacement,
                 PreferredPlacementName = ((DataAccessLayer.Enums.PlacementTypeEnum)survey.PreferredPlacement).ToString(),
                 CreatedAt = survey.CreatedAt,
@@ -503,7 +501,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 HasChildren = survey.HasChildren,
                 MaxBudget = survey.MaxBudget,
                 ExperienceLevel = survey.ExperienceLevel,
-                ExperienceLevelName = ((DataAccessLayer.Enums.CareLevelTypeEnum)survey.ExperienceLevel).ToString(),
+                ExperienceLevelName = GetExperienceLevelName(survey.ExperienceLevel),
                 PreferredPlacement = survey.PreferredPlacement,
                 PreferredPlacementName = ((DataAccessLayer.Enums.PlacementTypeEnum)survey.PreferredPlacement).ToString(),
                 CreatedAt = survey.CreatedAt,
@@ -511,11 +509,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
-        private string GetFengShuiElement(int birthYear)
+        private static int? GetFengShuiElement(int birthYear)
         {
             if (birthYear <= 0)
             {
-                return "None";
+                return null;
             }
 
             try
@@ -546,18 +544,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return result switch
                 {
-                    1 => "Kim",
-                    2 => "Thủy",
-                    3 => "Hỏa",
-                    4 => "Thổ",
-                    5 => "Mộc",
-                    _ => "None"
+                    1 => (int)FengShuiElementTypeEnum.Kim,
+                    2 => (int)FengShuiElementTypeEnum.Thuy,
+                    3 => (int)FengShuiElementTypeEnum.Hoa,
+                    4 => (int)FengShuiElementTypeEnum.Tho,
+                    5 => (int)FengShuiElementTypeEnum.Moc,
+                    _ => null
                 };
             }
             catch (Exception)
             {
                 // Prevent a single malformed profile from breaking preference recalculation.
-                return "None";
+                return null;
             }
         }
 
@@ -577,48 +575,49 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return remainder;
         }
 
-        private int CalculateFengShuiScore(string userElement, string plantElement)
+        private static int CalculateFengShuiScore(int? userElement, int? plantElement)
         {
-            if (string.IsNullOrEmpty(userElement) || string.IsNullOrEmpty(plantElement) || userElement == "None")
+            if (!userElement.HasValue || !plantElement.HasValue)
                 return 0;
 
-            var normalizedUserElement = NormalizeElement(userElement);
-            var normalizedPlantElement = NormalizeElement(plantElement);
+            var userValue = userElement.Value;
+            var plantValue = plantElement.Value;
 
-            if (string.IsNullOrEmpty(normalizedUserElement) || string.IsNullOrEmpty(normalizedPlantElement))
-            {
-                return 0;
-            }
-
-            if (normalizedUserElement == normalizedPlantElement)
+            if (userValue == plantValue)
                 return 5;
 
+            var kim = (int)FengShuiElementTypeEnum.Kim;
+            var moc = (int)FengShuiElementTypeEnum.Moc;
+            var thuy = (int)FengShuiElementTypeEnum.Thuy;
+            var hoa = (int)FengShuiElementTypeEnum.Hoa;
+            var tho = (int)FengShuiElementTypeEnum.Tho;
+
             bool isTuongSinh =
-                (normalizedUserElement == "thuy" && normalizedPlantElement == "moc") ||
-                (normalizedUserElement == "moc" && normalizedPlantElement == "hoa") ||
-                (normalizedUserElement == "hoa" && normalizedPlantElement == "tho") ||
-                (normalizedUserElement == "tho" && normalizedPlantElement == "kim") ||
-                (normalizedUserElement == "kim" && normalizedPlantElement == "thuy") ||
-                (normalizedPlantElement == "thuy" && normalizedUserElement == "moc") ||
-                (normalizedPlantElement == "moc" && normalizedUserElement == "hoa") ||
-                (normalizedPlantElement == "hoa" && normalizedUserElement == "tho") ||
-                (normalizedPlantElement == "tho" && normalizedUserElement == "kim") ||
-                (normalizedPlantElement == "kim" && normalizedUserElement == "thuy");
+                (userValue == thuy && plantValue == moc) ||
+                (userValue == moc && plantValue == hoa) ||
+                (userValue == hoa && plantValue == tho) ||
+                (userValue == tho && plantValue == kim) ||
+                (userValue == kim && plantValue == thuy) ||
+                (plantValue == thuy && userValue == moc) ||
+                (plantValue == moc && userValue == hoa) ||
+                (plantValue == hoa && userValue == tho) ||
+                (plantValue == tho && userValue == kim) ||
+                (plantValue == kim && userValue == thuy);
 
             if (isTuongSinh)
                 return 5;
 
             bool isTuongKhac =
-                (normalizedUserElement == "thuy" && normalizedPlantElement == "hoa") ||
-                (normalizedUserElement == "hoa" && normalizedPlantElement == "kim") ||
-                (normalizedUserElement == "kim" && normalizedPlantElement == "moc") ||
-                (normalizedUserElement == "moc" && normalizedPlantElement == "tho") ||
-                (normalizedUserElement == "tho" && normalizedPlantElement == "thuy") ||
-                (normalizedPlantElement == "thuy" && normalizedUserElement == "hoa") ||
-                (normalizedPlantElement == "hoa" && normalizedUserElement == "kim") ||
-                (normalizedPlantElement == "kim" && normalizedUserElement == "moc") ||
-                (normalizedPlantElement == "moc" && normalizedUserElement == "tho") ||
-                (normalizedPlantElement == "tho" && normalizedUserElement == "thuy");
+                (userValue == thuy && plantValue == hoa) ||
+                (userValue == hoa && plantValue == kim) ||
+                (userValue == kim && plantValue == moc) ||
+                (userValue == moc && plantValue == tho) ||
+                (userValue == tho && plantValue == thuy) ||
+                (plantValue == thuy && userValue == hoa) ||
+                (plantValue == hoa && userValue == kim) ||
+                (plantValue == kim && userValue == moc) ||
+                (plantValue == moc && userValue == tho) ||
+                (plantValue == tho && userValue == thuy);
 
             if (isTuongKhac)
                 return -2;
@@ -638,14 +637,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return 0m;
             }
 
-            return experienceLevel switch
+            if (!Enum.IsDefined(typeof(ExperienceLevelEnum), experienceLevel))
             {
-                1 => careLevelType == (int)CareLevelTypeEnum.Easy ? 3m : -1m,
-                2 => careLevelType == (int)CareLevelTypeEnum.Easy || careLevelType == (int)CareLevelTypeEnum.Medium ? 2m : 0m,
-                3 => careLevelType == (int)CareLevelTypeEnum.Hard || careLevelType == (int)CareLevelTypeEnum.Expert ? 2m : 0m,
-                4 => 1m,
+                return 0m;
+            }
+
+            var level = (ExperienceLevelEnum)experienceLevel;
+
+            return level switch
+            {
+                ExperienceLevelEnum.Beginner => careLevelType == (int)CareLevelTypeEnum.Easy ? 3m : -1m,
+                ExperienceLevelEnum.Basic =>
+                    careLevelType == (int)CareLevelTypeEnum.Easy || careLevelType == (int)CareLevelTypeEnum.Medium ? 2m : 0m,
+                ExperienceLevelEnum.Intermediate =>
+                    careLevelType == (int)CareLevelTypeEnum.Medium || careLevelType == (int)CareLevelTypeEnum.Hard ? 2m : 0m,
+                ExperienceLevelEnum.Expert =>
+                    careLevelType == (int)CareLevelTypeEnum.Hard || careLevelType == (int)CareLevelTypeEnum.Expert ? 2m : 0m,
                 _ => 0m
             };
+        }
+
+        private static string GetExperienceLevelName(int experienceLevel)
+        {
+            if (!Enum.IsDefined(typeof(ExperienceLevelEnum), experienceLevel))
+            {
+                return string.Empty;
+            }
+
+            return ((ExperienceLevelEnum)experienceLevel).ToString();
         }
 
         private static decimal ScoreBySurveyPlacement(int preferredPlacement, int? plantPlacement)
@@ -684,35 +703,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return Enum.IsDefined(typeof(CareLevelTypeEnum), careLevelType.Value)
                 ? ((CareLevelTypeEnum)careLevelType.Value).ToString()
                 : null;
-        }
-
-        private static string NormalizeElement(string? element)
-        {
-            var normalized = NormalizeText(element);
-            return normalized switch
-            {
-                "kim" => "kim",
-                "thuy" => "thuy",
-                "moc" => "moc",
-                "hoa" => "hoa",
-                "tho" => "tho",
-                _ => string.Empty
-            };
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var normalized = value.Trim().Normalize(NormalizationForm.FormD);
-            var chars = normalized
-                .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                .ToArray();
-
-            return new string(chars).Normalize(NormalizationForm.FormC).ToLowerInvariant();
         }
     }
 }

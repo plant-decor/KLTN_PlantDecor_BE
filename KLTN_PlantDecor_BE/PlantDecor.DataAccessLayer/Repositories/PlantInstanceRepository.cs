@@ -17,6 +17,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (statusFilter.HasValue)
@@ -44,6 +45,36 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(pi => pi.Id == id);
         }
 
+        // Dùng cho trường hợp PlantInstance không có ảnh riêng, fallback lấy ảnh từ Plant
+        public async Task<string?> GetPrimaryImageUrlAsync(int plantInstanceId)
+        {
+            var instanceImages = await _context.PlantImages
+                .Where(image => image.PlantInstanceId == plantInstanceId)
+                .ToListAsync();
+
+            var instanceImageUrl = SelectPrimaryImageUrl(instanceImages);
+            if (!string.IsNullOrWhiteSpace(instanceImageUrl))
+            {
+                return instanceImageUrl;
+            }
+
+            var plantId = await _context.PlantInstances
+                .Where(pi => pi.Id == plantInstanceId)
+                .Select(pi => (int?)pi.PlantId)
+                .FirstOrDefaultAsync();
+
+            if (!plantId.HasValue)
+            {
+                return null;
+            }
+
+            var plantImages = await _context.PlantImages
+                .Where(image => image.PlantId == plantId.Value && image.PlantInstanceId == null)
+                .ToListAsync();
+
+            return SelectPrimaryImageUrl(plantImages);
+        }
+
         public async Task<List<PlantInstance>> GetByIdsAsync(List<int> ids)
         {
             return await _context.PlantInstances
@@ -58,6 +89,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
                 .Include(pi => pi.Plant)
                     .ThenInclude(p => p.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .ToListAsync();
         }
 
@@ -80,6 +112,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId && pi.Status == (int)PlantInstanceStatusEnum.Available)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (plantId.HasValue)
@@ -104,6 +137,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.Status == (int)PlantInstanceStatusEnum.Available)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (nurseryId.HasValue)
@@ -125,6 +159,40 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return new PaginatedResult<PlantInstance>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static string? SelectPrimaryImageUrl(IEnumerable<PlantImage>? images)
+        {
+            if (images == null)
+            {
+                return null;
+            }
+
+            return images
+                .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.IsPrimary == true)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault();
+        }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.PlantInstances.CountAsync();
+        }
+
+        public async Task<List<PlantInstance>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            return await _context.PlantInstances
+                .AsNoTracking()
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Categories)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Tags)
+                .Include(pi => pi.CurrentNursery)
+                .OrderBy(pi => pi.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
     }
 }

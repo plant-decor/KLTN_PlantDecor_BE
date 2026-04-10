@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Unit { get; set; }
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; }
-        public int AvailableQuantity => Quantity - ReservedQuantity;
+        public int AvailableQuantity => Quantity;
         public DateOnly? ExpiredDate { get; set; }
         public int DaysToExpire { get; set; }
     }

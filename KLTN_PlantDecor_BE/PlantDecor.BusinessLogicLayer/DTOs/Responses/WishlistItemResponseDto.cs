@@ -11,6 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? ItemImageUrl { get; set; }
         public decimal? Price { get; set; }
         public int? Quantity { get; set; }
+        public string? NurseryName { get; set; }
         public string? AdditionalInfo { get; set; }
         public DateTime? CreatedAt { get; set; }
     }

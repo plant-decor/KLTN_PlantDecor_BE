@@ -17,6 +17,12 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? AvatarUrl { get; set; }
         public RoleEnum Role { get; set; }
 
+        // Nursery info for shippers
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? NurseryId { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? NurseryName { get; set; }
+
 
 
         //UserProfile info
@@ -28,6 +34,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? BirthYear { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Gender { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? Latitude { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? Longitude { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? ReceiveNotifications { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -11,12 +12,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static PlantComboResponseDto ToResponse(this PlantCombo combo)
         {
             if (combo == null) return null!;
+            var seasonName = MapSeasonName(combo.Season);
+            var comboTypeName = MapComboTypeName(combo.ComboType);
+
             return new PlantComboResponseDto
             {
                 Id = combo.Id,
                 ComboCode = combo.ComboCode,
                 ComboName = combo.ComboName,
                 ComboType = combo.ComboType,
+                ComboTypeName = comboTypeName,
                 Description = combo.Description,
                 SuitableSpace = combo.SuitableSpace,
                 SuitableRooms = combo.SuitableRooms,
@@ -28,6 +33,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ThemeDescription = combo.ThemeDescription,
                 ComboPrice = combo.ComboPrice,
                 Season = combo.Season,
+                SeasonName = seasonName,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
@@ -59,20 +65,25 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static PlantComboListResponseDto ToListResponse(this PlantCombo combo)
         {
             if (combo == null) return null!;
+            var seasonName = MapSeasonName(combo.Season);
+            var comboTypeName = MapComboTypeName(combo.ComboType);
+
             return new PlantComboListResponseDto
             {
                 Id = combo.Id,
                 ComboCode = combo.ComboCode,
                 ComboName = combo.ComboName,
                 ComboType = combo.ComboType,
+                ComboTypeName = comboTypeName,
                 ComboPrice = combo.ComboPrice,
+                Season = combo.Season,
+                SeasonName = seasonName,
                 PetSafe = combo.PetSafe,
                 ChildSafe = combo.ChildSafe,
                 IsActive = combo.IsActive,
                 ViewCount = combo.ViewCount,
                 PurchaseCount = combo.PurchaseCount,
-                PrimaryImageUrl = combo.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? combo.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = combo.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 TotalItems = combo.PlantComboItems.Count,
                 TagNames = combo.TagsNavigation.Select(t => t.TagName).ToList()
             };
@@ -146,13 +157,36 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             combo.ThemeName = request.ThemeName ?? combo.ThemeName;
             combo.ThemeDescription = request.ThemeDescription ?? combo.ThemeDescription;
             combo.ComboPrice = request.ComboPrice ?? combo.ComboPrice;
-            combo.Season = request.Season ?? combo.Season;
+            if (request.Season.HasValue)
+            {
+                combo.Season = request.Season.Value;
+            }
             combo.IsActive = request.IsActive ?? combo.IsActive;
             combo.UpdatedAt = DateTime.Now;
         }
         #endregion
 
         #region Helper
+        private static string? MapSeasonName(int? season)
+        {
+            if (!season.HasValue || !Enum.IsDefined(typeof(SeasonTypeEnum), season.Value))
+            {
+                return null;
+            }
+
+            return ((SeasonTypeEnum)season.Value).ToString();
+        }
+
+        private static string? MapComboTypeName(int? comboType)
+        {
+            if (!comboType.HasValue || !Enum.IsDefined(typeof(ComboTypeEnum), comboType.Value))
+            {
+                return null;
+            }
+
+            return ((ComboTypeEnum)comboType.Value).ToString();
+        }
+
         public static string GenerateComboCode()
         {
             return $"CMB{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";

@@ -35,6 +35,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IChatSessionRepository? _chatSessionRepository;
         private IChatMessageRepository? _chatMessageRepository;
         private IChatParticipantRepository? _chatParticipantRepository;
+        private IEmbeddingRepository? _embeddingRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -154,6 +155,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IChatParticipantRepository ChatParticipantRepository
         {
             get { return _chatParticipantRepository ??= new ChatParticipantRepository(_context); }
+        }
+
+        public IEmbeddingRepository EmbeddingRepository
+        {
+            get { return _embeddingRepository ??= new EmbeddingRepository(_context); }
         }
 
         // Transaction Management

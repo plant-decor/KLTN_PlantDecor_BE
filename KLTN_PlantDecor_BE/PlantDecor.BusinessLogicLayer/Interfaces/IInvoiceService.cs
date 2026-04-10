@@ -6,6 +6,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         Task<InvoiceResponseDto> GetInvoiceByIdAsync(int invoiceId, int userId);
         Task<List<InvoiceResponseDto>> GetInvoicesByOrderIdAsync(int orderId, int userId);
+        Task<List<InvoiceResponseDto>> GetPendingInvoicesAsync(int userId);
         Task<InvoiceResponseDto> GenerateRemainingInvoiceAsync(int orderId);
     }
 }

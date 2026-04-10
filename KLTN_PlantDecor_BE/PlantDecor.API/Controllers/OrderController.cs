@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -62,10 +63,10 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách tất cả đơn hàng của user hiện tại
         /// </summary>
         [HttpGet("my")]
-        public async Task<IActionResult> GetMyOrders()
+        public async Task<IActionResult> GetMyOrders([FromQuery] OrderStatusEnum? orderStatus = null)
         {
             var userId = GetUserId();
-            var result = await _orderService.GetMyOrdersAsync(userId);
+            var result = await _orderService.GetMyOrdersAsync(userId, orderStatus);
             return Ok(new ApiResponse<List<OrderResponseDto>>
             {
                 Success = true,

@@ -18,7 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public List<string>? SuitableRooms { get; set; }
 
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
 
         public string? FengShuiPurpose { get; set; }
 
@@ -43,7 +43,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public string? Tags { get; set; }
 
-        public string? Season { get; set; }
+        public List<int>? TagIds { get; set; }
+
+        public int? Season { get; set; }
 
         public bool? IsActive { get; set; }
     }

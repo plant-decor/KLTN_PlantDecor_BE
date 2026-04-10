@@ -14,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto?> GetComboByIdAsync(int id);
         Task<PlantComboResponseDto> CreateComboAsync(PlantComboRequestDto request);
         Task<PlantComboResponseDto> UpdateComboAsync(int id, PlantComboUpdateDto request);
+        Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file);
         Task<PlantComboResponseDto> UploadPlantComboImagesAsync(int comboId, List<IFormFile> files);
         Task<bool> DeleteComboAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
@@ -28,8 +29,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto> RemoveTagFromComboAsync(int comboId, int tagId);
 
         // Manager - Nursery Combo Stock
-        Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int nurseryId, int managerId, int comboId, AssembleNurseryComboRequestDto request);
-        Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int nurseryId, int managerId, int comboId, DecomposeNurseryComboRequestDto request);
+        Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int managerId, int comboId, AssembleNurseryComboRequestDto request);
+        Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int managerId, int comboId, DecomposeNurseryComboRequestDto request);
+        Task<PaginatedResult<NurseryComboStockResponseDto>> GetNurseryComboStockAsync(int managerId, Pagination pagination);
 
         // Shop Display
         Task<PaginatedResult<PlantComboListResponseDto>> GetCombosForShopAsync(Pagination pagination);

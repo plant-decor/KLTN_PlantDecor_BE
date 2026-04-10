@@ -1,0 +1,62 @@
+namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
+{
+    public class SemanticSearchResponseDto
+    {
+        public List<SearchResultItemDto> Results { get; set; } = new();
+        public int TotalCount { get; set; }
+        public string? Query { get; set; }
+    }
+
+    public class SearchResultItemDto
+    {
+        public string EntityType { get; set; } = null!;
+        public int EntityId { get; set; }
+        public string Name { get; set; } = null!;
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public int NurseryId { get; set; }
+        public string? NurseryName { get; set; }
+        public bool IsPurchasable { get; set; }
+        public string? ImageUrl { get; set; }
+        public double SimilarityScore { get; set; }
+        public string? FengShuiElement { get; set; }
+        public Dictionary<string, object>? AdditionalInfo { get; set; }
+    }
+
+    public class RoomRecommendationResponseDto
+    {
+        public List<PlantRecommendationItemDto> Recommendations { get; set; } = new();
+        public int TotalCount { get; set; }
+        public string? RoomDescription { get; set; }
+        public string? FengShuiElement { get; set; }
+    }
+
+    public class PlantRecommendationItemDto
+    {
+        public string EntityType { get; set; } = null!;
+        public int EntityId { get; set; }
+        public string Name { get; set; } = null!;
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? FengShuiElement { get; set; }
+        public string? FengShuiMeaning { get; set; }
+        public string? SuitableSpace { get; set; }
+        public double MatchScore { get; set; }
+        public string? ReasonForRecommendation { get; set; }
+        public int NurseryId { get; set; }
+        public string? NurseryName { get; set; }
+    }
+
+    public class PlantSuggestionResponseDto
+    {
+        public string EntityType { get; set; } = null!;
+        public int EntityId { get; set; }
+        public string Name { get; set; } = null!;
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool IsPurchasable { get; set; }
+        public double RelevanceScore { get; set; }
+    }
+}

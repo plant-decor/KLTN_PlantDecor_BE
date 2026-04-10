@@ -4,6 +4,7 @@ using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Services;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -253,7 +254,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("/api/shop/nurseries/{nurseryId}/plant-instances/search")]
         [AllowAnonymous]
-        public async Task<IActionResult> SearchAvailablePlantInstancesByNursery(int nurseryId, [FromBody] ShopPlantInstanceSearchRequestDto request)
+        public async Task<IActionResult> SearchAvailablePlantInstancesByNursery(int nurseryId, [FromBody] ShopPlantInstanceByNurserySearchRequestDto request)
         {
             var pagination = request?.Pagination ?? new Pagination();
             var result = await _plantInstanceService.GetAvailableByNurseryIdAsync(nurseryId, pagination, request?.PlantId);
@@ -334,12 +335,9 @@ namespace PlantDecor.API.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                // For testing, return a default manager ID
-                return 1;
-            }
+                throw new UnauthorizedException("Unable to identify user from token");
             return userId;
         }
 

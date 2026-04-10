@@ -16,6 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantResponseDto?> GetPlantByIdAsync(int id);
         Task<PlantResponseDto> CreatePlantAsync(PlantRequestDto request);
         Task<PlantResponseDto> UpdatePlantAsync(int id, PlantUpdateDto request);
+        Task<PlantResponseDto> UploadPlantThumbnailAsync(int plantId, IFormFile file);
         Task<PlantResponseDto> UploadPlantImagesAsync(int plantId, List<IFormFile> files);
         Task<PlantResponseDto> SetPrimaryPlantImageAsync(int plantId, int imageId);
         Task<bool> DeletePlantAsync(int id);

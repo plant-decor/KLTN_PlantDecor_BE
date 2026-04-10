@@ -7,5 +7,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<NurseryPlantCombo?> GetByNurseryAndComboAsync(int nurseryId, int comboId);
         IQueryable<NurseryPlantCombo> GetQuery();
         Task<NurseryPlantCombo?> GetByIdWithComboItemsAsync(int id);
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<NurseryPlantCombo>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }

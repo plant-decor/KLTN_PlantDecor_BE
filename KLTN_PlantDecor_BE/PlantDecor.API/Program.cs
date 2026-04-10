@@ -111,10 +111,11 @@ namespace PlantDecor.API
 
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
             dataSourceBuilder.EnableDynamicJson();
+            dataSourceBuilder.UseVector();
             var dataSource = dataSourceBuilder.Build();
 
             builder.Services.AddDbContext<PlantDecorContext>(options =>
-                options.UseNpgsql(dataSource));
+                options.UseNpgsql(dataSource, o => o.UseVector()));
 
             //ADD SCOPED HERE
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -124,6 +125,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
+            builder.Services.AddScoped<IShopSearchService, ShopSearchService>();
 
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
             builder.Services.AddScoped<IMaterialService, MaterialService>();
@@ -149,6 +151,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<INurseryOrderService, NurseryOrderService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();
@@ -157,13 +160,24 @@ namespace PlantDecor.API
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
 
+            // Embedding & AI Search Services
+            builder.Services.AddScoped<IEmbeddingTextSerializer, EmbeddingTextSerializer>();
+            builder.Services.AddScoped<IEmbeddingTextPreprocessor, EmbeddingTextPreprocessor>();
+            builder.Services.AddScoped<IEmbeddingChunker, EmbeddingChunker>();
+            builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+            builder.Services.AddScoped<IAISearchService, AISearchService>();
+            builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
+            builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
+            builder.Services.AddScoped<ILangflowService, LangflowService>();
+
             builder.Services.AddCors(options =>
             {
                 // Policy cho Development
                 options.AddPolicy("Development",
                     policy => policy
                         .WithOrigins(
-                            "http://localhost:3000",         // React dev
+                            "https://localhost:3000",         // React dev
                             "http://localhost:5173",         // Vite
                             "http://localhost:5500",         // Live Server
                             "http://localhost:7180",         // API dev port

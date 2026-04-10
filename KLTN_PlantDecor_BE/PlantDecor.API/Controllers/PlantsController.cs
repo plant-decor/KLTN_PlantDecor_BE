@@ -120,11 +120,33 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Upload ảnh thumbnail cho plant
+        /// </summary>
+        [HttpPost("{id}/thumbnail")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadPlantThumbnail(int id, IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new BadRequestException("No file was uploaded");
+            }
+
+            var plant = await _plantService.UploadPlantThumbnailAsync(id, file);
+            return Ok(new ApiResponse<PlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Upload plant thumbnail successfully",
+                Payload = plant
+            });
+        }
+
+        /// <summary>
         /// Upload ảnh cho plant
         /// </summary>
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadPlantImages(int id, [FromForm] List<IFormFile> files)
+        public async Task<IActionResult> UploadPlantImages(int id, List<IFormFile> files)
         {
             if (files == null || files.Count == 0)
             {

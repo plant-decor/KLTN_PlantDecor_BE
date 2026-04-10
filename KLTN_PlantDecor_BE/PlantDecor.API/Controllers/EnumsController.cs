@@ -15,11 +15,25 @@ namespace PlantDecor.API.Controllers
         private static readonly Dictionary<string, Type> EnumMap = new(StringComparer.OrdinalIgnoreCase)
         {
             ["CategoryType"] = typeof(CategoryTypeEnum),
+            ["OrderStatus"] = typeof(OrderStatusEnum),
+            ["OrderType"] = typeof(OrderTypeEnum),
+            ["InvoiceStatus"] = typeof(InvoiceStatusEnum),
+            ["InvoiceType"] = typeof(InvoiceTypeEnum),
+            ["PaymentStatus"] = typeof(PaymentStatusEnum),
+            ["PaymentType"] = typeof(PaymentTypeEnum),
+            ["PaymentStrategies"] = typeof(PaymentStrategiesEnum),
+            ["TransactionStatus"] = typeof(TransactionStatusEnum),
             ["ComboType"] = typeof(ComboTypeEnum),
             ["Gender"] = typeof(GenderEnum),
             ["PlacementType"] = typeof(PlacementTypeEnum),
             ["PlantSize"] = typeof(PlantSizeEnum),
             ["CareLevelType"] = typeof(CareLevelTypeEnum),
+            ["PlantSortBy"] = typeof(PlantSortByEnum),
+            ["CommonPlantSortBy"] = typeof(CommonPlantSortByEnum),
+            ["NurseryMaterialSortBy"] = typeof(NurseryMaterialSortByEnum),
+            ["PlantComboSortBy"] = typeof(PlantComboSortByEnum),
+            ["UnifiedSearchSortBy"] = typeof(UnifiedSearchSortByEnum),
+            ["SortDirection"] = typeof(SortDirectionEnum),
             ["PlantInstanceStatus"] = typeof(PlantInstanceStatusEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
@@ -113,6 +127,111 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
                     CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho sort của Plant search
+        /// GET /api/system/enums/plant-sort
+        /// </summary>
+        [HttpGet("plant-sort")]
+        [AllowAnonymous]
+        public IActionResult GetPlantSortEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get plant sort enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PlantSortBy", typeof(PlantSortByEnum)),
+                    CreateEnumGroup("SortDirection", typeof(SortDirectionEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho sort của CommonPlant search
+        /// GET /api/system/enums/common-plant-sort
+        /// </summary>
+        [HttpGet("common-plant-sort")]
+        [AllowAnonymous]
+        public IActionResult GetCommonPlantSortEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get common plant sort enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("CommonPlantSortBy", typeof(CommonPlantSortByEnum)),
+                    CreateEnumGroup("SortDirection", typeof(SortDirectionEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho sort của NurseryMaterial search
+        /// GET /api/system/enums/nursery-material-sort
+        /// </summary>
+        [HttpGet("nursery-material-sort")]
+        [AllowAnonymous]
+        public IActionResult GetNurseryMaterialSortEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get nursery material sort enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("NurseryMaterialSortBy", typeof(NurseryMaterialSortByEnum)),
+                    CreateEnumGroup("SortDirection", typeof(SortDirectionEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho sort của PlantCombo search
+        /// GET /api/system/enums/plant-combo-sort
+        /// </summary>
+        [HttpGet("plant-combo-sort")]
+        [AllowAnonymous]
+        public IActionResult GetPlantComboSortEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get plant combo sort enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PlantComboSortBy", typeof(PlantComboSortByEnum)),
+                    CreateEnumGroup("SortDirection", typeof(SortDirectionEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho sort của unified shop search
+        /// GET /api/system/enums/unified-search-sort
+        /// </summary>
+        [HttpGet("unified-search-sort")]
+        [AllowAnonymous]
+        public IActionResult GetUnifiedSearchSortEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get unified search sort enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("UnifiedSearchSortBy", typeof(UnifiedSearchSortByEnum)),
+                    CreateEnumGroup("SortDirection", typeof(SortDirectionEnum))
                 }
             });
         }
@@ -235,6 +354,90 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("Role", typeof(RoleEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Order
+        /// GET /api/system/enums/orders
+        /// </summary>
+        [HttpGet("orders")]
+        [AllowAnonymous]
+        public IActionResult GetOrderEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get order enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("OrderStatus", typeof(OrderStatusEnum)),
+                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Invoice
+        /// GET /api/system/enums/invoices
+        /// </summary>
+        [HttpGet("invoices")]
+        [AllowAnonymous]
+        public IActionResult GetInvoiceEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get invoice enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("InvoiceStatus", typeof(InvoiceStatusEnum)),
+                    CreateEnumGroup("InvoiceType", typeof(InvoiceTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Payment
+        /// GET /api/system/enums/payments
+        /// </summary>
+        [HttpGet("payments")]
+        [AllowAnonymous]
+        public IActionResult GetPaymentEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get payment enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PaymentStatus", typeof(PaymentStatusEnum)),
+                    CreateEnumGroup("PaymentType", typeof(PaymentTypeEnum)),
+                    CreateEnumGroup("PaymentStrategies", typeof(PaymentStrategiesEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Transaction
+        /// GET /api/system/enums/transactions
+        /// </summary>
+        [HttpGet("transactions")]
+        [AllowAnonymous]
+        public IActionResult GetTransactionEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get transaction enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("TransactionStatus", typeof(TransactionStatusEnum))
                 }
             });
         }

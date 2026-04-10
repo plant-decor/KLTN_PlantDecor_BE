@@ -12,6 +12,11 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static PlantResponseDto ToResponse(this Plant plant)
         {
             if (plant == null) return null!;
+
+            var plantLevelImages = plant.PlantImages
+                .Where(i => i.PlantInstanceId == null)
+                .ToList();
+
             return new PlantResponseDto
             {
                 Id = plant.Id,
@@ -31,6 +36,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PetSafe = plant.PetSafe,
                 ChildSafe = plant.ChildSafe,
                 FengShuiElement = plant.FengShuiElement,
+                FengShuiElementName = GetFengShuiElementName(plant.FengShuiElement),
                 FengShuiMeaning = plant.FengShuiMeaning,
                 PotIncluded = plant.PotIncluded,
                 PotSize = plant.PotSize,
@@ -53,7 +59,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     Id = t.Id,
                     TagName = t.TagName
                 }).ToList(),
-                Images = plant.PlantImages.Select(i => new PlantImageResponseDto
+                Images = plantLevelImages.Select(i => new PlantImageResponseDto
                 {
                     Id = i.Id,
                     ImageUrl = i.ImageUrl,
@@ -71,22 +77,27 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             var availableInstances = plant.PlantInstances.Count(i => i.Status == (int)PlantInstanceStatusEnum.Available);
             var availableCommonQuantity = plant.CommonPlants
-                .Where(cp => cp.IsActive && cp.Quantity > cp.ReservedQuantity)
-                .Sum(cp => cp.Quantity - cp.ReservedQuantity);
+                .Where(cp => cp.IsActive && cp.Quantity > 0)
+                .Sum(cp => cp.Quantity);
+            var primaryImageUrl = plant.PlantImages
+                .Where(i => i.PlantInstanceId == null && i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault();
 
             return new PlantListResponseDto
             {
                 Id = plant.Id,
                 Name = plant.Name,
                 BasePrice = plant.BasePrice,
+                IsUniqueInstance = plant.IsUniqueInstance,
                 Size = plant.Size,
                 SizeName = GetPlantSizeName(plant.Size),
                 CareLevelType = plant.CareLevelType,
                 CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
-                CareLevel = GetCareLevelName(plant.CareLevelType),
+                FengShuiElement = plant.FengShuiElement,
+                FengShuiElementName = GetFengShuiElementName(plant.FengShuiElement),
                 IsActive = plant.IsActive,
-                PrimaryImageUrl = plant.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
-                    ?? plant.PlantImages.FirstOrDefault()?.ImageUrl,
+                PrimaryImageUrl = primaryImageUrl,
                 TotalInstances = plant.PlantInstances.Count,
                 AvailableInstances = availableInstances,
                 AvailableCommonQuantity = availableCommonQuantity,
@@ -252,6 +263,18 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             return Enum.IsDefined(typeof(PlantSizeEnum), size.Value)
                 ? ((PlantSizeEnum)size.Value).ToString()
+                : null;
+        }
+
+        private static string? GetFengShuiElementName(int? fengShuiElement)
+        {
+            if (!fengShuiElement.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
+                ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
                 : null;
         }
 

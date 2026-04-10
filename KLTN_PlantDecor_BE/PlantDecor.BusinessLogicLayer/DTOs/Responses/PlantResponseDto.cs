@@ -18,7 +18,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public bool? HasFlower { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
-        public string? FengShuiElement { get; set; }
+        public int? FengShuiElement { get; set; }
+        public string? FengShuiElementName { get; set; }
         public string? FengShuiMeaning { get; set; }
         public bool? PotIncluded { get; set; }
         public string? PotSize { get; set; }
@@ -50,11 +51,13 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Id { get; set; }
         public string Name { get; set; } = null!;
         public decimal? BasePrice { get; set; }
+        public bool? IsUniqueInstance { get; set; }
         public int? Size { get; set; }
         public string? SizeName { get; set; }
         public int? CareLevelType { get; set; }
         public string? CareLevelTypeName { get; set; }
-        public string? CareLevel { get; set; }
+        public int? FengShuiElement { get; set; }
+        public string? FengShuiElementName { get; set; }
         public bool? IsActive { get; set; }
         public string? PrimaryImageUrl { get; set; }
         public int TotalInstances { get; set; }

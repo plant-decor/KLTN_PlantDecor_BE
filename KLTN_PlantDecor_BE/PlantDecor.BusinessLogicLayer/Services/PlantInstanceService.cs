@@ -1,9 +1,12 @@
+using Hangfire;
+using Microsoft.AspNetCore.Http;
+using PlantDecor.BusinessLogicLayer.Constants;
+using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
-using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -16,16 +19,25 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILangflowService _langflowService;
 
         private const string NURSERY_INSTANCES_KEY = "nursery_instances";
         private const string PLANT_NURSERIES_KEY = "plant_nurseries";
         private const string PLANT_SHOP_SEARCH_KEY = "plants_shop_search";
 
-        public PlantInstanceService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
+        public PlantInstanceService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
+            ILangflowService langflowService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
+            _langflowService = langflowService;
         }
 
         #region Manager Operations
@@ -55,6 +67,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
                 await InvalidateCacheAsync(nurseryId);
+
+                // Queue embeddings for created instances
+                foreach (var entity in entities)
+                {
+                    var reloadedEntity = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(entity.Id);
+                    if (reloadedEntity != null)
+                    {
+                        QueueEmbeddingAsync(reloadedEntity);
+                    }
+                }
 
                 // Reload với details
                 var result = new BatchCreatePlantInstanceResponseDto
@@ -159,6 +181,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
                 await InvalidateCacheAsync(instance.CurrentNurseryId);
 
+                // Update embedding
+                var reloaded = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (reloaded != null)
+                {
+                    QueueEmbeddingAsync(reloaded);
+                }
+
                 return instance.ToResponse();
             }
             catch (Exception)
@@ -202,6 +231,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
                 await InvalidateCacheAsync(nursery.Id);
+
+                // Update embeddings for all updated instances
+                foreach (var instance in instances)
+                {
+                    var reloaded = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instance.Id);
+                    if (reloaded != null)
+                    {
+                        QueueEmbeddingAsync(reloaded);
+                    }
+                }
 
                 return new BatchUpdateStatusResponseDto
                 {
@@ -250,7 +289,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                var hasPrimary = instance.PlantImages.Any(i => i.IsPrimary == true);
                 foreach (var uploadedFile in uploadedFiles)
                 {
                     instance.PlantImages.Add(new PlantImage
@@ -258,12 +296,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         PlantId = instance.PlantId.Value,
                         PlantInstanceId = instance.Id,
                         ImageUrl = uploadedFile.SecureUrl,
-                        IsPrimary = !hasPrimary,
+                        IsPrimary = false,
                         CreatedAt = DateTime.Now
                     });
-
-                    if (!hasPrimary)
-                        hasPrimary = true;
                 }
 
                 instance.UpdatedAt = DateTime.Now;
@@ -281,6 +316,78 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (string.IsNullOrWhiteSpace(uploadedFile.PublicId))
                         continue;
 
+                    try
+                    {
+                        await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
+
+            await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+            var updatedInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            return updatedInstance!.ToResponse();
+        }
+
+        public async Task<PlantInstanceResponseDto> UploadPlantInstanceThumbnailAsync(int instanceId, int managerId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+            if (!instance.PlantId.HasValue)
+                throw new BadRequestException("PlantInstance chưa có PlantId hợp lệ");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantInstanceImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Plant instance thumbnail upload failed");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                foreach (var image in instance.PlantImages)
+                {
+                    image.IsPrimary = false;
+                }
+
+                instance.PlantImages.Add(new PlantImage
+                {
+                    PlantId = instance.PlantId.Value,
+                    PlantInstanceId = instance.Id,
+                    ImageUrl = uploadedFile.SecureUrl,
+                    IsPrimary = true,
+                    CreatedAt = DateTime.Now
+                });
+
+                instance.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(uploadedFile.PublicId))
+                {
                     try
                     {
                         await _cloudinaryService.DeleteFileAsync(uploadedFile.PublicId);
@@ -403,6 +510,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_KEY);
             await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH_KEY);
             await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
             if (nurseryId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_INSTANCES_KEY}_{nurseryId.Value}");
@@ -412,6 +520,80 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _cacheService.RemoveByPrefixAsync(NURSERY_INSTANCES_KEY);
             }
         }
+
+        #endregion
+
+        #region Embedding Operations
+
+        private void QueueEmbeddingAsync(PlantInstance entity)
+        {
+            try
+            {
+                var plant = entity.Plant;
+
+                var embeddingDto = new PlantInstanceEmbeddingDto
+                {
+                    PlantInstanceId = entity.Id,
+                    Status = entity.Status,
+                    PlantName = plant?.Name ?? string.Empty,
+                    PlantSpecificName = plant?.SpecificName,
+                    FengShuiElement = plant?.FengShuiElement,
+                    FengShuiMeaning = plant?.FengShuiMeaning,
+                    PetSafe = plant?.PetSafe,
+                    ChildSafe = plant?.ChildSafe,
+                    AirPurifying = plant?.AirPurifying,
+                    Description = entity.Description,
+                    HealthStatus = entity.HealthStatus,
+                    Height = entity.Height,
+                    TrunkDiameter = entity.TrunkDiameter,
+                    Age = entity.Age,
+                    SKU = entity.SKU,
+                    Price = entity.SpecificPrice,
+                    SpecificPrice = entity.SpecificPrice,
+                    BasePrice = plant?.BasePrice,
+                    CategoryNames = plant?.Categories?
+                        .Select(c => c.Name)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    TagNames = plant?.Tags?
+                        .Select(t => t.TagName)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList() ?? new List<string>(),
+                    NurseryId = entity.CurrentNurseryId ?? 0,
+                    NurseryName = entity.CurrentNursery?.Name
+                };
+
+                var entityId = ConvertToGuid(entity.Id);
+
+                // Queue Hangfire background job for local PostgreSQL
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessPlantInstanceEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.PlantInstance));
+
+                // Send to Langflow webhook via Hangfire
+                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
+                //    service => service.ProcessPlantInstanceIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.PlantInstance));
+            }
+            catch
+            {
+                // Log but don't fail the main operation
+            }
+        }
+
+        private async Task DeleteEmbeddingAsync(int entityId)
+        {
+            try
+            {
+                var guid = ConvertToGuid(entityId);
+                await _unitOfWork.EmbeddingRepository.DeleteByEntityAsync(EmbeddingEntityTypes.PlantInstance, guid);
+            }
+            catch
+            {
+                // Log but don't fail
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         #endregion
     }

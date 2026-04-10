@@ -13,6 +13,12 @@ public partial class NurseryOrder
 
     public int? ShipperId { get; set; }
 
+    public DateTime? AssignedAt { get; set; }
+
+    public DateTime? ShippingStartedAt { get; set; }
+
+    public DateTime? DeliveredAt { get; set; }
+
     public decimal? SubTotalAmount { get; set; }
 
     public decimal? DepositAmount { get; set; }
@@ -26,6 +32,8 @@ public partial class NurseryOrder
     public string? Note { get; set; }
 
     public string? ShipperNote { get; set; }
+
+    public string? DeliveryNote { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

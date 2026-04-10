@@ -200,7 +200,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"CommonPlant {request.CommonPlantId.Value} not exists or has been discontinued");
 
                 var price = commonPlant.Plant.BasePrice ?? 0;
-                var availableQty = commonPlant.Quantity - commonPlant.ReservedQuantity;
+                var availableQty = commonPlant.Quantity;
                 return (price, availableQty);
             }
 
@@ -211,7 +211,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"NurseryMaterial {request.NurseryMaterialId.Value} not exists or has been discontinued");
 
                 var price = nurseryMaterial.Material.BasePrice ?? 0;
-                var availableQty = nurseryMaterial.Quantity - nurseryMaterial.ReservedQuantity;
+                var availableQty = nurseryMaterial.Quantity;
                 return (price, availableQty);
             }
 
@@ -227,10 +227,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private static int GetAvailableQty(CartItem item)
         {
             if (item.CommonPlant != null)
-                return item.CommonPlant.Quantity - item.CommonPlant.ReservedQuantity;
+                return item.CommonPlant.Quantity;
 
             if (item.NurseryMaterial != null)
-                return item.NurseryMaterial.Quantity - item.NurseryMaterial.ReservedQuantity;
+                return item.NurseryMaterial.Quantity;
 
             if (item.NurseryPlantCombo != null)
                 return item.NurseryPlantCombo.Quantity;

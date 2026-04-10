@@ -8,6 +8,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<PaginatedResult<CommonPlant>> GetAllWithDetailsAsync(Pagination pagination);
         Task<CommonPlant?> GetByIdWithDetailsAsync(int id);
+        Task<string?> GetPrimaryImageUrlAsync(int commonPlantId);
         Task<PaginatedResult<CommonPlant>> GetByPlantIdAsync(int plantId, Pagination pagination);
         Task<PaginatedResult<CommonPlant>> GetByNurseryIdAsync(int nurseryId, Pagination pagination);
         Task<List<CommonPlant>> GetAllByNurseryIdAsync(int nurseryId);
@@ -31,7 +32,10 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             List<int>? sizes,
             double? minPrice,
             double? maxPrice,
-            string? sortBy,
-            bool isAscending);
+            CommonPlantSortByEnum? sortBy,
+            SortDirectionEnum? sortDirection);
+
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<CommonPlant>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }
