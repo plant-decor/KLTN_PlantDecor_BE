@@ -37,6 +37,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 pagination.PageSize);
         }
 
+        public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
+        {
+            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
+                ?? throw new UnauthorizedException("Unable to identify user from token");
+
+            if (currentUser.RoleId != (int)RoleEnum.Manager)
+                throw new ForbiddenException("Only manager can access this resource");
+
+            if (!currentUser.NurseryId.HasValue)
+                throw new ForbiddenException("Manager is not assigned to any nursery");
+
+            var (items, totalCount) = await _unitOfWork.NurseryOrderRepository.GetByNurseryIdPagedAsync(
+                currentUser.NurseryId.Value,
+                status,
+                pagination.Skip,
+                pagination.Take);
+
+            return new PaginatedResult<NurseryOrderResponseDto>(
+                items.Select(MapToDto),
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize);
+        }
+
         public async Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request)
         {
             var currentUser = await GetValidatedShipperAsync(currentUserId);
@@ -75,6 +99,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
             nurseryOrder.DeliveredAt = now;
             nurseryOrder.DeliveryNote = request.DeliveryNote;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            return MapToDto(nurseryOrder);
+        }
+
+        public async Task<NurseryOrderResponseDto> MarkDeliveryFailedAsync(int currentUserId, int nurseryOrderId, MarkDeliveryFailedRequestDto request)
+        {
+            var currentUser = await GetValidatedShipperAsync(currentUserId);
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            ValidateOwnership(currentUser, nurseryOrder);
+
+            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+                throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)NurseryOrderStatus.DeliveryFailed;
+            nurseryOrder.DeliveryNote = request.FailureReason;
             nurseryOrder.UpdatedAt = now;
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);

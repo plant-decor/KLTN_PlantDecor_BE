@@ -76,6 +76,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Xác nhận giao hàng thất bại -> DeliveryFailed
+        /// </summary>
+        [HttpPut("{id}/mark-delivery-failed")]
+        public async Task<IActionResult> MarkDeliveryFailed(int id, [FromBody] MarkDeliveryFailedRequestDto request)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.MarkDeliveryFailedAsync(currentUserId, id, request);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Xác nhận giao hàng thất bại thành công",
+                Payload = result
+            });
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
