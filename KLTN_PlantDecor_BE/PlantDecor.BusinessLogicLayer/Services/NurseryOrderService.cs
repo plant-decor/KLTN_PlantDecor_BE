@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -46,7 +46,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)NurseryOrderStatus.Assigned)
-                throw new BadRequestException("??n kh�ng ? tr?ng th�i c� th? b?t ??u giao.");
+                throw new BadRequestException("Đơn không ở trạng thái có thể bắt đầu giao.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)NurseryOrderStatus.Shipping;
@@ -69,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
-                throw new BadRequestException("??n ch?a ? tr?ng th�i ?ang giao.");
+                throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
