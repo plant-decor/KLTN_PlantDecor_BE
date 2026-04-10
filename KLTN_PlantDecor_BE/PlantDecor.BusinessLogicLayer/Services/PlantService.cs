@@ -330,6 +330,83 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedPlant!.ToResponse();
         }
 
+        public async Task<PlantResponseDto> ReplaceImageAsync(int plantId, int imageId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var image = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var oldPublicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Image upload failed");
+
+            image.ImageUrl = uploadedFile.SecureUrl;
+            plant.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantRepository.PrepareUpdate(plant);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(oldPublicId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete old plant image from Cloudinary: {PublicId}", oldPublicId); }
+            }
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
+        }
+
+        public async Task<PlantResponseDto> DeletePlantImageAsync(int plantId, int imageId)
+        {
+            var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            if (plant == null)
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+
+            var image = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+
+            var wasPrimary = image.IsPrimary == true;
+            var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            plant.PlantImages.Remove(image);
+
+            if (wasPrimary)
+            {
+                var next = plant.PlantImages.FirstOrDefault(i => i.PlantInstanceId == null);
+                if (next != null) next.IsPrimary = true;
+            }
+
+            plant.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantRepository.PrepareUpdate(plant);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(publicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(publicId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete plant image from Cloudinary: {PublicId}", publicId); }
+            }
+
+            await InvalidateCacheAsync();
+
+            var updatedPlant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
+            return updatedPlant!.ToResponse();
+        }
+
         public async Task<bool> DeletePlantAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -620,5 +697,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
         #endregion
+
+        private static string ExtractCloudinaryPublicId(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return string.Empty;
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath; // /image/upload/v123/Folder/file.jpg
+                var idx = path.IndexOf("/upload/", StringComparison.Ordinal);
+                if (idx < 0) return string.Empty;
+                var after = path[(idx + 8)..]; // v123/Folder/file.jpg OR Folder/file.jpg
+                if (after.StartsWith('v') && after.Contains('/'))
+                    after = after[(after.IndexOf('/') + 1)..]; // Folder/file.jpg
+                var dot = after.LastIndexOf('.');
+                return dot > 0 ? after[..dot] : after; // Folder/file
+            }
+            catch { return string.Empty; }
+        }
     }
 }

@@ -46,6 +46,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Lấy chi tiết một PlantInstance theo ID
+        /// GET /api/manager/plant-instances/{instanceId}
+        /// </summary>
+        [HttpGet("plant-instances/{instanceId}")]
+        public async Task<IActionResult> GetPlantInstanceById(int instanceId)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.GetByIdAsync(instanceId, managerId);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết plant instance thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Lấy danh sách PlantInstance theo nursery
         /// GET /api/manager/nurseries/{nurseryId}/plant-instances
         /// </summary>
@@ -164,10 +182,64 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Đặt ảnh primary cho PlantInstance
+        /// PATCH /api/manager/plant-instances/{instanceId}/images/{imageId}/set-primary
+        /// </summary>
+        [HttpPatch("plant-instances/{instanceId}/images/{imageId}/set-primary")]
+        public async Task<IActionResult> SetPrimaryPlantInstanceImage(int instanceId, int imageId)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.SetPrimaryInstanceImageAsync(instanceId, managerId, imageId);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Set primary plant instance image successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Thay thế ảnh cho PlantInstance
+        /// PUT /api/manager/plant-instances/{instanceId}/images/{imageId}
+        /// </summary>
+        [HttpPut("plant-instances/{instanceId}/images/{imageId}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ReplacePlantInstanceImage(int instanceId, int imageId, IFormFile file)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.ReplaceInstanceImageAsync(instanceId, managerId, imageId, file);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Replace plant instance image successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Xóa ảnh của PlantInstance
+        /// DELETE /api/manager/plant-instances/{instanceId}/images/{imageId}
+        /// </summary>
+        [HttpDelete("plant-instances/{instanceId}/images/{imageId}")]
+        public async Task<IActionResult> DeletePlantInstanceImage(int instanceId, int imageId)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.DeleteInstanceImageAsync(instanceId, managerId, imageId);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Delete plant instance image successfully",
+                Payload = result
+            });
+        }
+
         #endregion
 
-        #region Shop Operations
-
+        #region Shop - Search Available Plant Instances
         /// <summary>
         /// [Shop] Tìm kiếm cây định danh đang available (toàn hệ thống hoặc theo vựa)
         /// POST /api/shop/plant-instances/search

@@ -193,6 +193,27 @@ namespace PlantDecor.DataAccessLayer.Repositories
             _context.RefreshTokens.RemoveRange(revokedTokens);
             return await _context.SaveChangesAsync();
         }
+
+        public async Task<List<User>> GetCaretakersByNurseryIdAsync(int nurseryId)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserProfile)
+                .Include(u => u.StaffSpecializations)
+                    .ThenInclude(ss => ss.Specialization)
+                .Where(u => u.NurseryId == nurseryId && u.RoleId == (int)RoleEnum.Caretaker)
+                .OrderBy(u => u.Username)
+                .ToListAsync();
+        }
+
+        public async Task<User?> GetCaretakerByIdWithSpecializationsAsync(int userId, int nurseryId)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserProfile)
+                .Include(u => u.StaffSpecializations)
+                    .ThenInclude(ss => ss.Specialization)
+                .FirstOrDefaultAsync(u => u.Id == userId && u.NurseryId == nurseryId && u.RoleId == (int)RoleEnum.Caretaker);
+        }
     }
 }
-

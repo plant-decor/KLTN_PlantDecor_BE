@@ -11,11 +11,15 @@ public partial class ServiceProgress
 
     public int? CaretakerId { get; set; }
 
-    public int? Action { get; set; }
+    public int ShiftId { get; set; }
 
     public string? Description { get; set; }
 
     public string? EvidenceImageUrl { get; set; }
+
+    public DateOnly? TaskDate { get; set; }
+
+    public int? Status { get; set; }
 
     public DateTime? ActualStartTime { get; set; }
 
@@ -24,4 +28,6 @@ public partial class ServiceProgress
     public virtual User? Caretaker { get; set; }
 
     public virtual ServiceRegistration? ServiceRegistration { get; set; }
+
+    public virtual Shift Shift { get; set; } = null!;
 }

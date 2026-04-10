@@ -105,7 +105,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -135,8 +135,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<DateOnly?>("ReminderDate")
                         .HasColumnType("date");
@@ -168,8 +168,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
@@ -205,6 +205,22 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("CareServicePackage", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CareServiceSpecialization", b =>
+                {
+                    b.Property<int>("SpecializationId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PackageId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SpecializationId", "PackageId")
+                        .HasName("CareServiceSpecialization_pkey");
+
+                    b.HasIndex("PackageId");
+
+                    b.ToTable("CareServiceSpecialization", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Cart", b =>
                 {
                     b.Property<int>("Id")
@@ -215,8 +231,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("integer");
@@ -245,8 +261,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("NurseryMaterialId")
                         .HasColumnType("integer");
@@ -290,8 +306,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<bool?>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -308,8 +324,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("Category_pkey");
@@ -335,8 +351,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("Sender")
                         .HasColumnType("integer");
@@ -359,8 +375,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("JoinedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("ChatSessionId", "UserId");
 
@@ -378,12 +394,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("EndedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("StartedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -439,8 +455,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int>("ExperienceLevel")
                         .HasColumnType("integer");
@@ -464,8 +480,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -500,7 +516,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Vector>("EmbeddingVector")
                         .HasColumnType("vector(1536)")
@@ -553,8 +569,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("IssuedDate")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
@@ -621,8 +637,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("FluxPromptUsed")
                         .HasColumnType("text");
@@ -666,8 +682,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(512)
@@ -697,8 +713,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int>("LayoutDesignId")
                         .HasColumnType("integer");
@@ -748,8 +764,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
@@ -780,8 +796,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("Material_pkey");
@@ -799,8 +815,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(512)
@@ -840,8 +856,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<bool?>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -889,8 +905,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -957,15 +973,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("AssignedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<DateTime?>("DeliveredAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("DeliveryNote")
                         .HasMaxLength(255)
@@ -1000,7 +1016,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("ShippingStartedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
@@ -1011,8 +1027,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("NurseryOrder_pkey");
@@ -1095,8 +1111,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -1114,8 +1130,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("NurseryPlantCombo_pkey");
@@ -1140,12 +1156,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("CustomerName")
                         .HasMaxLength(100)
@@ -1186,8 +1202,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -1216,8 +1232,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("InvoiceId")
                         .HasColumnType("integer");
@@ -1226,7 +1242,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("PaymentType")
                         .HasColumnType("integer");
@@ -1267,8 +1283,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
@@ -1328,8 +1344,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("Plant_pkey");
@@ -1367,8 +1383,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
@@ -1413,8 +1429,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("ViewCount")
                         .ValueGeneratedOnAdd()
@@ -1437,8 +1453,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(512)
@@ -1505,8 +1521,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Fertilizing")
                         .HasMaxLength(255)
@@ -1555,8 +1571,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(512)
@@ -1596,8 +1612,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("CurrentNurseryId")
                         .HasColumnType("integer");
@@ -1634,8 +1650,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.HasKey("Id")
                         .HasName("PlantInstance_pkey");
@@ -1657,12 +1673,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<int>("NurseryOrderDetailId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("PlantId")
                         .HasColumnType("integer");
@@ -1678,6 +1697,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("PlantRating_pkey");
+
+                    b.HasIndex("NurseryOrderDetailId")
+                        .IsUnique();
 
                     b.HasIndex("PlantId");
 
@@ -1698,15 +1720,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedDate")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("DeviceId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("ExpiryDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsRevoked")
                         .ValueGeneratedOnAdd()
@@ -1818,8 +1840,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UploadedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("integer");
@@ -1845,7 +1867,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("RoomImageId")
                         .HasColumnType("integer");
@@ -1869,14 +1891,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Action")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("ActualEndTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("ActualStartTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("CaretakerId")
                         .HasColumnType("integer");
@@ -1892,12 +1911,23 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("ServiceRegistrationId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("TaskDate")
+                        .HasColumnType("date");
+
                     b.HasKey("Id")
                         .HasName("ServiceProgress_pkey");
 
                     b.HasIndex("CaretakerId");
 
                     b.HasIndex("ServiceRegistrationId");
+
+                    b.HasIndex("ShiftId");
 
                     b.ToTable("ServiceProgress", (string)null);
                 });
@@ -1912,21 +1942,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<decimal?>("Rating")
-                        .HasPrecision(2, 1)
-                        .HasColumnType("numeric(2,1)");
-
-                    b.Property<int?>("ServiceRegistrationId")
+                    b.Property<int>("Rating")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("ServiceRegistrationId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -1954,7 +1983,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("CancelReason")
                         .HasMaxLength(255)
@@ -1962,13 +1991,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("CurrentCaretakerId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("EstimatedDuration")
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("Latitude")
@@ -1989,9 +2015,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("NurseryCareServiceId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("NurseryId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -1999,10 +2022,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DateTime?>("ServiceDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int?>("PrefferedShiftId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ScheduleDaysOfWeek")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateOnly?>("ServiceDate")
+                        .HasColumnType("date");
 
                     b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TotalSessions")
                         .HasColumnType("integer");
 
                     b.Property<int?>("UserId")
@@ -2017,14 +2049,83 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasIndex("NurseryCareServiceId");
 
-                    b.HasIndex("NurseryId");
-
                     b.HasIndex("OrderId")
                         .IsUnique();
+
+                    b.HasIndex("PrefferedShiftId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("ServiceRegistration", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Shift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("ShiftName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id")
+                        .HasName("Shift_pkey");
+
+                    b.ToTable("Shift", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Specialization", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id")
+                        .HasName("Specialization_pkey");
+
+                    b.ToTable("Specialization", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.StaffSpecialization", b =>
+                {
+                    b.Property<int>("StaffId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SpecializationId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("StaffId", "SpecializationId")
+                        .HasName("StaffSpecialization_pkey");
+
+                    b.HasIndex("SpecializationId");
+
+                    b.ToTable("StaffSpecialization", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Tag", b =>
@@ -2063,11 +2164,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<DateTime?>("ExpiredAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("OrderInfo")
                         .HasMaxLength(255)
@@ -2109,8 +2210,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -2146,8 +2247,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Username")
                         .HasMaxLength(100)
@@ -2179,8 +2280,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Metadata")
                         .HasColumnType("jsonb");
@@ -2219,8 +2320,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<decimal?>("CurrentHeight")
                         .HasPrecision(10, 2)
@@ -2258,8 +2359,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("integer");
@@ -2290,7 +2391,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("numeric(5,2)");
 
                     b.Property<DateTime?>("LastCalculated")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("PlantId")
                         .HasColumnType("integer");
@@ -2337,8 +2438,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("FullName")
                         .HasMaxLength(100)
@@ -2368,8 +2469,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("integer");
@@ -2393,11 +2494,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -2531,6 +2632,25 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("CareReminder_UserPlantId_fkey");
 
                     b.Navigation("UserPlant");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CareServiceSpecialization", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CareServicePackage", "CareServicePackage")
+                        .WithMany("CareServiceSpecializations")
+                        .HasForeignKey("PackageId")
+                        .IsRequired()
+                        .HasConstraintName("CareServiceSpecialization_PackageId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Specialization", "Specialization")
+                        .WithMany("CareServiceSpecializations")
+                        .HasForeignKey("SpecializationId")
+                        .IsRequired()
+                        .HasConstraintName("CareServiceSpecialization_SpecializationId_fkey");
+
+                    b.Navigation("CareServicePackage");
+
+                    b.Navigation("Specialization");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Cart", b =>
@@ -2971,6 +3091,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantRating", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", "NurseryOrderDetail")
+                        .WithOne("PlantRating")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.PlantRating", "NurseryOrderDetailId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("PlantRating_NurseryOrderDetailId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
                         .WithMany("PlantRatings")
                         .HasForeignKey("PlantId")
@@ -2989,6 +3116,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("PlantRating_UserId_fkey");
+
+                    b.Navigation("NurseryOrderDetail");
 
                     b.Navigation("Plant");
 
@@ -3051,9 +3180,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasForeignKey("ServiceRegistrationId")
                         .HasConstraintName("ServiceProgress_ServiceRegistrationId_fkey");
 
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Shift", "Shift")
+                        .WithMany("ServiceProgresses")
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("ServiceProgress_ShiftId_fkey");
+
                     b.Navigation("Caretaker");
 
                     b.Navigation("ServiceRegistration");
+
+                    b.Navigation("Shift");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ServiceRating", b =>
@@ -3061,11 +3199,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.ServiceRegistration", "ServiceRegistration")
                         .WithOne("ServiceRating")
                         .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRating", "ServiceRegistrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("ServiceRating_ServiceRegistrationId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithOne("ServiceRating")
                         .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRating", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("ServiceRating_UserId_fkey");
 
                     b.Navigation("ServiceRegistration");
@@ -3090,14 +3232,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasForeignKey("NurseryCareServiceId")
                         .HasConstraintName("ServiceRegistration_NurseryCareServiceId_fkey");
 
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
-                        .WithMany("ServiceRegistrations")
-                        .HasForeignKey("NurseryId");
-
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
                         .WithOne("ServiceRegistration")
                         .HasForeignKey("PlantDecor.DataAccessLayer.Entities.ServiceRegistration", "OrderId")
                         .HasConstraintName("ServiceRegistration_OrderId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Shift", "PrefferedShift")
+                        .WithMany("ServiceRegistrations")
+                        .HasForeignKey("PrefferedShiftId")
+                        .HasConstraintName("ServiceRegistration_PrefferedShiftId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("ServiceRegistrationUsers")
@@ -3108,13 +3251,32 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("MainCaretaker");
 
-                    b.Navigation("Nursery");
-
                     b.Navigation("NurseryCareService");
 
                     b.Navigation("Order");
 
+                    b.Navigation("PrefferedShift");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.StaffSpecialization", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Specialization", "Specialization")
+                        .WithMany("StaffSpecializations")
+                        .HasForeignKey("SpecializationId")
+                        .IsRequired()
+                        .HasConstraintName("StaffSpecialization_SpecializationId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Staff")
+                        .WithMany("StaffSpecializations")
+                        .HasForeignKey("StaffId")
+                        .IsRequired()
+                        .HasConstraintName("StaffSpecialization_StaffId_fkey");
+
+                    b.Navigation("Specialization");
+
+                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Transaction", b =>
@@ -3281,6 +3443,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CareServicePackage", b =>
                 {
+                    b.Navigation("CareServiceSpecializations");
+
                     b.Navigation("NurseryCareServices");
                 });
 
@@ -3349,8 +3513,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("PlantInstances");
 
-                    b.Navigation("ServiceRegistrations");
-
                     b.Navigation("Users");
                 });
 
@@ -3369,6 +3531,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrder", b =>
                 {
                     b.Navigation("NurseryOrderDetails");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", b =>
+                {
+                    b.Navigation("PlantRating");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.NurseryPlantCombo", b =>
@@ -3466,6 +3633,20 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ServiceRating");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Shift", b =>
+                {
+                    b.Navigation("ServiceProgresses");
+
+                    b.Navigation("ServiceRegistrations");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Specialization", b =>
+                {
+                    b.Navigation("CareServiceSpecializations");
+
+                    b.Navigation("StaffSpecializations");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.User", b =>
                 {
                     b.Navigation("Carts");
@@ -3497,6 +3678,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ServiceRegistrationUsers");
 
                     b.Navigation("ShipperNurseryOrders");
+
+                    b.Navigation("StaffSpecializations");
 
                     b.Navigation("UserBehaviorLogs");
 

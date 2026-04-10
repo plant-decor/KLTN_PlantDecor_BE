@@ -88,6 +88,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request.Longitude.HasValue) entity.Longitude = request.Longitude;
             if (request.Phone != null) entity.Phone = request.Phone;
             if (request.IsActive.HasValue) entity.IsActive = request.IsActive;
+            if (request.ManagerId.HasValue) entity.ManagerId = request.ManagerId;
         }
         #endregion
     }

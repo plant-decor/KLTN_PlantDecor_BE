@@ -39,7 +39,5 @@ public partial class Nursery
 
     public virtual ICollection<NurseryMaterial> NurseryMaterials { get; set; } = new List<NurseryMaterial>();
 
-    public virtual ICollection<ServiceRegistration> ServiceRegistrations { get; set; } = new List<ServiceRegistration>();
-
     public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
 }

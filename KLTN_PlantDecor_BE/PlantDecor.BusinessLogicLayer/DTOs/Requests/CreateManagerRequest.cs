@@ -4,9 +4,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateManagerRequest
     {
-        [Required(ErrorMessage = "Cần chọn vựa để gán cho Manager")]
+        /// <summary>
+        /// Không bắt buộc — có thể gán vựa sau qua API assign-manager
+        /// </summary>
         [Range(1, int.MaxValue, ErrorMessage = "NurseryId không hợp lệ")]
-        public int NurseryId { get; set; }
+        public int? NurseryId { get; set; }
 
         [Required(ErrorMessage = "Cần nhập Email")]
         [EmailAddress(ErrorMessage = "Sai định dạng email")]

@@ -45,7 +45,8 @@ namespace PlantDecor.API.Controllers
             ["TagType"] = typeof(TagTypeEnum),
             ["WishlistItemType"] = typeof(WishlistItemType),
             ["UserActionType"] = typeof(UserActionTypeEnum),
-            ["UserStatus"] = typeof(UserStatusEnum)
+            ["UserStatus"] = typeof(UserStatusEnum),
+            ["CareServiceType"] = typeof(CareServiceTypeEnum)
         };
 
         /// <summary>
@@ -112,6 +113,26 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("CategoryType", typeof(CategoryTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Care Service
+        /// GET /api/system/enums/care-services
+        /// </summary>
+        [HttpGet("care-services")]
+        [AllowAnonymous]
+        public IActionResult GetCareServiceEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care service enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("CareServiceType", typeof(CareServiceTypeEnum))
                 }
             });
         }

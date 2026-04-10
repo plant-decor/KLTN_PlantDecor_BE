@@ -364,6 +364,106 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedMaterial!.ToResponse();
         }
 
+        public async Task<MaterialResponseDto> SetPrimaryMaterialImageAsync(int materialId, int imageId)
+        {
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            var targetImage = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
+            if (targetImage == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+
+            foreach (var image in material.MaterialImages)
+                image.IsPrimary = image.Id == imageId;
+
+            material.UpdatedAt = DateTime.Now;
+            _unitOfWork.MaterialRepository.PrepareUpdate(material);
+            await _unitOfWork.SaveAsync();
+
+            await InvalidateCacheAsync(materialId);
+
+            var updated = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updated!.ToResponse();
+        }
+
+        public async Task<MaterialResponseDto> ReplaceImageAsync(int materialId, int imageId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            var image = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var oldPublicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "MaterialImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Image upload failed");
+
+            image.ImageUrl = uploadedFile.SecureUrl;
+            material.UpdatedAt = DateTime.Now;
+            _unitOfWork.MaterialRepository.PrepareUpdate(material);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(oldPublicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(materialId);
+
+            var updated = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updated!.ToResponse();
+        }
+
+        public async Task<MaterialResponseDto> DeleteMaterialImageAsync(int materialId, int imageId)
+        {
+            var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            if (material == null)
+                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+
+            var image = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+
+            var wasPrimary = image.IsPrimary == true;
+            var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            material.MaterialImages.Remove(image);
+
+            if (wasPrimary)
+            {
+                var next = material.MaterialImages.FirstOrDefault();
+                if (next != null) next.IsPrimary = true;
+            }
+
+            material.UpdatedAt = DateTime.Now;
+            _unitOfWork.MaterialRepository.PrepareUpdate(material);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(publicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(publicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(materialId);
+
+            var updated = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
+            return updated!.ToResponse();
+        }
+
         public async Task<bool> DeleteMaterialAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -627,5 +727,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
         #endregion
+
+        private static string ExtractCloudinaryPublicId(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return string.Empty;
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath;
+                var idx = path.IndexOf("/upload/", StringComparison.Ordinal);
+                if (idx < 0) return string.Empty;
+                var after = path[(idx + 8)..];
+                if (after.StartsWith('v') && after.Contains('/'))
+                    after = after[(after.IndexOf('/') + 1)..];
+                var dot = after.LastIndexOf('.');
+                return dot > 0 ? after[..dot] : after;
+            }
+            catch { return string.Empty; }
+        }
     }
 }

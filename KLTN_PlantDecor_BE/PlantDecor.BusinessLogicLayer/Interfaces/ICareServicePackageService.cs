@@ -1,0 +1,19 @@
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+
+namespace PlantDecor.BusinessLogicLayer.Interfaces
+{
+    public interface ICareServicePackageService
+    {
+        Task<List<CareServicePackageResponseDto>> GetAllActiveAsync();
+        Task<List<CareServicePackageResponseDto>> GetAllAsync();
+        Task<CareServicePackageResponseDto> GetByIdAsync(int id);
+        Task<CareServicePackageResponseDto> CreateAsync(CreateCareServicePackageRequestDto request);
+        Task<CareServicePackageResponseDto> UpdateAsync(int id, UpdateCareServicePackageRequestDto request);
+        Task DeleteAsync(int id);
+        /// <summary>Manager: các gói dịch vụ có ít nhất 1 vựa đang kinh doanh</summary>
+        Task<List<CareServicePackageResponseDto>> GetPackagesWithNurseriesAsync();
+        /// <summary>Manager: các gói dịch vụ vựa mình chưa kinh doanh (active)</summary>
+        Task<List<CareServicePackageResponseDto>> GetNotOfferedByManagerAsync(int managerId);
+    }
+}
