@@ -1,10 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -18,25 +19,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<List<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId)
+        public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await GetValidatedShipperAsync(currentUserId);
-            var now = GetCurrentVietnamTime();
 
-            var nurseryOrders = await _unitOfWork.NurseryOrderRepository.GetByShipperAndNurseryAsync(
+            var (items, totalCount) = await _unitOfWork.NurseryOrderRepository.GetByShipperAndNurseryPagedAsync(
                 currentUserId,
                 currentUser.NurseryId!.Value,
-                new List<int>
-                {
-                    (int)NurseryOrderStatus.Assigned,
-                    (int)NurseryOrderStatus.Shipping
-                });
+                status,
+                pagination.Skip,
+                pagination.Take);
 
-            nurseryOrders = nurseryOrders
-                .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt ?? now)
-                .ToList();
+            return new PaginatedResult<NurseryOrderResponseDto>(
+                items.Select(MapToDto),
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize);
+        }
 
-            return nurseryOrders.Select(MapToDto).ToList();
+        public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
+        {
+            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
+                ?? throw new UnauthorizedException("Unable to identify user from token");
+
+            if (currentUser.RoleId != (int)RoleEnum.Manager)
+                throw new ForbiddenException("Only manager can access this resource");
+
+            if (!currentUser.NurseryId.HasValue)
+                throw new ForbiddenException("Manager is not assigned to any nursery");
+
+            var (items, totalCount) = await _unitOfWork.NurseryOrderRepository.GetByNurseryIdPagedAsync(
+                currentUser.NurseryId.Value,
+                status,
+                pagination.Skip,
+                pagination.Take);
+
+            return new PaginatedResult<NurseryOrderResponseDto>(
+                items.Select(MapToDto),
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize);
         }
 
         public async Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request)
@@ -48,7 +70,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)NurseryOrderStatus.Assigned)
-                throw new BadRequestException("??n kh�ng ? tr?ng th�i c� th? b?t ??u giao.");
+                throw new BadRequestException("Đơn không ở trạng thái có thể bắt đầu giao.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)NurseryOrderStatus.Shipping;
@@ -71,12 +93,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
-                throw new BadRequestException("??n ch?a ? tr?ng th�i ?ang giao.");
+                throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
             nurseryOrder.DeliveredAt = now;
             nurseryOrder.DeliveryNote = request.DeliveryNote;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            return MapToDto(nurseryOrder);
+        }
+
+        public async Task<NurseryOrderResponseDto> MarkDeliveryFailedAsync(int currentUserId, int nurseryOrderId, MarkDeliveryFailedRequestDto request)
+        {
+            var currentUser = await GetValidatedShipperAsync(currentUserId);
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            ValidateOwnership(currentUser, nurseryOrder);
+
+            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+                throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)NurseryOrderStatus.DeliveryFailed;
+            nurseryOrder.DeliveryNote = request.FailureReason;
             nurseryOrder.UpdatedAt = now;
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
@@ -119,6 +163,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             Status = order.Status,
             StatusName = order.Status.HasValue ? ((NurseryOrderStatus)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
+            DeliveryNote = order.DeliveryNote,
+            Note = order.Note,
             Items = order.NurseryOrderDetails.Select(d => new OrderItemResponseDto
             {
                 Id = d.Id,

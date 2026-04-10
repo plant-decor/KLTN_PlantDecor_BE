@@ -178,7 +178,7 @@ namespace PlantDecor.API
                 options.AddPolicy("Development",
                     policy => policy
                         .WithOrigins(
-                            "http://localhost:3000",         // React dev
+                            "https://localhost:3000",         // React dev
                             "http://localhost:5173",         // Vite
                             "http://localhost:5500",         // Live Server
                             "http://localhost:7180",         // API dev port

@@ -1,4 +1,5 @@
-﻿using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+﻿using Microsoft.Extensions.Configuration;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
@@ -10,10 +11,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class ChatService : IChatService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly TimeZoneInfo _vnTimeZone;
 
-        public ChatService(IUnitOfWork unitOfWork)
+        public ChatService(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
+            var timeZoneId = configuration["TimeZoneId"] ?? "SE Asia Standard Time";
+            _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
 
         public async Task<bool> IsParticipantAsync(int userId, int conversationId)
@@ -21,8 +25,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
         }
 
-        private static readonly TimeZoneInfo _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-        private static DateTime VnNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _vnTimeZone);
+        private DateTime VnNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _vnTimeZone);
 
         public async Task<ChatMessage> SendMessageAsync(int userId, int conversationId, string content)
         {
