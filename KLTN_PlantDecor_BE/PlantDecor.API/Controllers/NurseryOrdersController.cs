@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -22,23 +23,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        ///Lấy ra danh sách nursery order của shipper hiện tại
+        /// Lay ra danh sach nursery order cua shipper hien tai (co phan trang va loc theo trang thai)
         /// </summary>
         [HttpGet("my")]
-        public async Task<IActionResult> GetMyNurseryOrders()
+        public async Task<IActionResult> GetMyNurseryOrders([FromQuery] int? status, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var currentUserId = GetCurrentUserId();
-            var result = await _nurseryOrderService.GetMyNurseryOrdersAsync(currentUserId);
+            var pagination = new Pagination(pageNumber, pageSize);
+            var result = await _nurseryOrderService.GetMyNurseryOrdersAsync(currentUserId, status, pagination);
 
-            return Ok(new ApiResponse<List<NurseryOrderResponseDto>>
+            return Ok(new ApiResponse<PaginatedResult<NurseryOrderResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách đơn giao hàng thành công",
+                Message = "Lay danh sach don giao hang thanh cong",
                 Payload = result
             });
         }
-
         /// <summary>
         /// Xác nhận đã lấy hàng -> Shipping
         /// </summary>
