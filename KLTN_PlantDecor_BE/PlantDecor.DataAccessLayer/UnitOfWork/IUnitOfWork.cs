@@ -36,6 +36,12 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ILayoutDesignAiResponseImageRepository LayoutDesignAiResponseImageRepository { get; }
         ILayoutDesignPlantRepository LayoutDesignPlantRepository { get; }
         IRoomUploadModerationRepository RoomUploadModerationRepository { get; }
+        IServiceRegistrationRepository ServiceRegistrationRepository { get; }
+        IServiceProgressRepository ServiceProgressRepository { get; }
+        INurseryCareServiceRepository NurseryCareServiceRepository { get; }
+        ICareServicePackageRepository CareServicePackageRepository { get; }
+        ISpecializationRepository SpecializationRepository { get; }
+        IServiceRatingRepository ServiceRatingRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

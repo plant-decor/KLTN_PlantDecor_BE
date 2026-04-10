@@ -43,6 +43,12 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ILayoutDesignAiResponseImageRepository? _layoutDesignAiResponseImageRepository;
         private ILayoutDesignPlantRepository? _layoutDesignPlantRepository;
         private IRoomUploadModerationRepository? _roomUploadModerationRepository;
+        private IServiceRegistrationRepository? _serviceRegistrationRepository;
+        private IServiceProgressRepository? _serviceProgressRepository;
+        private INurseryCareServiceRepository? _nurseryCareServiceRepository;
+        private ICareServicePackageRepository? _careServicePackageRepository;
+        private ISpecializationRepository? _specializationRepository;
+        private IServiceRatingRepository? _serviceRatingRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -202,6 +208,36 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IRoomUploadModerationRepository RoomUploadModerationRepository
         {
             get { return _roomUploadModerationRepository ??= new RoomUploadModerationRepository(_context); }
+        }
+
+        public IServiceRegistrationRepository ServiceRegistrationRepository
+        {
+            get { return _serviceRegistrationRepository ??= new ServiceRegistrationRepository(_context); }
+        }
+
+        public IServiceProgressRepository ServiceProgressRepository
+        {
+            get { return _serviceProgressRepository ??= new ServiceProgressRepository(_context); }
+        }
+
+        public INurseryCareServiceRepository NurseryCareServiceRepository
+        {
+            get { return _nurseryCareServiceRepository ??= new NurseryCareServiceRepository(_context); }
+        }
+
+        public ICareServicePackageRepository CareServicePackageRepository
+        {
+            get { return _careServicePackageRepository ??= new CareServicePackageRepository(_context); }
+        }
+
+        public ISpecializationRepository SpecializationRepository
+        {
+            get { return _specializationRepository ??= new SpecializationRepository(_context); }
+        }
+
+        public IServiceRatingRepository ServiceRatingRepository
+        {
+            get { return _serviceRatingRepository ??= new ServiceRatingRepository(_context); }
         }
 
         // Transaction Management

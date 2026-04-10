@@ -158,6 +158,15 @@ namespace PlantDecor.API
             builder.Services.AddScoped<INurseryService, NurseryService>();
             builder.Services.AddScoped<INurseryMaterialService, NurseryMaterialService>();
 
+            // Care Service APIs
+            builder.Services.AddScoped<ICareServicePackageService, CareServicePackageService>();
+            builder.Services.AddScoped<INurseryCareServiceService, NurseryCareServiceService>();
+            builder.Services.AddScoped<IServiceRegistrationService, ServiceRegistrationService>();
+            builder.Services.AddScoped<IServiceProgressService, ServiceProgressService>();
+            builder.Services.AddScoped<IServiceCareBackgroundJobService, ServiceCareBackgroundJobService>();
+            builder.Services.AddScoped<IServiceRatingService, ServiceRatingService>();
+            builder.Services.AddScoped<ISpecializationService, SpecializationService>();
+
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
 
