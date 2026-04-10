@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -18,25 +19,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<List<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId)
+        public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await GetValidatedShipperAsync(currentUserId);
-            var now = GetCurrentVietnamTime();
 
-            var nurseryOrders = await _unitOfWork.NurseryOrderRepository.GetByShipperAndNurseryAsync(
+            var (items, totalCount) = await _unitOfWork.NurseryOrderRepository.GetByShipperAndNurseryPagedAsync(
                 currentUserId,
                 currentUser.NurseryId!.Value,
-                new List<int>
-                {
-                    (int)NurseryOrderStatus.Assigned,
-                    (int)NurseryOrderStatus.Shipping
-                });
+                status,
+                pagination.Skip,
+                pagination.Take);
 
-            nurseryOrders = nurseryOrders
-                .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt ?? now)
-                .ToList();
-
-            return nurseryOrders.Select(MapToDto).ToList();
+            return new PaginatedResult<NurseryOrderResponseDto>(
+                items.Select(MapToDto),
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize);
         }
 
         public async Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request)
