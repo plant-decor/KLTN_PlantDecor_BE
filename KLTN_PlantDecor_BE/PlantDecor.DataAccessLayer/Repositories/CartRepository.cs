@@ -17,11 +17,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenInclude(i => i.CommonPlant)
                         .ThenInclude(cp => cp!.Plant)
                 .Include(c => c.CartItems)
+                    .ThenInclude(i => i.CommonPlant)
+                        .ThenInclude(cp => cp!.Nursery)
+                .Include(c => c.CartItems)
                     .ThenInclude(i => i.NurseryPlantCombo)
                         .ThenInclude(npc => npc!.PlantCombo)
                 .Include(c => c.CartItems)
+                    .ThenInclude(i => i.NurseryPlantCombo)
+                        .ThenInclude(npc => npc!.Nursery)
+                .Include(c => c.CartItems)
                     .ThenInclude(i => i.NurseryMaterial)
                         .ThenInclude(nm => nm!.Material)
+                .Include(c => c.CartItems)
+                    .ThenInclude(i => i.NurseryMaterial)
+                        .ThenInclude(nm => nm!.Nursery)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 
@@ -30,10 +39,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var query = _context.CartItems
                 .Include(i => i.CommonPlant)
                     .ThenInclude(cp => cp!.Plant)
+                .Include(i => i.CommonPlant)
+                    .ThenInclude(cp => cp!.Nursery)
                 .Include(i => i.NurseryPlantCombo)
                     .ThenInclude(npc => npc!.PlantCombo)
+                .Include(i => i.NurseryPlantCombo)
+                    .ThenInclude(npc => npc!.Nursery)
                 .Include(i => i.NurseryMaterial)
                     .ThenInclude(nm => nm!.Material)
+                .Include(i => i.NurseryMaterial)
+                    .ThenInclude(nm => nm!.Nursery)
                 .Where(i => i.CartId == cartId)
                 .OrderByDescending(i => i.CreatedAt);
 
@@ -49,10 +64,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(i => i.Cart)
                 .Include(i => i.CommonPlant)
                     .ThenInclude(cp => cp!.Plant)
+                .Include(i => i.CommonPlant)
+                    .ThenInclude(cp => cp!.Nursery)
                 .Include(i => i.NurseryPlantCombo)
                     .ThenInclude(npc => npc!.PlantCombo)
+                .Include(i => i.NurseryPlantCombo)
+                    .ThenInclude(npc => npc!.Nursery)
                 .Include(i => i.NurseryMaterial)
                     .ThenInclude(nm => nm!.Material)
+                .Include(i => i.NurseryMaterial)
+                    .ThenInclude(nm => nm!.Nursery)
                 .FirstOrDefaultAsync(i => i.Id == cartItemId);
         }
 

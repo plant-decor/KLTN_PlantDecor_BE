@@ -17,6 +17,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (statusFilter.HasValue)
@@ -88,6 +89,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
                 .Include(pi => pi.Plant)
                     .ThenInclude(p => p.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .ToListAsync();
         }
 
@@ -110,6 +112,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.CurrentNurseryId == nurseryId && pi.Status == (int)PlantInstanceStatusEnum.Available)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (plantId.HasValue)
@@ -134,6 +137,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(pi => pi.Status == (int)PlantInstanceStatusEnum.Available)
                 .Include(pi => pi.Plant)
                 .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
                 .AsQueryable();
 
             if (nurseryId.HasValue)

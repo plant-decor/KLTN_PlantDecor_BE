@@ -61,6 +61,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PlantInstanceId = entity.Id,
                 PlantId = entity.PlantId,
                 PlantName = entity.Plant?.Name,
+                CurrentNurseryId = entity.CurrentNurseryId,
+                NurseryName = entity.CurrentNursery?.Name,
                 SKU = entity.SKU,
                 SpecificPrice = entity.SpecificPrice,
                 Height = entity.Height,
