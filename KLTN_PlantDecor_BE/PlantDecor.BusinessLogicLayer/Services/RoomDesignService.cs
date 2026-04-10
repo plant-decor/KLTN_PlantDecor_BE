@@ -470,6 +470,7 @@ Chỉ trả về JSON array, không có text khác.
 
             // Search for similar plants - get more than needed for filtering
             var searchLimit = (limit + 5) * 3;
+            // danh sách type gồm CommonPlant và PlantInstance
             var roomDesignEntityTypes = new[]
             {
                 EmbeddingEntityTypes.CommonPlant,
@@ -482,9 +483,11 @@ Chỉ trả về JSON array, không có text khác.
 
             foreach (var entityType in roomDesignEntityTypes)
             {
+                // sau khi search xong thì trong metadata đã được update thêm field "CosineSimilarityScore" để dùng làm feature khi re-rank với AI
                 var rawEmbeddings = await _unitOfWork.EmbeddingRepository
                     .SearchSimilarAsync(vector, perTypeLimit, entityType);
 
+                // tách thành 2 list embeddings có type là commonPlant và plantInstance để sau đó khi chọn lọc candidate sẽ ưu tiên đa dạng loại cây hơn là chỉ tập trung vào 1 loại có thể chiếm hết top-k
                 embeddingsByType[entityType] = rawEmbeddings
                     .Select(RoomDesignMapper.ToEmbeddingSearchItem)
                     .ToList();
@@ -497,7 +500,9 @@ Chỉ trả về JSON array, không có text khác.
                 var added = false;
                 foreach (var entityType in roomDesignEntityTypes)
                 {
+                    // Danh sách embedding đã được phân loại theo entityType, nên khi lấy ra sẽ có 2 list riêng biệt cho CommonPlant và PlantInstance. Việc này giúp đảm bảo rằng khi chọn lọc candidate ở bước sau sẽ có sự đa dạng giữa cây trong catalog (CommonPlant) và cây thực tế đã bán (PlantInstance), thay vì chỉ tập trung vào một loại có thể chiếm hết top-k.
                     var typedEmbeddings = embeddingsByType[entityType];
+                    // nếu index vượt quá số lượng embedding của type này thì bỏ qua, tiếp tục lấy embedding của type khác. Việc này giúp đảm bảo rằng nếu một type có ít embedding hơn perTypeLimit thì vẫn có thể lấy đủ số lượng candidate cần thiết từ type còn lại.
                     if (index < typedEmbeddings.Count)
                     {
                         embeddings.Add(typedEmbeddings[index]);

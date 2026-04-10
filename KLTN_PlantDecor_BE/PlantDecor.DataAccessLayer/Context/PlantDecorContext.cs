@@ -45,6 +45,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<LayoutDesign> LayoutDesigns { get; set; }
 
+    public virtual DbSet<LayoutDesignAiResponseImage> LayoutDesignAiResponseImages { get; set; }
+
     public virtual DbSet<LayoutDesignPlant> LayoutDesignPlants { get; set; }
 
     public virtual DbSet<Nursery> Nurseries { get; set; }
@@ -498,8 +500,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.PreviewImageUrl).HasMaxLength(512);
-            entity.Property(e => e.PlantCollageUrl).HasMaxLength(512);
-            entity.Property(e => e.AIResponseImageUrl).HasMaxLength(512);
 
             entity.HasOne(d => d.User).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.UserId)
@@ -508,6 +508,21 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.RoomImageId)
                 .HasConstraintName("LayoutDesign_RoomImageId_fkey");
+        });
+
+        modelBuilder.Entity<LayoutDesignAiResponseImage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("LayoutDesignAIResponseImage_pkey");
+
+            entity.ToTable("LayoutDesignAIResponseImage");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.ImageUrl).HasMaxLength(512);
+
+            entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignAiResponseImages)
+                .HasForeignKey(d => d.LayoutDesignId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignId_fkey");
         });
 
         modelBuilder.Entity<LayoutDesignPlant>(entity =>

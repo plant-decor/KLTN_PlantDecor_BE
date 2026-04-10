@@ -619,10 +619,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AIResponseImageUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -633,10 +629,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<bool?>("IsSaved")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("PlantCollageUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("PreviewImageUrl")
                         .HasMaxLength(512)
@@ -662,6 +654,34 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("LayoutDesign", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignAiResponseImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("LayoutDesignId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("LayoutDesignAIResponseImage_pkey");
+
+                    b.HasIndex("LayoutDesignId");
+
+                    b.ToTable("LayoutDesignAIResponseImage", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", b =>
@@ -1519,7 +1539,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasKey("Id")
                         .HasName("PlantGuide_pkey");
 
-                    b.HasIndex("PlantId");
+                    b.HasIndex(new[] { "PlantId" }, "IX_PlantGuide_PlantId")
+                        .IsUnique();
 
                     b.ToTable("PlantGuide", (string)null);
                 });
@@ -1801,9 +1822,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -2663,6 +2681,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignAiResponseImage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.LayoutDesign", "LayoutDesign")
+                        .WithMany("LayoutDesignAiResponseImages")
+                        .HasForeignKey("LayoutDesignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignId_fkey");
+
+                    b.Navigation("LayoutDesign");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.CommonPlant", "CommonPlant")
@@ -2894,8 +2924,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PlantGuide", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Plant", "Plant")
-                        .WithMany("PlantGuides")
-                        .HasForeignKey("PlantId")
+                        .WithOne("PlantGuide")
+                        .HasForeignKey("PlantDecor.DataAccessLayer.Entities.PlantGuide", "PlantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("PlantGuide_PlantId_fkey");
@@ -3291,6 +3321,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     b.Navigation("AilayoutResponseModerations");
 
+                    b.Navigation("LayoutDesignAiResponseImages");
+
                     b.Navigation("LayoutDesignPlants");
                 });
 
@@ -3368,7 +3400,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("PlantComboItems");
 
-                    b.Navigation("PlantGuides");
+                    b.Navigation("PlantGuide");
 
                     b.Navigation("PlantImages");
 

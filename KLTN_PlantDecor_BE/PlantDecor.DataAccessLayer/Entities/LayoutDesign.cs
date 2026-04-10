@@ -13,13 +13,9 @@ public partial class LayoutDesign
 
     public string? PreviewImageUrl { get; set; }
 
-    public string? PlantCollageUrl { get; set; }
-
     public string? FluxPromptUsed { get; set; }
 
     public string? RawResponse { get; set; }
-
-    public string? AIResponseImageUrl { get; set; }
 
     public int? Status { get; set; }
 
@@ -28,6 +24,8 @@ public partial class LayoutDesign
     public DateTime? CreatedAt { get; set; }
 
     public virtual ICollection<AilayoutResponseModeration> AilayoutResponseModerations { get; set; } = new List<AilayoutResponseModeration>();
+
+    public virtual ICollection<LayoutDesignAiResponseImage> LayoutDesignAiResponseImages { get; set; } = new List<LayoutDesignAiResponseImage>();
 
     public virtual ICollection<LayoutDesignPlant> LayoutDesignPlants { get; set; } = new List<LayoutDesignPlant>();
 

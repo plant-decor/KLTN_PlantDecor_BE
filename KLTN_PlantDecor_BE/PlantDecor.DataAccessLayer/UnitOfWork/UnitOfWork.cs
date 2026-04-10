@@ -40,6 +40,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IRoomImageRepository? _roomImageRepository;
         private IRoomDesignPreferencesRepository? _roomDesignPreferencesRepository;
         private ILayoutDesignRepository? _layoutDesignRepository;
+        private ILayoutDesignAiResponseImageRepository? _layoutDesignAiResponseImageRepository;
         private ILayoutDesignPlantRepository? _layoutDesignPlantRepository;
         private IRoomUploadModerationRepository? _roomUploadModerationRepository;
 
@@ -186,6 +187,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public ILayoutDesignRepository LayoutDesignRepository
         {
             get { return _layoutDesignRepository ??= new LayoutDesignRepository(_context); }
+        }
+
+        public ILayoutDesignAiResponseImageRepository LayoutDesignAiResponseImageRepository
+        {
+            get { return _layoutDesignAiResponseImageRepository ??= new LayoutDesignAiResponseImageRepository(_context); }
         }
 
         public ILayoutDesignPlantRepository LayoutDesignPlantRepository

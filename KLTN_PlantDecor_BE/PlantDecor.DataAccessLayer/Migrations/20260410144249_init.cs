@@ -626,10 +626,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     RoomImageId = table.Column<int>(type: "integer", nullable: true),
                     PreviewImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    PlantCollageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
                     RawResponse = table.Column<string>(type: "text", nullable: true),
-                    AIResponseImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     IsSaved = table.Column<bool>(type: "boolean", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
@@ -637,6 +635,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("LayoutDesign_pkey", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LayoutDesignAIResponseImage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    LayoutDesignId = table.Column<int>(type: "integer", nullable: false),
+                    ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("LayoutDesignAIResponseImage_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "LayoutDesignAIResponseImage_LayoutDesignId_fkey",
+                        column: x => x.LayoutDesignId,
+                        principalTable: "LayoutDesign",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -968,8 +987,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true)
+                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {
@@ -1580,6 +1598,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesignAIResponseImage_LayoutDesignId",
+                table: "LayoutDesignAIResponseImage",
+                column: "LayoutDesignId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_LayoutDesignPlant_CommonPlantId",
                 table: "LayoutDesignPlant",
                 column: "CommonPlantId");
@@ -1738,7 +1761,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlantGuide_PlantId",
                 table: "PlantGuide",
-                column: "PlantId");
+                column: "PlantId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlantImage_PlantId",
@@ -2081,6 +2105,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "InvoiceDetail");
+
+            migrationBuilder.DropTable(
+                name: "LayoutDesignAIResponseImage");
 
             migrationBuilder.DropTable(
                 name: "LayoutDesignPlant");
