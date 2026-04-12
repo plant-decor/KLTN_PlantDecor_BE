@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260410153450_init")]
+    [Migration("20260412152357_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -2025,7 +2025,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int?>("PrefferedShiftId")
+                    b.Property<int?>("PreferredShiftId")
                         .HasColumnType("integer");
 
                     b.Property<string>("ScheduleDaysOfWeek")
@@ -2055,7 +2055,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.HasIndex("PrefferedShiftId");
+                    b.HasIndex("PreferredShiftId");
 
                     b.HasIndex("UserId");
 
@@ -3242,7 +3242,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Shift", "PrefferedShift")
                         .WithMany("ServiceRegistrations")
-                        .HasForeignKey("PrefferedShiftId")
+                        .HasForeignKey("PreferredShiftId")
                         .HasConstraintName("ServiceRegistration_PrefferedShiftId_fkey");
 
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")

@@ -120,5 +120,22 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Cập nhật (thay thế toàn bộ) danh sách chuyên môn của gói dịch vụ
+        /// </summary>
+        [HttpPut("{id}/specializations")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateSpecializations(int id, [FromBody] SetSpecializationsDto request)
+        {
+            var result = await _careServicePackageService.UpdateSpecializationsAsync(id, request.SpecializationIds);
+            return Ok(new ApiResponse<CareServicePackageResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Package specializations updated successfully",
+                Payload = result
+            });
+        }
+
     }
 }

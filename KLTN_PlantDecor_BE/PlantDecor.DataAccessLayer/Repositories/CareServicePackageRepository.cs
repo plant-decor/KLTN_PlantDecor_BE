@@ -74,5 +74,27 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task ReplaceSpecializationsAsync(int packageId, List<int> specializationIds)
+        {
+            var existing = await _context.CareServiceSpecializations
+                .Where(cs => cs.PackageId == packageId)
+                .ToListAsync();
+
+            _context.CareServiceSpecializations.RemoveRange(existing);
+
+            var newEntries = specializationIds
+                .Distinct()
+                .Select(sid => new CareServiceSpecialization
+                {
+                    PackageId = packageId,
+                    SpecializationId = sid
+                }).ToList();
+
+            if (newEntries.Count > 0)
+                _context.CareServiceSpecializations.AddRange(newEntries);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

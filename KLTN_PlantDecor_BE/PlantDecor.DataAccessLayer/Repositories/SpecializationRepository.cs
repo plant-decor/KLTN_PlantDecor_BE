@@ -52,5 +52,34 @@ namespace PlantDecor.DataAccessLayer.Repositories
             _context.StaffSpecializations.Remove(existing);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<StaffSpecialization>> GetStaffSpecializationsAsync(int staffId)
+        {
+            return await _context.StaffSpecializations
+                .Where(ss => ss.StaffId == staffId)
+                .ToListAsync();
+        }
+
+        public async Task ReplaceStaffSpecializationsAsync(int staffId, List<int> specializationIds)
+        {
+            var existing = await _context.StaffSpecializations
+                .Where(ss => ss.StaffId == staffId)
+                .ToListAsync();
+
+            _context.StaffSpecializations.RemoveRange(existing);
+
+            var newEntries = specializationIds
+                .Distinct()
+                .Select(sid => new StaffSpecialization
+                {
+                    StaffId = staffId,
+                    SpecializationId = sid
+                }).ToList();
+
+            if (newEntries.Count > 0)
+                _context.StaffSpecializations.AddRange(newEntries);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

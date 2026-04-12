@@ -161,6 +161,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return packages.Select(MapToDto).ToList();
         }
 
+        public async Task<CareServicePackageResponseDto> UpdateSpecializationsAsync(int packageId, List<int> specializationIds)
+        {
+            var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            if (pkg == null)
+                throw new NotFoundException($"CareServicePackage {packageId} not found");
+
+            // Validate that all provided specialization IDs exist
+            foreach (var specId in specializationIds.Distinct())
+            {
+                var spec = await _unitOfWork.SpecializationRepository.GetByIdAsync(specId);
+                if (spec == null)
+                    throw new NotFoundException($"Specialization {specId} not found");
+            }
+
+            await _unitOfWork.CareServicePackageRepository.ReplaceSpecializationsAsync(packageId, specializationIds);
+            await InvalidateCacheAsync();
+
+            var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            return MapToDto(updated!);
+        }
+
         private async Task InvalidateCacheAsync()
         {
             await _cacheService.RemoveByPrefixAsync(CACHE_KEY_PREFIX);

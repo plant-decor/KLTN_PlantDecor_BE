@@ -172,6 +172,27 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Caretaker] Tự xem lịch chăm sóc của mình theo khoảng ngày (mặc định 7 ngày từ hôm nay)
+        /// GET /api/service-progress/my-schedule?from=&amp;to=
+        /// </summary>
+        [HttpGet("my-schedule")]
+        [Authorize(Roles = "Caretaker")]
+        public async Task<IActionResult> GetMySchedule([FromQuery] DateOnly? from, [FromQuery] DateOnly? to)
+        {
+            var caretakerId = GetUserId();
+            var fromDate = from ?? DateOnly.FromDateTime(DateTime.Today);
+            var toDate = to ?? fromDate.AddDays(6);
+            var result = await _serviceProgressService.GetMyScheduleAsync(caretakerId, fromDate, toDate);
+            return Ok(new ApiResponse<List<ServiceProgressResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get my schedule successfully",
+                Payload = result
+            });
+        }
+
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

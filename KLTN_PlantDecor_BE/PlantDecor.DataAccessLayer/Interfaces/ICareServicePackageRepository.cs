@@ -12,5 +12,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// <summary>Trả về các gói dịch vụ mà vựa chưa đang kinh doanh (active)</summary>
         Task<List<CareServicePackage>> GetNotActivelyOfferedByNurseryAsync(int nurseryId);
         Task AddSpecializationsAsync(int packageId, List<int> specializationIds);
+        Task ReplaceSpecializationsAsync(int packageId, List<int> specializationIds);
     }
 }

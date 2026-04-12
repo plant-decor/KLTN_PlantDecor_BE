@@ -1307,7 +1307,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     NurseryCareServiceId = table.Column<int>(type: "integer", nullable: true),
                     MainCaretakerId = table.Column<int>(type: "integer", nullable: true),
                     CurrentCaretakerId = table.Column<int>(type: "integer", nullable: true),
-                    PrefferedShiftId = table.Column<int>(type: "integer", nullable: true),
+                    PreferredShiftId = table.Column<int>(type: "integer", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
@@ -1346,7 +1346,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "ServiceRegistration_PrefferedShiftId_fkey",
-                        column: x => x.PrefferedShiftId,
+                        column: x => x.PreferredShiftId,
                         principalTable: "Shift",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1976,9 +1976,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServiceRegistration_PrefferedShiftId",
+                name: "IX_ServiceRegistration_PreferredShiftId",
                 table: "ServiceRegistration",
-                column: "PrefferedShiftId");
+                column: "PreferredShiftId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServiceRegistration_UserId",

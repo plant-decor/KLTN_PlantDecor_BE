@@ -1014,7 +1014,7 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("ServiceRegistration_OrderId_fkey");
 
             entity.HasOne(d => d.PrefferedShift).WithMany(p => p.ServiceRegistrations)
-                .HasForeignKey(d => d.PrefferedShiftId)
+                .HasForeignKey(d => d.PreferredShiftId)
                 .HasConstraintName("ServiceRegistration_PrefferedShiftId_fkey");
         });
 

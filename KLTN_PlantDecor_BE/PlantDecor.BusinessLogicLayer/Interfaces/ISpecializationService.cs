@@ -15,6 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Staff specialization management (Manager)
         Task<StaffWithSpecializationsResponseDto> AssignToStaffAsync(int managerId, int staffId, int specializationId);
         Task<StaffWithSpecializationsResponseDto> RemoveFromStaffAsync(int managerId, int staffId, int specializationId);
+        Task<StaffWithSpecializationsResponseDto> SetStaffSpecializationsAsync(int managerId, int staffId, List<int> specializationIds);
 
         // Caretakers eligible for a package (have all required specializations)
         Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForPackageAsync(int managerId, int packageId);

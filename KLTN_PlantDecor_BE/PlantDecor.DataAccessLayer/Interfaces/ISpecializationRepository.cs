@@ -10,5 +10,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<StaffSpecialization?> GetStaffSpecializationAsync(int staffId, int specializationId);
         Task AddStaffSpecializationAsync(StaffSpecialization assignment);
         Task RemoveStaffSpecializationAsync(StaffSpecialization existing);
+        Task<List<StaffSpecialization>> GetStaffSpecializationsAsync(int staffId);
+        Task ReplaceStaffSpecializationsAsync(int staffId, List<int> specializationIds);
     }
 }

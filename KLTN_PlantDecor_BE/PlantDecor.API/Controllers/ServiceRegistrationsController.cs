@@ -50,10 +50,10 @@ namespace PlantDecor.API.Controllers
         /// [Customer] Lấy danh sách đăng ký dịch vụ của tôi
         /// </summary>
         [HttpGet("my")]
-        public async Task<IActionResult> GetMyRegistrations([FromQuery] Pagination pagination)
+        public async Task<IActionResult> GetMyRegistrations([FromQuery] Pagination pagination, [FromQuery] int? status = null)
         {
             var userId = GetUserId();
-            var result = await _serviceRegistrationService.GetMyRegistrationsAsync(userId, pagination);
+            var result = await _serviceRegistrationService.GetMyRegistrationsAsync(userId, pagination, status);
             return Ok(new ApiResponse<PaginatedResult<ServiceRegistrationResponseDto>>
             {
                 Success = true,
