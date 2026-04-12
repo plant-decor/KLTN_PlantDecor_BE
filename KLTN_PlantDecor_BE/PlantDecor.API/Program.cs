@@ -142,6 +142,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
             builder.Services.AddScoped<IUserBehaviorLogService, UserBehaviorLogService>();
             builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+            builder.Services.AddScoped<IUserPlantService, UserPlantService>();
             builder.Services.AddScoped<IChatService, ChatService>();
 
             // Cart & Wishlist
@@ -177,6 +178,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IAISearchService, AISearchService>();
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            // builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
             builder.Services.AddScoped<ILangflowService, LangflowService>();
@@ -283,6 +285,9 @@ namespace PlantDecor.API
 
             });
 
+            var jwtSigningKey = builder.Configuration["JwtSettings:Key"]
+                ?? throw new InvalidOperationException("JwtSettings:Key is not configured.");
+
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                {
@@ -297,7 +302,7 @@ namespace PlantDecor.API
                        ClockSkew = TimeSpan.Zero, // Disable the default clock skew of 5 minutes
                        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
                        ValidAudience = builder.Configuration["JwtSettings:Audience"],
-                       IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]))
+                       IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSigningKey))
                    };
                    // map "Role" claim về role cho ASP.NET Core
                    options.TokenValidationParameters.RoleClaimType = "Role";

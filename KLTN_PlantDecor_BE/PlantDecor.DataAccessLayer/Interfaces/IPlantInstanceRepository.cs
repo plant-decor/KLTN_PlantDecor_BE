@@ -15,6 +15,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// </summary>
         Task<PlantInstance?> GetByIdWithDetailsAsync(int id);
         Task<string?> GetPrimaryImageUrlAsync(int plantInstanceId);
+        Task<Dictionary<int, string>> GetPrimaryImageUrlsAsync(IEnumerable<int> plantInstanceIds);
 
         /// <summary>
         /// Lấy danh sách PlantInstance theo nhiều Ids

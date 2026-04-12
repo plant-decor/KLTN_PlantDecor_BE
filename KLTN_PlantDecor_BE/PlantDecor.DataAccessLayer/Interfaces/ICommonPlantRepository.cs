@@ -9,6 +9,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<PaginatedResult<CommonPlant>> GetAllWithDetailsAsync(Pagination pagination);
         Task<CommonPlant?> GetByIdWithDetailsAsync(int id);
         Task<string?> GetPrimaryImageUrlAsync(int commonPlantId);
+        Task<Dictionary<int, string>> GetPrimaryImageUrlsAsync(IEnumerable<int> commonPlantIds);
         Task<PaginatedResult<CommonPlant>> GetByPlantIdAsync(int plantId, Pagination pagination);
         Task<PaginatedResult<CommonPlant>> GetByNurseryIdAsync(int nurseryId, Pagination pagination);
         Task<List<CommonPlant>> GetAllByNurseryIdAsync(int nurseryId);

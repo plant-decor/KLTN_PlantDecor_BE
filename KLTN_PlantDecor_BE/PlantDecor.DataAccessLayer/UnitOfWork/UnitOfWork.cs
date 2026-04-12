@@ -33,6 +33,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private INurseryOrderRepository? _nurseryOrderRepository;
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
+        private IUserPlantRepository? _userPlantRepository;
         private IChatSessionRepository? _chatSessionRepository;
         private IChatMessageRepository? _chatMessageRepository;
         private IChatParticipantRepository? _chatParticipantRepository;
@@ -158,6 +159,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IUserBehaviorLogRepository UserBehaviorLogRepository
         {
             get { return _userBehaviorLogRepository ??= new UserBehaviorLogRepository(_context); }
+        }
+
+        public IUserPlantRepository UserPlantRepository
+        {
+            get { return _userPlantRepository ??= new UserPlantRepository(_context); }
         }
 
         public IChatSessionRepository ChatSessionRepository
