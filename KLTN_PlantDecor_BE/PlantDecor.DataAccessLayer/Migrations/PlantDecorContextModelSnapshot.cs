@@ -640,9 +640,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
-                    b.Property<string>("FluxPromptUsed")
-                        .HasColumnType("text");
-
                     b.Property<bool?>("IsSaved")
                         .HasColumnType("boolean");
 
@@ -685,6 +682,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
+                    b.Property<string>("FluxPromptUsed")
+                        .HasColumnType("text");
+
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
@@ -692,10 +692,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int>("LayoutDesignId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("LayoutDesignPlantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PublicId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.HasKey("Id")
                         .HasName("LayoutDesignAIResponseImage_pkey");
 
                     b.HasIndex("LayoutDesignId");
+
+                    b.HasIndex(new[] { "LayoutDesignPlantId" }, "IX_LayoutDesignAIResponseImage_LayoutDesignPlantId");
 
                     b.ToTable("LayoutDesignAIResponseImage", (string)null);
                 });
@@ -2810,7 +2819,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsRequired()
                         .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignId_fkey");
 
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", "LayoutDesignPlant")
+                        .WithMany("LayoutDesignAiResponseImages")
+                        .HasForeignKey("LayoutDesignPlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignPlantId_fkey");
+
                     b.Navigation("LayoutDesign");
+
+                    b.Navigation("LayoutDesignPlant");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", b =>
@@ -3488,6 +3505,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("LayoutDesignAiResponseImages");
 
                     b.Navigation("LayoutDesignPlants");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", b =>
+                {
+                    b.Navigation("LayoutDesignAiResponseImages");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Material", b =>

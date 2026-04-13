@@ -678,7 +678,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     RoomImageId = table.Column<int>(type: "integer", nullable: true),
                     PreviewImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
                     RawResponse = table.Column<string>(type: "text", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     IsSaved = table.Column<bool>(type: "boolean", nullable: true),
@@ -696,7 +695,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LayoutDesignId = table.Column<int>(type: "integer", nullable: false),
+                    LayoutDesignPlantId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    PublicId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -1700,6 +1702,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "LayoutDesignId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LayoutDesignAIResponseImage_LayoutDesignPlantId",
+                table: "LayoutDesignAIResponseImage",
+                column: "LayoutDesignPlantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_LayoutDesignPlant_CommonPlantId",
                 table: "LayoutDesignPlant",
                 column: "CommonPlantId");
@@ -2170,6 +2177,14 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 principalColumn: "Id");
 
             migrationBuilder.AddForeignKey(
+                name: "LayoutDesignAIResponseImage_LayoutDesignPlantId_fkey",
+                table: "LayoutDesignAIResponseImage",
+                column: "LayoutDesignPlantId",
+                principalTable: "LayoutDesignPlant",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
                 name: "LayoutDesignPlant_PlantInstanceId_fkey",
                 table: "LayoutDesignPlant",
                 column: "PlantInstanceId",
@@ -2224,9 +2239,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "LayoutDesignAIResponseImage");
-
-            migrationBuilder.DropTable(
-                name: "LayoutDesignPlant");
 
             migrationBuilder.DropTable(
                 name: "MaterialCategory");
@@ -2301,7 +2313,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "ChatSession");
 
             migrationBuilder.DropTable(
-                name: "LayoutDesign");
+                name: "LayoutDesignPlant");
 
             migrationBuilder.DropTable(
                 name: "Category");
@@ -2322,7 +2334,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "Payment");
 
             migrationBuilder.DropTable(
-                name: "RoomImage");
+                name: "LayoutDesign");
 
             migrationBuilder.DropTable(
                 name: "CommonPlant");
@@ -2347,6 +2359,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Invoice");
+
+            migrationBuilder.DropTable(
+                name: "RoomImage");
 
             migrationBuilder.DropTable(
                 name: "Material");
