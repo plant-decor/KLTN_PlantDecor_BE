@@ -46,7 +46,8 @@ namespace PlantDecor.API.Controllers
             ["WishlistItemType"] = typeof(WishlistItemType),
             ["UserActionType"] = typeof(UserActionTypeEnum),
             ["UserStatus"] = typeof(UserStatusEnum),
-            ["CareServiceType"] = typeof(CareServiceTypeEnum)
+            ["CareServiceType"] = typeof(CareServiceTypeEnum),
+            ["DayOfWeek"] = typeof(DayOfWeek)
         };
 
         /// <summary>

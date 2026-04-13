@@ -301,6 +301,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!caretaker.NurseryId.HasValue || caretaker.NurseryId.Value != nursery.Id)
                 throw new ForbiddenException("Caretaker is not assigned to your nursery");
 
+            // Check schedule conflict: 1 ca chỉ làm 1 đơn
+            if (registration.PreferredShiftId.HasValue)
+            {
+                var sessionDates = ComputeSessionDates(registration);
+                if (sessionDates.Count > 0)
+                {
+                    var conflictingIds = await _unitOfWork.ServiceProgressRepository
+                        .GetConflictingCaretakerIdsAsync(registration.PreferredShiftId.Value, sessionDates);
+                    if (conflictingIds.Contains(caretakerId))
+                        throw new BadRequestException("Caretaker has schedule conflicts on one or more sessions of this registration");
+                }
+            }
+
             registration.MainCaretakerId = caretakerId;
             registration.CurrentCaretakerId = caretakerId;
             _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
@@ -400,6 +413,83 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             return MapToDto(updated!);
+        }
+
+        public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("You are not a manager of any nursery");
+
+            var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registrationId);
+            if (registration == null)
+                throw new NotFoundException($"ServiceRegistration {registrationId} not found");
+
+            if (registration.NurseryCareService?.NurseryId != nursery.Id)
+                throw new ForbiddenException("This registration does not belong to your nursery");
+
+            // Get all caretakers in the nursery
+            var allStaff = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
+
+            // Filter by specializations required by the package
+            var pkg = registration.NurseryCareService?.CareServicePackage;
+            IEnumerable<User> eligibleStaff;
+            if (pkg?.CareServiceSpecializations != null && pkg.CareServiceSpecializations.Count > 0)
+            {
+                var requiredSpecIds = pkg.CareServiceSpecializations.Select(cs => cs.SpecializationId).ToHashSet();
+                eligibleStaff = allStaff
+                    .Where(u => requiredSpecIds.All(reqId => u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+            }
+            else
+            {
+                eligibleStaff = allStaff;
+            }
+
+            // Filter out caretakers with schedule conflicts
+            if (registration.PreferredShiftId.HasValue)
+            {
+                var sessionDates = ComputeSessionDates(registration);
+                if (sessionDates.Count > 0)
+                {
+                    var conflictingIds = await _unitOfWork.ServiceProgressRepository
+                        .GetConflictingCaretakerIdsAsync(registration.PreferredShiftId.Value, sessionDates);
+                    eligibleStaff = eligibleStaff.Where(u => !conflictingIds.Contains(u.Id));
+                }
+            }
+
+            return eligibleStaff.Select(NurseryService.MapToStaffDtoPublic).ToList();
+        }
+
+        private static List<DateOnly> ComputeSessionDates(ServiceRegistration r)
+        {
+            var dates = new List<DateOnly>();
+            if (r.ServiceDate == null || r.TotalSessions == null) return dates;
+
+            bool isOneTime = r.NurseryCareService?.CareServicePackage?.ServiceType == (int)CareServiceTypeEnum.OneTime;
+            if (isOneTime)
+            {
+                dates.Add(r.ServiceDate.Value);
+                return dates;
+            }
+
+            var scheduleDays = string.IsNullOrEmpty(r.ScheduleDaysOfWeek)
+                ? new List<int>()
+                : JsonSerializer.Deserialize<List<int>>(r.ScheduleDaysOfWeek) ?? new List<int>();
+
+            var current = r.ServiceDate.Value;
+            var generated = 0;
+            while (generated < r.TotalSessions.Value)
+            {
+                // DayOfWeek: Sunday=0, Monday=1,...Saturday=6  — matches our enum (1=Mon..6=Sat)
+                int dayCode = (int)current.DayOfWeek;
+                if (scheduleDays.Contains(dayCode))
+                {
+                    dates.Add(current);
+                    generated++;
+                }
+                current = current.AddDays(1);
+            }
+            return dates;
         }
 
 

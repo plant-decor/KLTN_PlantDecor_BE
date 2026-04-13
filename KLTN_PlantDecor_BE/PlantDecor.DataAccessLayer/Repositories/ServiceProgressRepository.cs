@@ -107,5 +107,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenBy(sp => sp.Shift.StartTime)
                 .ToListAsync();
         }
+
+        public async Task<HashSet<int>> GetConflictingCaretakerIdsAsync(int shiftId, List<DateOnly> dates)
+        {
+            var ids = await _context.ServiceProgresses
+                .Where(sp => sp.ShiftId == shiftId
+                    && sp.TaskDate.HasValue && dates.Contains(sp.TaskDate.Value)
+                    && sp.Status != (int)Enums.ServiceProgressStatusEnum.Cancelled
+                    && sp.CaretakerId != null)
+                .Select(sp => sp.CaretakerId!.Value)
+                .Distinct()
+                .ToListAsync();
+            return ids.ToHashSet();
+        }
     }
 }
