@@ -13,6 +13,8 @@ public partial class PlantRating
 
     public int? PlantInstanceId { get; set; }
 
+    public int NurseryOrderDetailId { get; set; }
+
     public int Rating { get; set; }
 
     public string? Description { get; set; }
@@ -24,4 +26,6 @@ public partial class PlantRating
     public virtual PlantInstance? PlantInstance { get; set; }
 
     public virtual User? User { get; set; }
+
+    public virtual NurseryOrderDetail? NurseryOrderDetail { get; set; }
 }

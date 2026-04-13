@@ -78,7 +78,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Cập nhật thông tin vựa của Manager
         /// </summary>
-        [HttpPatch("/api/admin/my-nursery")]
+        [HttpPatch("/api/manager/my-nursery")]
         public async Task<IActionResult> UpdateMyNursery([FromBody] NurseryUpdateDto request)
         {
             var managerId = GetCurrentUserId();
@@ -227,9 +227,88 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Gán manager cho vựa
+        /// </summary>
+        [HttpPut("/api/admin/nurseries/{nurseryId}/assign-manager/{managerId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AssignManager(int nurseryId, int managerId)
+        {
+            var result = await _nurseryService.AssignManagerAsync(nurseryId, managerId);
+            return Ok(new ApiResponse<NurseryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Manager assigned to nursery successfully",
+                Payload = result
+            });
+        }
+
+        #endregion
+
+        #region Manager - Staff
+
+        /// <summary>
+        /// [Manager] Lấy danh sách nhân viên (caretaker) của vựa
+        /// GET /api/manager/nurseries/my-nursery/staff
+        /// </summary>
+        [HttpGet("my-nursery/staff")]
+        public async Task<IActionResult> GetNurseryStaff()
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetNurseryStaffAsync(managerId);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách nhân viên thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager] Lấy chi tiết nhân viên kèm chuyên môn
+        /// GET /api/manager/nurseries/my-nursery/staff/{staffId}
+        /// </summary>
+        [HttpGet("my-nursery/staff/{staffId}")]
+        public async Task<IActionResult> GetNurseryStaffDetail(int staffId)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetNurseryStaffDetailAsync(managerId, staffId);
+            return Ok(new ApiResponse<StaffWithSpecializationsResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết nhân viên thành công",
+                Payload = result
+            });
+        }
+
         #endregion
 
         #region Public Operations
+
+        /// <summary>
+        /// [Public] Tìm vựa gần theo tọa độ (Haversine), có thể lọc theo gói dịch vụ
+        /// GET /api/nurseries/nearby?lat=&amp;lng=&amp;radiusKm=&amp;packageId=
+        /// </summary>
+        [HttpGet("/api/nurseries/nearby")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNearbyNurseries(
+            [FromQuery] decimal lat,
+            [FromQuery] decimal lng,
+            [FromQuery] decimal radiusKm = 20,
+            [FromQuery] int? packageId = null)
+        {
+            var result = await _nurseryService.GetNearbyNurseriesAsync(lat, lng, radiusKm, packageId);
+            return Ok(new ApiResponse<List<NurseryNearbyResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vựa gần bạn thành công",
+                Payload = result
+            });
+        }
 
         /// <summary>
         /// [Shop] Tìm kiếm danh sách vựa đang hoạt động

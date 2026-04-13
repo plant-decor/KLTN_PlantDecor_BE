@@ -9,10 +9,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static CommonPlantEmbeddingDto ToEmbeddingBackfillDto(this CommonPlant entity)
         {
             var plant = entity.Plant;
+            var guide = plant?.PlantGuide;
 
             return new CommonPlantEmbeddingDto
             {
                 CommonPlantId = entity.Id,
+                PlantId = entity.PlantId,
                 IsActive = entity.IsActive,
                 PlantName = plant?.Name ?? string.Empty,
                 PlantSpecificName = plant?.SpecificName,
@@ -36,17 +38,28 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     .ToList() ?? new List<string>(),
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
-                Price = plant?.BasePrice
+                Price = plant?.BasePrice,
+                GuideLightRequirement = guide?.LightRequirement,
+                GuideLightRequirementName = GetLightRequirementName(guide?.LightRequirement),
+                GuideWatering = guide?.Watering,
+                GuideFertilizing = guide?.Fertilizing,
+                GuidePruning = guide?.Pruning,
+                GuideTemperature = guide?.Temperature,
+                GuideHumidity = guide?.Humidity,
+                GuideSoil = guide?.Soil,
+                GuideCareNotes = guide?.CareNotes
             };
         }
 
         public static PlantInstanceEmbeddingDto ToEmbeddingBackfillDto(this PlantInstance entity)
         {
             var plant = entity.Plant;
+            var guide = plant?.PlantGuide;
 
             return new PlantInstanceEmbeddingDto
             {
                 PlantInstanceId = entity.Id,
+                PlantId = entity.PlantId ?? 0,
                 Status = entity.Status,
                 PlantName = plant?.Name ?? string.Empty,
                 PlantSpecificName = plant?.SpecificName,
@@ -73,7 +86,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList() ?? new List<string>(),
                 NurseryId = entity.CurrentNurseryId ?? 0,
-                NurseryName = entity.CurrentNursery?.Name
+                NurseryName = entity.CurrentNursery?.Name,
+                GuideLightRequirement = guide?.LightRequirement,
+                GuideLightRequirementName = GetLightRequirementName(guide?.LightRequirement),
+                GuideWatering = guide?.Watering,
+                GuideFertilizing = guide?.Fertilizing,
+                GuidePruning = guide?.Pruning,
+                GuideTemperature = guide?.Temperature,
+                GuideHumidity = guide?.Humidity,
+                GuideSoil = guide?.Soil,
+                GuideCareNotes = guide?.CareNotes
             };
         }
 
@@ -136,6 +158,21 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 NurseryName = entity.Nursery?.Name,
                 Price = material?.BasePrice
             };
+        }
+
+        private static string? GetLightRequirementName(int? lightRequirement)
+        {
+            if (!lightRequirement.HasValue)
+            {
+                return null;
+            }
+
+            if (!Enum.IsDefined(typeof(LightRequirementEnum), lightRequirement.Value))
+            {
+                return null;
+            }
+
+            return ((LightRequirementEnum)lightRequirement.Value).ToString();
         }
     }
 }

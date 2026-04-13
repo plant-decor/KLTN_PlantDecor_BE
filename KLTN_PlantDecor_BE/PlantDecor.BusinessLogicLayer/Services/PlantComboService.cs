@@ -367,6 +367,106 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedCombo!.ToResponse();
         }
 
+        public async Task<PlantComboResponseDto> SetPrimaryPlantComboImageAsync(int comboId, int imageId)
+        {
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            var targetImage = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
+            if (targetImage == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+
+            foreach (var image in combo.PlantComboImages)
+                image.IsPrimary = image.Id == imageId;
+
+            combo.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
+            await _unitOfWork.SaveAsync();
+
+            await InvalidateCacheAsync(comboId);
+
+            var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            return updated!.ToResponse();
+        }
+
+        public async Task<PlantComboResponseDto> ReplaceImageAsync(int comboId, int imageId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            var image = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var oldPublicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantComboImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Image upload failed");
+
+            image.ImageUrl = uploadedFile.SecureUrl;
+            combo.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(oldPublicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(comboId);
+
+            var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            return updated!.ToResponse();
+        }
+
+        public async Task<PlantComboResponseDto> DeletePlantComboImageAsync(int comboId, int imageId)
+        {
+            var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            if (combo == null)
+                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+
+            var image = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+
+            var wasPrimary = image.IsPrimary == true;
+            var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            combo.PlantComboImages.Remove(image);
+
+            if (wasPrimary)
+            {
+                var next = combo.PlantComboImages.FirstOrDefault();
+                if (next != null) next.IsPrimary = true;
+            }
+
+            combo.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantComboRepository.PrepareUpdate(combo);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(publicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(publicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(comboId);
+
+            var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
+            return updated!.ToResponse();
+        }
+
         public async Task<bool> DeleteComboAsync(int id)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -1147,6 +1247,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private static Guid ConvertToGuid(int id)
             => new Guid(id.ToString().PadLeft(32, '0'));
+
+        private static string ExtractCloudinaryPublicId(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return string.Empty;
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath;
+                var idx = path.IndexOf("/upload/", StringComparison.Ordinal);
+                if (idx < 0) return string.Empty;
+                var after = path[(idx + 8)..];
+                if (after.StartsWith('v') && after.Contains('/'))
+                    after = after[(after.IndexOf('/') + 1)..];
+                var dot = after.LastIndexOf('.');
+                return dot > 0 ? after[..dot] : after;
+            }
+            catch { return string.Empty; }
+        }
 
         #endregion
     }

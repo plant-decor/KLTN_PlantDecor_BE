@@ -164,6 +164,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Thay thế ảnh plant theo imageId
+        /// </summary>
+        [HttpPut("{id}/images/{imageId}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ReplacePlantImage(int id, int imageId, IFormFile file)
+        {
+            var plant = await _plantService.ReplaceImageAsync(id, imageId, file);
+            return Ok(new ApiResponse<PlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Replace plant image successfully",
+                Payload = plant
+            });
+        }
+
+        /// <summary>
         /// Đặt thumbnail cho plant theo imageId
         /// </summary>
         [HttpPatch("{id}/images/{imageId}/set-primary")]
@@ -175,6 +192,22 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Set primary plant image successfully",
+                Payload = plant
+            });
+        }
+
+        /// <summary>
+        /// Xóa ảnh plant theo imageId
+        /// </summary>
+        [HttpDelete("{id}/images/{imageId}")]
+        public async Task<IActionResult> DeletePlantImage(int id, int imageId)
+        {
+            var plant = await _plantService.DeletePlantImageAsync(id, imageId);
+            return Ok(new ApiResponse<PlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Delete plant image successfully",
                 Payload = plant
             });
         }

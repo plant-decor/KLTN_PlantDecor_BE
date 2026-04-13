@@ -172,18 +172,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return entityType switch
             {
                 EmbeddingEntityTypes.CommonPlant when entity is CommonPlantEmbeddingDto cpDto
-                    => _textSerializer.ExtractMetadata(
-                        cpDto.NurseryId,
-                        cpDto.Price ?? cpDto.BasePrice,
-                        cpDto.IsActive ? "Active" : "Inactive",
-                        cpDto.CommonPlantId),
+                    => AddPlantGuideMetadata(
+                        _textSerializer.ExtractMetadata(
+                            cpDto.NurseryId,
+                            cpDto.Price ?? cpDto.BasePrice,
+                            cpDto.IsActive ? "Active" : "Inactive",
+                            cpDto.CommonPlantId),
+                        cpDto.GuideLightRequirement,
+                        cpDto.GuideLightRequirementName),
 
                 EmbeddingEntityTypes.PlantInstance when entity is PlantInstanceEmbeddingDto piDto
-                    => _textSerializer.ExtractMetadata(
-                        piDto.NurseryId,
-                        piDto.Price ?? piDto.SpecificPrice ?? piDto.BasePrice,
-                        piDto.Status == 1 ? "Available" : "Unavailable",
-                        piDto.PlantInstanceId),
+                    => AddPlantGuideMetadata(
+                        _textSerializer.ExtractMetadata(
+                            piDto.NurseryId,
+                            piDto.Price ?? piDto.SpecificPrice ?? piDto.BasePrice,
+                            piDto.Status == 1 ? "Available" : "Unavailable",
+                            piDto.PlantInstanceId),
+                        piDto.GuideLightRequirement,
+                        piDto.GuideLightRequirementName),
 
                 EmbeddingEntityTypes.NurseryPlantCombo when entity is NurseryPlantComboEmbeddingDto npcDto
                     => _textSerializer.ExtractMetadata(
@@ -202,6 +208,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Fallback for unknown types
                 _ => new Dictionary<string, object> { ["EntityTypeName"] = typeof(T).Name }
             };
+        }
+
+        private static Dictionary<string, object> AddPlantGuideMetadata(
+            Dictionary<string, object> metadata,
+            int? guideLightRequirement,
+            string? guideLightRequirementName)
+        {
+            if (guideLightRequirement.HasValue)
+            {
+                metadata["GuideLightRequirement"] = guideLightRequirement.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(guideLightRequirementName))
+            {
+                metadata["GuideLightRequirementName"] = guideLightRequirementName;
+            }
+
+            return metadata;
         }
 
         private static Dictionary<string, object> CloneMetadataWithChunkInfo(

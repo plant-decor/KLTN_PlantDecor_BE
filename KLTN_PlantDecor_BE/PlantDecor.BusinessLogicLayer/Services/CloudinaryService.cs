@@ -51,6 +51,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<bool> DeleteFileByUrlAsync(string fileUrl)
+        {
+            var publicId = ExtractCloudinaryPublicId(fileUrl);
+            if (string.IsNullOrWhiteSpace(publicId))
+            {
+                _logger.LogWarning("Unable to extract Cloudinary publicId from URL: {FileUrl}", fileUrl);
+                return false;
+            }
+
+            return await DeleteFileAsync(publicId);
+        }
+
         public async Task<List<bool>> DeleteFilesAsync(List<string> publicIds)
         {
             var results = new List<bool>();
@@ -136,6 +148,58 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<FileUploadResponse> UploadImageBytesAsync(byte[] fileBytes, string fileName, string folder = "tests")
+        {
+            if (fileBytes == null || fileBytes.Length == 0)
+            {
+                throw new BadRequestException("Image bytes are null or empty");
+            }
+
+            var normalizedFileName = string.IsNullOrWhiteSpace(fileName)
+                ? $"generated_{Guid.NewGuid():N}.png"
+                : fileName;
+
+            var fileExtension = Path.GetExtension(normalizedFileName).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(fileExtension))
+            {
+                fileExtension = ".png";
+                normalizedFileName = $"{normalizedFileName}.png";
+            }
+
+            await using var stream = new MemoryStream(fileBytes);
+            var uploadParams = new ImageUploadParams
+            {
+                File = new FileDescription(normalizedFileName, stream),
+                Folder = folder,
+                PublicId = $"{folder}/{Guid.NewGuid()}_{Path.GetFileNameWithoutExtension(normalizedFileName)}",
+                UseFilename = false,
+                UniqueFilename = true,
+                Overwrite = false
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            if (uploadResult.Error != null)
+            {
+                _logger.LogError("Cloudinary upload error for generated image: {Message}", uploadResult.Error.Message);
+                throw new BadRequestException($"Upload failed: {uploadResult.Error.Message}");
+            }
+
+            return new FileUploadResponse
+            {
+                PublicId = uploadResult.PublicId,
+                Url = uploadResult.Url?.ToString() ?? string.Empty,
+                SecureUrl = uploadResult.SecureUrl?.ToString() ?? string.Empty,
+                OriginalFileName = normalizedFileName,
+                FileType = fileExtension,
+                FileSize = fileBytes.Length,
+                UploadedAt = DateTime.UtcNow,
+                Width = uploadResult.Width,
+                Height = uploadResult.Height,
+                Format = uploadResult.Format,
+                ResourceType = uploadResult.ResourceType
+            };
+        }
+
         public async Task<List<FileUploadResponse>> UploadFilesAsync(List<IFormFile> files, string folder = "tests")
         {
             var results = new List<FileUploadResponse>();
@@ -199,6 +263,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             return (true, string.Empty);
+        }
+
+        private static string ExtractCloudinaryPublicId(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath;
+                var uploadIndex = path.IndexOf("/upload/", StringComparison.Ordinal);
+                if (uploadIndex < 0)
+                {
+                    return string.Empty;
+                }
+
+                var afterUpload = path[(uploadIndex + "/upload/".Length)..];
+                if (afterUpload.StartsWith('v') && afterUpload.Contains('/'))
+                {
+                    afterUpload = afterUpload[(afterUpload.IndexOf('/') + 1)..];
+                }
+
+                var extensionIndex = afterUpload.LastIndexOf('.');
+                return extensionIndex > 0
+                    ? afterUpload[..extensionIndex]
+                    : afterUpload;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }

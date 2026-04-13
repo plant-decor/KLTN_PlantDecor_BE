@@ -16,6 +16,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<BatchCreatePlantInstanceResponseDto> BatchCreateAsync(int nurseryId, int managerId, BatchCreatePlantInstanceRequestDto request);
 
         /// <summary>
+        /// Lấy chi tiết một PlantInstance theo ID
+        /// GET /api/manager/plant-instances/{instanceId}
+        /// </summary>
+        Task<PlantInstanceResponseDto> GetByIdAsync(int instanceId, int managerId);
+
+        /// <summary>
         /// Lấy danh sách PlantInstance theo nursery (phân trang + lọc theo status)
         /// GET /api/manager/nurseries/{nurseryId}/plant-instances
         /// </summary>
@@ -45,6 +51,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// </summary>
         Task<PlantInstanceResponseDto> UploadPlantInstanceThumbnailAsync(int instanceId, int managerId, IFormFile file);
         Task<PlantInstanceResponseDto> UploadPlantInstanceImagesAsync(int instanceId, int managerId, List<IFormFile> files);
+        Task<PlantInstanceResponseDto> SetPrimaryInstanceImageAsync(int instanceId, int managerId, int imageId);
+        Task<PlantInstanceResponseDto> ReplaceInstanceImageAsync(int instanceId, int managerId, int imageId, IFormFile file);
+        Task<PlantInstanceResponseDto> DeleteInstanceImageAsync(int instanceId, int managerId, int imageId);
 
         #endregion
 

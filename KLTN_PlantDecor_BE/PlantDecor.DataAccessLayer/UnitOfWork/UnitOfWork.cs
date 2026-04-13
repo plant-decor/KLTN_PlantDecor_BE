@@ -16,6 +16,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ICategoryRepository? _categoryRepository;
         private ITagRepository? _tagRepository;
         private IPlantRepository? _plantRepository;
+        private IPlantGuideRepository? _plantGuideRepository;
         private IMaterialRepository? _materialRepository;
         private IRoleRepository? _roleRepository;
         private ICommonPlantRepository? _commonPlantRepository;
@@ -32,10 +33,24 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private INurseryOrderRepository? _nurseryOrderRepository;
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
+        private IUserPlantRepository? _userPlantRepository;
         private IChatSessionRepository? _chatSessionRepository;
         private IChatMessageRepository? _chatMessageRepository;
         private IChatParticipantRepository? _chatParticipantRepository;
         private IEmbeddingRepository? _embeddingRepository;
+        private IRoomImageRepository? _roomImageRepository;
+        private IRoomDesignPreferencesRepository? _roomDesignPreferencesRepository;
+        private ILayoutDesignRepository? _layoutDesignRepository;
+        private ILayoutDesignAiResponseImageRepository? _layoutDesignAiResponseImageRepository;
+        private ILayoutDesignPlantRepository? _layoutDesignPlantRepository;
+        private IRoomUploadModerationRepository? _roomUploadModerationRepository;
+        private IServiceRegistrationRepository? _serviceRegistrationRepository;
+        private IServiceProgressRepository? _serviceProgressRepository;
+        private INurseryCareServiceRepository? _nurseryCareServiceRepository;
+        private ICareServicePackageRepository? _careServicePackageRepository;
+        private ISpecializationRepository? _specializationRepository;
+        private IServiceRatingRepository? _serviceRatingRepository;
+        private IShiftRepository? _shiftRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -61,6 +76,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IPlantRepository PlantRepository
         {
             get { return _plantRepository ??= new PlantRepository(_context); }
+        }
+
+        public IPlantGuideRepository PlantGuideRepository
+        {
+            get { return _plantGuideRepository ??= new PlantGuideRepository(_context); }
         }
 
         public IMaterialRepository MaterialRepository
@@ -142,6 +162,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
             get { return _userBehaviorLogRepository ??= new UserBehaviorLogRepository(_context); }
         }
 
+        public IUserPlantRepository UserPlantRepository
+        {
+            get { return _userPlantRepository ??= new UserPlantRepository(_context); }
+        }
+
         public IChatSessionRepository ChatSessionRepository
         {
             get { return _chatSessionRepository ??= new ChatSessionRepository(_context); }
@@ -160,6 +185,71 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IEmbeddingRepository EmbeddingRepository
         {
             get { return _embeddingRepository ??= new EmbeddingRepository(_context); }
+        }
+
+        public IRoomImageRepository RoomImageRepository
+        {
+            get { return _roomImageRepository ??= new RoomImageRepository(_context); }
+        }
+
+        public IRoomDesignPreferencesRepository RoomDesignPreferencesRepository
+        {
+            get { return _roomDesignPreferencesRepository ??= new RoomDesignPreferencesRepository(_context); }
+        }
+
+        public ILayoutDesignRepository LayoutDesignRepository
+        {
+            get { return _layoutDesignRepository ??= new LayoutDesignRepository(_context); }
+        }
+
+        public ILayoutDesignAiResponseImageRepository LayoutDesignAiResponseImageRepository
+        {
+            get { return _layoutDesignAiResponseImageRepository ??= new LayoutDesignAiResponseImageRepository(_context); }
+        }
+
+        public ILayoutDesignPlantRepository LayoutDesignPlantRepository
+        {
+            get { return _layoutDesignPlantRepository ??= new LayoutDesignPlantRepository(_context); }
+        }
+
+        public IRoomUploadModerationRepository RoomUploadModerationRepository
+        {
+            get { return _roomUploadModerationRepository ??= new RoomUploadModerationRepository(_context); }
+        }
+
+        public IServiceRegistrationRepository ServiceRegistrationRepository
+        {
+            get { return _serviceRegistrationRepository ??= new ServiceRegistrationRepository(_context); }
+        }
+
+        public IServiceProgressRepository ServiceProgressRepository
+        {
+            get { return _serviceProgressRepository ??= new ServiceProgressRepository(_context); }
+        }
+
+        public INurseryCareServiceRepository NurseryCareServiceRepository
+        {
+            get { return _nurseryCareServiceRepository ??= new NurseryCareServiceRepository(_context); }
+        }
+
+        public ICareServicePackageRepository CareServicePackageRepository
+        {
+            get { return _careServicePackageRepository ??= new CareServicePackageRepository(_context); }
+        }
+
+        public ISpecializationRepository SpecializationRepository
+        {
+            get { return _specializationRepository ??= new SpecializationRepository(_context); }
+        }
+
+        public IServiceRatingRepository ServiceRatingRepository
+        {
+            get { return _serviceRatingRepository ??= new ServiceRatingRepository(_context); }
+        }
+
+        public IShiftRepository ShiftRepository
+        {
+            get { return _shiftRepository ??= new ShiftRepository(_context); }
         }
 
         // Transaction Management

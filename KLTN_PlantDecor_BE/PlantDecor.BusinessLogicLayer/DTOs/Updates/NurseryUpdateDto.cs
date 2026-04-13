@@ -13,13 +13,20 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         [Range(0, double.MaxValue, ErrorMessage = "Diện tích phải lớn hơn hoặc bằng 0")]
         public decimal? Area { get; set; }
 
+        [Range(-90.0, 90.0, ErrorMessage = "Vĩ độ phải nằm trong khoảng -90 đến 90")]
         public decimal? Latitude { get; set; }
 
+        [Range(-180.0, 180.0, ErrorMessage = "Kinh độ phải nằm trong khoảng -180 đến 180")]
         public decimal? Longitude { get; set; }
 
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        [RegularExpression(@"^(0[3|5|7|8|9])[0-9]{8}$", ErrorMessage = "Số điện thoại không hợp lệ (phải là số điện thoại Việt Nam 10 chữ số)")]
         public string? Phone { get; set; }
 
         public bool? IsActive { get; set; }
+
+        /// <summary>
+        /// Gán manager cho vựa (chỉ dùng cho Admin)
+        /// </summary>
+        public int? ManagerId { get; set; }
     }
 }

@@ -30,7 +30,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var strategy = (PaymentStrategiesEnum)request.PaymentStrategy;
             var orderType = (OrderTypeEnum)request.OrderType;
 
+            ValidateCreateOrderRequest(orderType, request);
+
             List<OrderItemInfo> orderItems;
+            var isCheckoutFromCart = false;
 
             // Flow 1: PlantInstance Order (Buy Now - không qua Cart)
             if (orderType == OrderTypeEnum.PlantInstance)
@@ -62,9 +65,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
                 };
             }
-            // Flow 2: OtherProducts Order (From Cart)
-            else
+            // Flow 2: OtherProducts Buy Now (khong qua Cart)
+            else if (orderType == OrderTypeEnum.OtherProductBuyNow)
             {
+                orderItems = await BuildOtherProductBuyNowOrderItemsAsync(request);
+            }
+            // Flow 3: OtherProducts Order (From Cart)
+            else if (orderType == OrderTypeEnum.OtherProduct)
+            {
+                isCheckoutFromCart = true;
+
                 // Get cart with items from database
                 var cart = await _unitOfWork.CartRepository.GetByUserIdAsync(userId);
 
@@ -112,6 +122,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Price = GetPriceFromCartItem(ci)
                 }).ToList();
             }
+            else
+            {
+                throw new BadRequestException($"OrderType {request.OrderType} is not supported for create order");
+            }
 
             // Validate payment strategy
             if (orderType != OrderTypeEnum.PlantInstance && strategy == PaymentStrategiesEnum.Deposit)
@@ -129,7 +143,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             // Clear checked out cart items (only for OtherProducts)
-            if (orderType != OrderTypeEnum.PlantInstance)
+            if (isCheckoutFromCart)
             {
                 var cart = await _unitOfWork.CartRepository.GetByUserIdAsync(userId);
 
@@ -328,6 +342,128 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return cartItem.NurseryMaterial.Material?.BasePrice ?? 0;
 
             return 0;
+        }
+
+        private static void ValidateCreateOrderRequest(OrderTypeEnum orderType, CreateOrderRequestDto request)
+        {
+            if (!Enum.IsDefined(typeof(OrderTypeEnum), (int)orderType))
+                throw new BadRequestException($"Invalid OrderType: {request.OrderType}");
+
+            switch (orderType)
+            {
+                case OrderTypeEnum.PlantInstance:
+                    if (request.CartItemIds != null && request.CartItemIds.Any())
+                        throw new BadRequestException("CartItemIds are not allowed for PlantInstance orders");
+
+                    if (request.BuyNowItemId.HasValue || request.BuyNowItemType.HasValue)
+                        throw new BadRequestException("BuyNowItem fields are only allowed for OtherProductBuyNow orders");
+
+                    break;
+
+                case OrderTypeEnum.OtherProductBuyNow:
+                    if (request.CartItemIds != null && request.CartItemIds.Any())
+                        throw new BadRequestException("CartItemIds are not allowed for OtherProductBuyNow orders");
+
+                    if (request.PlantInstanceId.HasValue)
+                        throw new BadRequestException("PlantInstanceId is not allowed for OtherProductBuyNow orders");
+
+                    break;
+
+                case OrderTypeEnum.OtherProduct:
+                    if (request.BuyNowItemId.HasValue || request.BuyNowItemType.HasValue)
+                        throw new BadRequestException("BuyNowItem fields are not allowed when OrderType is OtherProduct. Use OrderType = OtherProductBuyNow");
+
+                    if (request.PlantInstanceId.HasValue)
+                        throw new BadRequestException("PlantInstanceId is only allowed for PlantInstance orders");
+
+                    break;
+
+                default:
+                    throw new BadRequestException($"OrderType {request.OrderType} is not supported for create order");
+            }
+        }
+
+        private async Task<List<OrderItemInfo>> BuildOtherProductBuyNowOrderItemsAsync(CreateOrderRequestDto request)
+        {
+            if (!request.BuyNowItemId.HasValue)
+                throw new BadRequestException("BuyNowItemId is required for OtherProductBuyNow order");
+
+            if (!request.BuyNowItemType.HasValue)
+                throw new BadRequestException("BuyNowItemType is required for OtherProductBuyNow order");
+
+            if (request.BuyNowQuantity <= 0)
+                throw new BadRequestException("BuyNowQuantity must be greater than 0");
+
+            var itemType = (BuyNowItemTypeEnum)request.BuyNowItemType.Value;
+            var itemId = request.BuyNowItemId.Value;
+            var quantity = request.BuyNowQuantity;
+
+            var orderItem = itemType switch
+            {
+                BuyNowItemTypeEnum.CommonPlant => await BuildCommonPlantBuyNowItemAsync(itemId, quantity),
+                BuyNowItemTypeEnum.NurseryPlantCombo => await BuildNurseryPlantComboBuyNowItemAsync(itemId, quantity),
+                BuyNowItemTypeEnum.NurseryMaterial => await BuildNurseryMaterialBuyNowItemAsync(itemId, quantity),
+                _ => throw new BadRequestException($"Unsupported BuyNowItemType: {request.BuyNowItemType.Value}")
+            };
+
+            return new List<OrderItemInfo> { orderItem };
+        }
+
+        private async Task<OrderItemInfo> BuildCommonPlantBuyNowItemAsync(int itemId, int quantity)
+        {
+            var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(itemId);
+            if (commonPlant == null || !commonPlant.IsActive)
+                throw new NotFoundException($"CommonPlant {itemId} not exists or has been discontinued");
+
+            if (commonPlant.Quantity < quantity)
+                throw new BadRequestException($"The remaining stock isn't enough for request. Remaining: {commonPlant.Quantity}");
+
+            return new OrderItemInfo
+            {
+                CommonPlantId = commonPlant.Id,
+                NurseryId = commonPlant.NurseryId,
+                ItemName = commonPlant.Plant?.Name ?? $"CommonPlant #{commonPlant.Id}",
+                Quantity = quantity,
+                Price = commonPlant.Plant?.BasePrice ?? 0
+            };
+        }
+
+        private async Task<OrderItemInfo> BuildNurseryMaterialBuyNowItemAsync(int itemId, int quantity)
+        {
+            var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(itemId);
+            if (nurseryMaterial == null || !nurseryMaterial.IsActive)
+                throw new NotFoundException($"NurseryMaterial {itemId} not exists or has been discontinued");
+
+            if (nurseryMaterial.Quantity < quantity)
+                throw new BadRequestException($"The remaining stock isn't enough for request. Remaining: {nurseryMaterial.Quantity}");
+
+            return new OrderItemInfo
+            {
+                NurseryMaterialId = nurseryMaterial.Id,
+                NurseryId = nurseryMaterial.NurseryId,
+                ItemName = nurseryMaterial.Material?.Name ?? $"NurseryMaterial #{nurseryMaterial.Id}",
+                Quantity = quantity,
+                Price = nurseryMaterial.Material?.BasePrice ?? 0
+            };
+        }
+
+        private async Task<OrderItemInfo> BuildNurseryPlantComboBuyNowItemAsync(int itemId, int quantity)
+        {
+            var combo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(itemId);
+            if (combo == null || !combo.IsActive)
+                throw new NotFoundException($"NurseryPlantCombo {itemId} not exists or has been discontinued");
+
+            if (combo.Quantity < quantity)
+                throw new BadRequestException($"The remaining stock isn't enough for request. Remaining: {combo.Quantity}");
+
+            return new OrderItemInfo
+            {
+                NurseryPlantComboId = combo.Id,
+                NurseryId = combo.NurseryId,
+                ItemName = combo.PlantCombo?.ComboName ?? $"NurseryPlantCombo #{combo.Id}",
+                Quantity = quantity,
+                Price = combo.PlantCombo?.ComboPrice ?? 0
+            };
         }
 
         private static Order BuildOrder(int userId, CreateOrderRequestDto request, List<IGrouping<int, OrderItemInfo>> groupedItems)

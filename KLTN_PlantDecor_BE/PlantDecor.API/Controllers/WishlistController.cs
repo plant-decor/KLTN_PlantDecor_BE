@@ -80,6 +80,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Xóa toàn bộ item khỏi wishlist
+        /// </summary>
+        [HttpDelete("all")]
+        public async Task<IActionResult> ClearWishlist()
+        {
+            var userId = GetUserId();
+            var removedCount = await _wishlistService.ClearWishlistAsync(userId);
+
+            return Ok(new ApiResponse<int>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Clear wishlist successfully",
+                Payload = removedCount
+            });
+        }
+
+        /// <summary>
         /// Kiểm tra item có trong wishlist không
         /// </summary>
         /// <param name="itemType">Loại item (0: Plant, 1: PlantInstance, 2: PlantCombo, 3: Material)</param>

@@ -15,6 +15,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// </summary>
         Task<PlantInstance?> GetByIdWithDetailsAsync(int id);
         Task<string?> GetPrimaryImageUrlAsync(int plantInstanceId);
+        Task<Dictionary<int, string>> GetPrimaryImageUrlsAsync(IEnumerable<int> plantInstanceIds);
 
         /// <summary>
         /// Lấy danh sách PlantInstance theo nhiều Ids
@@ -48,5 +49,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
 
         Task<int> CountForEmbeddingBackfillAsync();
         Task<List<PlantInstance>> GetEmbeddingBackfillBatchAsync(int skip, int take);
+        Task<List<PlantInstance>> GetByPlantIdForEmbeddingAsync(int plantId);
     }
 }

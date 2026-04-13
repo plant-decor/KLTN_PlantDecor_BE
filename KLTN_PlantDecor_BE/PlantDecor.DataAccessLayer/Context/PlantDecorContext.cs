@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.DataAccessLayer.Context;
@@ -16,6 +17,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<CareReminder> CareReminders { get; set; }
 
     public virtual DbSet<CareServicePackage> CareServicePackages { get; set; }
+
+    public virtual DbSet<CareServiceSpecialization> CareServiceSpecializations { get; set; }
 
     public virtual DbSet<Cart> Carts { get; set; }
 
@@ -44,6 +47,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<InvoiceDetail> InvoiceDetails { get; set; }
 
     public virtual DbSet<LayoutDesign> LayoutDesigns { get; set; }
+
+    public virtual DbSet<LayoutDesignAiResponseImage> LayoutDesignAiResponseImages { get; set; }
 
     public virtual DbSet<LayoutDesignPlant> LayoutDesignPlants { get; set; }
 
@@ -95,6 +100,12 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<ServiceRegistration> ServiceRegistrations { get; set; }
 
+    public virtual DbSet<Shift> Shifts { get; set; }
+
+    public virtual DbSet<Specialization> Specializations { get; set; }
+
+    public virtual DbSet<StaffSpecialization> StaffSpecializations { get; set; }
+
     public virtual DbSet<Tag> Tags { get; set; }
 
     public virtual DbSet<Transaction> Transactions { get; set; }
@@ -111,6 +122,16 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Wishlist> Wishlists { get; set; }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone");
+
+        configurationBuilder.Properties<DateTime?>()
+        .HaveColumnType("timestamp without time zone");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,7 +158,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("CareReminder");
 
             entity.Property(e => e.Content).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.UserPlant).WithMany(p => p.CareReminders)
                 .HasForeignKey(d => d.UserPlantId)
@@ -150,7 +171,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("CareServicePackage");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
@@ -162,7 +183,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("Cart");
 
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.User).WithMany(p => p.Carts)
                 .HasForeignKey(d => d.UserId)
@@ -175,7 +196,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("CartItem");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Price).HasPrecision(18, 2);
             entity.Property(e => e.Quantity).HasDefaultValue(1);
 
@@ -202,10 +223,10 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("Category");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.ParentCategory).WithMany(p => p.InverseParentCategory)
                 .HasForeignKey(d => d.ParentCategoryId)
@@ -218,7 +239,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("ChatMessage");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.ChatSession).WithMany(p => p.ChatMessages)
                 .HasForeignKey(d => d.ChatSessionId)
@@ -231,7 +252,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasKey(cp => new { cp.ChatSessionId, cp.UserId });
 
-            entity.Property(e => e.JoinedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.ChatSession).WithMany(p => p.ChatParticipants)
                 .HasForeignKey(d => d.ChatSessionId)
@@ -248,15 +269,15 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("ChatSession");
 
-            entity.Property(e => e.StartedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.StartedAt).HasDefaultValueSql("LOCALTIMESTAMP");
         });
 
         modelBuilder.Entity<CustomerSurvey>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("CustomerSurvey_pkey");
             entity.ToTable("CustomerSurvey");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.MaxBudget).HasPrecision(18, 2);
             entity.Property(e => e.HasPets).HasDefaultValue(false);
             entity.Property(e => e.HasChildren).HasDefaultValue(false);
@@ -273,14 +294,14 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.Brand).HasMaxLength(100);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.MaterialCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Specifications).HasColumnType("jsonb");
             entity.Property(e => e.Unit).HasMaxLength(20);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasMany(d => d.Categories).WithMany(p => p.Materials)
                 .UsingEntity<Dictionary<string, object>>(
@@ -323,7 +344,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("MaterialImage");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
             entity.Property(e => e.IsPrimary).HasDefaultValue(false);
 
@@ -339,8 +360,8 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("NurseryPlantCombo");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.PlantCombo).WithMany(p => p.NurseryPlantCombos)
                 .HasForeignKey(d => d.PlantComboId)
@@ -369,8 +390,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Note).HasMaxLength(255);
             entity.Property(e => e.ShipperNote).HasMaxLength(255);
             entity.Property(e => e.DeliveryNote).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.Order).WithMany(p => p.NurseryOrders)
                 .HasForeignKey(d => d.OrderId)
@@ -429,7 +450,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("NurseryCareService");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.CareServicePackage).WithMany(p => p.NurseryCareServices)
                 .HasForeignKey(d => d.CareServicePackageId)
@@ -467,7 +488,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("Invoice");
 
-            entity.Property(e => e.IssuedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.IssuedDate).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
 
             entity.HasOne(d => d.Order).WithMany(p => p.Invoices)
@@ -496,10 +517,8 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("LayoutDesign");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.PreviewImageUrl).HasMaxLength(512);
-            entity.Property(e => e.PlantCollageUrl).HasMaxLength(512);
-            entity.Property(e => e.AIResponseImageUrl).HasMaxLength(512);
 
             entity.HasOne(d => d.User).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.UserId)
@@ -508,6 +527,29 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.RoomImageId)
                 .HasConstraintName("LayoutDesign_RoomImageId_fkey");
+        });
+
+        modelBuilder.Entity<LayoutDesignAiResponseImage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("LayoutDesignAIResponseImage_pkey");
+
+            entity.ToTable("LayoutDesignAIResponseImage");
+
+            entity.HasIndex(e => e.LayoutDesignPlantId, "IX_LayoutDesignAIResponseImage_LayoutDesignPlantId");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.PublicId).HasMaxLength(255);
+
+            entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignAiResponseImages)
+                .HasForeignKey(d => d.LayoutDesignId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignId_fkey");
+
+            entity.HasOne(d => d.LayoutDesignPlant).WithMany(p => p.LayoutDesignAiResponseImages)
+                .HasForeignKey(d => d.LayoutDesignPlantId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignPlantId_fkey");
         });
 
         modelBuilder.Entity<LayoutDesignPlant>(entity =>
@@ -521,7 +563,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.PlantReason).HasMaxLength(500);
             entity.Property(e => e.PlacementPosition).HasMaxLength(255);
             entity.Property(e => e.PlacementReason).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignPlants)
                 .HasForeignKey(d => d.LayoutDesignId)
@@ -545,7 +587,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.Address).HasMaxLength(255);
             entity.Property(e => e.Area).HasPrecision(10, 2);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Latitude).HasPrecision(10, 7);
             entity.Property(e => e.Longitude).HasPrecision(10, 7);
@@ -568,7 +610,7 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Status, "IX_Order_Status");
 
             entity.Property(e => e.Address).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.CustomerName).HasMaxLength(100);
             entity.Property(e => e.DepositAmount).HasPrecision(18, 2);
             entity.Property(e => e.Note).HasMaxLength(255);
@@ -576,7 +618,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
             entity.Property(e => e.ReturnReason).HasMaxLength(255);
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
@@ -590,7 +632,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("Payment");
 
             entity.Property(e => e.Amount).HasPrecision(18, 2);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.Invoice).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.InvoiceId)
@@ -610,14 +652,14 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Name, "IX_Plant_Name");
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.GrowthRate).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Origin).HasMaxLength(100);
             entity.Property(e => e.PotSize).HasMaxLength(50);
             entity.Property(e => e.SpecificName).HasMaxLength(255);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasMany(d => d.Categories).WithMany(p => p.Plants)
                 .UsingEntity<Dictionary<string, object>>(
@@ -662,7 +704,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.ComboCode).HasMaxLength(50);
             entity.Property(e => e.ComboName).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.FengShuiPurpose).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.PurchaseCount).HasDefaultValue(0);
@@ -671,7 +713,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.SuitableSpace).HasMaxLength(100);
             entity.Property(e => e.ThemeDescription).HasMaxLength(500);
             entity.Property(e => e.ThemeName).HasMaxLength(100);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ViewCount).HasDefaultValue(0);
 
             entity.HasMany(d => d.TagsNavigation).WithMany(p => p.PlantCombos)
@@ -700,7 +742,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasIndex(e => e.PlantComboId, "IX_PlantComboImage_ComboId");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
             entity.Property(e => e.IsPrimary).HasDefaultValue(false);
 
@@ -732,14 +774,16 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("PlantGuide");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => e.PlantId, "IX_PlantGuide_PlantId").IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Fertilizing).HasMaxLength(255);
             entity.Property(e => e.Pruning).HasMaxLength(255);
             entity.Property(e => e.Temperature).HasMaxLength(255);
             entity.Property(e => e.Watering).HasMaxLength(255);
 
-            entity.HasOne(d => d.Plant).WithMany(p => p.PlantGuides)
-                .HasForeignKey(d => d.PlantId)
+            entity.HasOne(d => d.Plant).WithOne(p => p.PlantGuide)
+                .HasForeignKey<PlantGuide>(d => d.PlantId)
                 .HasConstraintName("PlantGuide_PlantId_fkey");
         });
 
@@ -749,7 +793,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("PlantImage");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
             entity.Property(e => e.IsPrimary).HasDefaultValue(false);
 
@@ -787,14 +831,14 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("PlantInstance");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.HealthStatus).HasMaxLength(50);
             entity.Property(e => e.Height).HasPrecision(10, 2);
             entity.Property(e => e.SKU).HasMaxLength(50);
             entity.Property(e => e.SpecificPrice).HasPrecision(18, 2);
             entity.Property(e => e.TrunkDiameter).HasPrecision(10, 2);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.Plant).WithMany(p => p.PlantInstances)
                 .HasForeignKey(d => d.PlantId)
@@ -811,7 +855,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("PlantRating");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
 
             entity.HasOne(d => d.Plant).WithMany(p => p.PlantRatings)
@@ -825,6 +869,10 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.PlantRatings)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("PlantRating_UserId_fkey");
+
+            entity.HasOne(d => d.NurseryOrderDetail).WithOne(p => p.PlantRating)
+                  .HasForeignKey<PlantRating>(d => d.NurseryOrderDetailId)
+                  .HasConstraintName("PlantRating_NurseryOrderDetailId_fkey");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
@@ -833,7 +881,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("RefreshToken");
 
-            entity.Property(e => e.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.IsRevoked).HasDefaultValue(false);
             entity.Property(e => e.Token).HasMaxLength(512);
             entity.Property(e => e.DeviceId).HasMaxLength(255);
@@ -860,7 +908,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("RoomImage");
 
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
-            entity.Property(e => e.UploadedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.User).WithMany(p => p.RoomImages)
                 .HasForeignKey(d => d.UserId)
@@ -914,6 +962,10 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.ServiceRegistration).WithMany(p => p.ServiceProgresses)
                 .HasForeignKey(d => d.ServiceRegistrationId)
                 .HasConstraintName("ServiceProgress_ServiceRegistrationId_fkey");
+
+            entity.HasOne(d => d.Shift).WithMany(p => p.ServiceProgresses)
+                .HasForeignKey(d => d.ShiftId)
+                .HasConstraintName("ServiceProgress_ShiftId_fkey");
         });
 
         modelBuilder.Entity<ServiceRating>(entity =>
@@ -922,9 +974,8 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("ServiceRating");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
-            entity.Property(e => e.Rating).HasPrecision(2, 1);
 
             entity.HasOne(d => d.ServiceRegistration).WithOne(p => p.ServiceRating)
                 .HasForeignKey<ServiceRating>(d => d.ServiceRegistrationId)
@@ -942,11 +993,12 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("ServiceRegistration");
 
             entity.Property(e => e.CancelReason).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Address).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.Latitude).HasPrecision(10, 7);
             entity.Property(e => e.Longitude).HasPrecision(10, 7);
+            entity.Property(e => e.ScheduleDaysOfWeek).HasColumnType("jsonb");
             entity.Property(e => e.Note).HasMaxLength(255);
 
             entity.HasOne(d => d.CurrentCaretaker).WithMany(p => p.ServiceRegistrationCurrentCaretakers)
@@ -968,6 +1020,59 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Order).WithOne(p => p.ServiceRegistration)
                 .HasForeignKey<ServiceRegistration>(d => d.OrderId)
                 .HasConstraintName("ServiceRegistration_OrderId_fkey");
+
+            entity.HasOne(d => d.PrefferedShift).WithMany(p => p.ServiceRegistrations)
+                .HasForeignKey(d => d.PreferredShiftId)
+                .HasConstraintName("ServiceRegistration_PrefferedShiftId_fkey");
+        });
+
+        modelBuilder.Entity<Shift>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Shift_pkey");
+            entity.ToTable("Shift");
+            entity.Property(e => e.StartTime).HasColumnType("time without time zone");
+            entity.Property(e => e.EndTime).HasColumnType("time without time zone");
+        });
+
+        modelBuilder.Entity<Specialization>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Specialization_pkey");
+            entity.ToTable("Specialization");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(255);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<CareServiceSpecialization>(entity =>
+        {
+            entity.HasKey(e => new { e.SpecializationId, e.PackageId }).HasName("CareServiceSpecialization_pkey");
+            entity.ToTable("CareServiceSpecialization");
+
+            entity.HasOne(d => d.CareServicePackage).WithMany(p => p.CareServiceSpecializations)
+                .HasForeignKey(d => d.PackageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("CareServiceSpecialization_PackageId_fkey");
+
+            entity.HasOne(d => d.Specialization).WithMany(p => p.CareServiceSpecializations)
+                .HasForeignKey(d => d.SpecializationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("CareServiceSpecialization_SpecializationId_fkey");
+        });
+
+        modelBuilder.Entity<StaffSpecialization>(entity =>
+        {
+            entity.HasKey(e => new { e.StaffId, e.SpecializationId }).HasName("StaffSpecialization_pkey");
+            entity.ToTable("StaffSpecialization");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.StaffSpecializations)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("StaffSpecialization_StaffId_fkey");
+
+            entity.HasOne(d => d.Specialization).WithMany(p => p.StaffSpecializations)
+                .HasForeignKey(d => d.SpecializationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("StaffSpecialization_SpecializationId_fkey");
         });
 
         modelBuilder.Entity<Tag>(entity =>
@@ -986,7 +1091,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("Transaction");
 
             entity.Property(e => e.Amount).HasPrecision(18, 2);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.OrderInfo).HasMaxLength(255);
             entity.Property(e => e.ResponseCode).HasMaxLength(50);
             entity.Property(e => e.TransactionId).HasMaxLength(100);
@@ -1005,13 +1110,13 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Email, "User_Email_key").IsUnique();
 
             entity.Property(e => e.AvatarUrl).HasMaxLength(512);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Email).HasMaxLength(255);
             entity.Property(e => e.PasswordHash).HasMaxLength(255);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.SecurityStamp).HasMaxLength(255);
             entity.Property(e => e.Status).HasDefaultValue(1);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Username).HasMaxLength(100);
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
@@ -1031,7 +1136,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("UserBehaviorLog");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Metadata).HasColumnType("jsonb");
 
             entity.HasOne(d => d.PlantCombo).WithMany(p => p.UserBehaviorLogs)
@@ -1053,12 +1158,12 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("UserPlant");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.CurrentHeight).HasPrecision(10, 2);
             entity.Property(e => e.CurrentTrunkDiameter).HasPrecision(10, 2);
             entity.Property(e => e.HealthStatus).HasMaxLength(50);
             entity.Property(e => e.Location).HasMaxLength(100);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.Plant).WithMany(p => p.UserPlants)
                 .HasForeignKey(d => d.PlantId)
@@ -1102,13 +1207,13 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.UserId, "UserProfile_UserId_key").IsUnique();
 
             entity.Property(e => e.Address).HasMaxLength(255);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.NotificationPreferences).HasColumnType("jsonb");
             entity.Property(e => e.Latitude).HasPrecision(10, 7);
             entity.Property(e => e.Longitude).HasPrecision(10, 7);
             entity.Property(e => e.ReceiveNotifications).HasDefaultValue(true);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             entity.HasOne(d => d.User).WithOne(p => p.UserProfile)
                 .HasForeignKey<UserProfile>(d => d.UserId)
@@ -1167,7 +1272,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.ItemType).IsRequired();
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
             // User relationship
             entity.HasOne(d => d.User).WithMany(p => p.Wishlists)
@@ -1205,7 +1310,7 @@ public partial class PlantDecorContext : DbContext
 
             // Index for better query performance
             entity.HasIndex(e => new { e.UserId, e.IsDeleted });
-        });
+       });
 
         OnModelCreatingPartial(modelBuilder);
     }

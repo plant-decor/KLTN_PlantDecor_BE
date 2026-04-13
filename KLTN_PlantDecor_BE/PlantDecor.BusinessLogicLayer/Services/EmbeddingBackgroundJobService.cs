@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Embedding;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -34,11 +35,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task ProcessCommonPlantEmbeddingAsync(CommonPlantEmbeddingDto dto, Guid entityId, string entityType)
         {
+            await EnrichPlantGuideAsync(dto);
             await ProcessEmbeddingInternalAsync(dto, entityId, entityType);
         }
 
         public async Task ProcessPlantInstanceEmbeddingAsync(PlantInstanceEmbeddingDto dto, Guid entityId, string entityType)
         {
+            await EnrichPlantGuideAsync(dto);
             await ProcessEmbeddingInternalAsync(dto, entityId, entityType);
         }
 
@@ -254,5 +257,68 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private static int NormalizeBatchSize(int batchSize)
             => Math.Clamp(batchSize, 1, 100);
+
+        private async Task EnrichPlantGuideAsync(CommonPlantEmbeddingDto dto)
+        {
+            if (dto.PlantId <= 0)
+            {
+                return;
+            }
+
+            var guide = await _unitOfWork.PlantGuideRepository.GetByPlantIdWithPlantAsync(dto.PlantId);
+            if (guide == null)
+            {
+                return;
+            }
+
+            dto.GuideLightRequirement = guide.LightRequirement;
+            dto.GuideLightRequirementName = GetLightRequirementName(guide.LightRequirement);
+            dto.GuideWatering = guide.Watering;
+            dto.GuideFertilizing = guide.Fertilizing;
+            dto.GuidePruning = guide.Pruning;
+            dto.GuideTemperature = guide.Temperature;
+            dto.GuideHumidity = guide.Humidity;
+            dto.GuideSoil = guide.Soil;
+            dto.GuideCareNotes = guide.CareNotes;
+        }
+
+        private async Task EnrichPlantGuideAsync(PlantInstanceEmbeddingDto dto)
+        {
+            if (dto.PlantId <= 0)
+            {
+                return;
+            }
+
+            var guide = await _unitOfWork.PlantGuideRepository.GetByPlantIdWithPlantAsync(dto.PlantId);
+            if (guide == null)
+            {
+                return;
+            }
+
+            dto.GuideLightRequirement = guide.LightRequirement;
+            dto.GuideLightRequirementName = GetLightRequirementName(guide.LightRequirement);
+            dto.GuideWatering = guide.Watering;
+            dto.GuideFertilizing = guide.Fertilizing;
+            dto.GuidePruning = guide.Pruning;
+            dto.GuideTemperature = guide.Temperature;
+            dto.GuideHumidity = guide.Humidity;
+            dto.GuideSoil = guide.Soil;
+            dto.GuideCareNotes = guide.CareNotes;
+        }
+
+        private static string? GetLightRequirementName(int? lightRequirement)
+        {
+            if (!lightRequirement.HasValue)
+            {
+                return null;
+            }
+
+            if (!Enum.IsDefined(typeof(LightRequirementEnum), lightRequirement.Value))
+            {
+                return null;
+            }
+
+            return ((LightRequirementEnum)lightRequirement.Value).ToString();
+        }
     }
 }

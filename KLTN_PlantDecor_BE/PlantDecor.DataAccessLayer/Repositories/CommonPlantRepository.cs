@@ -33,6 +33,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.CommonPlants
                 .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantGuide)
                 .Include(cp => cp.Nursery)
                 .FirstOrDefaultAsync(cp => cp.Id == id);
         }
@@ -45,6 +46,36 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return SelectPrimaryImageUrl(images);
+        }
+
+        public async Task<Dictionary<int, string>> GetPrimaryImageUrlsAsync(IEnumerable<int> commonPlantIds)
+        {
+            var normalizedIds = commonPlantIds
+                .Distinct()
+                .ToList();
+
+            if (normalizedIds.Count == 0)
+            {
+                return new Dictionary<int, string>();
+            }
+
+            var records = await _context.CommonPlants
+                .AsNoTracking()
+                .Where(cp => normalizedIds.Contains(cp.Id))
+                .Select(cp => new
+                {
+                    cp.Id,
+                    ImageUrl = cp.Plant.PlantImages
+                        .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                        .OrderByDescending(image => image.IsPrimary == true)
+                        .Select(image => image.ImageUrl)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            return records
+                .Where(record => !string.IsNullOrWhiteSpace(record.ImageUrl))
+                .ToDictionary(record => record.Id, record => record.ImageUrl!);
         }
 
         public async Task<PaginatedResult<CommonPlant>> GetByPlantIdAsync(int plantId, Pagination pagination)
@@ -237,6 +268,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CommonPlants
                 .AsNoTracking()
                 .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(cp => cp.Plant)
                     .ThenInclude(p => p.Categories)
                 .Include(cp => cp.Plant)
                     .ThenInclude(p => p.Tags)
@@ -244,6 +277,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .OrderBy(cp => cp.Id)
                 .Skip(skip)
                 .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<List<CommonPlant>> GetByPlantIdForEmbeddingAsync(int plantId)
+        {
+            return await _context.CommonPlants
+                .AsNoTracking()
+                .Where(cp => cp.PlantId == plantId)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.Categories)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.Tags)
+                .Include(cp => cp.Nursery)
+                .OrderBy(cp => cp.Id)
                 .ToListAsync();
         }
     }
