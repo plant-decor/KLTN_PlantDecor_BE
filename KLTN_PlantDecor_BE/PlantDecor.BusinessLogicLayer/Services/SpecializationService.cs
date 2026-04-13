@@ -139,6 +139,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return NurseryService.MapToStaffDtoPublic(updated!);
         }
 
+        public async Task<StaffWithSpecializationsResponseDto> SetStaffSpecializationsAsync(int managerId, int staffId, List<int> specializationIds)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("You are not a manager of any nursery");
+
+            var staff = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
+            if (staff == null)
+                throw new NotFoundException($"Caretaker {staffId} not found in your nursery");
+
+            // Validate all provided specialization IDs exist and are active
+            foreach (var specId in specializationIds.Distinct())
+            {
+                var spec = await _unitOfWork.SpecializationRepository.GetByIdAsync(specId);
+                if (spec == null)
+                    throw new NotFoundException($"Specialization {specId} not found");
+                if (!spec.IsActive)
+                    throw new BadRequestException($"Specialization {specId} is not active");
+            }
+
+            await _unitOfWork.SpecializationRepository.ReplaceStaffSpecializationsAsync(staffId, specializationIds);
+
+            var updated = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
+            return NurseryService.MapToStaffDtoPublic(updated!);
+        }
+
         public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForPackageAsync(int managerId, int packageId)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);

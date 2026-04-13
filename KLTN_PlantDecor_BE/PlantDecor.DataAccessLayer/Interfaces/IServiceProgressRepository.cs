@@ -9,5 +9,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<ServiceProgress?> GetByIdWithDetailsAsync(int id);
         Task<List<ServiceProgress>> GetByNurseryAndDateAsync(int nurseryId, DateOnly date);
         Task<List<ServiceProgress>> GetByCaretakerAndDateRangeAsync(int nurseryId, int caretakerId, DateOnly from, DateOnly to);
+        Task<List<ServiceProgress>> GetByCaretakerSelfDateRangeAsync(int caretakerId, DateOnly from, DateOnly to);
     }
 }

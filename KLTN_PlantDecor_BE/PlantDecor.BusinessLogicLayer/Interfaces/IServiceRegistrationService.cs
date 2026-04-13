@@ -7,7 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IServiceRegistrationService
     {
         Task<ServiceRegistrationResponseDto> CreateAsync(int userId, CreateServiceRegistrationRequestDto request);
-        Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination);
+        Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination, int? status);
         Task<PaginatedResult<ServiceRegistrationResponseDto>> GetPendingForNurseryAsync(int managerId, Pagination pagination);
         Task<PaginatedResult<ServiceRegistrationResponseDto>> GetAllForNurseryAsync(int managerId, Pagination pagination, int? status = null);
         Task<ServiceRegistrationResponseDto> GetByIdAsync(int id, int userId);

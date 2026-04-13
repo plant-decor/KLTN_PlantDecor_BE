@@ -17,11 +17,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public async Task<PaginatedResult<ServiceRegistration>> GetByUserIdAsync(int userId, Pagination pagination)
+        public async Task<PaginatedResult<ServiceRegistration>> GetByUserIdAsync(int userId, Pagination pagination, int? status = null)
         {
             var query = BuildDetailedQuery()
-                .Where(r => r.UserId == userId)
-                .OrderByDescending(r => r.Id);
+                .Where(r => r.UserId == userId);
+
+            if (status.HasValue)
+                query = query.Where(r => r.Status == status.Value);
+
+            query = query.OrderByDescending(r => r.Id);
 
             var totalCount = await query.CountAsync();
             var items = await query

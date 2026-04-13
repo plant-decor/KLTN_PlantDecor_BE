@@ -18,7 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public List<int> ScheduleDaysOfWeek { get; set; } = new();
 
         [Required]
-        public int PrefferedShiftId { get; set; }
+        public int PreferredShiftId { get; set; }
 
         [Required]
         [MaxLength(500)]

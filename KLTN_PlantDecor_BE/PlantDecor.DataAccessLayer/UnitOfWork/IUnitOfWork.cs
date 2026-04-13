@@ -43,6 +43,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ICareServicePackageRepository CareServicePackageRepository { get; }
         ISpecializationRepository SpecializationRepository { get; }
         IServiceRatingRepository ServiceRatingRepository { get; }
+        IShiftRepository ShiftRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

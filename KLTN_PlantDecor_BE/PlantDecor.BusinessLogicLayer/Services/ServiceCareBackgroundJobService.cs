@@ -34,7 +34,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             if (!registration.ServiceDate.HasValue ||
-                !registration.PrefferedShiftId.HasValue ||
+                !registration.PreferredShiftId.HasValue ||
                 !registration.TotalSessions.HasValue)
             {
                 _logger.LogError("GenerateServiceSchedule: ServiceRegistration {Id} is missing required fields", serviceRegistrationId);
@@ -53,7 +53,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     ServiceRegistrationId = registration.Id,
                     CaretakerId = registration.MainCaretakerId,
-                    ShiftId = registration.PrefferedShiftId.Value,
+                    ShiftId = registration.PreferredShiftId.Value,
                     TaskDate = registration.ServiceDate.Value,
                     Status = registration.MainCaretakerId.HasValue
                         ? (int)ServiceProgressStatusEnum.Assigned
@@ -98,7 +98,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         {
                             ServiceRegistrationId = registration.Id,
                             CaretakerId = registration.MainCaretakerId,
-                            ShiftId = registration.PrefferedShiftId.Value,
+                            ShiftId = registration.PreferredShiftId.Value,
                             TaskDate = current,
                             Status = registration.MainCaretakerId.HasValue
                                 ? (int)ServiceProgressStatusEnum.Assigned

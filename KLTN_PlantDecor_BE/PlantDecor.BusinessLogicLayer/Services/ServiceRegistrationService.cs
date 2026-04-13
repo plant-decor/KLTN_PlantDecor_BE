@@ -31,6 +31,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (request.ServiceDate < DateOnly.FromDateTime(DateTime.Today))
                 throw new BadRequestException("ServiceDate cannot be in the past");
 
+            var shiftExists = await _unitOfWork.ShiftRepository.ExistsAsync(request.PreferredShiftId);
+            if (!shiftExists)
+                throw new NotFoundException($"Shift {request.PreferredShiftId} not found");
+
             var pkg = nurseryCareService.CareServicePackage;
 
             if (!pkg.DurationDays.HasValue || !pkg.ServiceType.HasValue)
@@ -66,7 +70,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 UserId = userId,
                 NurseryCareServiceId = request.NurseryCareServiceId,
-                PrefferedShiftId = request.PrefferedShiftId,
+                PreferredShiftId = request.PreferredShiftId,
                 ServiceDate = request.ServiceDate,
                 ScheduleDaysOfWeek = scheduleDaysJson,
                 TotalSessions = totalSessions,
@@ -79,16 +83,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 CreatedAt = DateTime.Now
             };
 
-            _unitOfWork.ServiceRegistrationRepository.PrepareCreate(registration);
-            await _unitOfWork.SaveAsync();
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.ServiceRegistrationRepository.PrepareCreate(registration);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
 
             var created = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registration.Id);
             return MapToDto(created!);
         }
 
-        public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination)
+        public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination, int? status)
         {
-            var result = await _unitOfWork.ServiceRegistrationRepository.GetByUserIdAsync(userId, pagination);
+            var result = await _unitOfWork.ServiceRegistrationRepository.GetByUserIdAsync(userId, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
                 result.Items.Select(MapToDto).ToList(),
                 result.TotalCount,
@@ -173,50 +187,60 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var pkg = registration.NurseryCareService!.CareServicePackage;
 
-            // Create Order
-            var order = new Order
+            await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                UserId = registration.UserId!.Value,
-                OrderType = (int)OrderTypeEnum.Service,
-                Status = (int)OrderStatusEnum.Pending,
-                PaymentStrategy = (int)PaymentStrategiesEnum.FullPayment,
-                TotalAmount = pkg.UnitPrice ?? 0,
-                Address = registration.Address,
-                Phone = registration.Phone,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-            _unitOfWork.OrderRepository.PrepareCreate(order);
-            await _unitOfWork.SaveAsync();
-
-            // Create Invoice
-            var invoice = new Invoice
-            {
-                OrderId = order.Id,
-                Type = (int)InvoiceTypeEnum.FullPayment,
-                TotalAmount = order.TotalAmount,
-                Status = (int)InvoiceStatusEnum.Pending,
-                IssuedDate = DateTime.Now,
-                InvoiceDetails = new List<InvoiceDetail>
+                // 1. Create Order
+                var order = new Order
                 {
-                    new InvoiceDetail
+                    UserId = registration.UserId!.Value,
+                    OrderType = (int)OrderTypeEnum.Service,
+                    Status = (int)OrderStatusEnum.Pending,
+                    PaymentStrategy = (int)PaymentStrategiesEnum.FullPayment,
+                    TotalAmount = pkg.UnitPrice ?? 0,
+                    Address = registration.Address,
+                    Phone = registration.Phone,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                _unitOfWork.OrderRepository.PrepareCreate(order);
+                await _unitOfWork.SaveAsync(); // order.Id is now populated
+
+                // 2. Create Invoice (OrderId is now available)
+                var invoice = new Invoice
+                {
+                    OrderId = order.Id,
+                    Type = (int)InvoiceTypeEnum.FullPayment,
+                    TotalAmount = order.TotalAmount,
+                    Status = (int)InvoiceStatusEnum.Pending,
+                    IssuedDate = DateTime.Now,
+                    InvoiceDetails = new List<InvoiceDetail>
                     {
-                        ItemName = pkg.Name ?? "Care Service",
-                        UnitPrice = pkg.UnitPrice ?? 0,
-                        Quantity = 1,
-                        Amount = pkg.UnitPrice ?? 0
+                        new InvoiceDetail
+                        {
+                            ItemName = pkg.Name ?? "Care Service",
+                            UnitPrice = pkg.UnitPrice ?? 0,
+                            Quantity = 1,
+                            Amount = pkg.UnitPrice ?? 0
+                        }
                     }
-                }
-            };
-            _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
+                };
+                _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
 
-            // Update registration
-            registration.OrderId = order.Id;
-            registration.Status = (int)ServiceRegistrationStatusEnum.AwaitPayment;
-            registration.ApprovedAt = DateTime.Now;
-            _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
+                // 3. Update Registration
+                registration.OrderId = order.Id;
+                registration.Status = (int)ServiceRegistrationStatusEnum.AwaitPayment;
+                registration.ApprovedAt = DateTime.Now;
+                _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
 
-            await _unitOfWork.SaveAsync();
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             return MapToDto(updated!);

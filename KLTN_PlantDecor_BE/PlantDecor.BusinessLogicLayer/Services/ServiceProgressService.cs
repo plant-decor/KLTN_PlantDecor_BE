@@ -230,6 +230,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return progresses.Select(MapToDto).ToList();
         }
 
+        public async Task<List<ServiceProgressResponseDto>> GetMyScheduleAsync(int caretakerId, DateOnly from, DateOnly to)
+        {
+            if (to < from)
+                throw new BadRequestException("'to' date must be >= 'from' date");
+
+            if ((to.ToDateTime(TimeOnly.MinValue) - from.ToDateTime(TimeOnly.MinValue)).TotalDays > 90)
+                throw new BadRequestException("Date range cannot exceed 90 days");
+
+            var progresses = await _unitOfWork.ServiceProgressRepository.GetByCaretakerSelfDateRangeAsync(caretakerId, from, to);
+            return progresses.Select(MapToDto).ToList();
+        }
+
         #region Mapping
 
         public static ServiceProgressResponseDto MapToDto(ServiceProgress sp)

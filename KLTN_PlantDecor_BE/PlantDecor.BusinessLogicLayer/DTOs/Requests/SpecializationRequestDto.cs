@@ -28,4 +28,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Required]
         public int SpecializationId { get; set; }
     }
+
+    public class SetSpecializationsDto
+    {
+        [Required]
+        public List<int> SpecializationIds { get; set; } = new();
+    }
 }

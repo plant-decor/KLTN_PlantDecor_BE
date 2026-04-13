@@ -88,5 +88,24 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenBy(sp => sp.Shift.StartTime)
                 .ToListAsync();
         }
+
+        public async Task<List<ServiceProgress>> GetByCaretakerSelfDateRangeAsync(int caretakerId, DateOnly from, DateOnly to)
+        {
+            return await _context.ServiceProgresses
+                .Include(sp => sp.Shift)
+                .Include(sp => sp.ServiceRegistration)
+                    .ThenInclude(r => r!.NurseryCareService)
+                        .ThenInclude(ncs => ncs!.CareServicePackage)
+                .Include(sp => sp.ServiceRegistration)
+                    .ThenInclude(r => r!.NurseryCareService)
+                        .ThenInclude(ncs => ncs!.Nursery)
+                .Include(sp => sp.ServiceRegistration)
+                    .ThenInclude(r => r!.User)
+                .Where(sp => sp.CaretakerId == caretakerId
+                    && sp.TaskDate >= from && sp.TaskDate <= to)
+                .OrderBy(sp => sp.TaskDate)
+                    .ThenBy(sp => sp.Shift.StartTime)
+                .ToListAsync();
+        }
     }
 }

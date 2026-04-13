@@ -166,6 +166,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Cập nhật (thay thế toàn bộ) danh sách chuyên môn của nhân viên trong nursery của manager
+        /// </summary>
+        [HttpPut("api/manager/nurseries/my-nursery/staff/{staffId:int}/specializations")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> SetStaffSpecializations(int staffId, [FromBody] SetSpecializationsDto request)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _specializationService.SetStaffSpecializationsAsync(managerId, staffId, request.SpecializationIds);
+            return Ok(new ApiResponse<StaffWithSpecializationsResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Staff specializations updated successfully",
+                Payload = result
+            });
+        }
+
         // ─── Manager – Package eligible caretakers ─────────────────────────────────
 
         /// <summary>

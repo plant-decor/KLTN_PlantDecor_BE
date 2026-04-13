@@ -17,7 +17,7 @@ public partial class ServiceRegistration
 
     public int? CurrentCaretakerId { get; set; }
 
-    public int? PrefferedShiftId { get; set; }
+    public int? PreferredShiftId { get; set; }
 
     public int? Status { get; set; }
 

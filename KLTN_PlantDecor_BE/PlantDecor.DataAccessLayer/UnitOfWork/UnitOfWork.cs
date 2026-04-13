@@ -50,6 +50,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ICareServicePackageRepository? _careServicePackageRepository;
         private ISpecializationRepository? _specializationRepository;
         private IServiceRatingRepository? _serviceRatingRepository;
+        private IShiftRepository? _shiftRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -244,6 +245,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IServiceRatingRepository ServiceRatingRepository
         {
             get { return _serviceRatingRepository ??= new ServiceRatingRepository(_context); }
+        }
+
+        public IShiftRepository ShiftRepository
+        {
+            get { return _shiftRepository ??= new ShiftRepository(_context); }
         }
 
         // Transaction Management
