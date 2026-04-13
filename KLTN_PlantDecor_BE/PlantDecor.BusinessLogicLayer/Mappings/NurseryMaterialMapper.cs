@@ -44,7 +44,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 NurseryName = entity.Nursery?.Name,
                 Quantity = entity.Quantity,
                 ReservedQuantity = entity.ReservedQuantity,
-                IsActive = entity.IsActive
+                IsActive = entity.IsActive,
+                PrimaryImageUrl = entity.Material?.MaterialImages
+                    .FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                    ?? entity.Material?.MaterialImages.FirstOrDefault()?.ImageUrl
             };
         }
 

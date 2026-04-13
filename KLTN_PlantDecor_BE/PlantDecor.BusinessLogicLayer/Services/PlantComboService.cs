@@ -1068,7 +1068,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ComboTypeName = MapComboTypeName(g.Key.ComboType),
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
-                    ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                    PrimaryImageUrl = g.Key.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                               ?? g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
                     Nurseries = g.Select(npc => new SellingNurseryResponseDto
                     {
                         NurseryId = npc.NurseryId,
@@ -1176,6 +1177,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
+        }
+
+        public async Task<List<PlantComboResponseDto>> GetCompatibleCombosForNurseryAsync(int managerId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+
+            var combos = await _unitOfWork.PlantComboRepository.GetCompatibleCombosForNurseryAsync(nursery.Id);
+            return combos.Select(c => c.ToResponse()).ToList();
         }
 
         #endregion

@@ -26,7 +26,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nursery == null)
                 throw new NotFoundException($"Nursery {nurseryId} not found");
 
-            var cacheKey = $"{CACHE_KEY_PREFIX}_active_{nurseryId}";
+            var cacheKey = $"{CACHE_KEY_PREFIX}_{nurseryId}_active";
             var cached = await _cacheService.GetDataAsync<List<NurseryCareServiceResponseDto>>(cacheKey);
             if (cached != null) return cached;
 
@@ -52,7 +52,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nursery == null)
                 throw new ForbiddenException("You are not a manager of any nursery");
 
-            var cacheKey = $"{CACHE_KEY_PREFIX}_all_{nursery.Id}";
+            var cacheKey = $"{CACHE_KEY_PREFIX}_{nursery.Id}_all";
             var cached = await _cacheService.GetDataAsync<List<NurseryCareServiceResponseDto>>(cacheKey);
             if (cached != null) return cached;
 
@@ -141,7 +141,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task InvalidateCacheAsync(int nurseryId)
         {
-            await _cacheService.RemoveByPrefixAsync($"{CACHE_KEY_PREFIX}_{nurseryId}");
+            await _cacheService.RemoveByPrefixAsync($"{CACHE_KEY_PREFIX}_{nurseryId}_");
         }
 
         public static NurseryCareServiceResponseDto MapToDto(NurseryCareService ncs)
