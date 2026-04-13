@@ -22,7 +22,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMBOS_KEY = "combos_all";
         private const string ACTIVE_COMBOS_KEY = "combos_active";
@@ -33,14 +32,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -1221,10 +1218,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessNurseryPlantComboEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessNurseryPlantComboIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
             }
             catch
             {

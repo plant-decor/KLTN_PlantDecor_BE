@@ -18,7 +18,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
         private const string NURSERY_COMMON_PLANTS_KEY = "nursery_common_plants";
@@ -28,13 +27,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public CommonPlantService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -521,10 +518,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessCommonPlantEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessCommonPlantIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
             }
             catch
             {

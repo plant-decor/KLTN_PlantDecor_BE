@@ -181,7 +181,6 @@ namespace PlantDecor.API
             builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
-            builder.Services.AddScoped<ILangflowService, LangflowService>();
 
             builder.Services.AddCors(options =>
             {
