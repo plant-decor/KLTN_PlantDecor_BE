@@ -18,5 +18,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<ServiceRegistrationResponseDto> CancelAsync(int userId, int id, string? cancelReason);
         Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyTasksAsync(int caretakerId, Pagination pagination, int? status);
         Task<ServiceRegistrationResponseDto> ManagerCancelAsync(int managerId, int id, string? cancelReason);
+        Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId);
     }
 }
