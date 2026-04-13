@@ -13,8 +13,6 @@ public partial class LayoutDesign
 
     public string? PreviewImageUrl { get; set; }
 
-    public string? FluxPromptUsed { get; set; }
-
     public string? RawResponse { get; set; }
 
     public int? Status { get; set; }

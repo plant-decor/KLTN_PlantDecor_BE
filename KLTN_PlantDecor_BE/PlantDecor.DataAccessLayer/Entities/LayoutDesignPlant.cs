@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PlantDecor.DataAccessLayer.Entities;
 
@@ -21,6 +22,8 @@ public partial class LayoutDesignPlant
     public DateTime? CreatedAt { get; set; }
 
     public virtual LayoutDesign LayoutDesign { get; set; } = null!;
+
+    public virtual ICollection<LayoutDesignAiResponseImage> LayoutDesignAiResponseImages { get; set; } = new List<LayoutDesignAiResponseImage>();
 
     public virtual CommonPlant? CommonPlant { get; set; }
 

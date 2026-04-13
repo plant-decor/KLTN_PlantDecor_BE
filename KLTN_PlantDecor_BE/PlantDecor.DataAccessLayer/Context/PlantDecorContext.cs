@@ -535,13 +535,21 @@ public partial class PlantDecorContext : DbContext
 
             entity.ToTable("LayoutDesignAIResponseImage");
 
+            entity.HasIndex(e => e.LayoutDesignPlantId, "IX_LayoutDesignAIResponseImage_LayoutDesignPlantId");
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.PublicId).HasMaxLength(255);
 
             entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignAiResponseImages)
                 .HasForeignKey(d => d.LayoutDesignId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignId_fkey");
+
+            entity.HasOne(d => d.LayoutDesignPlant).WithMany(p => p.LayoutDesignAiResponseImages)
+                .HasForeignKey(d => d.LayoutDesignPlantId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignAIResponseImage_LayoutDesignPlantId_fkey");
         });
 
         modelBuilder.Entity<LayoutDesignPlant>(entity =>

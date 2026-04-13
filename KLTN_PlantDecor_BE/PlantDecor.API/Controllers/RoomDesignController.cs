@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -15,13 +17,16 @@ namespace PlantDecor.API.Controllers
     public class RoomDesignController : ControllerBase
     {
         private readonly IRoomDesignService _roomDesignService;
+        private readonly ILayoutDesignImageGenerationService _layoutDesignImageGenerationService;
         private readonly ILogger<RoomDesignController> _logger;
 
         public RoomDesignController(
             IRoomDesignService roomDesignService,
+            ILayoutDesignImageGenerationService layoutDesignImageGenerationService,
             ILogger<RoomDesignController> logger)
         {
             _roomDesignService = roomDesignService;
+            _layoutDesignImageGenerationService = layoutDesignImageGenerationService;
             _logger = logger;
         }
 
@@ -267,6 +272,165 @@ namespace PlantDecor.API.Controllers
                     message = "Failed to analyze room"
                 });
             }
+        }
+
+        /// <summary>
+        /// Generate AI room images from existing LayoutDesign recommendations.
+        /// </summary>
+        [HttpPost("{layoutDesignId:int}/generate-images")]
+        [Authorize]
+        [ProducesResponseType(typeof(LayoutDesignImageGenerationResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GenerateImages(int layoutDesignId)
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var result = await _layoutDesignImageGenerationService.GenerateImagesAsync(layoutDesignId, userId);
+
+                if (result.SuccessCount == 0)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<LayoutDesignImageGenerationResultDto>
+                    {
+                        Success = false,
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        Message = "Image generation failed for all items",
+                        Payload = result
+                    });
+                }
+
+                return Ok(new ApiResponse<LayoutDesignImageGenerationResultDto>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = $"Generated {result.SuccessCount}/{result.TotalItems} images",
+                    Payload = result
+                });
+            }
+            catch (UnauthorizedException ex)
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status401Unauthorized,
+                    Message = ex.Message
+                });
+            }
+            catch (ForbiddenException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status403Forbidden,
+                    Message = ex.Message
+                });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = ex.Message
+                });
+            }
+            catch (BadRequestException ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while generating images for LayoutDesign {LayoutDesignId}", layoutDesignId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    Message = "Failed to generate images"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Get generated AI images for a LayoutDesign.
+        /// </summary>
+        [HttpGet("{layoutDesignId:int}/generated-images")]
+        [Authorize]
+        [ProducesResponseType(typeof(List<LayoutDesignGeneratedImageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetGeneratedImages(int layoutDesignId)
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var result = await _layoutDesignImageGenerationService.GetGeneratedImagesAsync(layoutDesignId, userId);
+
+                return Ok(new ApiResponse<List<LayoutDesignGeneratedImageDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = $"Found {result.Count} generated images",
+                    Payload = result
+                });
+            }
+            catch (UnauthorizedException ex)
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status401Unauthorized,
+                    Message = ex.Message
+                });
+            }
+            catch (ForbiddenException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status403Forbidden,
+                    Message = ex.Message
+                });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while listing generated images for LayoutDesign {LayoutDesignId}", layoutDesignId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    Message = "Failed to fetch generated images"
+                });
+            }
+        }
+
+        private int GetRequiredUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            return userId;
         }
 
         private static string NormalizeBase64(string value)

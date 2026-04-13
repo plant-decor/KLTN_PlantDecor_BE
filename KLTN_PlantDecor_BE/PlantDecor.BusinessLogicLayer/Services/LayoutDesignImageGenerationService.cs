@@ -446,10 +446,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ? "a visually appropriate position in the room"
                 : candidate.PlacementPosition;
 
-            return $"A photorealistic interior design image of a room. " +
-           $"The exact potted plant from the provided reference image is placed {placement}. " +
-           $"The lighting, shadows, and perspective of the plant match the room seamlessly. " +
-           $"Strictly preserve the original room background, furniture, and lighting fixtures without any modifications.";
+            return $"Add the potted plant from the second reference image into this room. " +
+            $"Place it exactly {placement}. " +
+            $"Maintain the original lighting, shadows, and all existing furniture or wall art. " +
+            $"Most Important: Do not modify any other part of the room.";
         }
 
         private string BuildFluxUrl()

@@ -2071,13 +2071,12 @@ Chỉ trả về JSON array, không có text khác.
                     UserId = request.UserId,
                     RoomImageId = request.RoomImageId.Value,
                     PreviewImageUrl = TrimAndLimit(request.UploadedImageUrl, 512),
-                    FluxPromptUsed = searchQuery,
                     RawResponse = JsonSerializer.Serialize(new
                     {
                         roomAnalysis,
                         recommendations
                     }),
-                    Status = (int)LayoutDesignStatusEnum.Completed,
+                    Status = (int)LayoutDesignStatusEnum.PlantRecommendationCompleted,
                     IsSaved = false,
                     CreatedAt = DateTime.UtcNow
                 };

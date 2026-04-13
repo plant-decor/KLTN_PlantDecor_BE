@@ -3,7 +3,8 @@
     public enum LayoutDesignStatusEnum
     {
         Processing = 0, // Đang xử lý
-        Completed = 1,  // Đã hoàn thành
-        Failed = 2      // Thất bại
+        PlantRecommendationCompleted = 1, // Hoàn thành gợi ý cây
+        Failed = 2, // Thất bại
+        ImageGenerationCompleted = 3 // Hoàn thành tạo ảnh
     }
 }
