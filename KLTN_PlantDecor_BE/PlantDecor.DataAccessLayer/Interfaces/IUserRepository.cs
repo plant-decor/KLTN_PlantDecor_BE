@@ -19,5 +19,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<RefreshToken?> GetRefreshTokenByDeviceIdAsync(int userId, string deviceId);
         Task<RefreshToken?> GetRefreshTokenByRefreshTokenAsync(int userId, string refreshToken);
         Task<int> DeleteRevokedRefreshTokensAsync();
+        Task<List<User>> GetCaretakersByNurseryIdAsync(int nurseryId);
+        Task<User?> GetCaretakerByIdWithSpecializationsAsync(int userId, int nurseryId);
     }
 }

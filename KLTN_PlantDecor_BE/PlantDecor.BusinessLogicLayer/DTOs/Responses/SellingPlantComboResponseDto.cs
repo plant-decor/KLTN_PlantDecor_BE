@@ -15,7 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? ComboTypeName { get; set; }
         public string? Description { get; set; }
         public decimal Price { get; set; }
-        public string? ImageUrl { get; set; }
+        public string? PrimaryImageUrl { get; set; }
         public List<SellingNurseryResponseDto> Nurseries { get; set; } = new();
     }
 }

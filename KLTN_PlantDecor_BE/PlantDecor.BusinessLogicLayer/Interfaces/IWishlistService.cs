@@ -9,6 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PaginatedResult<WishlistItemResponseDto>> GetWishlistByUserIdAsync(int userId, Pagination pagination);
         Task<WishlistItemResponseDto> AddToWishlistAsync(int userId, WishlistItemType itemType, int itemId);
         Task<bool> RemoveFromWishlistAsync(int userId, WishlistItemType itemType, int itemId);
+        Task<int> ClearWishlistAsync(int userId);
         Task<bool> IsInWishlistAsync(int userId, WishlistItemType itemType, int itemId);
     }
 }

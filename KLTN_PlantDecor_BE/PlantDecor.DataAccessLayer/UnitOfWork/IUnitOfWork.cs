@@ -10,6 +10,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ICategoryRepository CategoryRepository { get; }
         ITagRepository TagRepository { get; }
         IPlantRepository PlantRepository { get; }
+        IPlantGuideRepository PlantGuideRepository { get; }
         IMaterialRepository MaterialRepository { get; }
         ICommonPlantRepository CommonPlantRepository { get; }
         IPlantComboRepository PlantComboRepository { get; }
@@ -25,10 +26,24 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         INurseryOrderRepository NurseryOrderRepository { get; }
         IInvoiceRepository InvoiceRepository { get; }
         IUserBehaviorLogRepository UserBehaviorLogRepository { get; }
+        IUserPlantRepository UserPlantRepository { get; }
         IChatSessionRepository ChatSessionRepository { get; }
         IChatMessageRepository ChatMessageRepository { get; }
         IChatParticipantRepository ChatParticipantRepository { get; }
         IEmbeddingRepository EmbeddingRepository { get; }
+        IRoomImageRepository RoomImageRepository { get; }
+        IRoomDesignPreferencesRepository RoomDesignPreferencesRepository { get; }
+        ILayoutDesignRepository LayoutDesignRepository { get; }
+        ILayoutDesignAiResponseImageRepository LayoutDesignAiResponseImageRepository { get; }
+        ILayoutDesignPlantRepository LayoutDesignPlantRepository { get; }
+        IRoomUploadModerationRepository RoomUploadModerationRepository { get; }
+        IServiceRegistrationRepository ServiceRegistrationRepository { get; }
+        IServiceProgressRepository ServiceProgressRepository { get; }
+        INurseryCareServiceRepository NurseryCareServiceRepository { get; }
+        ICareServicePackageRepository CareServicePackageRepository { get; }
+        ISpecializationRepository SpecializationRepository { get; }
+        IServiceRatingRepository ServiceRatingRepository { get; }
+        IShiftRepository ShiftRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

@@ -16,6 +16,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantComboResponseDto> UpdateComboAsync(int id, PlantComboUpdateDto request);
         Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file);
         Task<PlantComboResponseDto> UploadPlantComboImagesAsync(int comboId, List<IFormFile> files);
+        Task<PlantComboResponseDto> SetPrimaryPlantComboImageAsync(int comboId, int imageId);
+        Task<PlantComboResponseDto> ReplaceImageAsync(int comboId, int imageId, IFormFile file);
+        Task<PlantComboResponseDto> DeletePlantComboImageAsync(int comboId, int imageId);
         Task<bool> DeleteComboAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 
@@ -37,5 +40,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PaginatedResult<PlantComboListResponseDto>> GetCombosForShopAsync(Pagination pagination);
         Task<PaginatedResult<SellingPlantComboResponseDto>> GetSellingCombosAsync(Pagination pagination, PlantComboShopSearchRequestDto searchDto);
         Task<List<NurseryListResponseDto>> GetNurseriesByComboAsync(int comboId);
+
+        // Manager - Compatible combos suggestion
+        Task<List<PlantComboResponseDto>> GetCompatibleCombosForNurseryAsync(int managerId);
     }
 }

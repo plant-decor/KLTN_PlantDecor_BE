@@ -6,6 +6,5 @@
         FullPayment = 2,
         RemainingBalance = 3,
         Refund = 4
-
     }
 }

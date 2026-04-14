@@ -25,6 +25,7 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lay ra danh sach nursery order cua shipper hien tai (co phan trang va loc theo trang thai)
         /// </summary>
+        /// <param name="status">Lọc theo trạng thái:  3=Assigned, 4=Shipping, 5=Delivered, 7=DeliveryFailed</param>
         [HttpGet("my")]
         public async Task<IActionResult> GetMyNurseryOrders([FromQuery] int? status, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -36,7 +37,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lay danh sach don giao hang thanh cong",
+                Message = "Lấy danh sách đơn hàng của shipper thành công",
                 Payload = result
             });
         }
@@ -72,6 +73,24 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Xác nhận giao hàng thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Xác nhận giao hàng thất bại -> DeliveryFailed
+        /// </summary>
+        [HttpPut("{id}/mark-delivery-failed")]
+        public async Task<IActionResult> MarkDeliveryFailed(int id, [FromBody] MarkDeliveryFailedRequestDto request)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.MarkDeliveryFailedAsync(currentUserId, id, request);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Xác nhận giao hàng thất bại thành công",
                 Payload = result
             });
         }

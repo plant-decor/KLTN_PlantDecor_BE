@@ -176,6 +176,55 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Thay thế ảnh material theo imageId
+        /// </summary>
+        [HttpPut("{id}/images/{imageId}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ReplaceMaterialImage(int id, int imageId, IFormFile file)
+        {
+            var material = await _materialService.ReplaceImageAsync(id, imageId, file);
+            return Ok(new ApiResponse<MaterialResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Replace material image successfully",
+                Payload = material
+            });
+        }
+
+        /// <summary>
+        /// Đặt ảnh primary cho material theo imageId
+        /// </summary>
+        [HttpPatch("{id}/images/{imageId}/set-primary")]
+        public async Task<IActionResult> SetPrimaryMaterialImage(int id, int imageId)
+        {
+            var material = await _materialService.SetPrimaryMaterialImageAsync(id, imageId);
+            return Ok(new ApiResponse<MaterialResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Set primary material image successfully",
+                Payload = material
+            });
+        }
+
+        /// <summary>
+        /// Xóa ảnh material theo imageId
+        /// </summary>
+        [HttpDelete("{id}/images/{imageId}")]
+        public async Task<IActionResult> DeleteMaterialImage(int id, int imageId)
+        {
+            var material = await _materialService.DeleteMaterialImageAsync(id, imageId);
+            return Ok(new ApiResponse<MaterialResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Delete material image successfully",
+                Payload = material
+            });
+        }
+
+        /// <summary>
         /// Bật/tắt trạng thái active của material
         /// </summary>
         [HttpPatch("{id}/toggle-active")]

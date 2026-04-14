@@ -125,6 +125,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IPlantService, PlantService>();
+            builder.Services.AddScoped<IPlantGuideService, PlantGuideService>();
             builder.Services.AddScoped<IShopSearchService, ShopSearchService>();
 
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
@@ -141,6 +142,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IPaymentTimeoutService, PaymentTimeoutService>();
             builder.Services.AddScoped<IUserBehaviorLogService, UserBehaviorLogService>();
             builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+            builder.Services.AddScoped<IUserPlantService, UserPlantService>();
             builder.Services.AddScoped<IChatService, ChatService>();
 
             // Cart & Wishlist
@@ -157,6 +159,16 @@ namespace PlantDecor.API
             builder.Services.AddScoped<INurseryService, NurseryService>();
             builder.Services.AddScoped<INurseryMaterialService, NurseryMaterialService>();
 
+            // Care Service APIs
+            builder.Services.AddScoped<ICareServicePackageService, CareServicePackageService>();
+            builder.Services.AddScoped<INurseryCareServiceService, NurseryCareServiceService>();
+            builder.Services.AddScoped<IServiceRegistrationService, ServiceRegistrationService>();
+            builder.Services.AddScoped<IServiceProgressService, ServiceProgressService>();
+            builder.Services.AddScoped<IServiceCareBackgroundJobService, ServiceCareBackgroundJobService>();
+            builder.Services.AddScoped<IServiceRatingService, ServiceRatingService>();
+            builder.Services.AddScoped<ISpecializationService, SpecializationService>();
+            builder.Services.AddScoped<IShiftService, ShiftService>();
+
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
 
@@ -167,6 +179,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IAISearchService, AISearchService>();
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
             builder.Services.AddScoped<ILangflowService, LangflowService>();
@@ -218,7 +231,10 @@ namespace PlantDecor.API
                 {
                     // BỎ QUA RATE LIMIT CHO HANGFIRE DASHBOARD VÀ SWAGGER (Bỏ cả swagger vì có thể tốn nhiều request để lấy các file như .js, .css)
                     var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
-                    if (path.StartsWith("/hangfire") || path.StartsWith("/swagger") || path.StartsWith("/health"))
+                    if (path.StartsWith("/hangfire")
+                        || path.StartsWith("/swagger")
+                        || path.StartsWith("/health")
+                        || path.StartsWith("/api/Authentication"))
                     {
                         return RateLimitPartition.GetNoLimiter("BypassLimiter");
                     }
@@ -270,6 +286,9 @@ namespace PlantDecor.API
 
             });
 
+            var jwtSigningKey = builder.Configuration["JwtSettings:Key"]
+                ?? throw new InvalidOperationException("JwtSettings:Key is not configured.");
+
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                {
@@ -284,7 +303,7 @@ namespace PlantDecor.API
                        ClockSkew = TimeSpan.Zero, // Disable the default clock skew of 5 minutes
                        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
                        ValidAudience = builder.Configuration["JwtSettings:Audience"],
-                       IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]))
+                       IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSigningKey))
                    };
                    // map "Role" claim về role cho ASP.NET Core
                    options.TokenValidationParameters.RoleClaimType = "Role";
@@ -294,6 +313,16 @@ namespace PlantDecor.API
                    {
                        OnMessageReceived = context =>
                        {
+                           // 1. Ưu tiên lấy từ COOKIE
+                           var token = context.Request.Cookies["accessToken"];
+
+                           if (!string.IsNullOrEmpty(token))
+                           {
+                               context.Token = token;
+                               return Task.CompletedTask;
+                           }
+
+                           // 2. SignalR (query string)
                            var accessToken = context.Request.Query["access_token"];
                            var path = context.HttpContext.Request.Path;
 
@@ -301,6 +330,15 @@ namespace PlantDecor.API
                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                            {
                                context.Token = accessToken;
+                               return Task.CompletedTask;
+                           }
+
+                           //  3. Fallback: Authorization header (Swagger)
+                           var authHeader = context.Request.Headers["Authorization"].ToString();
+
+                           if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                           {
+                               context.Token = authHeader.Substring("Bearer ".Length).Trim();
                            }
                            return Task.CompletedTask;
                        }

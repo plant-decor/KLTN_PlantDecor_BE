@@ -17,13 +17,15 @@ public partial class ServiceRegistration
 
     public int? CurrentCaretakerId { get; set; }
 
+    public int? PreferredShiftId { get; set; }
+
     public int? Status { get; set; }
 
     public string? Note { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
-    public DateTime? ServiceDate { get; set; }
+    public DateOnly? ServiceDate { get; set; }
 
     public DateTime? ApprovedAt { get; set; }
 
@@ -33,19 +35,19 @@ public partial class ServiceRegistration
 
     public decimal? Latitude { get; set; }
 
+    public string? ScheduleDaysOfWeek { get; set; }
+
     public string? Phone { get; set; }
 
-    public string? CancelReason { get; set; }
+    public int? TotalSessions { get; set; }
 
-    public int? EstimatedDuration { get; set; }
+    public string? CancelReason { get; set; }
 
     public virtual User? CurrentCaretaker { get; set; }
 
     public virtual User? MainCaretaker { get; set; }
 
     public virtual Order? Order { get; set; }
-
-    public virtual Nursery? Nursery { get; set; }
 
     public virtual NurseryCareService? NurseryCareService { get; set; }
 
@@ -54,4 +56,6 @@ public partial class ServiceRegistration
     public virtual User? User { get; set; }
 
     public virtual ServiceRating? ServiceRating { get; set; }
+
+    public virtual Shift? PrefferedShift { get; set; }
 }

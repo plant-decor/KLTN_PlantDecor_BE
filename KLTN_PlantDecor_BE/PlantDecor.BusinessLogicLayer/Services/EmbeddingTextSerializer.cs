@@ -61,6 +61,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!string.IsNullOrEmpty(dto.NurseryName))
                 sb.AppendLine($"Vựa: {dto.NurseryName}");
 
+            AppendPlantGuideSection(
+                sb,
+                dto.GuideLightRequirementName,
+                dto.GuideLightRequirement,
+                dto.GuideWatering,
+                dto.GuideFertilizing,
+                dto.GuidePruning,
+                dto.GuideTemperature,
+                dto.GuideHumidity,
+                dto.GuideSoil,
+                dto.GuideCareNotes);
+
             return sb.ToString().Trim();
         }
 
@@ -123,6 +135,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Nursery
             if (!string.IsNullOrEmpty(dto.NurseryName))
                 sb.AppendLine($"Vựa: {dto.NurseryName}");
+
+            AppendPlantGuideSection(
+                sb,
+                dto.GuideLightRequirementName,
+                dto.GuideLightRequirement,
+                dto.GuideWatering,
+                dto.GuideFertilizing,
+                dto.GuidePruning,
+                dto.GuideTemperature,
+                dto.GuideHumidity,
+                dto.GuideSoil,
+                dto.GuideCareNotes);
 
             return sb.ToString().Trim();
         }
@@ -284,6 +308,67 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 SeasonTypeEnum.Tet => "Tết",
                 _ => "Không xác định"
             };
+        }
+
+        private static void AppendPlantGuideSection(
+            StringBuilder sb,
+            string? lightRequirementName,
+            int? lightRequirement,
+            string? watering,
+            string? fertilizing,
+            string? pruning,
+            string? temperature,
+            string? humidity,
+            string? soil,
+            string? careNotes)
+        {
+            var hasGuideData =
+                !string.IsNullOrWhiteSpace(lightRequirementName)
+                || lightRequirement.HasValue
+                || !string.IsNullOrWhiteSpace(watering)
+                || !string.IsNullOrWhiteSpace(fertilizing)
+                || !string.IsNullOrWhiteSpace(pruning)
+                || !string.IsNullOrWhiteSpace(temperature)
+                || !string.IsNullOrWhiteSpace(humidity)
+                || !string.IsNullOrWhiteSpace(soil)
+                || !string.IsNullOrWhiteSpace(careNotes);
+
+            if (!hasGuideData)
+            {
+                return;
+            }
+
+            sb.AppendLine("Hướng dẫn chăm sóc:");
+
+            if (!string.IsNullOrWhiteSpace(lightRequirementName))
+            {
+                sb.AppendLine($"Ánh sáng: {lightRequirementName}");
+            }
+            else if (lightRequirement.HasValue)
+            {
+                sb.AppendLine($"Ánh sáng (mức): {lightRequirement.Value}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(watering))
+                sb.AppendLine($"Tưới nước: {watering}");
+
+            if (!string.IsNullOrWhiteSpace(fertilizing))
+                sb.AppendLine($"Bón phân: {fertilizing}");
+
+            if (!string.IsNullOrWhiteSpace(pruning))
+                sb.AppendLine($"Cắt tỉa: {pruning}");
+
+            if (!string.IsNullOrWhiteSpace(temperature))
+                sb.AppendLine($"Nhiệt độ: {temperature}");
+
+            if (!string.IsNullOrWhiteSpace(humidity))
+                sb.AppendLine($"Độ ẩm: {humidity}");
+
+            if (!string.IsNullOrWhiteSpace(soil))
+                sb.AppendLine($"Đất trồng: {soil}");
+
+            if (!string.IsNullOrWhiteSpace(careNotes))
+                sb.AppendLine($"Ghi chú chăm sóc: {careNotes}");
         }
     }
 }

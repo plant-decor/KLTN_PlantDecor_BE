@@ -29,6 +29,8 @@ public partial class NurseryOrderDetail
 
     public virtual CommonPlant? CommonPlant { get; set; }
 
+    public virtual PlantRating? PlantRating { get; set; }
+
     public virtual PlantInstance? PlantInstance { get; set; }
 
     public virtual NurseryPlantCombo? NurseryPlantCombo { get; set; }

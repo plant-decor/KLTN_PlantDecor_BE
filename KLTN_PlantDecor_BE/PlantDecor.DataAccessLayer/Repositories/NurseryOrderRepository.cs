@@ -61,5 +61,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             return (items, totalCount);
         }
+
+        public async Task<(List<NurseryOrder> Items, int TotalCount)> GetByNurseryIdPagedAsync(int nurseryId, int? status, int skip, int take)
+        {
+            var query = _context.NurseryOrders
+                .Include(no => no.Nursery)
+                .Include(no => no.Shipper)
+                .Include(no => no.NurseryOrderDetails)
+                .Where(no => no.NurseryId == nurseryId)
+                .AsQueryable();
+
+            if (status.HasValue)
+                query = query.Where(no => no.Status == status.Value);
+
+            query = query.OrderByDescending(no => no.UpdatedAt ?? no.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip(skip).Take(take).ToListAsync();
+
+            return (items, totalCount);
+        }
     }
 }

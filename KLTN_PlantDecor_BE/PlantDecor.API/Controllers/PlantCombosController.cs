@@ -157,6 +157,55 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Thay thế ảnh combo theo imageId
+        /// </summary>
+        [HttpPut("{id}/images/{imageId}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ReplaceComboImage(int id, int imageId, IFormFile file)
+        {
+            var combo = await _plantComboService.ReplaceImageAsync(id, imageId, file);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Replace combo image successfully",
+                Payload = combo
+            });
+        }
+
+        /// <summary>
+        /// Đặt ảnh primary cho combo theo imageId
+        /// </summary>
+        [HttpPatch("{id}/images/{imageId}/set-primary")]
+        public async Task<IActionResult> SetPrimaryComboImage(int id, int imageId)
+        {
+            var combo = await _plantComboService.SetPrimaryPlantComboImageAsync(id, imageId);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Set primary combo image successfully",
+                Payload = combo
+            });
+        }
+
+        /// <summary>
+        /// Xóa ảnh combo theo imageId
+        /// </summary>
+        [HttpDelete("{id}/images/{imageId}")]
+        public async Task<IActionResult> DeleteComboImage(int id, int imageId)
+        {
+            var combo = await _plantComboService.DeletePlantComboImageAsync(id, imageId);
+            return Ok(new ApiResponse<PlantComboResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Delete combo image successfully",
+                Payload = combo
+            });
+        }
+
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(int id)
         {
@@ -173,6 +222,25 @@ namespace PlantDecor.API.Controllers
         #endregion
 
         #region Manager - Nursery Combo Stock
+
+        /// <summary>
+        /// [Manager] Lấy danh sách PlantCombo phù hợp với vựa dựa trên cây đang có
+        /// GET /api/manager/plant-combos/compatible
+        /// </summary>
+        [HttpGet("/api/manager/plant-combos/compatible")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetCompatibleCombos()
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantComboService.GetCompatibleCombosForNurseryAsync(managerId);
+            return Ok(new ApiResponse<List<PlantComboResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách combo phù hợp với vựa thành công",
+                Payload = result
+            });
+        }
 
         /// <summary>
         /// [Manager] Lấy danh sách plant combo tồn kho của vựa (lấy nursery từ token)

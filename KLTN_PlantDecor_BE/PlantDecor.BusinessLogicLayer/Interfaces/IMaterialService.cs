@@ -16,6 +16,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
         Task<MaterialResponseDto> UploadMaterialThumbnailAsync(int materialId, IFormFile file);
         Task<MaterialResponseDto> UploadMaterialImagesAsync(int materialId, List<IFormFile> files);
+        Task<MaterialResponseDto> SetPrimaryMaterialImageAsync(int materialId, int imageId);
+        Task<MaterialResponseDto> ReplaceImageAsync(int materialId, int imageId, IFormFile file);
+        Task<MaterialResponseDto> DeleteMaterialImageAsync(int materialId, int imageId);
         Task<bool> DeleteMaterialAsync(int id);
         Task<bool> ToggleActiveAsync(int id);
 

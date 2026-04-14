@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -17,15 +18,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IConfiguration _configuration;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private const int PaymentTimeoutMinutes = 30;
         private const int MaxRetryAttempts = 3;
         private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IUnitOfWork unitOfWork, ICacheService cacheService, IConfiguration configuration, ILogger<PaymentService> logger)
+        public PaymentService(IUnitOfWork unitOfWork, ICacheService cacheService, IConfiguration configuration, IBackgroundJobClient backgroundJobClient, ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _configuration = configuration;
+            _backgroundJobClient = backgroundJobClient;
             _logger = logger;
         }
 
@@ -309,8 +312,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         await AssignShippersForPaidOrderAsync(order);
                     }
 
-                    // Update inventory for OtherProduct orders (CommonPlant, NurseryMaterial, NurseryPlantCombo)
-                    if (order.OrderType == (int)OrderTypeEnum.OtherProduct)
+                    // Update inventory for OtherProduct orders (cart + buy-now)
+                    if (order.OrderType == (int)OrderTypeEnum.OtherProduct
+                        || order.OrderType == (int)OrderTypeEnum.OtherProductBuyNow)
                     {
                         await UpdateInventoryForOrderAsync(order);
                     }
@@ -319,6 +323,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (order.OrderType == (int)OrderTypeEnum.PlantInstance)
                     {
                         await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
+                    }
+
+                    // Generate care service schedule for Service orders
+                    if (order.OrderType == (int)OrderTypeEnum.Service)
+                    {
+                        var serviceRegistration = await _unitOfWork.ServiceRegistrationRepository.GetByOrderIdAsync(order.Id);
+                        if (serviceRegistration != null)
+                        {
+                            _backgroundJobClient.Enqueue<IServiceCareBackgroundJobService>(
+                                service => service.GenerateServiceScheduleAsync(serviceRegistration.Id));
+                        }
                     }
 
                     var invoice = await ResolveTargetInvoiceForPaymentAsync(payment);

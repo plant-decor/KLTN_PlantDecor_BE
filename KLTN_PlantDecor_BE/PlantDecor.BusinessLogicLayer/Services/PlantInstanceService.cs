@@ -94,6 +94,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<PlantInstanceResponseDto> GetByIdAsync(int instanceId, int managerId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            if (instance.CurrentNurseryId != nursery.Id)
+                throw new ForbiddenException("PlantInstance này không thuộc vựa của bạn");
+
+            return instance.ToResponse();
+        }
+
         public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetByNurseryIdAsync(int nurseryId, int managerId, Pagination pagination, int? statusFilter = null)
         {
             // Validate nursery thuộc về manager
@@ -406,6 +422,118 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedInstance!.ToResponse();
         }
 
+        public async Task<PlantInstanceResponseDto> SetPrimaryInstanceImageAsync(int instanceId, int managerId, int imageId)
+        {
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+            var targetImage = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
+            if (targetImage == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+
+            foreach (var image in instance.PlantImages.Where(i => i.PlantInstanceId == instanceId))
+                image.IsPrimary = image.Id == imageId;
+
+            instance.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+            await _unitOfWork.SaveAsync();
+
+            await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+            var updatedInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            return updatedInstance!.ToResponse();
+        }
+
+        public async Task<PlantInstanceResponseDto> ReplaceInstanceImageAsync(int instanceId, int managerId, int imageId, IFormFile file)
+        {
+            if (file == null)
+                throw new BadRequestException("No file was uploaded");
+
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+            var image = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var oldPublicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            var uploadedFile = await _cloudinaryService.UploadFileAsync(file, "PlantInstanceImages");
+            if (uploadedFile == null || string.IsNullOrWhiteSpace(uploadedFile.SecureUrl))
+                throw new BadRequestException("Image upload failed");
+
+            image.ImageUrl = uploadedFile.SecureUrl;
+            instance.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(oldPublicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+            var updatedInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            return updatedInstance!.ToResponse();
+        }
+
+        public async Task<PlantInstanceResponseDto> DeleteInstanceImageAsync(int instanceId, int managerId, int imageId)
+        {
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            if (instance == null)
+                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+
+            var image = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
+            if (image == null)
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+
+            var wasPrimary = image.IsPrimary == true;
+            var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
+
+            instance.PlantImages.Remove(image);
+
+            if (wasPrimary)
+            {
+                var next = instance.PlantImages.FirstOrDefault(i => i.PlantInstanceId == instanceId);
+                if (next != null) next.IsPrimary = true;
+            }
+
+            instance.UpdatedAt = DateTime.Now;
+            _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+            await _unitOfWork.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(publicId))
+            {
+                try { await _cloudinaryService.DeleteFileAsync(publicId); }
+                catch { }
+            }
+
+            await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+            var updatedInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+            return updatedInstance!.ToResponse();
+        }
+
         #endregion
 
         #region Shop Operations
@@ -523,6 +651,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #endregion
 
+        #region Private Helpers
+
+        private static string ExtractCloudinaryPublicId(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return string.Empty;
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath;
+                var idx = path.IndexOf("/upload/", StringComparison.Ordinal);
+                if (idx < 0) return string.Empty;
+                var after = path[(idx + 8)..];
+                if (after.StartsWith('v') && after.Contains('/'))
+                    after = after[(after.IndexOf('/') + 1)..];
+                var dot = after.LastIndexOf('.');
+                return dot > 0 ? after[..dot] : after;
+            }
+            catch { return string.Empty; }
+        }
+
+        #endregion
+
         #region Embedding Operations
 
         private void QueueEmbeddingAsync(PlantInstance entity)
@@ -530,10 +680,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             try
             {
                 var plant = entity.Plant;
+                var guide = plant?.PlantGuide;
 
                 var embeddingDto = new PlantInstanceEmbeddingDto
                 {
                     PlantInstanceId = entity.Id,
+                    PlantId = entity.PlantId ?? 0,
                     Status = entity.Status,
                     PlantName = plant?.Name ?? string.Empty,
                     PlantSpecificName = plant?.SpecificName,
@@ -560,7 +712,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToList() ?? new List<string>(),
                     NurseryId = entity.CurrentNurseryId ?? 0,
-                    NurseryName = entity.CurrentNursery?.Name
+                    NurseryName = entity.CurrentNursery?.Name,
+                    GuideLightRequirement = guide?.LightRequirement
                 };
 
                 var entityId = ConvertToGuid(entity.Id);

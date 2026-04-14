@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class RoomDesignResponseDto
@@ -28,21 +30,25 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         /// <summary>
         /// Detected room type (living room, bedroom, office, etc.)
         /// </summary>
+        [JsonIgnore]
         public string RoomType { get; set; } = null!;
 
         /// <summary>
         /// Estimated room size (small, medium, large)
         /// </summary>
+        [JsonIgnore]
         public string RoomSize { get; set; } = null!;
 
         /// <summary>
         /// Lighting condition (low, medium, high, natural)
         /// </summary>
+        [JsonIgnore]
         public string LightingCondition { get; set; } = null!;
 
         /// <summary>
         /// Detected interior style (modern, minimalist, tropical, etc.)
         /// </summary>
+        [JsonIgnore]
         public string InteriorStyle { get; set; } = null!;
 
         /// <summary>
@@ -55,9 +61,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         /// </summary>
         public List<string> ColorPalette { get; set; } = new();
 
-        /// <summary>
-        /// AI suggestions for plant placement
-        /// </summary>
         /// <summary>
         /// Overall recommendation summary
         /// </summary>
@@ -80,6 +83,30 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         /// Product ID for purchase
         /// </summary>
         public int? ProductId { get; set; }
+
+        /// <summary>
+        /// Underlying Plant ID used internally for allergy filtering
+        /// </summary>
+        [JsonIgnore]
+        public int? PlantId { get; set; }
+
+        /// <summary>
+        /// Internal safety flag used for strict PetSafe filtering
+        /// </summary>
+        [JsonIgnore]
+        public bool? PetSafe { get; set; }
+
+        /// <summary>
+        /// Internal safety flag used for strict ChildSafe filtering
+        /// </summary>
+        [JsonIgnore]
+        public bool? ChildSafe { get; set; }
+
+        /// <summary>
+        /// Internal light requirement from PlantGuide used for strict NaturalLightLevel filtering
+        /// </summary>
+        [JsonIgnore]
+        public int? LightRequirement { get; set; }
 
         /// <summary>
         /// Plant name
@@ -140,5 +167,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         /// Whether the plant is currently available for purchase
         /// </summary>
         public bool IsPurchasable { get; set; }
+    }
+
+    public class AllergyPlantOptionDto
+    {
+        public int PlantId { get; set; }
+        public string PlantName { get; set; } = null!;
     }
 }

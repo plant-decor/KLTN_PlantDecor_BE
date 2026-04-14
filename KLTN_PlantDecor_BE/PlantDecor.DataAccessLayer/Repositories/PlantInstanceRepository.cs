@@ -39,7 +39,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<PlantInstance?> GetByIdWithDetailsAsync(int id)
         {
             return await _context.PlantInstances
-                .Include(pi => pi.Plant)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
                 .Include(pi => pi.CurrentNursery)
                 .Include(pi => pi.PlantImages)
                 .FirstOrDefaultAsync(pi => pi.Id == id);
@@ -75,6 +76,94 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return SelectPrimaryImageUrl(plantImages);
         }
 
+        public async Task<Dictionary<int, string>> GetPrimaryImageUrlsAsync(IEnumerable<int> plantInstanceIds)
+        {
+            var normalizedIds = plantInstanceIds
+                .Distinct()
+                .ToList();
+
+            if (normalizedIds.Count == 0)
+            {
+                return new Dictionary<int, string>();
+            }
+
+            var result = new Dictionary<int, string>();
+
+            var instanceImages = await _context.PlantImages
+                .AsNoTracking()
+                .Where(image => image.PlantInstanceId.HasValue
+                    && normalizedIds.Contains(image.PlantInstanceId.Value)
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .ToListAsync();
+
+            var instanceImageLookup = instanceImages
+                .GroupBy(image => image.PlantInstanceId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => SelectPrimaryImageUrl(group.AsEnumerable()));
+
+            foreach (var kvp in instanceImageLookup)
+            {
+                if (!string.IsNullOrWhiteSpace(kvp.Value))
+                {
+                    result[kvp.Key] = kvp.Value!;
+                }
+            }
+
+            var missingIds = normalizedIds
+                .Where(id => !result.ContainsKey(id))
+                .ToList();
+
+            if (missingIds.Count == 0)
+            {
+                return result;
+            }
+
+            var instanceToPlantMappings = await _context.PlantInstances
+                .AsNoTracking()
+                .Where(instance => missingIds.Contains(instance.Id) && instance.PlantId.HasValue)
+                .Select(instance => new
+                {
+                    instance.Id,
+                    PlantId = instance.PlantId!.Value
+                })
+                .ToListAsync();
+
+            var plantIds = instanceToPlantMappings
+                .Select(mapping => mapping.PlantId)
+                .Distinct()
+                .ToList();
+
+            if (plantIds.Count == 0)
+            {
+                return result;
+            }
+
+            var plantImages = await _context.PlantImages
+                .AsNoTracking()
+                .Where(image => image.PlantInstanceId == null
+                    && plantIds.Contains(image.PlantId)
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .ToListAsync();
+
+            var plantImageLookup = plantImages
+                .GroupBy(image => image.PlantId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => SelectPrimaryImageUrl(group.AsEnumerable()));
+
+            foreach (var mapping in instanceToPlantMappings)
+            {
+                if (plantImageLookup.TryGetValue(mapping.PlantId, out var plantImageUrl)
+                    && !string.IsNullOrWhiteSpace(plantImageUrl))
+                {
+                    result[mapping.Id] = plantImageUrl!;
+                }
+            }
+
+            return result;
+        }
+
         public async Task<List<PlantInstance>> GetByIdsAsync(List<int> ids)
         {
             return await _context.PlantInstances
@@ -87,7 +176,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.PlantInstances
                 .Where(pi => pi.CurrentNurseryId == nurseryId)
-                .Include(pi => pi.Plant)
+                .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.PlantImages)
                 .Include(pi => pi.CurrentNursery)
                 .ToListAsync();
@@ -185,6 +274,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.PlantInstances
                 .AsNoTracking()
                 .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.Categories)
                 .Include(pi => pi.Plant!)
                     .ThenInclude(p => p.Tags)
@@ -192,6 +283,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .OrderBy(pi => pi.Id)
                 .Skip(skip)
                 .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<List<PlantInstance>> GetByPlantIdForEmbeddingAsync(int plantId)
+        {
+            return await _context.PlantInstances
+                .AsNoTracking()
+                .Where(pi => pi.PlantId == plantId)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantGuide)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Categories)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.Tags)
+                .Include(pi => pi.CurrentNursery)
+                .OrderBy(pi => pi.Id)
                 .ToListAsync();
         }
     }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class SemanticSearchResponseDto
@@ -21,6 +23,12 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public double SimilarityScore { get; set; }
         public string? FengShuiElement { get; set; }
         public Dictionary<string, object>? AdditionalInfo { get; set; }
+
+        [JsonIgnore]
+        public bool? PetSafe { get; set; }
+
+        [JsonIgnore]
+        public bool? ChildSafe { get; set; }
     }
 
     public class RoomRecommendationResponseDto

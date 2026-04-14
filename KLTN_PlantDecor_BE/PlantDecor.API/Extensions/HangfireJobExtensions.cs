@@ -215,6 +215,17 @@ namespace PlantDecor.API.Extensions
         #endregion
 
         /// <summary>
+        /// Enqueue service care schedule generation after a Service order is paid
+        /// </summary>
+        public static string EnqueueServiceScheduleGeneration(
+            this IBackgroundJobClient backgroundJobClient,
+            int serviceRegistrationId)
+        {
+            return backgroundJobClient.Enqueue<IServiceCareBackgroundJobService>(
+                service => service.GenerateServiceScheduleAsync(serviceRegistrationId));
+        }
+
+        /// <summary>
         /// Register all recurring Hangfire jobs
         /// </summary>
         public static void RegisterRecurringJobs(this IApplicationBuilder app)

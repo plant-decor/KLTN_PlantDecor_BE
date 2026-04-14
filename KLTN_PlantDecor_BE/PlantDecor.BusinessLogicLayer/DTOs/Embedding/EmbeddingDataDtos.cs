@@ -8,6 +8,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
     public class CommonPlantEmbeddingDto
     {
         public int CommonPlantId { get; set; }
+        public int PlantId { get; set; }
         public bool IsActive { get; set; }
 
         public string PlantName { get; set; } = string.Empty;
@@ -31,6 +32,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public decimal? Price { get; set; }
+
+        // PlantGuide snapshot by PlantId
+        public int? GuideLightRequirement { get; set; }
+        public string? GuideLightRequirementName { get; set; }
+        public string? GuideWatering { get; set; }
+        public string? GuideFertilizing { get; set; }
+        public string? GuidePruning { get; set; }
+        public string? GuideTemperature { get; set; }
+        public string? GuideHumidity { get; set; }
+        public string? GuideSoil { get; set; }
+        public string? GuideCareNotes { get; set; }
     }
 
     /// <summary>
@@ -39,6 +51,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
     public class PlantInstanceEmbeddingDto
     {
         public int PlantInstanceId { get; set; }
+        public int PlantId { get; set; }
         public int Status { get; set; }
 
         public string PlantName { get; set; } = string.Empty;
@@ -64,6 +77,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
 
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
+
+        // PlantGuide snapshot by PlantId
+        public int? GuideLightRequirement { get; set; }
+        public string? GuideLightRequirementName { get; set; }
+        public string? GuideWatering { get; set; }
+        public string? GuideFertilizing { get; set; }
+        public string? GuidePruning { get; set; }
+        public string? GuideTemperature { get; set; }
+        public string? GuideHumidity { get; set; }
+        public string? GuideSoil { get; set; }
+        public string? GuideCareNotes { get; set; }
     }
 
     /// <summary>

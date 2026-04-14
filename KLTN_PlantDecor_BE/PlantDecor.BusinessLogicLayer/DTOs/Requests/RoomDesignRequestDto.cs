@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -15,9 +16,61 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public FengShuiElementTypeEnum? FengShuiElement { get; set; }
 
         /// <summary>
+        /// Optional room type value aligned with RoomDesignPreferences
+        /// </summary>
+        [Required(ErrorMessage = "RoomType is required")]
+        public RoomTypeEnum RoomType { get; set; }
+
+        /// <summary>
+        /// Optional room style value aligned with RoomDesignPreferences
+        /// </summary>
+        [Required(ErrorMessage = "RoomStyle is required")]
+        public RoomStyleEnum RoomStyle { get; set; }
+
+        /// <summary>
+        /// Optional room area value aligned with RoomDesignPreferences
+        /// </summary>
+        public int? RoomArea { get; set; }
+
+        /// <summary>
+        /// Optional minimum budget filter
+        /// </summary>
+        public decimal? MinBudget { get; set; }
+
+        /// <summary>
         /// Maximum budget for plant recommendations
         /// </summary>
         public decimal? MaxBudget { get; set; }
+
+        /// <summary>
+        /// Optional care level value aligned with RoomDesignPreferences
+        /// </summary>
+        public CareLevelTypeEnum? CareLevelType { get; set; }
+
+        /// <summary>
+        /// Optional flag aligned with RoomDesignPreferences
+        /// </summary>
+        public bool? IsOftenAway { get; set; }
+
+        /// <summary>
+        /// Optional natural light level value aligned with RoomDesignPreferences
+        /// </summary>
+        public LightRequirementEnum? NaturalLightLevel { get; set; }
+
+        /// <summary>
+        /// Optional allergy flag aligned with RoomDesignPreferences
+        /// </summary>
+        public bool? HasAllergy { get; set; }
+
+        /// <summary>
+        /// Optional allergy note aligned with RoomDesignPreferences
+        /// </summary>
+        public string? AllergyNote { get; set; }
+
+        /// <summary>
+        /// Optional selected active Plant IDs that the user is allergic to
+        /// </summary>
+        public List<int>? AllergicPlantIds { get; set; }
 
         /// <summary>
         /// Filter for pet-safe plants only
@@ -33,5 +86,20 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// Preferred nursery IDs (optional)
         /// </summary>
         public List<int>? PreferredNurseryIds { get; set; }
+
+        /// <summary>
+        /// Internal persistence metadata for uploaded room image
+        /// </summary>
+        public int? RoomImageId { get; set; }
+
+        /// <summary>
+        /// Internal persistence metadata for request user
+        /// </summary>
+        public int? UserId { get; set; }
+
+        /// <summary>
+        /// Internal persistence metadata for uploaded image URL
+        /// </summary>
+        public string? UploadedImageUrl { get; set; }
     }
 }

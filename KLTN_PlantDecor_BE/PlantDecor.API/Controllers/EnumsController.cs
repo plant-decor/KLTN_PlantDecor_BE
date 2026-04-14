@@ -17,6 +17,7 @@ namespace PlantDecor.API.Controllers
             ["CategoryType"] = typeof(CategoryTypeEnum),
             ["OrderStatus"] = typeof(OrderStatusEnum),
             ["OrderType"] = typeof(OrderTypeEnum),
+            ["BuyNowItemType"] = typeof(BuyNowItemTypeEnum),
             ["InvoiceStatus"] = typeof(InvoiceStatusEnum),
             ["InvoiceType"] = typeof(InvoiceTypeEnum),
             ["PaymentStatus"] = typeof(PaymentStatusEnum),
@@ -35,10 +36,18 @@ namespace PlantDecor.API.Controllers
             ["UnifiedSearchSortBy"] = typeof(UnifiedSearchSortByEnum),
             ["SortDirection"] = typeof(SortDirectionEnum),
             ["PlantInstanceStatus"] = typeof(PlantInstanceStatusEnum),
+            ["RoomType"] = typeof(RoomTypeEnum),
+            ["RoomStyle"] = typeof(RoomStyleEnum),
+            ["LightRequirement"] = typeof(LightRequirementEnum),
+            ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
+            ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
+            ["WishlistItemType"] = typeof(WishlistItemType),
             ["UserActionType"] = typeof(UserActionTypeEnum),
-            ["UserStatus"] = typeof(UserStatusEnum)
+            ["UserStatus"] = typeof(UserStatusEnum),
+            ["CareServiceType"] = typeof(CareServiceTypeEnum),
+            ["DayOfWeek"] = typeof(DayOfWeek)
         };
 
         /// <summary>
@@ -110,6 +119,26 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Enum cho Care Service
+        /// GET /api/system/enums/care-services
+        /// </summary>
+        [HttpGet("care-services")]
+        [AllowAnonymous]
+        public IActionResult GetCareServiceEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care service enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("CareServiceType", typeof(CareServiceTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
         /// Enum cho Plant
         /// GET /api/system/enums/plants
         /// </summary>
@@ -127,6 +156,30 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
                     CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Room Design
+        /// GET /api/system/enums/room-design
+        /// </summary>
+        [HttpGet("room-design")]
+        [AllowAnonymous]
+        public IActionResult GetRoomDesignEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get room design enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("RoomType", typeof(RoomTypeEnum)),
+                    CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
+                    CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
+                    CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
+                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum))
                 }
             });
         }
@@ -317,6 +370,26 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Enum cho Wishlist item type
+        /// GET /api/system/enums/wishlist-types
+        /// </summary>
+        [HttpGet("wishlist-types")]
+        [AllowAnonymous]
+        public IActionResult GetWishlistTypeEnum()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get wishlist enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("WishlistItemType", typeof(WishlistItemType))
+                }
+            });
+        }
+
+        /// <summary>
         /// Enum cho User
         /// GET /api/system/enums/users
         /// </summary>
@@ -374,7 +447,8 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("OrderStatus", typeof(OrderStatusEnum)),
-                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum))
+                    CreateEnumGroup("OrderType", typeof(OrderTypeEnum)),
+                    CreateEnumGroup("BuyNowItemType", typeof(BuyNowItemTypeEnum))
                 }
             });
         }
