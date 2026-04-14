@@ -45,6 +45,7 @@ Bạn là chuyên gia thiết kế nội thất và cây cảnh. Hãy phân tíc
 
 Lưu ý:
 - Đánh giá ánh sáng dựa trên cửa sổ, đèn, góc chụp
+- Trường lightingCondition phải được suy luận từ ảnh phòng, không dựa vào thông tin do người dùng nhập
 - Xác định không gian trống có thể đặt cây
 - Đề xuất vị trí đặt cây phù hợp với phong thủy và thẩm mỹ
 - Trường roomType, interiorStyle, lightingCondition PHẢI dùng đúng các giá trị enum đã liệt kê ở trên
@@ -103,7 +104,7 @@ Chỉ trả về JSON array, không có text khác.
             _logger = logger;
         }
 
-        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int? userId = null)
+        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int userId)
         {
             if (request == null)
             {
@@ -160,7 +161,7 @@ Chỉ trả về JSON array, không có text khác.
                 throw new BadRequestException(message);
             }
 
-            if (request.Image == null)
+            if (request.Image == null || request.Image.Length == 0)
             {
                 const string message = "Room image file is required";
                 var status = IsImageRelatedError(message)
@@ -210,12 +211,9 @@ Chỉ trả về JSON array, không có text khác.
                     FengShuiElement = request.FengShuiElement,
                     RoomType = request.RoomType,
                     RoomStyle = request.RoomStyle,
-                    RoomArea = request.RoomArea,
                     MinBudget = request.MinBudget,
                     MaxBudget = request.MaxBudget,
                     CareLevelType = request.CareLevelType,
-                    IsOftenAway = request.IsOftenAway,
-                    NaturalLightLevel = request.NaturalLightLevel,
                     HasAllergy = request.HasAllergy,
                     AllergyNote = request.AllergyNote,
                     AllergicPlantIds = request.AllergicPlantIds,
@@ -227,7 +225,7 @@ Chỉ trả về JSON array, không có text khác.
                     UploadedImageUrl = uploadedImage.SecureUrl
                 };
 
-                var result = await AnalyzeAndRecommendAsync(dto);
+                var result = await AnalyzeAndRecommendAsync(dto, inferNaturalLightFromAi: true);
                 await SaveRoomUploadModerationAsync(roomImage.Id, RoomUploadModerationStatusEnum.Approved, "Image validated successfully");
                 return result;
             }
@@ -252,7 +250,9 @@ Chỉ trả về JSON array, không có text khác.
             }
         }
 
-        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(RoomDesignRequestDto request)
+        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(
+            RoomDesignRequestDto request,
+            bool inferNaturalLightFromAi = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -275,6 +275,20 @@ Chỉ trả về JSON array, không có text khác.
                 // Step 1: Analyze room image using Vision API
                 _logger.LogInformation("Starting room analysis...");
                 var roomAnalysis = await AnalyzeRoomAsync(request.RoomImageBase64);
+
+                if (inferNaturalLightFromAi && !request.NaturalLightLevel.HasValue)
+                {
+                    var inferredNaturalLightLevel = MapLightingConditionToLightRequirement(roomAnalysis.LightingCondition);
+                    if (inferredNaturalLightLevel.HasValue)
+                    {
+                        request.NaturalLightLevel = inferredNaturalLightLevel.Value;
+                        _logger.LogInformation(
+                            "NaturalLightLevel inferred from AI room analysis. LightingCondition={LightingCondition}, NaturalLightLevel={NaturalLightLevel}",
+                            roomAnalysis.LightingCondition,
+                            request.NaturalLightLevel.Value);
+                    }
+                }
+
                 ApplyRequestPreferencesToRoomAnalysis(roomAnalysis, request);
 
                 // Step 2: Build search query based on room analysis
@@ -297,7 +311,7 @@ Chỉ trả về JSON array, không có text khác.
                 // Overwrite AI vision summary with a grounded summary based on DB-backed recommendations.
                 roomAnalysis.Summary = BuildGroundedSummary(roomAnalysis, recommendations);
 
-                await PersistDesignArtifactsAsync(request, roomAnalysis, recommendations, searchQuery);
+                var layoutDesignId = await PersistDesignArtifactsAsync(request, roomAnalysis, recommendations, searchQuery);
 
                 stopwatch.Stop();
 
@@ -306,7 +320,9 @@ Chỉ trả về JSON array, không có text khác.
                     RoomAnalysis = roomAnalysis,
                     Recommendations = recommendations,
                     TotalCount = recommendations.Count,
-                    ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+                    ProcessingTimeMs = stopwatch.ElapsedMilliseconds,
+                    UserId = request.UserId,
+                    LayoutDesignId = layoutDesignId
                 };
             }
             catch (Exception ex)
@@ -960,6 +976,18 @@ Chỉ trả về JSON array, không có text khác.
                 // "high" => "cao",
                 // "natural" => "tự nhiên",
                 _ => lightingCondition ?? "không xác định"
+            };
+        }
+
+        private static LightRequirementEnum? MapLightingConditionToLightRequirement(string? lightingCondition)
+        {
+            return lightingCondition?.Trim() switch
+            {
+                "LowLight" or "low" => LightRequirementEnum.LowLight,
+                "IndirectLight" or "medium" => LightRequirementEnum.IndirectLight,
+                "PartialSun" => LightRequirementEnum.PartialSun,
+                "FullSun" or "high" or "natural" => LightRequirementEnum.FullSun,
+                _ => null
             };
         }
 
@@ -2035,7 +2063,7 @@ Chỉ trả về JSON array, không có text khác.
             return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
-        private async Task PersistDesignArtifactsAsync(
+        private async Task<int?> PersistDesignArtifactsAsync(
             RoomDesignRequestDto request,
             RoomAnalysisDto roomAnalysis,
             IReadOnlyCollection<PlantRecommendationDto> recommendations,
@@ -2043,7 +2071,7 @@ Chỉ trả về JSON array, không có text khác.
         {
             if (!request.RoomImageId.HasValue)
             {
-                return;
+                return null;
             }
 
             await _unitOfWork.BeginTransactionAsync();
@@ -2101,6 +2129,7 @@ Chỉ trả về JSON array, không có text khác.
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
+                return layoutDesign.Id;
             }
             catch (Exception ex)
             {

@@ -3,6 +3,7 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.Text.Json;
 
@@ -259,7 +260,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error analyzing image");
-                throw;
+                throw new BadRequestException("Failed to analyze image. Please ensure the image is valid and try again.");
             }
         }
 
