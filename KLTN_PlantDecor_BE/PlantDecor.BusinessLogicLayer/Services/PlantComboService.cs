@@ -1146,7 +1146,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryListResponseDto>> GetNurseriesByComboAsync(int comboId)
         {
-            var cacheKey = $"{NURSERIES_BY_COMBO_KEY}_{comboId}_v2";
+            var cacheKey = $"{NURSERIES_BY_COMBO_KEY}_{comboId}_v3";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
@@ -1171,6 +1171,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var nursery = npc.Nursery!.ToListResponse();
                     nursery.NurseryPlantComboId = npc.Id;
+                    nursery.Quantity = npc.Quantity;
                     return nursery;
                 })
                 .ToList();
