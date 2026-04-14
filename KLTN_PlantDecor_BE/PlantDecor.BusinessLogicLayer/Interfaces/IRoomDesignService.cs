@@ -10,15 +10,19 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// </summary>
         /// <param name="request">Room design request with image and filters</param>
         /// <returns>Room analysis and plant recommendations</returns>
-        Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(RoomDesignRequestDto request);
+        Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(
+            RoomDesignRequestDto request,
+            bool inferNaturalLightFromAi = false);
 
         /// <summary>
         /// Analyze uploaded room image and persist design artifacts
         /// </summary>
         /// <param name="request">Multipart upload request and optional filters/preferences</param>
-        /// <param name="userId">Optional authenticated user id</param>
+        /// <param name="userId">Authenticated user id</param>
         /// <returns>Room analysis and plant recommendations</returns>
-        Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int? userId = null);
+        Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(
+            AnalyzeAndRecommendUploadRequest request,
+            int userId);
 
         /// <summary>
         /// Analyze room image only (without recommendations)

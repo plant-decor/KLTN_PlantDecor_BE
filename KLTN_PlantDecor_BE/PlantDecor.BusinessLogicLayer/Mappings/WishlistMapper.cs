@@ -37,6 +37,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             Id = w.Id,
             ItemType = w.ItemType,
             ItemId = w.PlantInstanceId ?? 0,
+            PlantId = w.PlantInstance?.PlantId,
             ItemName = w.PlantInstance?.Plant?.Name ?? "Plant Instance",
             ItemImageUrl = w.PlantInstance?.PlantImages?
                 .FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl

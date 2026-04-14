@@ -7,6 +7,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? CommonPlantId { get; set; }
         public int? NurseryPlantComboId { get; set; }
         public int? NurseryMaterialId { get; set; }
+        public int? PlantId { get; set; }
+        public int? PlantComboId { get; set; }
+        public int? MaterialId { get; set; }
         public int NurseryId { get; set; }
         public string NurseryName { get; set; } = null!;
         public string? ProductName { get; set; }
