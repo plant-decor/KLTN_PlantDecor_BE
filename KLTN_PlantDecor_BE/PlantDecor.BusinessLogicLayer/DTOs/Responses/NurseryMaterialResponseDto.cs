@@ -32,5 +32,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int ReservedQuantity { get; set; }
         public bool IsActive { get; set; }
         public int AvailableQuantity => Quantity;
+        public string? PrimaryImageUrl { get; set; }
     }
 }

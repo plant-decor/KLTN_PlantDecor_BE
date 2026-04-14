@@ -167,6 +167,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IServiceCareBackgroundJobService, ServiceCareBackgroundJobService>();
             builder.Services.AddScoped<IServiceRatingService, ServiceRatingService>();
             builder.Services.AddScoped<ISpecializationService, SpecializationService>();
+            builder.Services.AddScoped<IShiftService, ShiftService>();
 
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();

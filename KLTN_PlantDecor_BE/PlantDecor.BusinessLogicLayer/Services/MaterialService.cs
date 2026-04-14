@@ -665,7 +665,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryListResponseDto>> GetNurseriesByMaterialAsync(int materialId)
         {
-            var cacheKey = $"{NURSERIES_BY_MATERIAL_KEY}_{materialId}_v2";
+            var cacheKey = $"{NURSERIES_BY_MATERIAL_KEY}_{materialId}_v3";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
@@ -701,6 +701,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var nursery = nm.Nursery!.ToListResponse();
                     nursery.NurseryMaterialId = nm.Id;
+                    nursery.Quantity = nm.Quantity;
                     return nursery;
                 })
                 .ToList();

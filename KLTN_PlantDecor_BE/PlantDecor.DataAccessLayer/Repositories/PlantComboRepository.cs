@@ -87,6 +87,28 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(c => c.PlantComboItems.Any(ci => ci.Id == comboItemId));
         }
 
+        public async Task<List<PlantCombo>> GetCompatibleCombosForNurseryAsync(int nurseryId)
+        {
+            var nurseryPlantIds = await _context.CommonPlants
+                .Where(cp => cp.NurseryId == nurseryId && cp.IsActive)
+                .Select(cp => cp.PlantId)
+                .ToHashSetAsync();
+
+            var combos = await _context.PlantCombos
+                .Where(c => c.IsActive == true && c.PlantComboItems.Any())
+                .Include(c => c.PlantComboItems)
+                    .ThenInclude(ci => ci.Plant)
+                .Include(c => c.PlantComboImages)
+                .Include(c => c.TagsNavigation)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+
+            return combos
+                .Where(c => c.PlantComboItems
+                    .All(i => i.PlantId.HasValue && nurseryPlantIds.Contains(i.PlantId.Value)))
+                .ToList();
+        }
+
         public async Task<PaginatedResult<PlantCombo>> GetCombosForShopAsync(Pagination pagination)
         {
             var query = _context.PlantCombos

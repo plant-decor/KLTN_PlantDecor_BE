@@ -21,9 +21,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int ServiceType { get; set; }
 
         /// <summary>
-        /// Chỉ bắt buộc với Periodic (ServiceType = 2)
+        /// Chỉ bắt buộc với Periodic (ServiceType = 2). Với OneTime thì bỏ qua.
         /// </summary>
-        [Range(1, 7)]
         public int? VisitPerWeek { get; set; }
 
         [Required]

@@ -80,6 +80,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 progress.Status != (int)ServiceProgressStatusEnum.Pending)
                 throw new BadRequestException("Task is not in a state that allows check-in");
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (progress.TaskDate != today)
+                throw new BadRequestException($"You can only check in on the scheduled task date ({progress.TaskDate:yyyy-MM-dd})");
+
             progress.Status = (int)ServiceProgressStatusEnum.InProgress;
             progress.ActualStartTime = DateTime.Now;
             _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
@@ -100,6 +104,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (progress.Status != (int)ServiceProgressStatusEnum.InProgress)
                 throw new BadRequestException("Task is not in progress");
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (progress.TaskDate != today)
+                throw new BadRequestException($"You can only check out on the scheduled task date ({progress.TaskDate:yyyy-MM-dd})");
 
             string? evidenceImageUrl = null;
             if (evidenceImage != null)
@@ -187,6 +195,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (!newCaretaker.NurseryId.HasValue || newCaretaker.NurseryId.Value != nursery.Id)
                 throw new ForbiddenException("Caretaker is not assigned to your nursery");
+
+            // Check schedule conflict: 1 ca chỉ làm 1 đơn
+            if (progress.TaskDate.HasValue)
+            {
+                var conflictingIds = await _unitOfWork.ServiceProgressRepository
+                    .GetConflictingCaretakerIdsAsync(progress.ShiftId, new List<DateOnly> { progress.TaskDate.Value });
+                if (conflictingIds.Contains(newCaretakerId))
+                    throw new BadRequestException("Caretaker has a schedule conflict on this session's shift and date");
+            }
 
             progress.CaretakerId = newCaretakerId;
             progress.Status = (int)ServiceProgressStatusEnum.Assigned;

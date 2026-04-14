@@ -73,7 +73,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             else if (request.ServiceType == (int)CareServiceTypeEnum.Periodic &&
                 (!request.VisitPerWeek.HasValue || request.VisitPerWeek.Value == 0))
             {
-                throw new BadRequestException("VisitPerWeek (1-7) is required for Periodic service packages");
+                throw new BadRequestException("VisitPerWeek (1-6) is required for Periodic service packages");
+            }
+            else if (request.ServiceType == (int)CareServiceTypeEnum.Periodic &&
+                (request.VisitPerWeek.Value < 1 || request.VisitPerWeek.Value > 6))
+            {
+                throw new BadRequestException("VisitPerWeek must be between 1 and 6");
             }
 
             var pkg = new CareServicePackage

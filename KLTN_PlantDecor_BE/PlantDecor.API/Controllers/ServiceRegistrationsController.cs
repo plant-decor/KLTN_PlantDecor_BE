@@ -257,6 +257,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Lấy danh sách caretaker đủ điều kiện (đúng chuyên môn + không trùng lịch) cho đăng ký dịch vụ
+        /// </summary>
+        [HttpGet("{id}/eligible-caretakers")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetEligibleCaretakers(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _serviceRegistrationService.GetEligibleCaretakersForRegistrationAsync(managerId, id);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get eligible caretakers successfully",
+                Payload = result
+            });
+        }
+
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
