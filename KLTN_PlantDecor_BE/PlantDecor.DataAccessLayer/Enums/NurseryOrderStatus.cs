@@ -15,6 +15,6 @@ namespace PlantDecor.DataAccessLayer.Enums
         Shipping = 4, // đang vận chuyển, chờ giao hàng
         Delivered = 5, // đã giao hàng tới
         Cancelled = 6, // da huy, co the do khach hang huy truoc khi thanh toan hoac do nhan vien huy sau khi thanh toan
-        DeliveryFailed = 7 // giao hang that bai
+        Failed = 7 // đơn hàng thất bại (có thể do shipper hoặc không thể xử lý đơn hàng hoặc khách hàng không trả tiền ...)
     }
 }
