@@ -70,11 +70,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Assigned)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Assigned)
                 throw new BadRequestException("Đơn không ở trạng thái có thể bắt đầu giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.Shipping;
+            nurseryOrder.Status = (int)OrderStatusEnum.Shipping;
             nurseryOrder.ShippingStartedAt = now;
             nurseryOrder.ShipperNote = request.ShipperNote;
             nurseryOrder.UpdatedAt = now;
@@ -106,11 +106,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
+            nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
             nurseryOrder.DeliveredAt = now;
             nurseryOrder.DeliveryNote = request.DeliveryNote;
             nurseryOrder.UpdatedAt = now;
@@ -125,7 +125,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
-                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)NurseryOrderStatus.Delivered));
+                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)OrderStatusEnum.Delivered));
 
                 if (areAllNurseryOrdersDeliveredOrAbove)
                 {
@@ -154,11 +154,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.Failed;
+            nurseryOrder.Status = (int)OrderStatusEnum.Failed;
             nurseryOrder.DeliveryNote = request.FailureReason;
             nurseryOrder.UpdatedAt = now;
 
@@ -200,7 +200,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ShipperName = order.Shipper?.Username ?? order.Shipper?.Email,
             SubTotalAmount = order.SubTotalAmount,
             Status = order.Status,
-            StatusName = order.Status.HasValue ? ((NurseryOrderStatus)order.Status.Value).ToString() : null,
+            StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
             Note = order.Note,
