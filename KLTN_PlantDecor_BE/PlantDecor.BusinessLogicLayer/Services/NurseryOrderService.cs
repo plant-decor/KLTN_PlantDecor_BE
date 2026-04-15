@@ -126,7 +126,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (areAllNurseryOrdersDeliveredOrAbove)
                 {
-                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.Status = parentOrder.OrderType == (int)OrderTypeEnum.OtherProduct
+                        ? (int)OrderStatusEnum.PendingConfirmation
+                        : parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
+                            ? (int)OrderStatusEnum.RemainingPaymentPending
+                            : (int)OrderStatusEnum.Delivered;
                     parentOrder.UpdatedAt = now;
                     _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
                 }
