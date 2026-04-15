@@ -51,9 +51,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return _unitOfWork.UserRepository.IsEmailExistsForOtherUserAsync(email, currentUserId);
         }
 
-        public Task<bool> IsPhoneExistsForOtherUserAsync(string phone, int currentUserId)
+        public async Task<bool> IsPhoneExistsForOtherUserAsync(string phone, int currentUserId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(phone))
+                return false;
+
+            var existingUser = await _unitOfWork.UserRepository.GetByPhoneAsync(phone.Trim());
+            return existingUser != null && existingUser.Id != currentUserId;
         }
 
         public Task<bool> SetActive(int userId)
@@ -84,6 +88,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     throw new NotFoundException($"User with ID {id} not found");
+                }
+
+                if (!string.IsNullOrWhiteSpace(userUpdate.PhoneNumber))
+                {
+                    var normalizedPhone = userUpdate.PhoneNumber.Trim();
+                    var currentPhone = existingUser.PhoneNumber?.Trim();
+
+                    if (!normalizedPhone.Equals(currentPhone, StringComparison.Ordinal))
+                    {
+                        var isPhoneExists = await IsPhoneExistsForOtherUserAsync(normalizedPhone, id);
+                        if (isPhoneExists)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            throw new BadRequestException($"Phone number '{normalizedPhone}' is already in use");
+                        }
+                    }
                 }
 
                 // Map về lại Entity
