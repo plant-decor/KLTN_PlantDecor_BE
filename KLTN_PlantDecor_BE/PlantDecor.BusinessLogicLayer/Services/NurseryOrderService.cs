@@ -121,6 +121,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
             if (parentOrder != null)
             {
+                parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                parentOrder.UpdatedAt = now;
+
                 var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
                     .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)NurseryOrderStatus.Delivered));
 
@@ -131,9 +134,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         : parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
                             ? (int)OrderStatusEnum.RemainingPaymentPending
                             : (int)OrderStatusEnum.Delivered;
-                    parentOrder.UpdatedAt = now;
-                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
                 }
+
+                _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
             }
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
