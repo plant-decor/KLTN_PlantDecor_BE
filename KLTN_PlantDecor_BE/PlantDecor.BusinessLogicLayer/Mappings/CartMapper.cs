@@ -26,6 +26,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             ProductName = item.CommonPlant?.Plant?.Name
                 ?? item.NurseryPlantCombo?.PlantCombo?.ComboName
                 ?? item.NurseryMaterial?.Material?.Name,
+            PrimaryImageUrl = item.CommonPlant?.Plant?.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.CommonPlant?.Plant?.PlantImages.FirstOrDefault()?.ImageUrl
+                ?? item.NurseryPlantCombo?.PlantCombo?.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.NurseryPlantCombo?.PlantCombo?.PlantComboImages.FirstOrDefault()?.ImageUrl
+                ?? item.NurseryMaterial?.Material?.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.NurseryMaterial?.Material?.MaterialImages.FirstOrDefault()?.ImageUrl,
             Quantity = item.Quantity,
             Price = item.Price,
             CreatedAt = item.CreatedAt
