@@ -118,6 +118,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.DeliveryNote = request.DeliveryNote;
             nurseryOrder.UpdatedAt = now;
 
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
+                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)NurseryOrderStatus.Delivered));
+
+                if (areAllNurseryOrdersDeliveredOrAbove)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.UpdatedAt = now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+                }
+            }
+
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
 
