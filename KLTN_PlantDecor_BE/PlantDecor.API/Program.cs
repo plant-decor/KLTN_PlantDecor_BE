@@ -167,6 +167,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IServiceCareBackgroundJobService, ServiceCareBackgroundJobService>();
             builder.Services.AddScoped<IServiceRatingService, ServiceRatingService>();
             builder.Services.AddScoped<ISpecializationService, SpecializationService>();
+            builder.Services.AddScoped<IShiftService, ShiftService>();
 
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();
@@ -181,7 +182,6 @@ namespace PlantDecor.API
             builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
-            builder.Services.AddScoped<ILangflowService, LangflowService>();
 
             builder.Services.AddCors(options =>
             {

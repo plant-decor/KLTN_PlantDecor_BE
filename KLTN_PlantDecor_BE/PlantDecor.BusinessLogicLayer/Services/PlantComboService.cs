@@ -22,7 +22,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMBOS_KEY = "combos_all";
         private const string ACTIVE_COMBOS_KEY = "combos_active";
@@ -33,14 +32,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -1068,7 +1065,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ComboTypeName = MapComboTypeName(g.Key.ComboType),
                     Description = g.Key.Description,
                     Price = g.Key.ComboPrice ?? 0,
-                    ImageUrl = g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
+                    PrimaryImageUrl = g.Key.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                               ?? g.Key.PlantComboImages.FirstOrDefault()?.ImageUrl,
                     Nurseries = g.Select(npc => new SellingNurseryResponseDto
                     {
                         NurseryId = npc.NurseryId,
@@ -1145,7 +1143,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryListResponseDto>> GetNurseriesByComboAsync(int comboId)
         {
-            var cacheKey = $"{NURSERIES_BY_COMBO_KEY}_{comboId}_v2";
+            var cacheKey = $"{NURSERIES_BY_COMBO_KEY}_{comboId}_v3";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
@@ -1170,12 +1168,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var nursery = npc.Nursery!.ToListResponse();
                     nursery.NurseryPlantComboId = npc.Id;
+                    nursery.Quantity = npc.Quantity;
                     return nursery;
                 })
                 .ToList();
 
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(15));
             return result;
+        }
+
+        public async Task<List<PlantComboResponseDto>> GetCompatibleCombosForNurseryAsync(int managerId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+
+            var combos = await _unitOfWork.PlantComboRepository.GetCompatibleCombosForNurseryAsync(nursery.Id);
+            return combos.Select(c => c.ToResponse()).ToList();
         }
 
         #endregion
@@ -1221,10 +1230,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessNurseryPlantComboEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessNurseryPlantComboIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
             }
             catch
             {

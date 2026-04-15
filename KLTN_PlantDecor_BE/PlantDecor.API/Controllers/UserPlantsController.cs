@@ -28,6 +28,16 @@ namespace PlantDecor.API.Controllers
         {
             var userId = GetUserId();
             var userPlants = await _userPlantService.GetMyPlantsAsync(userId);
+            if (userPlants == null || userPlants.Count == 0)
+            {
+                return Ok(new ApiResponse<List<UserPlantResponseDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "You don't have any plants yet",
+                    Payload = new List<UserPlantResponseDto>()
+                });
+            }
 
             return Ok(new ApiResponse<List<UserPlantResponseDto>>
             {

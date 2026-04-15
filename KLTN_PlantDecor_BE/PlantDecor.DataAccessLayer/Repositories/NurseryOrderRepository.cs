@@ -9,22 +9,42 @@ namespace PlantDecor.DataAccessLayer.Repositories
     {
         public NurseryOrderRepository(PlantDecorContext context) : base(context) { }
 
-        public async Task<List<NurseryOrder>> GetByNurseryIdAsync(int nurseryId)
+        private IQueryable<NurseryOrder> BuildDetailedQuery()
         {
-            return await _context.NurseryOrders
+            return _context.NurseryOrders
                 .Include(no => no.Nursery)
                 .Include(no => no.Shipper)
                 .Include(no => no.NurseryOrderDetails)
+                    .ThenInclude(d => d.CommonPlant)
+                        .ThenInclude(cp => cp!.Plant)
+                            .ThenInclude(p => p!.PlantImages)
+                .Include(no => no.NurseryOrderDetails)
+                    .ThenInclude(d => d.PlantInstance)
+                        .ThenInclude(pi => pi!.PlantImages)
+                .Include(no => no.NurseryOrderDetails)
+                    .ThenInclude(d => d.PlantInstance)
+                        .ThenInclude(pi => pi!.Plant)
+                            .ThenInclude(p => p!.PlantImages)
+                .Include(no => no.NurseryOrderDetails)
+                    .ThenInclude(d => d.NurseryPlantCombo)
+                        .ThenInclude(npc => npc!.PlantCombo)
+                            .ThenInclude(pc => pc!.PlantComboImages)
+                .Include(no => no.NurseryOrderDetails)
+                    .ThenInclude(d => d.NurseryMaterial)
+                        .ThenInclude(nm => nm!.Material)
+                            .ThenInclude(m => m!.MaterialImages);
+        }
+
+        public async Task<List<NurseryOrder>> GetByNurseryIdAsync(int nurseryId)
+        {
+            return await BuildDetailedQuery()
                 .Where(no => no.NurseryId == nurseryId)
                 .ToListAsync();
         }
 
         public async Task<List<NurseryOrder>> GetByShipperAndNurseryAsync(int shipperId, int nurseryId, List<int>? statuses = null)
         {
-            var query = _context.NurseryOrders
-                .Include(no => no.Nursery)
-                .Include(no => no.Shipper)
-                .Include(no => no.NurseryOrderDetails)
+            var query = BuildDetailedQuery()
                 .Where(no => no.ShipperId == shipperId && no.NurseryId == nurseryId);
 
             if (statuses != null && statuses.Count > 0)
@@ -35,19 +55,13 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<NurseryOrder?> GetByIdWithDetailsAsync(int nurseryOrderId)
         {
-            return await _context.NurseryOrders
-                .Include(no => no.Nursery)
-                .Include(no => no.Shipper)
-                .Include(no => no.NurseryOrderDetails)
+            return await BuildDetailedQuery()
                 .FirstOrDefaultAsync(no => no.Id == nurseryOrderId);
         }
 
         public async Task<(List<NurseryOrder> Items, int TotalCount)> GetByShipperAndNurseryPagedAsync(int shipperId, int nurseryId, int? status, int skip, int take)
         {
-            var query = _context.NurseryOrders
-                .Include(no => no.Nursery)
-                .Include(no => no.Shipper)
-                .Include(no => no.NurseryOrderDetails)
+            var query = BuildDetailedQuery()
                 .Where(no => no.ShipperId == shipperId && no.NurseryId == nurseryId)
                 .AsQueryable();
 
@@ -64,10 +78,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<(List<NurseryOrder> Items, int TotalCount)> GetByNurseryIdPagedAsync(int nurseryId, int? status, int skip, int take)
         {
-            var query = _context.NurseryOrders
-                .Include(no => no.Nursery)
-                .Include(no => no.Shipper)
-                .Include(no => no.NurseryOrderDetails)
+            var query = BuildDetailedQuery()
                 .Where(no => no.NurseryId == nurseryId)
                 .AsQueryable();
 

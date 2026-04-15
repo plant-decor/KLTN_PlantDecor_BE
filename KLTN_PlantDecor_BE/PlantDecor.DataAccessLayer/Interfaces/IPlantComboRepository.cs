@@ -12,5 +12,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<bool> ExistsByCodeAsync(string comboCode, int? excludeId = null);
         Task<PaginatedResult<PlantCombo>> GetCombosForShopAsync(Pagination pagination);
         Task<PlantCombo?> GetComboByComboItemIdAsync(int comboItemId);
+        Task<List<PlantCombo>> GetCompatibleCombosForNurseryAsync(int nurseryId);
     }
 }

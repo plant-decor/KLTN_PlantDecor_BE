@@ -17,7 +17,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PlantInstanceId = userPlant.PlantInstanceId,
                 PlantName = resolvedPlant?.Name,
                 PlantSpecificName = resolvedPlant?.SpecificName,
-                ImageUrl = imageUrl,
+                PrimaryImageUrl = imageUrl,
                 PurchaseDate = userPlant.PurchaseDate,
                 LastWateredDate = userPlant.LastWateredDate,
                 LastFertilizedDate = userPlant.LastFertilizedDate,

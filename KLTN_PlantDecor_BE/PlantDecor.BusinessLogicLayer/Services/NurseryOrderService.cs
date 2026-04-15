@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -165,15 +166,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
             Note = order.Note,
-            Items = order.NurseryOrderDetails.Select(d => new OrderItemResponseDto
-            {
-                Id = d.Id,
-                ItemName = d.ItemName,
-                Quantity = d.Quantity,
-                Price = d.UnitPrice,
-                Status = d.Status,
-                StatusName = d.Status.HasValue ? ((NurseryOrderStatus)d.Status.Value).ToString() : null
-            }).ToList()
+            Items = order.NurseryOrderDetails
+                .Select(d => d.ToOrderItemResponse())
+                .ToList()
         };
 
         private static DateTime GetCurrentVietnamTime()

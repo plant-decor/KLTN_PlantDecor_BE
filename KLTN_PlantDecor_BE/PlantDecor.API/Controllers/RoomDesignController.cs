@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
@@ -126,18 +126,40 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Analyze room image and get plant recommendations from multipart form-data upload.
         /// </summary>
-        /// <param name="request">Multipart request containing image file and optional filters</param>
+        /// <remarks>
+        /// This endpoint uses AI to:
+        /// 1. Analyze the room image (type, size, lighting, style)
+        /// 2. Search for suitable plants in the database
+        /// 3. Return personalized recommendations with explanations
+        ///
+        /// All recommended plants are guaranteed to be:
+        /// - Available in the database
+        /// - Currently purchasable (in stock)
+        /// - Matching the specified filters (budget, feng shui, etc.)
+        /// </remarks>
+        /// <param name="request">Multipart request containing image and optional filters</param>
         /// <returns>Room analysis and plant recommendations</returns>
+        /// <response code="200">Successfully analyzed room and generated recommendations</response>
+        /// <response code="400">Invalid request (missing image, etc.)</response>
+        /// <response code="401">Unauthorized request (user not logged in)</response>
+        /// <response code="500">AI processing error</response>
         [HttpPost("analyze-upload")]
+        [Authorize(Roles = "Customer")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AnalyzeAndRecommendUpload([FromForm] AnalyzeAndRecommendUploadRequest request)
         {
             try
             {
-                var userId = GetOptionalUserId();
+                if (request.Image == null || request.Image.Length == 0)
+                {
+                    return BadRequest("Room image file is required");
+                }
+
+                var userId = GetRequiredUserId();
                 var result = await _roomDesignService.AnalyzeAndRecommendUploadAsync(request, userId);
 
                 return Ok(new
@@ -147,30 +169,20 @@ namespace PlantDecor.API.Controllers
                     message = $"Found {result.TotalCount} plant recommendations"
                 });
             }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
             catch (BadRequestException ex)
             {
                 _logger.LogWarning(ex, "Invalid room design upload request");
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
+                throw new BadRequestException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in room design analysis (multipart)");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room. Please try again."
-                });
+                throw new Exception("Failed to analyze room. Please try again.");
             }
-        }
-
-        private int? GetOptionalUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.TryParse(userIdClaim, out var userId) ? userId : null;
         }
 
         /// <summary>

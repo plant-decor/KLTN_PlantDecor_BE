@@ -7,7 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? PlantInstanceId { get; set; }
         public string? PlantName { get; set; }
         public string? PlantSpecificName { get; set; }
-        public string? ImageUrl { get; set; }
+        public string? PrimaryImageUrl { get; set; }
         public DateOnly? PurchaseDate { get; set; }
         public DateOnly? LastWateredDate { get; set; }
         public DateOnly? LastFertilizedDate { get; set; }

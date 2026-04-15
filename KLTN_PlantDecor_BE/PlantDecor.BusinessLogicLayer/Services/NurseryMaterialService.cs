@@ -18,7 +18,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_NURSERY_MATERIALS_KEY = "nursery_materials_all";
         private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
@@ -26,13 +25,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public NurseryMaterialService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -435,10 +432,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessNurseryMaterialEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessNurseryMaterialIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
             }
             catch
             {

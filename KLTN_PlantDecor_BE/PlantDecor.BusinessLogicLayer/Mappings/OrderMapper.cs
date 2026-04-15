@@ -25,15 +25,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             UpdatedAt = order.UpdatedAt,
             Items = order.NurseryOrders
                 .SelectMany(no => no.NurseryOrderDetails)
-                .Select(i => new OrderItemResponseDto
-                {
-                    Id = i.Id,
-                    ItemName = i.ItemName,
-                    Quantity = i.Quantity,
-                    Price = i.UnitPrice,
-                    Status = i.Status,
-                    StatusName = i.Status.HasValue ? ((NurseryOrderStatus)i.Status.Value).ToString() : null
-                }).ToList(),
+                .Select(i => i.ToOrderItemResponse())
+                .ToList(),
             NurseryOrders = order.NurseryOrders.Select(no => new NurseryOrderResponseDto
             {
                 Id = no.Id,
@@ -45,15 +38,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Status = no.Status,
                 StatusName = no.Status.HasValue ? ((NurseryOrderStatus)no.Status.Value).ToString() : null,
                 ShipperNote = no.ShipperNote,
-                Items = no.NurseryOrderDetails.Select(d => new OrderItemResponseDto
-                {
-                    Id = d.Id,
-                    ItemName = d.ItemName,
-                    Quantity = d.Quantity,
-                    Price = d.UnitPrice,
-                    Status = d.Status,
-                    StatusName = d.Status.HasValue ? ((NurseryOrderStatus)d.Status.Value).ToString() : null
-                }).ToList()
+                Items = no.NurseryOrderDetails
+                    .Select(d => d.ToOrderItemResponse())
+                    .ToList()
             }).ToList(),
             Invoices = order.Invoices.Select(inv => new InvoiceResponseDto
             {
@@ -79,6 +66,53 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         public static List<OrderResponseDto> ToResponseList(this IEnumerable<Order> orders)
         {
             return orders.Select(o => o.ToResponse()).ToList();
+        }
+
+        public static OrderItemResponseDto ToOrderItemResponse(this NurseryOrderDetail detail) => new()
+        {
+            Id = detail.Id,
+            ItemName = detail.ItemName,
+            ImageUrl = ResolveItemImageUrl(detail),
+            Quantity = detail.Quantity,
+            Price = detail.UnitPrice,
+            Status = detail.Status,
+            StatusName = detail.Status.HasValue ? ((NurseryOrderStatus)detail.Status.Value).ToString() : null
+        };
+
+        private static string? ResolveItemImageUrl(NurseryOrderDetail detail)
+        {
+            var commonPlantImage = detail.CommonPlant?.Plant?.PlantImages?
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(commonPlantImage))
+                return commonPlantImage;
+
+            var plantInstanceImage = detail.PlantInstance?.PlantImages?
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(plantInstanceImage))
+                return plantInstanceImage;
+
+            var plantInstanceFallbackImage = detail.PlantInstance?.Plant?.PlantImages?
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(plantInstanceFallbackImage))
+                return plantInstanceFallbackImage;
+
+            var plantComboImage = detail.NurseryPlantCombo?.PlantCombo?.PlantComboImages?
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(plantComboImage))
+                return plantComboImage;
+
+            return detail.NurseryMaterial?.Material?.MaterialImages?
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
         }
     }
 }
