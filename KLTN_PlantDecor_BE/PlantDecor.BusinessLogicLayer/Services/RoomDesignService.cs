@@ -61,6 +61,7 @@ Dựa vào phân tích căn phòng:
 - Ánh sáng: {2}
 - Phong cách: {3}
 - Vị trí đặt cây: {4}
+- Ảnh để hiểu rõ hơn kèm phân tích trên: {8}
 
 Và danh sách các cây có sẵn trong hệ thống:
 {5}
@@ -790,7 +791,8 @@ Chỉ trả về JSON array, không có text khác.
                     roomAnalysis.AvailableSpace,
                     candidatesJson,
                     limit,
-                    additionalCriteria);
+                    additionalCriteria,
+                    request.RoomImageBase64);
 
                 var response = await _azureOpenAIService.GenerateChatCompletionAsync(
                     "Bạn là chuyên gia về cây cảnh và thiết kế nội thất. Trả lời bằng JSON array.",

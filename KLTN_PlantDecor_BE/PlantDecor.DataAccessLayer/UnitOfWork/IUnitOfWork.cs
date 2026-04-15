@@ -36,6 +36,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ILayoutDesignRepository LayoutDesignRepository { get; }
         ILayoutDesignAiResponseImageRepository LayoutDesignAiResponseImageRepository { get; }
         ILayoutDesignPlantRepository LayoutDesignPlantRepository { get; }
+        IAiLayoutResponseModerationRepository AiLayoutResponseModerationRepository { get; }
         IRoomUploadModerationRepository RoomUploadModerationRepository { get; }
         IServiceRegistrationRepository ServiceRegistrationRepository { get; }
         IServiceProgressRepository ServiceProgressRepository { get; }

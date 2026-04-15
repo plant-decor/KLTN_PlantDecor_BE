@@ -41,6 +41,7 @@ namespace PlantDecor.API.Controllers
             ["LightRequirement"] = typeof(LightRequirementEnum),
             ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
             ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
+            ["AiLayoutResponseModerationStatus"] = typeof(AilayoutResponseModerationStatus),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
             ["WishlistItemType"] = typeof(WishlistItemType),
@@ -179,7 +180,8 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
                     CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
-                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum))
+                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),
+                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus))
                 }
             });
         }
