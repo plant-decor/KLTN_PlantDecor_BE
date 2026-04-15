@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -47,24 +48,42 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Analyze room image and get plant recommendations
+        /// Get all layout designs of the authenticated user.
+        /// Each layout includes related layout plants and generated AI response images.
         /// </summary>
-        /// <remarks>
-        /// This endpoint uses AI to:
-        /// 1. Analyze the room image (type, size, lighting, style)
-        /// 2. Search for suitable plants in the database
-        /// 3. Return personalized recommendations with explanations
-        ///
-        /// All recommended plants are guaranteed to be:
-        /// - Available in the database
-        /// - Currently purchasable (in stock)
-        /// - Matching the specified filters (budget, feng shui, etc.)
-        /// </remarks>
-        /// <param name="request">Room design request with image and optional filters</param>
-        /// <returns>Room analysis and plant recommendations</returns>
-        /// <response code="200">Successfully analyzed room and generated recommendations</response>
-        /// <response code="400">Invalid request (missing image, etc.)</response>
-        /// <response code="500">AI processing error</response>
+        [HttpGet("layouts")]
+        [Authorize]
+        [ProducesResponseType(typeof(PaginatedResult<LayoutDesignListResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllLayouts([FromQuery] Pagination pagination)
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var layouts = await _roomDesignService.GetAllLayoutsAsync(userId, pagination);
+
+                return Ok(new ApiResponse<PaginatedResult<LayoutDesignListResponseDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Get all layouts successfully",
+                    Payload = layouts
+                });
+            }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while getting layouts");
+                throw new Exception("Failed to get layouts. Please try again.");
+            }
+        }
+
+        // Analyze room image and get plant recommendations.
+        // Kept as commented reference for the legacy JSON base64 endpoint.
         //[HttpPost("analyze")]
         //[ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
         //[ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -185,15 +204,8 @@ namespace PlantDecor.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Analyze room image only (without plant recommendations)
-        /// </summary>
-        /// <remarks>
-        /// Quick analysis of room characteristics without searching for plants.
-        /// Useful for previewing the analysis before getting recommendations.
-        /// </remarks>
-        /// <param name="request">Request containing a base64 encoded room image</param>
-        /// <returns>Room analysis result</returns>
+        // Analyze room image only (without plant recommendations).
+        // Kept as commented reference for the legacy JSON base64 endpoint.
         //[HttpPost("analyze-room-only")]
         //[ProducesResponseType(typeof(RoomAnalysisDto), StatusCodes.Status200OK)]
         //[ProducesResponseType(StatusCodes.Status400BadRequest)]

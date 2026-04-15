@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
 using System.Globalization;
@@ -102,6 +103,23 @@ Chỉ trả về JSON array, không có text khác.
             _aiSearchService = aiSearchService;
             _cloudinaryService = cloudinaryService;
             _logger = logger;
+        }
+
+        public async Task<PaginatedResult<LayoutDesignListResponseDto>> GetAllLayoutsAsync(int userId, Pagination pagination)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var paginatedLayouts = await _unitOfWork.LayoutDesignRepository.GetAllByUserIdWithDetailsAsync(userId, pagination);
+
+            var layoutDtos = paginatedLayouts.Items.ToLayoutDesignListResponseList();
+            return new PaginatedResult<LayoutDesignListResponseDto>(
+                layoutDtos,
+                paginatedLayouts.TotalCount,
+                paginatedLayouts.PageNumber,
+                paginatedLayouts.PageSize);
         }
 
         public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int userId)

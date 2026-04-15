@@ -1,10 +1,19 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IRoomDesignService
     {
+        /// <summary>
+        /// Get paginated layout designs of the authenticated user with plants and AI response images
+        /// </summary>
+        /// <param name="userId">Authenticated user id</param>
+        /// <param name="pagination">Pagination settings</param>
+        /// <returns>Paginated list of layouts</returns>
+        Task<PaginatedResult<LayoutDesignListResponseDto>> GetAllLayoutsAsync(int userId, Pagination pagination);
+
         /// <summary>
         /// Analyze room image and recommend suitable plants from database
         /// </summary>
