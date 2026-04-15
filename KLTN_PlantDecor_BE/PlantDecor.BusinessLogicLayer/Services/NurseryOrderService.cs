@@ -79,10 +79,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.ShipperNote = request.ShipperNote;
             nurseryOrder.UpdatedAt = now;
 
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                var areAllNurseryOrdersShipping = parentOrder.NurseryOrders
+                    .All(no => no.Id == nurseryOrder.Id || no.Status == (int)NurseryOrderStatus.Shipping);
+
+                if (areAllNurseryOrdersShipping)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Shipping;
+                    parentOrder.UpdatedAt = now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+                }
+            }
+
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
 
             return MapToDto(nurseryOrder);
+
+
         }
 
         public async Task<NurseryOrderResponseDto> MarkDeliveredAsync(int currentUserId, int nurseryOrderId, MarkDeliveredRequestDto request)
@@ -102,6 +118,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.DeliveryNote = request.DeliveryNote;
             nurseryOrder.UpdatedAt = now;
 
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
+                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)NurseryOrderStatus.Delivered));
+
+                if (areAllNurseryOrdersDeliveredOrAbove)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.UpdatedAt = now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+                }
+            }
+
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
 
@@ -120,7 +150,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.DeliveryFailed;
+            nurseryOrder.Status = (int)NurseryOrderStatus.Failed;
             nurseryOrder.DeliveryNote = request.FailureReason;
             nurseryOrder.UpdatedAt = now;
 
