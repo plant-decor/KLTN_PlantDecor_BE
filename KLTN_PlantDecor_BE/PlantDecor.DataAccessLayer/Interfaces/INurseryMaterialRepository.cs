@@ -16,6 +16,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
 
         Task<PaginatedResult<NurseryMaterial>> SearchForShopAsync(
             Pagination pagination,
+            int? nurseryId,
             string? searchTerm,
             List<int>? categoryIds,
             List<int>? tagIds,

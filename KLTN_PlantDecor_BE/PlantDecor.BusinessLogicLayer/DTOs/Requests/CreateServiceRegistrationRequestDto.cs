@@ -11,11 +11,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public DateOnly ServiceDate { get; set; }
 
         /// <summary>
-        /// Ngày trong tuần chăm sóc, dạng mảng int theo DayOfWeek: 1=Mon, ..., 6=Sat
+        /// Ngày trong tuần chăm sóc, dạng mảng int theo DayOfWeek: 1=Mon, ..., 6=Sat.
+        /// Chỉ bắt buộc với gói Periodic; gói One-time có thể bỏ qua.
         /// Ví dụ: [1, 3] = Thứ 2 và Thứ 4
         /// </summary>
-        [Required]
-        public List<int> ScheduleDaysOfWeek { get; set; } = new();
+        public List<int>? ScheduleDaysOfWeek { get; set; }
 
         [Required]
         public int PreferredShiftId { get; set; }

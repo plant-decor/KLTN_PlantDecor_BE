@@ -355,6 +355,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var paginatedEntities = await _unitOfWork.NurseryMaterialRepository.SearchForShopAsync(
                 pagination,
+                searchRequest.NurseryId,
                 searchRequest.SearchTerm,
                 searchRequest.CategoryIds,
                 searchRequest.TagIds,
