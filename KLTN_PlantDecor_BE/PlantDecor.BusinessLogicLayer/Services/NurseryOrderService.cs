@@ -82,10 +82,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
             if (parentOrder != null)
             {
-                var areAllNurseryOrdersShipping = parentOrder.NurseryOrders
-                    .All(no => no.Id == nurseryOrder.Id || no.Status == (int)NurseryOrderStatus.Shipping);
-
-                if (areAllNurseryOrdersShipping)
+                if (parentOrder.Status != (int)OrderStatusEnum.Shipping)
                 {
                     parentOrder.Status = (int)OrderStatusEnum.Shipping;
                     parentOrder.UpdatedAt = now;
@@ -121,15 +118,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
             if (parentOrder != null)
             {
+                if (parentOrder.Status != (int)OrderStatusEnum.Delivered)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.UpdatedAt = now;
+                }
+
                 var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
                     .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)NurseryOrderStatus.Delivered));
 
                 if (areAllNurseryOrdersDeliveredOrAbove)
                 {
-                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.Status = parentOrder.OrderType == (int)OrderTypeEnum.OtherProduct
+                        ? (int)OrderStatusEnum.PendingConfirmation
+                        : parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
+                            ? (int)OrderStatusEnum.RemainingPaymentPending
+                            : (int)OrderStatusEnum.Delivered;
                     parentOrder.UpdatedAt = now;
-                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
                 }
+
+                _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
             }
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
