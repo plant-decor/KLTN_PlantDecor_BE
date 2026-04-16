@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -18,11 +19,36 @@ namespace PlantDecor.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly IAuthenticationService _authenticationService;
+        private readonly IInvoiceService _invoiceService;
 
-        public UserController(IUserService userService, IAuthenticationService authenticationService)
+        public UserController(IUserService userService, IAuthenticationService authenticationService, IInvoiceService invoiceService)
         {
             _userService = userService;
             _authenticationService = authenticationService;
+            _invoiceService = invoiceService;
+        }
+
+        /// <summary>
+        /// Lấy danh sách invoice còn chờ thanh toán của user hiện tại
+        /// </summary>
+        [HttpGet("pending-invoices")]
+        public async Task<IActionResult> GetPendingInvoices()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var result = await _invoiceService.GetPendingInvoicesAsync(userId);
+
+            return Ok(new ApiResponse<List<InvoiceResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get pending invoices successfully",
+                Payload = result
+            });
         }
 
         [HttpGet("user-profile")]
