@@ -580,6 +580,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 var newUser = UserMapper.ToEntity(userRequest);
                 newUser.RoleId = staffRoleId;
+                newUser.NurseryId = nursery.Id;
                 newUser.IsVerified = true; // Staff được tạo bởi Manager nên mặc định là đã verified
                 newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
                 newUser.UpdateSecurityStamp();
@@ -605,6 +606,143 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<StaffWithSpecializationsResponseDto> CreateCaretakerAsync(int managerId, CreateCaretakerWithSpecializationsRequestDto request)
+        {
+            if (request == null)
+                throw new BadRequestException("Request is required");
+
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.ConfirmPassword) ||
+                string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new BadRequestException("Email, password, username and full name are required");
+            }
+
+            if (!IsValidEmail(request.Email))
+                throw new BadRequestException("Invalid email format");
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^(0|\+84)(\d{9})$"))
+            {
+                throw new BadRequestException("Invalid phone number format");
+            }
+
+            if (request.Password != request.ConfirmPassword)
+                throw new BadRequestException("Password and confirmation password do not match");
+
+            ValidatePassword(request.Password);
+
+            if (request.SpecializationIds == null || request.SpecializationIds.Count == 0)
+                throw new BadRequestException("At least one specialization is required");
+
+            var manager = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (manager == null)
+                throw new NotFoundException("Manager not found");
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new BadRequestException("Manager does not have an assigned nursery");
+
+            var existingUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+                throw new BadRequestException("This email is already registered");
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+            {
+                var phoneExists = await _unitOfWork.UserRepository.GetByPhoneAsync(request.PhoneNumber);
+                if (phoneExists != null)
+                    throw new BadRequestException("Phone number is already in use");
+            }
+
+            var caretakerRoleId = (int)RoleEnum.Caretaker;
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(caretakerRoleId);
+            if (role == null)
+                throw new BadRequestException("Caretaker role not found");
+
+            var specializationIds = request.SpecializationIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (specializationIds.Count == 0)
+                throw new BadRequestException("At least one valid specialization is required");
+
+            foreach (var specializationId in specializationIds)
+            {
+                var specialization = await _unitOfWork.SpecializationRepository.GetByIdAsync(specializationId);
+                if (specialization == null)
+                    throw new NotFoundException($"Specialization {specializationId} not found");
+                if (!specialization.IsActive)
+                    throw new BadRequestException($"Specialization {specializationId} is not active");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var userRequest = new UserRequest
+                {
+                    Email = request.Email,
+                    Password = request.Password,
+                    ConfirmPassword = request.ConfirmPassword,
+                    Username = request.Username,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber
+                };
+
+                var newUser = UserMapper.ToEntity(userRequest);
+                newUser.RoleId = caretakerRoleId;
+                newUser.NurseryId = nursery.Id;
+                newUser.IsVerified = true;
+                newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                newUser.UpdateSecurityStamp();
+
+                _unitOfWork.UserRepository.PrepareCreate(newUser);
+                await _unitOfWork.SaveAsync();
+
+                if (newUser.Id <= 0)
+                    throw new Exception("Failed to create caretaker account");
+
+                await _unitOfWork.SpecializationRepository.ReplaceStaffSpecializationsAsync(newUser.Id, specializationIds);
+                await _unitOfWork.SaveAsync();
+
+                var created = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(newUser.Id, nursery.Id);
+                if (created == null)
+                    throw new Exception("Failed to load created caretaker with specializations");
+
+                await _unitOfWork.CommitTransactionAsync();
+                return MapCaretakerWithSpecializations(created);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        private static StaffWithSpecializationsResponseDto MapCaretakerWithSpecializations(User user)
+        {
+            return new StaffWithSpecializationsResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status,
+                Specializations = user.StaffSpecializations
+                    .Select(ss => new SpecializationSummaryDto
+                    {
+                        Id = ss.Specialization.Id,
+                        Name = ss.Specialization.Name,
+                        Description = ss.Specialization.Description
+                    })
+                    .ToList()
+            };
         }
 
         public async Task<ClaimsPrincipal?> ValidateToken(string token)

@@ -1,0 +1,30 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
+{
+    public class CreateCaretakerWithSpecializationsRequestDto
+    {
+        [Required(ErrorMessage = "Cần nhập Email")]
+        [EmailAddress(ErrorMessage = "Sai định dạng email")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Cần nhập mật khẩu")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Cần nhập lại mật khẩu")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Cần nhập tên người dùng")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Cần nhập đầy đủ họ và tên")]
+        public string FullName { get; set; } = string.Empty;
+
+        [RegularExpression(@"^(0|\+84)(\d{9})$", ErrorMessage = "Sai định dạng điện thoại")]
+        public string? PhoneNumber { get; set; }
+
+        [Required(ErrorMessage = "Cần chọn ít nhất 1 chuyên môn")]
+        [MinLength(1, ErrorMessage = "Cần chọn ít nhất 1 chuyên môn")]
+        public List<int> SpecializationIds { get; set; } = new();
+    }
+}
