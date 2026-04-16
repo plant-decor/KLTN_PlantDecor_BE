@@ -423,9 +423,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<StaffWithSpecializationsResponseDto>> GetNurseryStaffAsync(int managerId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
 
             var staff = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
             return staff.Select(MapToStaffDtoPublic).ToList();
@@ -433,11 +431,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<StaffWithSpecializationsResponseDto> GetNurseryStaffDetailAsync(int managerId, int staffId)
         {
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
+
+            var staff = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
+            if (staff == null)
+                throw new NotFoundException($"Nhân viên với ID {staffId} không thuộc vựa của bạn");
+
+            return MapToStaffDtoPublic(staff);
+        }
+
+        public async Task<List<StaffWithSpecializationsResponseDto>> GetNurseryTeamForManagerAsync(int managerId)
+        {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
                 throw new ForbiddenException("Bạn không phải manager của vựa nào");
 
-            var staff = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
+            var staff = await _unitOfWork.UserRepository.GetStaffAndCaretakersByNurseryIdAsync(nursery.Id);
+            return staff.Select(MapToStaffDtoPublic).ToList();
+        }
+
+        public async Task<StaffWithSpecializationsResponseDto> GetNurseryTeamDetailForManagerAsync(int managerId, int staffId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+
+            var staff = await _unitOfWork.UserRepository.GetStaffOrCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
             if (staff == null)
                 throw new NotFoundException($"Nhân viên với ID {staffId} không thuộc vựa của bạn");
 
@@ -487,6 +506,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
             await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
             await _cacheService.RemoveByPrefixAsync("shop_unified_search");
+        }
+
+        private async Task<DataAccessLayer.Entities.Nursery> ResolveOperatorNurseryForReadAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new ForbiddenException("Bạn không thuộc vựa nào để xem danh sách nhân viên");
         }
 
         #endregion

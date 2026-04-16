@@ -29,5 +29,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // Staff
         Task<List<StaffWithSpecializationsResponseDto>> GetNurseryStaffAsync(int managerId);
         Task<StaffWithSpecializationsResponseDto> GetNurseryStaffDetailAsync(int managerId, int staffId);
+        Task<List<StaffWithSpecializationsResponseDto>> GetNurseryTeamForManagerAsync(int managerId);
+        Task<StaffWithSpecializationsResponseDto> GetNurseryTeamDetailForManagerAsync(int managerId, int staffId);
     }
 }
