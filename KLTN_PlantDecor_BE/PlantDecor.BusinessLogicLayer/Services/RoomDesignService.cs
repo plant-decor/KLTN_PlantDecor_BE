@@ -567,6 +567,7 @@ Chỉ trả về JSON array, không có text khác.
             var rejectedLightRequirementFromEntity = 0;
             var deferredLightRequirementChecks = 0;
             var rejectedCareLevel = 0;
+            var rejectedRoomType = 0;
             var rejectedPetSafe = 0;
             var rejectedChildSafe = 0;
             var rejectedAllergy = 0;
@@ -587,6 +588,13 @@ Chỉ trả về JSON array, không có text khác.
                 if (!seenEntities.Add(dedupeKey))
                 {
                     rejectedDuplicate++;
+                    continue;
+                }
+
+                // RoomType is a strict hard filter. Missing metadata is treated as not matched.
+                if (!IsEmbeddingRoomTypeMatch(embedding.Metadata, request.RoomType))
+                {
+                    rejectedRoomType++;
                     continue;
                 }
 
@@ -717,7 +725,7 @@ Chỉ trả về JSON array, không có text khác.
                 .ToList();
 
             _logger.LogInformation(
-                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedCareLevel={RejectedCareLevel}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RejectedAllergy={RejectedAllergy}, RejectedFengShui={RejectedFengShui}, RejectedLightRequirement={RejectedLightRequirement}, RejectedLightRequirementFromMetadata={RejectedLightRequirementFromMetadata}, RejectedLightRequirementFromEntity={RejectedLightRequirementFromEntity}, DeferredLightRequirementChecks={DeferredLightRequirementChecks}, BoostedLightMatch={BoostedLightMatch}, PenalizedMissingLightMetadata={PenalizedMissingLightMetadata}",
+                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedCareLevel={RejectedCareLevel}, RejectedRoomType={RejectedRoomType}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RejectedAllergy={RejectedAllergy}, RejectedFengShui={RejectedFengShui}, RejectedLightRequirement={RejectedLightRequirement}, RejectedLightRequirementFromMetadata={RejectedLightRequirementFromMetadata}, RejectedLightRequirementFromEntity={RejectedLightRequirementFromEntity}, DeferredLightRequirementChecks={DeferredLightRequirementChecks}, BoostedLightMatch={BoostedLightMatch}, PenalizedMissingLightMetadata={PenalizedMissingLightMetadata}",
                 searchQuery,
                 embeddings.Count,
                 candidates.Count,
@@ -729,6 +737,7 @@ Chỉ trả về JSON array, không có text khác.
                 rejectedBudget,
                 rejectedPreferredNursery,
                 rejectedCareLevel,
+                rejectedRoomType,
                 rejectedPetSafe,
                 rejectedChildSafe,
                 rejectedAllergy,
@@ -1105,6 +1114,39 @@ Chỉ trả về JSON array, không có text khác.
             return 0;
         }
 
+        private static bool IsEmbeddingRoomTypeMatch(
+            Dictionary<string, object>? metadata,
+            RoomTypeEnum requestedRoomType)
+        {
+            var roomTypes = ExtractEmbeddingRoomTypes(metadata);
+            if (roomTypes.Count == 0)
+            {
+                return false;
+            }
+
+            return roomTypes.Contains((int)requestedRoomType);
+        }
+
+        private static HashSet<int> ExtractEmbeddingRoomTypes(Dictionary<string, object>? metadata)
+        {
+            if (metadata == null)
+            {
+                return new HashSet<int>();
+            }
+
+            if (TryReadMetadataIntSet(metadata, "RoomTypes", out var roomTypes) && roomTypes.Count > 0)
+            {
+                return roomTypes;
+            }
+
+            if (TryReadMetadataIntSet(metadata, "RoomType", out roomTypes) && roomTypes.Count > 0)
+            {
+                return roomTypes;
+            }
+
+            return new HashSet<int>();
+        }
+
         private static bool IsEmbeddingLightRequirementMatch(
             Dictionary<string, object>? metadata,
             LightRequirementEnum? requestedLightRequirement)
@@ -1247,6 +1289,161 @@ Chỉ trả về JSON array, không có text khác.
                     }
 
                     return false;
+                default:
+                    return int.TryParse(rawValue.ToString(), out value);
+            }
+        }
+
+        private static bool TryReadMetadataIntSet(Dictionary<string, object> metadata, string key, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (!metadata.TryGetValue(key, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            switch (rawValue)
+            {
+                case List<int> listInt:
+                    values = listInt.ToHashSet();
+                    return values.Count > 0;
+
+                case int[] intArray:
+                    values = intArray.ToHashSet();
+                    return values.Count > 0;
+
+                case JsonElement jsonElement:
+                    return TryReadIntSetFromJsonElement(jsonElement, out values);
+
+                case string str:
+                    return TryReadIntSetFromString(str, out values);
+
+                case IEnumerable<object> objectEnumerable:
+                    foreach (var item in objectEnumerable)
+                    {
+                        if (TryConvertToInt(item, out var parsed))
+                        {
+                            values.Add(parsed);
+                        }
+                    }
+
+                    return values.Count > 0;
+
+                default:
+                    if (TryConvertToInt(rawValue, out var single))
+                    {
+                        values.Add(single);
+                        return true;
+                    }
+
+                    return false;
+            }
+        }
+
+        private static bool TryReadIntSetFromJsonElement(JsonElement jsonElement, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in jsonElement.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out var numberValue))
+                    {
+                        values.Add(numberValue);
+                        continue;
+                    }
+
+                    if (item.ValueKind == JsonValueKind.String &&
+                        int.TryParse(item.GetString(), out var stringValue))
+                    {
+                        values.Add(stringValue);
+                    }
+                }
+
+                return values.Count > 0;
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out var singleNumber))
+            {
+                values.Add(singleNumber);
+                return true;
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.String)
+            {
+                return TryReadIntSetFromString(jsonElement.GetString(), out values);
+            }
+
+            return false;
+        }
+
+        private static bool TryReadIntSetFromString(string? raw, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            var normalized = raw.Trim();
+            if (normalized.StartsWith('[') && normalized.EndsWith(']'))
+            {
+                try
+                {
+                    using var jsonDoc = JsonDocument.Parse(normalized);
+                    return TryReadIntSetFromJsonElement(jsonDoc.RootElement, out values);
+                }
+                catch
+                {
+                    // Fall through to delimiter-based parsing for malformed payloads.
+                }
+            }
+
+            var segments = normalized
+                .Split(new[] { ',', '|', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var segment in segments)
+            {
+                if (int.TryParse(segment, out var parsed))
+                {
+                    values.Add(parsed);
+                }
+            }
+
+            return values.Count > 0;
+        }
+
+        private static bool TryConvertToInt(object rawValue, out int value)
+        {
+            value = 0;
+
+            switch (rawValue)
+            {
+                case int intValue:
+                    value = intValue;
+                    return true;
+
+                case long longValue when longValue <= int.MaxValue && longValue >= int.MinValue:
+                    value = (int)longValue;
+                    return true;
+
+                case JsonElement jsonElement:
+                    if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out value))
+                    {
+                        return true;
+                    }
+
+                    if (jsonElement.ValueKind == JsonValueKind.String &&
+                        int.TryParse(jsonElement.GetString(), out value))
+                    {
+                        return true;
+                    }
+
+                    return false;
+
                 default:
                     return int.TryParse(rawValue.ToString(), out value);
             }
