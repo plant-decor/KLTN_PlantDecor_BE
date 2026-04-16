@@ -41,6 +41,25 @@ namespace PlantDecor.API.Controllers
                 Payload = result
             });
         }
+
+        /// <summary>
+        /// Lấy danh sách invoice còn chờ thanh toán thuộc vựa của shipper hiện tại
+        /// </summary>
+        [HttpGet("pending-invoices")]
+        public async Task<IActionResult> GetPendingInvoicesForMyNursery()
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetPendingInvoicesForMyNurseryAsync(currentUserId);
+
+            return Ok(new ApiResponse<List<InvoiceResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách invoice cần thanh toán thành công",
+                Payload = result
+            });
+        }
+
         /// <summary>
         /// Xác nhận đã lấy hàng -> Shipping
         /// </summary>
