@@ -60,7 +60,7 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Customer/Caretaker] Lấy danh sách tiến trình theo đăng ký dịch vụ
+        /// [Customer/Caretaker/Manager/Staff] Lấy danh sách tiến trình theo đăng ký dịch vụ
         /// </summary>
         [HttpGet("by-registration/{registrationId}")]
         public async Task<IActionResult> GetByRegistrationId(int registrationId)
@@ -114,10 +114,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Chuyển caretaker cho một phiên chăm sóc
+        /// [Manager/Staff] Chuyển caretaker cho một phiên chăm sóc
         /// </summary>
         [HttpPut("{id}/reassign")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> ReassignCaretaker(int id, [FromBody] ReassignCaretakerRequestDto request)
         {
             var managerId = GetUserId();
@@ -132,11 +132,30 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lịch chăm sóc toàn vựa theo ngày
+        /// [Manager/Staff] Lấy danh sách caretaker phù hợp để thay thế cho một phiên chăm sóc
+        /// GET /api/service-progress/{id}/eligible-caretakers
+        /// </summary>
+        [HttpGet("{id}/eligible-caretakers")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetEligibleCaretakers(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _serviceProgressService.GetEligibleCaretakersForProgressAsync(managerId, id);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get eligible caretakers for progress successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager/Staff] Lịch chăm sóc toàn vựa theo ngày
         /// GET /api/service-progress/nursery-schedule?date=yyyy-MM-dd
         /// </summary>
         [HttpGet("nursery-schedule")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetNurserySchedule([FromQuery] DateOnly? date)
         {
             var managerId = GetUserId();
@@ -152,11 +171,11 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lịch của một caretaker theo khoảng ngày
+        /// [Manager/Staff] Lịch của một caretaker theo khoảng ngày
         /// GET /api/service-progress/nursery-schedule/caretaker/{caretakerId}?from=&amp;to=
         /// </summary>
         [HttpGet("nursery-schedule/caretaker/{caretakerId}")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetCaretakerSchedule(int caretakerId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to)
         {
             var managerId = GetUserId();

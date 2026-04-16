@@ -126,9 +126,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetPendingForNurseryAsync(int managerId, Pagination pagination)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetPendingByNurseryIdAsync(nursery.Id, pagination);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
@@ -140,9 +138,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetAllForNurseryAsync(int managerId, Pagination pagination, int? status = null)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetAllByNurseryIdAsync(nursery.Id, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
@@ -169,9 +165,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> GetByIdAsManagerAsync(int managerId, int id)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             if (registration == null)
@@ -185,9 +179,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> ApproveAsync(int managerId, int id)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             if (registration == null)
@@ -262,9 +254,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> RejectAsync(int managerId, int id, string? rejectReason)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             if (registration == null)
@@ -287,9 +277,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             if (registration == null)
@@ -384,9 +372,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> ManagerCancelAsync(int managerId, int id, string? cancelReason)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             if (registration == null)
@@ -431,9 +417,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registrationId);
             if (registration == null)
@@ -479,6 +463,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             return eligibleStaff.Select(NurseryService.MapToStaffDtoPublic).ToList();
+        }
+
+        private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new ForbiddenException("You are not a manager/staff of any nursery");
         }
 
         private static List<DateOnly> ComputeSessionDates(ServiceRegistration r)

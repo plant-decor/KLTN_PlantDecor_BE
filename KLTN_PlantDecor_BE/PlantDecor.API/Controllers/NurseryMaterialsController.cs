@@ -32,6 +32,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách vật tư trong vựa của Manager
         /// </summary>
         [HttpGet("my-materials")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetMyNurseryMaterials([FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();
