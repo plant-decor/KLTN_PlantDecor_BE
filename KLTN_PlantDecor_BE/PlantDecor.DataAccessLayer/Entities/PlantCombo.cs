@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PlantDecor.DataAccessLayer.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace PlantDecor.DataAccessLayer.Entities;
@@ -15,9 +16,9 @@ public partial class PlantCombo
 
     public string? Description { get; set; }
 
-    public string? SuitableSpace { get; set; }
+    public int? SuitableSpace { get; set; }
 
-    public List<string>? SuitableRooms { get; set; }
+    public List<int>? SuitableRooms { get; set; }
 
     public int? FengShuiElement { get; set; }
 
