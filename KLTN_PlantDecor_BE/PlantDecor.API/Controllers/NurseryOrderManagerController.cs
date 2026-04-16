@@ -24,7 +24,23 @@ namespace PlantDecor.API.Controllers
         /// <summary>
         /// Lấy danh sách đơn hàng của vườn (có phân trang và lọc theo trạng thái)
         /// </summary>
-        /// <param name="status">Lọc theo trạng thái: 0=Pending, 1=Paid, 2=DepositPaid, 3=Assigned, 4=Shipping, 5=Delivered, 6=Cancelled, 7=DeliveryFailed</param>
+        /// <param name="status">
+        /// Lọc theo trạng thái:
+        /// 0=Pending,
+        /// 1=DepositPaid,
+        /// 2=Paid,
+        /// 3=Assigned,
+        /// 4=Shipping,
+        /// 5=Delivered,
+        /// 6=RemainingPaymentPending,
+        /// 7=Completed,
+        /// 8=Cancelled,
+        /// 9=Failed,
+        /// 10=RefundRequested,
+        /// 11=Refunded,
+        /// 12=Rejected,
+        /// 13=PendingConfirmation
+        /// </param>
         /// <param name="pageNumber">Số trang (mặc định: 1)</param>
         /// <param name="pageSize">Số item mỗi trang (mặc định: 10, tối đa: 100)</param>
         [HttpGet]
@@ -39,6 +55,24 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy danh sách đơn hàng của vườn thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy chi tiết đơn hàng của vườn theo nurseryOrderId (bao gồm sản phẩm, shipper, customer)
+        /// </summary>
+        [HttpGet("{nurseryOrderId:int}")]
+        public async Task<IActionResult> GetNurseryOrderDetail([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetNurseryOrderDetailForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết đơn hàng của vườn thành công",
                 Payload = result
             });
         }

@@ -30,10 +30,18 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             NurseryOrders = order.NurseryOrders.Select(no => new NurseryOrderResponseDto
             {
                 Id = no.Id,
+                OrderId = no.OrderId,
                 NurseryId = no.NurseryId,
                 NurseryName = no.Nursery?.Name,
                 ShipperId = no.ShipperId,
                 ShipperName = no.Shipper?.Username ?? no.Shipper?.Email,
+                ShipperEmail = no.Shipper?.Email,
+                ShipperPhone = no.Shipper?.PhoneNumber,
+                CustomerId = order.UserId,
+                CustomerName = order.CustomerName,
+                CustomerEmail = order.Customer?.Email,
+                CustomerPhone = order.Phone ?? order.Customer?.PhoneNumber,
+                CustomerAddress = order.Address,
                 SubTotalAmount = no.SubTotalAmount,
                 Status = no.Status,
                 StatusName = no.Status.HasValue ? ((OrderStatusEnum)no.Status.Value).ToString() : null,

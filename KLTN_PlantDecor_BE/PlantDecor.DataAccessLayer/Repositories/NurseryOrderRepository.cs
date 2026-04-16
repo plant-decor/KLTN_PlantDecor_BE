@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Interfaces;
@@ -14,6 +14,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return _context.NurseryOrders
                 .Include(no => no.Nursery)
                 .Include(no => no.Shipper)
+                .Include(no => no.Order)
+                    .ThenInclude(o => o.Customer)
                 .Include(no => no.NurseryOrderDetails)
                     .ThenInclude(d => d.CommonPlant)
                         .ThenInclude(cp => cp!.Plant)
