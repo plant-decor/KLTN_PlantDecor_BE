@@ -129,7 +129,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (areAllNurseryOrdersDeliveredOrAbove)
                 {
-                    parentOrder.Status = parentOrder.OrderType == (int)OrderTypeEnum.OtherProduct
+                    parentOrder.Status = parentOrder.PaymentStrategy == (int)PaymentStrategiesEnum.Deposit
                         ? (int)OrderStatusEnum.PendingConfirmation
                         : parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
                             ? (int)OrderStatusEnum.RemainingPaymentPending
