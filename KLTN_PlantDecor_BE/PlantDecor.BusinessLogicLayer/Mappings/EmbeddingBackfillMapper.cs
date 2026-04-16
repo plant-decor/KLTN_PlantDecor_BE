@@ -36,6 +36,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     .Select(t => t.TagName)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList() ?? new List<string>(),
+                RoomTypes = plant?.RoomType?.ToList() ?? new List<int>(),
+                RoomTypeNames = GetRoomTypeNames(plant?.RoomType),
+                RoomStyles = plant?.RoomStyle?.ToList() ?? new List<int>(),
+                RoomStyleNames = GetRoomStyleNames(plant?.RoomStyle),
                 NurseryId = entity.NurseryId,
                 NurseryName = entity.Nursery?.Name,
                 Price = plant?.BasePrice,
@@ -85,6 +89,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     .Select(t => t.TagName)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList() ?? new List<string>(),
+                RoomTypes = plant?.RoomType?.ToList() ?? new List<int>(),
+                RoomTypeNames = GetRoomTypeNames(plant?.RoomType),
+                RoomStyles = plant?.RoomStyle?.ToList() ?? new List<int>(),
+                RoomStyleNames = GetRoomStyleNames(plant?.RoomStyle),
                 NurseryId = entity.CurrentNurseryId ?? 0,
                 NurseryName = entity.CurrentNursery?.Name,
                 GuideLightRequirement = guide?.LightRequirement,
@@ -183,6 +191,34 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             }
 
             return roomType.ToString();
+        }
+
+        private static List<string> GetRoomTypeNames(List<int>? roomTypes)
+        {
+            if (roomTypes == null || roomTypes.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomTypes
+                .Distinct()
+                .Select(GetRoomTypeName)
+                .ToList();
+        }
+
+        private static List<string> GetRoomStyleNames(List<int>? roomStyles)
+        {
+            if (roomStyles == null || roomStyles.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomStyles
+                .Distinct()
+                .Select(roomStyle => Enum.IsDefined(typeof(RoomStyleEnum), roomStyle)
+                    ? ((RoomStyleEnum)roomStyle).ToString()
+                    : roomStyle.ToString())
+                .ToList();
         }
     }
 }

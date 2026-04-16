@@ -28,6 +28,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public decimal? BasePrice { get; set; }
         public List<string> CategoryNames { get; set; } = new();
         public List<string> TagNames { get; set; } = new();
+        public List<int> RoomTypes { get; set; } = new();
+        public List<string> RoomTypeNames { get; set; } = new();
+        public List<int> RoomStyles { get; set; } = new();
+        public List<string> RoomStyleNames { get; set; } = new();
 
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
@@ -74,6 +78,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public decimal? BasePrice { get; set; }
         public List<string> CategoryNames { get; set; } = new();
         public List<string> TagNames { get; set; } = new();
+        public List<int> RoomTypes { get; set; } = new();
+        public List<string> RoomTypeNames { get; set; } = new();
+        public List<int> RoomStyles { get; set; } = new();
+        public List<string> RoomStyleNames { get; set; } = new();
 
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }

@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -507,6 +508,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(t => t.TagName)
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToList() ?? new List<string>(),
+                    RoomTypes = plant?.RoomType?.ToList() ?? new List<int>(),
+                    RoomTypeNames = GetRoomTypeNames(plant?.RoomType),
+                    RoomStyles = plant?.RoomStyle?.ToList() ?? new List<int>(),
+                    RoomStyleNames = GetRoomStyleNames(plant?.RoomStyle),
                     NurseryId = entity.NurseryId,
                     NurseryName = entity.Nursery?.Name,
                     Price = plant?.BasePrice,
@@ -536,6 +541,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Log but don't fail
             }
+        }
+
+        private static List<string> GetRoomTypeNames(List<int>? roomTypes)
+        {
+            if (roomTypes == null || roomTypes.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomTypes
+                .Distinct()
+                .Select(roomType => Enum.IsDefined(typeof(RoomTypeEnum), roomType)
+                    ? ((RoomTypeEnum)roomType).ToString()
+                    : roomType.ToString())
+                .ToList();
+        }
+
+        private static List<string> GetRoomStyleNames(List<int>? roomStyles)
+        {
+            if (roomStyles == null || roomStyles.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomStyles
+                .Distinct()
+                .Select(roomStyle => Enum.IsDefined(typeof(RoomStyleEnum), roomStyle)
+                    ? ((RoomStyleEnum)roomStyle).ToString()
+                    : roomStyle.ToString())
+                .ToList();
         }
 
         private static Guid ConvertToGuid(int id)
