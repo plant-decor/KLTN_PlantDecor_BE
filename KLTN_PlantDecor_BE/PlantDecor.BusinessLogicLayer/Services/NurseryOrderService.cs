@@ -38,6 +38,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 pagination.PageSize);
         }
 
+        public async Task<NurseryOrderResponseDto> GetNurseryOrderDetailForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
+                ?? throw new UnauthorizedException("Unable to identify user from token");
+
+            if (currentUser.RoleId != (int)RoleEnum.Manager)
+                throw new ForbiddenException("Only manager can access this resource");
+
+            if (!currentUser.NurseryId.HasValue)
+                throw new ForbiddenException("Manager is not assigned to any nursery");
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to access this nursery order");
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
@@ -194,10 +214,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private static NurseryOrderResponseDto MapToDto(NurseryOrder order) => new()
         {
             Id = order.Id,
+            OrderId = order.OrderId,
             NurseryId = order.NurseryId,
             NurseryName = order.Nursery?.Name,
             ShipperId = order.ShipperId,
             ShipperName = order.Shipper?.Username ?? order.Shipper?.Email,
+            ShipperEmail = order.Shipper?.Email,
+            ShipperPhone = order.Shipper?.PhoneNumber,
+            CustomerId = order.Order?.UserId ?? 0,
+            CustomerName = order.Order?.CustomerName,
+            CustomerEmail = order.Order?.Customer?.Email,
+            CustomerPhone = order.Order?.Phone ?? order.Order?.Customer?.PhoneNumber,
+            CustomerAddress = order.Order?.Address,
             SubTotalAmount = order.SubTotalAmount,
             Status = order.Status,
             StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,

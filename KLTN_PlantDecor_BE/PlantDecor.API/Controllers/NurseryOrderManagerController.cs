@@ -59,6 +59,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Lấy chi tiết đơn hàng của vườn theo nurseryOrderId (bao gồm sản phẩm, shipper, customer)
+        /// </summary>
+        [HttpGet("{nurseryOrderId:int}")]
+        public async Task<IActionResult> GetNurseryOrderDetail([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetNurseryOrderDetailForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết đơn hàng của vườn thành công",
+                Payload = result
+            });
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

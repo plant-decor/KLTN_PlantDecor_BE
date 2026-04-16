@@ -1,4 +1,4 @@
-namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
+﻿namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class OrderResponseDto
     {
@@ -25,10 +25,18 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     public class NurseryOrderResponseDto
     {
         public int Id { get; set; }
+        public int OrderId { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
         public int? ShipperId { get; set; }
         public string? ShipperName { get; set; }
+        public string? ShipperEmail { get; set; }
+        public string? ShipperPhone { get; set; }
+        public int CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
+        public string? CustomerPhone { get; set; }
+        public string? CustomerAddress { get; set; }
         public decimal? SubTotalAmount { get; set; }
         public int? Status { get; set; }
         public string? StatusName { get; set; }
