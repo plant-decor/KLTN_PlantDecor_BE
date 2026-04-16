@@ -6,6 +6,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     public class PlantComboShopSearchRequestDto
     {
         public Pagination Pagination { get; set; } = new Pagination();
+        public int? NurseryId { get; set; }
         public string? Keyword { get; set; }
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }

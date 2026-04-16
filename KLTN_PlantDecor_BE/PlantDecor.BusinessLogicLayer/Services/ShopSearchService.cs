@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 {
     public class ShopSearchService : IShopSearchService
     {
-        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v6";
+        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v7";
 
         private readonly IPlantService _plantService;
         private readonly INurseryMaterialService _nurseryMaterialService;
@@ -163,6 +163,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     new NurseryMaterialShopSearchRequestDto
                     {
                         Pagination = materialPagination,
+                        NurseryId = searchRequest.NurseryId,
                         SearchTerm = searchRequest.Keyword,
                         CategoryIds = searchRequest.CategoryIds,
                         TagIds = searchRequest.TagIds,
@@ -216,6 +217,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     new PlantComboShopSearchRequestDto
                     {
                         Pagination = comboPagination,
+                        NurseryId = searchRequest.NurseryId,
                         Keyword = searchRequest.Keyword,
                         MinPrice = searchRequest.MinPrice,
                         MaxPrice = searchRequest.MaxPrice,

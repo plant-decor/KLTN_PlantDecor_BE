@@ -8,6 +8,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         [Required(ErrorMessage = "UserName is required")]
         public string UserName { get; set; }
 
+        [RegularExpression(@"^(0|\+84)(\d{9})$", ErrorMessage = "Sai định dạng điện thoại")]
+        public string? PhoneNumber { get; set; }
+
 
         // User Profile
         [Required(ErrorMessage = "Full Name is required")]

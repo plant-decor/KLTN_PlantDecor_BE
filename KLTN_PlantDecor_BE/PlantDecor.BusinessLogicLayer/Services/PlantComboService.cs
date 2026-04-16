@@ -999,6 +999,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IQueryable<NurseryPlantCombo> query = _unitOfWork.NurseryPlantComboRepository.GetQuery()
                 .Where(npc => npc.Quantity > 0 && npc.PlantCombo.IsActive == true);
 
+            if (searchDto.NurseryId.HasValue)
+            {
+                query = query.Where(npc => npc.NurseryId == searchDto.NurseryId.Value);
+            }
+
             query = query
                 .Include(npc => npc.PlantCombo)
                     .ThenInclude(pc => pc.PlantComboImages)

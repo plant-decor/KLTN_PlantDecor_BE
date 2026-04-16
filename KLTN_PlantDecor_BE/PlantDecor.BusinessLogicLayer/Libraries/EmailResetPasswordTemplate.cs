@@ -8,6 +8,7 @@
         <html>
         <body style='font-family: Arial;'>
             <h2>Xin chào {userName},</h2>
+            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776250312/DSfep_kaaue8.jpg' alt='Logo' width='120'/>
             <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>PlantDecor</b>.</p>
             <p>Vui lòng nhấn nút bên dưới để có thể reset password:</p>
             <p>

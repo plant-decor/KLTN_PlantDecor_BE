@@ -21,6 +21,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<ServiceRegistrationResponseDto> CreateAsync(int userId, CreateServiceRegistrationRequestDto request)
         {
+            if (request == null)
+                throw new BadRequestException("Request body is required");
+
             var nurseryCareService = await _unitOfWork.NurseryCareServiceRepository.GetByIdWithDetailsAsync(request.NurseryCareServiceId);
             if (nurseryCareService == null)
                 throw new NotFoundException($"NurseryCareService {request.NurseryCareServiceId} not found");
@@ -31,19 +34,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (request.ServiceDate < DateOnly.FromDateTime(DateTime.Today))
                 throw new BadRequestException("ServiceDate cannot be in the past");
 
-            var shiftExists = await _unitOfWork.ShiftRepository.ExistsAsync(request.PreferredShiftId);
-            if (!shiftExists)
+            var preferredShift = await _unitOfWork.ShiftRepository.GetByIdAsync(request.PreferredShiftId);
+            if (preferredShift == null)
                 throw new NotFoundException($"Shift {request.PreferredShiftId} not found");
 
             var pkg = nurseryCareService.CareServicePackage;
+            if (pkg == null)
+                throw new BadRequestException("Care service package not found for this nursery care service");
 
             if (!pkg.DurationDays.HasValue || !pkg.ServiceType.HasValue)
                 throw new BadRequestException("Care service package is missing configuration");
 
             bool isOneTime = pkg.ServiceType.Value == (int)CareServiceTypeEnum.OneTime;
+            var minimumLeadHours = isOneTime ? 24 : 48;
+            var firstSessionStartAt = request.ServiceDate.ToDateTime(preferredShift.StartTime);
+
+            if (firstSessionStartAt < DateTime.Now.AddHours(minimumLeadHours))
+                throw new BadRequestException($"{(isOneTime ? "One-time" : "Periodic")} service must be booked at least {minimumLeadHours} hours in advance");
 
             int totalSessions;
             string scheduleDaysJson;
+            var scheduleDaysOfWeek = request.ScheduleDaysOfWeek ?? new List<int>();
 
             if (isOneTime)
             {
@@ -56,14 +67,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (!pkg.VisitPerWeek.HasValue)
                     throw new BadRequestException("Periodic care service package is missing VisitPerWeek configuration");
 
-                if (request.ScheduleDaysOfWeek.Any(d => d < 1 || d > 6))
+                if (!scheduleDaysOfWeek.Any())
+                    throw new BadRequestException("ScheduleDaysOfWeek is required for periodic service package");
+
+                if (scheduleDaysOfWeek.Any(d => d < 1 || d > 6))
                     throw new BadRequestException("ScheduleDaysOfWeek only accepts values 1-6 (Monday to Saturday), Sunday is not supported");
 
-                if (request.ScheduleDaysOfWeek.Count != pkg.VisitPerWeek!.Value)
+                if (scheduleDaysOfWeek.Count != pkg.VisitPerWeek!.Value)
                     throw new BadRequestException($"You must select exactly {pkg.VisitPerWeek.Value} day(s) per week as per this package");
 
                 totalSessions = (int)Math.Ceiling(pkg.DurationDays.Value / 7.0) * pkg.VisitPerWeek.Value;
-                scheduleDaysJson = JsonSerializer.Serialize(request.ScheduleDaysOfWeek);
+                scheduleDaysJson = JsonSerializer.Serialize(scheduleDaysOfWeek);
             }
 
             var registration = new ServiceRegistration
@@ -431,8 +445,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Get all caretakers in the nursery
             var allStaff = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
 
+            // Load package with required specializations explicitly to avoid missing include chains.
+            var packageId = registration.NurseryCareService?.CareServicePackageId
+                ?? throw new BadRequestException("Registration is missing care service package");
+
+            var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            if (pkg == null)
+                throw new NotFoundException($"CareServicePackage {packageId} not found");
+
             // Filter by specializations required by the package
-            var pkg = registration.NurseryCareService?.CareServicePackage;
             IEnumerable<User> eligibleStaff;
             if (pkg?.CareServiceSpecializations != null && pkg.CareServiceSpecializations.Count > 0)
             {

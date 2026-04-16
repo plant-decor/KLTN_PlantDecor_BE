@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
 using System.Globalization;
@@ -60,6 +61,7 @@ Dựa vào phân tích căn phòng:
 - Ánh sáng: {2}
 - Phong cách: {3}
 - Vị trí đặt cây: {4}
+- Ảnh để hiểu rõ hơn kèm phân tích trên: {8}
 
 Và danh sách các cây có sẵn trong hệ thống:
 {5}
@@ -102,6 +104,23 @@ Chỉ trả về JSON array, không có text khác.
             _aiSearchService = aiSearchService;
             _cloudinaryService = cloudinaryService;
             _logger = logger;
+        }
+
+        public async Task<PaginatedResult<LayoutDesignListResponseDto>> GetAllLayoutsAsync(int userId, Pagination pagination)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var paginatedLayouts = await _unitOfWork.LayoutDesignRepository.GetAllByUserIdWithDetailsAsync(userId, pagination);
+
+            var layoutDtos = paginatedLayouts.Items.ToLayoutDesignListResponseList();
+            return new PaginatedResult<LayoutDesignListResponseDto>(
+                layoutDtos,
+                paginatedLayouts.TotalCount,
+                paginatedLayouts.PageNumber,
+                paginatedLayouts.PageSize);
         }
 
         public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int userId)
@@ -772,7 +791,8 @@ Chỉ trả về JSON array, không có text khác.
                     roomAnalysis.AvailableSpace,
                     candidatesJson,
                     limit,
-                    additionalCriteria);
+                    additionalCriteria,
+                    request.RoomImageBase64);
 
                 var response = await _azureOpenAIService.GenerateChatCompletionAsync(
                     "Bạn là chuyên gia về cây cảnh và thiết kế nội thất. Trả lời bằng JSON array.",

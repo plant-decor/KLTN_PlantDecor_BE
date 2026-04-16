@@ -74,6 +74,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (!string.IsNullOrWhiteSpace(request.UserName))
                 user.Username = request.UserName.Trim();
 
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+                user.PhoneNumber = request.PhoneNumber.Trim();
+
             user.UpdatedAt = DateTime.UtcNow;
 
             // Update UserProfile (tạo mới nếu chưa có)
