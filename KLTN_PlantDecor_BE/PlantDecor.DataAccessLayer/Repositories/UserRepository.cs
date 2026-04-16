@@ -215,5 +215,30 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenInclude(ss => ss.Specialization)
                 .FirstOrDefaultAsync(u => u.Id == userId && u.NurseryId == nurseryId && u.RoleId == (int)RoleEnum.Caretaker);
         }
+
+        public async Task<List<User>> GetStaffAndCaretakersByNurseryIdAsync(int nurseryId)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserProfile)
+                .Include(u => u.StaffSpecializations)
+                    .ThenInclude(ss => ss.Specialization)
+                .Where(u => u.NurseryId == nurseryId
+                            && (u.RoleId == (int)RoleEnum.Staff || u.RoleId == (int)RoleEnum.Caretaker))
+                .OrderBy(u => u.Username)
+                .ToListAsync();
+        }
+
+        public async Task<User?> GetStaffOrCaretakerByIdWithSpecializationsAsync(int userId, int nurseryId)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserProfile)
+                .Include(u => u.StaffSpecializations)
+                    .ThenInclude(ss => ss.Specialization)
+                .FirstOrDefaultAsync(u => u.Id == userId
+                                       && u.NurseryId == nurseryId
+                                       && (u.RoleId == (int)RoleEnum.Staff || u.RoleId == (int)RoleEnum.Caretaker));
+        }
     }
 }
