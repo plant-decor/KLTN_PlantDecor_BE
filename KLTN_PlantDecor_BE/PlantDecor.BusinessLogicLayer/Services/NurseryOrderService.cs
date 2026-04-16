@@ -38,6 +38,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 pagination.PageSize);
         }
 
+        public async Task<List<InvoiceResponseDto>> GetPendingInvoicesForMyNurseryAsync(int currentUserId)
+        {
+            var currentUser = await GetValidatedShipperAsync(currentUserId);
+
+            var invoices = await _unitOfWork.InvoiceRepository.GetPendingRemainingInvoicesForShipperAsync(
+                currentUserId,
+                currentUser.NurseryId!.Value);
+
+            return invoices.Select(MapInvoiceToDto).ToList();
+        }
+
         public async Task<NurseryOrderResponseDto> GetNurseryOrderDetailForManagerAsync(int currentUserId, int nurseryOrderId)
         {
             var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
@@ -242,6 +253,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             Items = order.NurseryOrderDetails
                 .Select(d => d.ToOrderItemResponse())
                 .ToList()
+        };
+
+        private static InvoiceResponseDto MapInvoiceToDto(Invoice invoice) => new()
+        {
+            Id = invoice.Id,
+            OrderId = invoice.OrderId,
+            IssuedDate = invoice.IssuedDate,
+            TotalAmount = invoice.TotalAmount,
+            Type = invoice.Type,
+            TypeName = invoice.Type.HasValue ? ((InvoiceTypeEnum)invoice.Type.Value).ToString() : null,
+            Status = invoice.Status,
+            StatusName = invoice.Status.HasValue ? ((InvoiceStatusEnum)invoice.Status.Value).ToString() : null,
+            Details = invoice.InvoiceDetails.Select(d => new InvoiceDetailResponseDto
+            {
+                Id = d.Id,
+                ItemName = d.ItemName,
+                UnitPrice = d.UnitPrice,
+                Quantity = d.Quantity,
+                Amount = d.Amount
+            }).ToList()
         };
 
         private static DateTime GetCurrentVietnamTime()

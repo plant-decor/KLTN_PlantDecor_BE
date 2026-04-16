@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -35,6 +35,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(i => i.Order != null
                     && i.Order.UserId == userId
                     && i.Status == (int)InvoiceStatusEnum.Pending)
+                .OrderByDescending(i => i.IssuedDate)
+                .ToListAsync();
+        }
+
+        public async Task<List<Invoice>> GetPendingRemainingInvoicesForShipperAsync(int shipperId, int nurseryId)
+        {
+            return await _context.Invoices
+                .Include(i => i.InvoiceDetails)
+                .Include(i => i.Order)
+                .Where(i => i.Status == (int)InvoiceStatusEnum.Pending
+                    && i.Type == (int)InvoiceTypeEnum.RemainingBalance
+                    && i.Order != null
+                    && i.Order.Status == (int)OrderStatusEnum.RemainingPaymentPending
+                    && i.Order.NurseryOrders.Any(no => no.NurseryId == nurseryId
+                        && no.ShipperId == shipperId
+                        && no.Status == (int)OrderStatusEnum.Delivered))
                 .OrderByDescending(i => i.IssuedDate)
                 .ToListAsync();
         }
