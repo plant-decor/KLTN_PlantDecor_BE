@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
@@ -114,6 +114,17 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> IpnVnpay()
         {
             var result = await _paymentService.ProcessVnpayIpnAsync(Request.Query);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// IPN từ VNPay cho thanh toán lần 2 (RemainingBalance) - cập nhật Order sang PendingConfirmation
+        /// </summary>
+        [HttpGet("Checkout/IpnVnpaySecondPayment")]
+        [AllowAnonymous]
+        public async Task<IActionResult> IpnVnpaySecondPayment()
+        {
+            var result = await _paymentService.ProcessVnpaySecondIpnAsync(Request.Query);
             return Ok(result);
         }
 

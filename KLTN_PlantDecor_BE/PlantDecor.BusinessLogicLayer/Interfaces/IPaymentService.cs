@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 
@@ -11,5 +11,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<CreatePaymentUrlResponseDto> RetryPaymentAsync(int userId, int paymentId, HttpContext httpContext);
         Task<PaymentResponse> ProcessVnpayCallbackAsync(IQueryCollection queryParams);
         Task<VnpayIpnResponseDto> ProcessVnpayIpnAsync(IQueryCollection queryParams);
+        Task<VnpayIpnResponseDto> ProcessVnpaySecondIpnAsync(IQueryCollection queryParams);
     }
 }
