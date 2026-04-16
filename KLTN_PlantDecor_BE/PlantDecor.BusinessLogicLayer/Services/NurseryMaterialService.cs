@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -326,9 +327,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<NurseryMaterialListResponseDto>> GetMyNurseryMaterialsAsync(int managerId, Pagination pagination)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
 
             return await GetByNurseryIdAsync(nursery.Id, pagination);
         }
@@ -345,6 +344,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await QueueEmbeddingByIdAsync(imported.Id);
 
             return imported;
+        }
+
+        private async Task<Nursery> ResolveOperatorNurseryForReadAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new NotFoundException("Bạn chưa có vựa nào");
         }
 
         #endregion

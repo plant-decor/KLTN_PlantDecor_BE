@@ -81,10 +81,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lấy danh sách đăng ký chờ duyệt của vựa
+        /// [Manager/Staff] Lấy danh sách đăng ký chờ duyệt của vựa
         /// </summary>
         [HttpGet("pending")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetPendingForNursery([FromQuery] Pagination pagination)
         {
             var managerId = GetUserId();
@@ -99,10 +99,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lấy chi tiết đăng ký dịch vụ thuộc vựa của manager
+        /// [Manager/Staff] Lấy chi tiết đăng ký dịch vụ thuộc vựa vận hành
         /// </summary>
         [HttpGet("nursery/{id}")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetByIdAsManager(int id)
         {
             var managerId = GetUserId();
@@ -117,10 +117,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lấy tất cả đăng ký dịch vụ của vựa, có thể lọc theo trạng thái
+        /// [Manager/Staff] Lấy tất cả đăng ký dịch vụ của vựa, có thể lọc theo trạng thái
         /// </summary>
         [HttpGet("nursery")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetAllForNursery([FromQuery] Pagination pagination, [FromQuery] int? status = null)
         {
             var managerId = GetUserId();
@@ -135,10 +135,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Phê duyệt đăng ký dịch vụ — tạo Order + Invoice
+        /// [Manager/Staff] Phê duyệt đăng ký dịch vụ — tạo Order + Invoice
         /// </summary>
         [HttpPost("{id}/approve")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> Approve(int id)
         {
             var managerId = GetUserId();
@@ -153,10 +153,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Từ chối đăng ký dịch vụ
+        /// [Manager/Staff] Từ chối đăng ký dịch vụ
         /// </summary>
         [HttpPost("{id}/reject")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> Reject(int id, [FromQuery] string? rejectReason = null)
         {
             var managerId = GetUserId();
@@ -171,10 +171,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Giao caretaker chính cho đăng ký dịch vụ và cập nhật các phiên chưa hoàn tất
+        /// [Manager/Staff] Giao caretaker chính cho đăng ký dịch vụ và cập nhật các phiên chưa hoàn tất
         /// </summary>
         [HttpPut("{id}/assign-caretaker")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> AssignCaretaker(int id, [FromBody] AssignServiceRegistrationCaretakerRequestDto request)
         {
             var managerId = GetUserId();
@@ -224,10 +224,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Hủy đăng ký dịch vụ đang Active — hủy các session chưa xong và set Order = Cancelled
+        /// [Manager/Staff] Hủy đăng ký dịch vụ đang Active — hủy các session chưa xong và set Order = Cancelled
         /// </summary>
         [HttpPost("{id}/manager-cancel")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> ManagerCancel(int id, [FromQuery] string? cancelReason = null)
         {
             var managerId = GetUserId();
@@ -258,10 +258,10 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Manager] Lấy danh sách caretaker đủ điều kiện (đúng chuyên môn + không trùng lịch) cho đăng ký dịch vụ
+        /// [Manager/Staff] Lấy danh sách caretaker đủ điều kiện (đúng chuyên môn + không trùng lịch) cho đăng ký dịch vụ
         /// </summary>
         [HttpGet("{id}/eligible-caretakers")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetEligibleCaretakers(int id)
         {
             var managerId = GetUserId();
