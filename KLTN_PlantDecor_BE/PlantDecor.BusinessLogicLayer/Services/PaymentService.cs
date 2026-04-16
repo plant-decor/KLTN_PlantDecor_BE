@@ -247,16 +247,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<VnpayIpnResponseDto> ProcessVnpayIpnAsync(IQueryCollection queryParams)
         {
-            return await ProcessVnpayIpnInternalAsync(queryParams, null);
-        }
-
-        public async Task<VnpayIpnResponseDto> ProcessVnpaySecondIpnAsync(IQueryCollection queryParams)
-        {
-            return await ProcessVnpayIpnInternalAsync(queryParams, PaymentTypeEnum.RemainingBalance);
-        }
-
-        private async Task<VnpayIpnResponseDto> ProcessVnpayIpnInternalAsync(IQueryCollection queryParams, PaymentTypeEnum? expectedPaymentType)
-        {
             // Build fake URL for the VnPayLibrary's URL parser
             var queryString = string.Join("&", queryParams.Select(q => $"{q.Key}={q.Value}"));
             var fakeUrl = $"https://ipn?{queryString}";
@@ -282,13 +272,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var payment = await _unitOfWork.PaymentRepository.GetByIdWithTransactionsAsync(dbTransaction.PaymentId!.Value);
             if (payment == null)
                 return new VnpayIpnResponseDto { RspCode = "01", Message = "Payment not found" };
-
-            if (expectedPaymentType.HasValue)
-            {
-                var currentPaymentType = (PaymentTypeEnum?)payment.PaymentType;
-                if (currentPaymentType != expectedPaymentType.Value)
-                    return new VnpayIpnResponseDto { RspCode = "04", Message = "Invalid payment type for this endpoint" };
-            }
 
             // Cập nhật Transaction với response code từ VnPay (dù thành công hay thất bại) để lưu lại kết quả callback và phục vụ mục đích tra cứu, thống kê sau này.
             dbTransaction.ResponseCode = responseCode;

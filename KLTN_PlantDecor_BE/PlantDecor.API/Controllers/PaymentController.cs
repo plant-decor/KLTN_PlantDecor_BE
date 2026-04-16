@@ -117,17 +117,6 @@ namespace PlantDecor.API.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// IPN từ VNPay cho thanh toán lần 2 (RemainingBalance) - cập nhật Order sang PendingConfirmation
-        /// </summary>
-        [HttpGet("Checkout/IpnVnpaySecondPayment")]
-        [AllowAnonymous]
-        public async Task<IActionResult> IpnVnpaySecondPayment()
-        {
-            var result = await _paymentService.ProcessVnpaySecondIpnAsync(Request.Query);
-            return Ok(result);
-        }
-
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
