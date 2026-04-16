@@ -1,4 +1,4 @@
-using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+﻿using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 
@@ -36,7 +36,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ShipperName = no.Shipper?.Username ?? no.Shipper?.Email,
                 SubTotalAmount = no.SubTotalAmount,
                 Status = no.Status,
-                StatusName = no.Status.HasValue ? ((NurseryOrderStatus)no.Status.Value).ToString() : null,
+                StatusName = no.Status.HasValue ? ((OrderStatusEnum)no.Status.Value).ToString() : null,
                 ShipperNote = no.ShipperNote,
                 Items = no.NurseryOrderDetails
                     .Select(d => d.ToOrderItemResponse())
@@ -76,7 +76,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             Quantity = detail.Quantity,
             Price = detail.UnitPrice,
             Status = detail.Status,
-            StatusName = detail.Status.HasValue ? ((NurseryOrderStatus)detail.Status.Value).ToString() : null
+            StatusName = detail.Status.HasValue ? ((OrderStatusEnum)detail.Status.Value).ToString() : null
         };
 
         private static string? ResolveItemImageUrl(NurseryOrderDetail detail)
