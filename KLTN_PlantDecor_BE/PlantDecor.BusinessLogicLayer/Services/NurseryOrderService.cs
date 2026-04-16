@@ -149,11 +149,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (areAllNurseryOrdersDeliveredOrAbove)
                 {
-                    parentOrder.Status = parentOrder.PaymentStrategy == (int)PaymentStrategiesEnum.Deposit
-                        ? (int)OrderStatusEnum.PendingConfirmation
-                        : parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
+                    if (parentOrder.PaymentStrategy == (int)PaymentStrategiesEnum.Deposit)
+                    {
+                        await EnsureRemainingBalanceInvoiceForDepositAsync(parentOrder, now);
+                        parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                    }
+                    else
+                    {
+                        parentOrder.Status = parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
                             ? (int)OrderStatusEnum.RemainingPaymentPending
                             : (int)OrderStatusEnum.Delivered;
+                    }
+
                     parentOrder.UpdatedAt = now;
                 }
 
@@ -248,6 +255,51 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 return DateTime.UtcNow.AddHours(7);
             }
+        }
+
+        private async Task EnsureRemainingBalanceInvoiceForDepositAsync(Order order, DateTime issuedDate)
+        {
+            if ((order.RemainingAmount ?? 0) <= 0)
+            {
+                return;
+            }
+
+            var hasExistingRemainingInvoice = order.Invoices.Any(i =>
+                i.Type == (int)InvoiceTypeEnum.RemainingBalance &&
+                i.Status != (int)InvoiceStatusEnum.Cancelled);
+
+            if (hasExistingRemainingInvoice)
+            {
+                return;
+            }
+
+            var invoiceDetails = order.NurseryOrders
+                .SelectMany(no => no.NurseryOrderDetails)
+                .Select(d => new InvoiceDetail
+                {
+                    ItemName = d.ItemName,
+                    UnitPrice = d.UnitPrice,
+                    Quantity = d.Quantity,
+                    Amount = d.Amount
+                })
+                .ToList();
+
+            if (!invoiceDetails.Any())
+            {
+                throw new BadRequestException($"Cannot create remaining invoice for order {order.Id} because no invoice details were found");
+            }
+
+            var remainingInvoice = new Invoice
+            {
+                OrderId = order.Id,
+                Type = (int)InvoiceTypeEnum.RemainingBalance,
+                TotalAmount = order.RemainingAmount,
+                Status = (int)InvoiceStatusEnum.Pending,
+                IssuedDate = issuedDate,
+                InvoiceDetails = invoiceDetails
+            };
+
+            _unitOfWork.InvoiceRepository.PrepareCreate(remainingInvoice);
         }
     }
 }
