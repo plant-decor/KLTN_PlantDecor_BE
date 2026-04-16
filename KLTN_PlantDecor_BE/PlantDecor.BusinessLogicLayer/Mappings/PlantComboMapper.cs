@@ -23,8 +23,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ComboType = combo.ComboType,
                 ComboTypeName = comboTypeName,
                 Description = combo.Description,
-                SuitableSpace = combo.SuitableSpace,
-                SuitableRooms = combo.SuitableRooms,
+                SuitableSpace = MapLightRequirementName(combo.SuitableSpace),
+                SuitableRooms = FormatRoomTypes(combo.SuitableRooms),
                 FengShuiElement = combo.FengShuiElement,
                 FengShuiPurpose = combo.FengShuiPurpose,
                 PetSafe = combo.PetSafe,
@@ -112,7 +112,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 ComboType = request.ComboType,
                 Description = request.Description,
                 SuitableSpace = request.SuitableSpace,
-                SuitableRooms = request.SuitableRooms,
+                SuitableRooms = request.SuitableRooms?.Distinct().ToList(),
                 FengShuiElement = request.FengShuiElement,
                 FengShuiPurpose = request.FengShuiPurpose,
                 ThemeName = request.ThemeName,
@@ -151,7 +151,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             combo.ComboType = request.ComboType ?? combo.ComboType;
             combo.Description = request.Description ?? combo.Description;
             combo.SuitableSpace = request.SuitableSpace ?? combo.SuitableSpace;
-            combo.SuitableRooms = request.SuitableRooms ?? combo.SuitableRooms;
+            combo.SuitableRooms = request.SuitableRooms != null
+                ? request.SuitableRooms.Distinct().ToList()
+                : combo.SuitableRooms;
             combo.FengShuiElement = request.FengShuiElement ?? combo.FengShuiElement;
             combo.FengShuiPurpose = request.FengShuiPurpose ?? combo.FengShuiPurpose;
             combo.ThemeName = request.ThemeName ?? combo.ThemeName;
@@ -185,6 +187,34 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             }
 
             return ((ComboTypeEnum)comboType.Value).ToString();
+        }
+
+        private static string? MapLightRequirementName(int? suitableSpace)
+        {
+            if (!suitableSpace.HasValue || !Enum.IsDefined(typeof(LightRequirementEnum), suitableSpace.Value))
+            {
+                return null;
+            }
+
+            return ((LightRequirementEnum)suitableSpace.Value).ToString();
+        }
+
+        private static List<string>? FormatRoomTypes(List<int>? roomTypes)
+        {
+            return roomTypes?
+                .Distinct()
+                .Select(MapRoomTypeName)
+                .ToList();
+        }
+
+        private static string MapRoomTypeName(int roomType)
+        {
+            if (Enum.IsDefined(typeof(RoomTypeEnum), roomType))
+            {
+                return ((RoomTypeEnum)roomType).ToString();
+            }
+
+            return roomType.ToString();
         }
 
         public static string GenerateComboCode()

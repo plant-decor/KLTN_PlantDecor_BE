@@ -109,8 +109,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 IsActive = entity.IsActive,
                 ComboName = combo?.ComboName ?? string.Empty,
                 Description = combo?.Description,
-                SuitableSpace = combo?.SuitableSpace,
-                SuitableRooms = combo?.SuitableRooms?.ToList() ?? new List<string>(),
+                SuitableSpace = GetLightRequirementName(combo?.SuitableSpace),
+                SuitableRooms = combo?.SuitableRooms?.Select(GetRoomTypeName).ToList() ?? new List<string>(),
                 FengShuiElement = combo?.FengShuiElement,
                 FengShuiPurpose = combo?.FengShuiPurpose,
                 ThemeName = combo?.ThemeName,
@@ -173,6 +173,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             }
 
             return ((LightRequirementEnum)lightRequirement.Value).ToString();
+        }
+
+        private static string GetRoomTypeName(int roomType)
+        {
+            if (Enum.IsDefined(typeof(RoomTypeEnum), roomType))
+            {
+                return ((RoomTypeEnum)roomType).ToString();
+            }
+
+            return roomType.ToString();
         }
     }
 }
