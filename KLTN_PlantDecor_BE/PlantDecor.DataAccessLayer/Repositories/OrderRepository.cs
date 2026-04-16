@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Interfaces;
@@ -25,6 +25,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             return await query
                 .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<Order>> GetPendingConfirmationOrdersOlderThanAsync(DateTime threshold)
+        {
+            return await _context.Orders
+                .Include(o => o.NurseryOrders)
+                .Where(o => o.Status == (int)Enums.OrderStatusEnum.PendingConfirmation
+                    && o.UpdatedAt.HasValue
+                    && o.UpdatedAt.Value <= threshold)
                 .ToListAsync();
         }
 
