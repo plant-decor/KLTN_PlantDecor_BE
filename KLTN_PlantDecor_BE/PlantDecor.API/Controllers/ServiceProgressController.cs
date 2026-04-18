@@ -85,11 +85,43 @@ namespace PlantDecor.API.Controllers
         {
             var caretakerId = GetUserId();
             var result = await _serviceProgressService.CheckInAsync(caretakerId, id);
+
+            var message = "Check-in successfully";
+            if (result.TaskDate.HasValue && result.Shift != null && result.ActualStartTime.HasValue)
+            {
+                var scheduledStart = result.TaskDate.Value.ToDateTime(result.Shift.StartTime);
+                var lateMinutes = (int)Math.Floor((result.ActualStartTime.Value - scheduledStart).TotalMinutes);
+
+                if (lateMinutes > 30)
+                {
+                    message = $"Check-in successfully. You are late by {lateMinutes} minutes. Please submit an incident report with evidence after your shift if needed.";
+                }
+            }
+
             return Ok(new ApiResponse<ServiceProgressResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Check-in successfully",
+                Message = message,
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Caretaker] Gửi báo cáo sự cố của ca làm việc
+        /// </summary>
+        [HttpPost("{id}/incident-report")]
+        [Authorize(Roles = "Caretaker")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SubmitIncidentReport(int id, [FromForm] SubmitIncidentReportRequestDto request, IFormFile incidentImage)
+        {
+            var caretakerId = GetUserId();
+            var result = await _serviceProgressService.SubmitIncidentReportAsync(caretakerId, id, request, incidentImage);
+            return Ok(new ApiResponse<ServiceProgressResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Submit incident report successfully",
                 Payload = result
             });
         }

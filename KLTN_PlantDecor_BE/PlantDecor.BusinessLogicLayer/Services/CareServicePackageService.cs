@@ -60,6 +60,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
+        public async Task<CareServicePackageWithNurseriesResponseDto> GetByIdWithNurseriesAsync(int id)
+        {
+            var cacheKey = $"{CACHE_KEY_PREFIX}_{id}_with_nurseries";
+            var cached = await _cacheService.GetDataAsync<CareServicePackageWithNurseriesResponseDto>(cacheKey);
+            if (cached != null) return cached;
+
+            var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithNurseriesAsync(id);
+            if (pkg == null)
+                throw new NotFoundException($"CareServicePackage {id} not found");
+
+            var result = MapToWithNurseriesDto(pkg);
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
+        }
+
         public async Task<CareServicePackageResponseDto> CreateAsync(CreateCareServicePackageRequestDto request)
         {
             if (await _unitOfWork.CareServicePackageRepository.ExistsByNameAsync(request.Name))
@@ -76,7 +91,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("VisitPerWeek (1-6) is required for Periodic service packages");
             }
             else if (request.ServiceType == (int)CareServiceTypeEnum.Periodic &&
-                (request.VisitPerWeek.Value < 1 || request.VisitPerWeek.Value > 6))
+                (request.VisitPerWeek is < 1 or > 6))
             {
                 throw new BadRequestException("VisitPerWeek must be between 1 and 6");
             }
@@ -150,10 +165,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await InvalidateCacheAsync();
         }
 
-        public async Task<List<CareServicePackageResponseDto>> GetPackagesWithNurseriesAsync()
+        public async Task<List<CareServicePackageWithNurseriesResponseDto>> GetPackagesWithNurseriesAsync()
         {
             var packages = await _unitOfWork.CareServicePackageRepository.GetPackagesWithNurseriesAsync();
-            return packages.Select(MapToDto).ToList();
+            return packages.Select(MapToWithNurseriesDto).ToList();
         }
 
         public async Task<List<CareServicePackageResponseDto>> GetNotOfferedByManagerAsync(int managerId)
@@ -220,6 +235,38 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         Name = cs.Specialization.Name,
                         Description = cs.Specialization.Description
                     }).ToList()
+            };
+        }
+
+        public static CareServicePackageWithNurseriesResponseDto MapToWithNurseriesDto(CareServicePackage pkg)
+        {
+            var baseDto = MapToDto(pkg);
+
+            return new CareServicePackageWithNurseriesResponseDto
+            {
+                Id = baseDto.Id,
+                Name = baseDto.Name,
+                Description = baseDto.Description,
+                Features = baseDto.Features,
+                VisitPerWeek = baseDto.VisitPerWeek,
+                DurationDays = baseDto.DurationDays,
+                TotalSessions = baseDto.TotalSessions,
+                ServiceType = baseDto.ServiceType,
+                AreaLimit = baseDto.AreaLimit,
+                UnitPrice = baseDto.UnitPrice,
+                IsActive = baseDto.IsActive,
+                CreatedAt = baseDto.CreatedAt,
+                Specializations = baseDto.Specializations,
+                NurseryCareServices = pkg.NurseryCareServices
+                    .Where(ncs => ncs.IsActive && ncs.Nursery.IsActive == true)
+                    .OrderBy(ncs => ncs.NurseryId)
+                    .Select(ncs => new NurseryCareServiceOptionResponseDto
+                    {
+                        NurseryCareServiceId = ncs.Id,
+                        NurseryId = ncs.NurseryId,
+                        NurseryName = ncs.Nursery.Name
+                    })
+                    .ToList()
             };
         }
     }

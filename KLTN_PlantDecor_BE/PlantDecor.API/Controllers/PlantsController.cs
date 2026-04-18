@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class PlantsController : ControllerBase
     {
         private readonly IPlantService _plantService;
@@ -70,13 +70,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetPlantById(int id)
         {
             var plant = await _plantService.GetPlantByIdAsync(id);
-            if (plant == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Plant with ID {id} not found"
-                });
 
             return Ok(new ApiResponse<PlantResponseDto>
             {

@@ -16,7 +16,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/nursery-materials")]
     [ApiController]
-    //[Authorize(Roles = "Manager")]
+    [Authorize]
     public class NurseryMaterialsController : ControllerBase
     {
         private readonly INurseryMaterialService _nurseryMaterialService;
@@ -50,6 +50,7 @@ namespace PlantDecor.API.Controllers
         /// Nhập vật tư vào vựa của Manager
         /// </summary>
         [HttpPost("import")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ImportToMyNursery([FromBody] ImportMaterialRequestDto request)
         {
             var managerId = GetCurrentUserId();
@@ -67,6 +68,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật số lượng vật tư trong vựa
         /// </summary>
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdateNurseryMaterial(int id, [FromBody] NurseryMaterialUpdateDto request)
         {
             var material = await _nurseryMaterialService.UpdateNurseryMaterialAsync(id, request);
@@ -83,6 +85,7 @@ namespace PlantDecor.API.Controllers
         /// Bật/tắt trạng thái active của vật tư trong vựa
         /// </summary>
         [HttpPatch("{id}/toggle-active")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ToggleActiveNurseryMaterial(int id)
         {
             var material = await _nurseryMaterialService.ToggleActiveAsync(id);
@@ -103,7 +106,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Lấy tất cả vật tư trong các vựa
         /// </summary>
         [HttpGet("/api/admin/nursery-materials")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllNurseryMaterials([FromQuery] Pagination pagination)
         {
             var materials = await _nurseryMaterialService.GetAllNurseryMaterialsAsync(pagination);
@@ -120,17 +123,10 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Lấy vật tư theo ID
         /// </summary>
         [HttpGet("/api/nursery-materials/{id}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetNurseryMaterialById(int id)
         {
             var material = await _nurseryMaterialService.GetNurseryMaterialByIdAsync(id);
-            if (material == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"NurseryMaterial với ID {id} không tồn tại"
-                });
 
             return Ok(new ApiResponse<NurseryMaterialResponseDto>
             {
@@ -145,7 +141,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Lấy vật tư theo Nursery ID
         /// </summary>
         [HttpGet("/api/admin/nursery-materials/by-nursery/{nurseryId}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetByNurseryId(int nurseryId, [FromQuery] Pagination pagination)
         {
             var materials = await _nurseryMaterialService.GetByNurseryIdAsync(nurseryId, pagination);
@@ -162,7 +158,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Lấy vật tư theo Material ID
         /// </summary>
         [HttpGet("/api/admin/nursery-materials/by-material/{materialId}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetByMaterialId(int materialId, [FromQuery] Pagination pagination)
         {
             var materials = await _nurseryMaterialService.GetByMaterialIdAsync(materialId, pagination);
@@ -179,7 +175,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Nhập vật tư vào vựa cụ thể
         /// </summary>
         [HttpPost("/api/admin/nursery-materials/nursery/{nurseryId}/import")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ImportMaterial(int nurseryId, [FromBody] ImportMaterialRequestDto request)
         {
             var material = await _nurseryMaterialService.ImportMaterialAsync(nurseryId, request);
@@ -196,7 +192,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Tạo NurseryMaterial mới
         /// </summary>
         [HttpPost("/api/admin/nursery-materials")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateNurseryMaterial([FromBody] NurseryMaterialRequestDto request)
         {
             var material = await _nurseryMaterialService.CreateNurseryMaterialAsync(request);

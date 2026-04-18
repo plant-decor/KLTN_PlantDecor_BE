@@ -80,11 +80,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<PlantComboResponseDto?> GetComboByIdAsync(int id)
+        public async Task<PlantComboResponseDto> GetComboByIdAsync(int id)
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(id);
             if (combo == null)
-                return null;
+                throw new NotFoundException($"Combo với ID {id} không tồn tại");
 
             return combo.ToResponse();
         }

@@ -99,11 +99,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<PlantResponseDto?> GetPlantByIdAsync(int id)
+        public async Task<PlantResponseDto> GetPlantByIdAsync(int id)
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(id);
             if (plant == null)
-                return null;
+                throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
             return plant.ToResponse();
         }

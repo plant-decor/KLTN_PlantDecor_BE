@@ -372,11 +372,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return true;
         }
 
-        public async Task<ConversationResponseDto?> GetLatestActiveConversationAsync(int customerId)
+        public async Task<ConversationResponseDto> GetLatestActiveConversationAsync(int customerId)
         {
             var conversation = await _unitOfWork.ChatSessionRepository.GetLatestActiveConversationAsync(customerId);
             if (conversation == null)
-                return null;
+                throw new NotFoundException("No active conversation found");
 
             var latestMessage = await _unitOfWork.ChatMessageRepository.GetLatestMessageAsync(conversation.Id);
 

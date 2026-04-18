@@ -16,7 +16,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class PlantCombosController : ControllerBase
     {
         private readonly IPlantComboService _plantComboService;
@@ -81,13 +81,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetComboById(int id)
         {
             var combo = await _plantComboService.GetComboByIdAsync(id);
-            if (combo == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Combo với ID {id} không tồn tại"
-                });
 
             return Ok(new ApiResponse<PlantComboResponseDto>
             {
@@ -247,6 +240,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/plant-combos
         /// </summary>
         [HttpGet("/api/manager/plant-combos")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetNurseryComboStock([FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();
@@ -265,6 +259,7 @@ namespace PlantDecor.API.Controllers
         /// POST /api/manager/plant-combos/{comboId}/assemble
         /// </summary>
         [HttpPost("/api/manager/plant-combos/{comboId}/assemble")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> AssembleComboStock(int comboId, [FromBody] AssembleNurseryComboRequestDto request)
         {
             var managerId = GetCurrentUserId();
@@ -283,6 +278,7 @@ namespace PlantDecor.API.Controllers
         /// POST /api/manager/plant-combos/{comboId}/decompose
         /// </summary>
         [HttpPost("/api/manager/plant-combos/{comboId}/decompose")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DecomposeComboStock(int comboId, [FromBody] DecomposeNurseryComboRequestDto request)
         {
             var managerId = GetCurrentUserId();

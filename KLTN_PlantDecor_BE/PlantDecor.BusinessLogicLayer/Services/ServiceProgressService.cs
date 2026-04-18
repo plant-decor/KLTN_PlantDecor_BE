@@ -98,6 +98,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updated!);
         }
 
+        public async Task<ServiceProgressResponseDto> SubmitIncidentReportAsync(int caretakerId, int progressId, SubmitIncidentReportRequestDto request, IFormFile incidentImage)
+        {
+            var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            if (progress == null)
+                throw new NotFoundException($"ServiceProgress {progressId} not found");
+
+            if (progress.CaretakerId != caretakerId)
+                throw new ForbiddenException("This task is not assigned to you");
+
+            if (progress.Status == (int)ServiceProgressStatusEnum.Cancelled)
+                throw new BadRequestException("Cannot submit incident report for a cancelled task");
+
+            if (string.IsNullOrWhiteSpace(request.IncidentReason))
+                throw new BadRequestException("IncidentReason is required");
+
+            if (incidentImage == null)
+                throw new BadRequestException("Incident image is required");
+
+            var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(incidentImage);
+            if (!isValid)
+                throw new BadRequestException(errorMessage);
+
+            var uploadResult = await _cloudinaryService.UploadFileAsync(incidentImage, "ServiceProgressIncident");
+
+            progress.HasIncidents = true;
+            progress.IncidentReason = request.IncidentReason.Trim();
+            progress.IncidentImageUrl = uploadResult.SecureUrl;
+
+            _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            return MapToDto(updated!);
+        }
+
         public async Task<ServiceProgressResponseDto> CheckOutAsync(int caretakerId, int progressId, CheckOutRequestDto request, IFormFile? evidenceImage)
         {
             var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
@@ -365,6 +400,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ActualEndTime = sp.ActualEndTime,
                 Description = sp.Description,
                 EvidenceImageUrl = sp.EvidenceImageUrl,
+                CareServiceType = sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType,
+                CareServiceTypeName = ResolveCareServiceTypeName(sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType),
+                HasIncidents = sp.HasIncidents,
+                IncidentReason = sp.IncidentReason,
+                IncidentImageUrl = sp.IncidentImageUrl,
                 Shift = sp.Shift == null ? null : new ShiftSummaryDto
                 {
                     Id = sp.Shift.Id,
@@ -397,6 +437,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Customer = sp.ServiceRegistration.User == null ? null : ServiceRegistrationService.MapUserSummary(sp.ServiceRegistration.User)
                 }
             };
+        }
+
+        private static string? ResolveCareServiceTypeName(int? serviceType)
+        {
+            if (!serviceType.HasValue)
+            {
+                return null;
+            }
+
+            return Enum.IsDefined(typeof(CareServiceTypeEnum), serviceType.Value)
+                ? ((CareServiceTypeEnum)serviceType.Value).ToString()
+                : $"Unknown({serviceType.Value})";
         }
 
         #endregion

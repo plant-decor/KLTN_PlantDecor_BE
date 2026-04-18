@@ -52,10 +52,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(created!);
         }
 
-        public async Task<ServiceRatingResponseDto?> GetByRegistrationIdAsync(int registrationId)
+        public async Task<ServiceRatingResponseDto> GetByRegistrationIdAsync(int registrationId)
         {
             var rating = await _unitOfWork.ServiceRatingRepository.GetByRegistrationIdAsync(registrationId);
-            return rating == null ? null : MapToDto(rating);
+            if (rating == null)
+                throw new NotFoundException("No rating found for this service registration");
+
+            return MapToDto(rating);
         }
 
         public static ServiceRatingResponseDto MapToDto(ServiceRating r) => new ServiceRatingResponseDto

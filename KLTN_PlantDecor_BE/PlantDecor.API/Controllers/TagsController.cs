@@ -14,7 +14,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class TagsController : ControllerBase
     {
         private readonly ITagService _tagService;
@@ -49,13 +49,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetTagById(int id)
         {
             var tag = await _tagService.GetTagByIdAsync(id);
-            if (tag == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Tag with ID {id} not found"
-                });
 
             return Ok(new ApiResponse<TagResponseDto>
             {

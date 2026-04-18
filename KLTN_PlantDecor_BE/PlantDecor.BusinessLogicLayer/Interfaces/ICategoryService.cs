@@ -11,7 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<CategoryResponseDto>> GetAllActiveCategoriesAsync();
         Task<List<CategoryResponseDto>> GetRootCategoriesAsync();
         Task<List<CategoryResponseDto>> GetRootActiveCategoriesAsync();
-        Task<CategoryResponseDto?> GetCategoryByIdAsync(int id);
+        Task<CategoryResponseDto> GetCategoryByIdAsync(int id);
         Task<CategoryResponseDto> CreateCategoryAsync(CategoryRequestDto request);
         Task<CategoryResponseDto> UpdateCategoryAsync(int id, CategoryUpdateDto request);
         Task<bool> DeleteCategoryAsync(int id);

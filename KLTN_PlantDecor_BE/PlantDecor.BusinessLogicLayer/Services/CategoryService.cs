@@ -59,13 +59,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<CategoryResponseDto?> GetCategoryByIdAsync(int id)
+        public async Task<CategoryResponseDto> GetCategoryByIdAsync(int id)
         {
             var allCategories = await _unitOfWork.CategoryRepository.GetAllAsync();
             var tree = BuildCategoryTree(allCategories, activeOnly: false);
             var category = FindCategoryInTree(tree, id);
             if (category == null)
-                return null;
+                throw new NotFoundException($"Category với ID {id} không tồn tại");
 
             return category;
         }

@@ -11,7 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // CRUD Operations
         Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination);
         Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination);
-        Task<MaterialResponseDto?> GetMaterialByIdAsync(int id);
+        Task<MaterialResponseDto> GetMaterialByIdAsync(int id);
         Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request);
         Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
         Task<MaterialResponseDto> UploadMaterialThumbnailAsync(int materialId, IFormFile file);

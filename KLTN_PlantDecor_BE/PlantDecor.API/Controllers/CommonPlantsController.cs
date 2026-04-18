@@ -16,7 +16,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/nurseries/{nurseryId}/common-plants")]
     [ApiController]
-    //[Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager")]
     public class CommonPlantsController : ControllerBase
     {
         private readonly ICommonPlantService _commonPlantService;

@@ -337,6 +337,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         }
                     }
 
+                    // Activate design registration and generate design tasks after successful deposit payment
+                    if (order.OrderType == (int)OrderTypeEnum.Design)
+                    {
+                        var designRegistration = await _unitOfWork.DesignRegistrationRepository.GetByOrderIdAsync(order.Id);
+                        if (designRegistration != null)
+                        {
+                            await ActivateDesignRegistrationAndGenerateTasksAsync(designRegistration.Id);
+                        }
+                    }
+
                     var invoice = await ResolveTargetInvoiceForPaymentAsync(payment);
 
                     invoice.Status = (int)InvoiceStatusEnum.Paid;
@@ -458,6 +468,131 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             throw new BadRequestException("Payment is not associated with any invoice");
+        }
+
+        private async Task ActivateDesignRegistrationAndGenerateTasksAsync(int designRegistrationId)
+        {
+            var registrationDetail = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(designRegistrationId);
+            if (registrationDetail == null)
+                return;
+
+            var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(designRegistrationId);
+            if (registration == null)
+                return;
+
+            if (registration.Status != (int)DesignRegistrationStatus.AwaitDeposit
+                && registration.Status != (int)DesignRegistrationStatus.Active)
+            {
+                return;
+            }
+
+            registration.Status = (int)DesignRegistrationStatus.Active;
+            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
+
+            var existingTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(designRegistrationId);
+            if (existingTasks.Any())
+            {
+                var orderedExistingTasks = existingTasks
+                    .OrderBy(x => x.ScheduledDate ?? DateOnly.MaxValue)
+                    .ThenBy(x => x.Id)
+                    .ToList();
+
+                if (registration.AssignedCaretakerId.HasValue)
+                {
+                    for (var index = 0; index < orderedExistingTasks.Count; index++)
+                    {
+                        var task = orderedExistingTasks[index];
+                        var trackedTask = await _unitOfWork.DesignTaskRepository.GetByIdAsync(task.Id);
+                        if (trackedTask == null)
+                            continue;
+
+                        trackedTask.TaskType = ResolveTaskTypeByIndex(index, orderedExistingTasks.Count);
+
+                        if (task.Status == (int)DesignTaskStatusEnum.Completed
+                            || task.Status == (int)DesignTaskStatusEnum.Cancelled)
+                        {
+                            _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                            continue;
+                        }
+
+                        trackedTask.AssignedStaffId = registration.AssignedCaretakerId;
+                        if (trackedTask.Status == (int)DesignTaskStatusEnum.Pending)
+                        {
+                            trackedTask.Status = (int)DesignTaskStatusEnum.Assigned;
+                        }
+                        _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                    }
+                }
+                else
+                {
+                    for (var index = 0; index < orderedExistingTasks.Count; index++)
+                    {
+                        var task = orderedExistingTasks[index];
+                        var trackedTask = await _unitOfWork.DesignTaskRepository.GetByIdAsync(task.Id);
+                        if (trackedTask == null)
+                            continue;
+
+                        trackedTask.TaskType = ResolveTaskTypeByIndex(index, orderedExistingTasks.Count);
+                        _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                    }
+                }
+
+                return;
+            }
+
+            var estimatedDays = registrationDetail.DesignTemplateTier?.EstimatedDays ?? 1;
+            if (estimatedDays <= 0)
+                estimatedDays = 1;
+
+            var scheduleDates = BuildConsecutiveWorkingDates(DateOnly.FromDateTime(DateTime.Today), estimatedDays);
+            var assignedStaffId = registration.AssignedCaretakerId;
+            var taskStatus = assignedStaffId.HasValue
+                ? (int)DesignTaskStatusEnum.Assigned
+                : (int)DesignTaskStatusEnum.Pending;
+
+            for (var index = 0; index < scheduleDates.Count; index++)
+            {
+                var date = scheduleDates[index];
+                var task = new DesignTask
+                {
+                    DesignRegistrationId = designRegistrationId,
+                    AssignedStaffId = assignedStaffId,
+                    ScheduledDate = date,
+                    TaskType = ResolveTaskTypeByIndex(index, scheduleDates.Count),
+                    Status = taskStatus,
+                    CreatedAt = DateTime.Now
+                };
+                _unitOfWork.DesignTaskRepository.PrepareCreate(task);
+            }
+        }
+
+        private static List<DateOnly> BuildConsecutiveWorkingDates(DateOnly startDate, int totalDays)
+        {
+            var dates = new List<DateOnly>();
+            var cursor = startDate;
+
+            while (dates.Count < totalDays)
+            {
+                if (cursor.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    dates.Add(cursor);
+                }
+
+                cursor = cursor.AddDays(1);
+            }
+
+            return dates;
+        }
+
+        private static int ResolveTaskTypeByIndex(int index, int totalTasks)
+        {
+            if (totalTasks <= 1 || index == 0)
+                return (int)TaskTypeEnum.Survey;
+
+            if (index == totalTasks - 1)
+                return (int)TaskTypeEnum.Acceptance;
+
+            return (int)TaskTypeEnum.Construction;
         }
 
         /// <summary>

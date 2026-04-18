@@ -49,13 +49,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetByRegistrationId(int registrationId)
         {
             var result = await _serviceRatingService.GetByRegistrationIdAsync(registrationId);
-            if (result == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = "No rating found for this service registration"
-                });
 
             return Ok(new ApiResponse<ServiceRatingResponseDto>
             {

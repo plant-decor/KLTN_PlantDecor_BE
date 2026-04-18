@@ -170,6 +170,11 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IServiceRatingService, ServiceRatingService>();
             builder.Services.AddScoped<ISpecializationService, SpecializationService>();
             builder.Services.AddScoped<IShiftService, ShiftService>();
+            builder.Services.AddScoped<IDesignTemplateService, DesignTemplateService>();
+            builder.Services.AddScoped<IDesignTemplateTierService, DesignTemplateTierService>();
+            builder.Services.AddScoped<INurseryDesignTemplateService, NurseryDesignTemplateService>();
+            builder.Services.AddScoped<IDesignRegistrationService, DesignRegistrationService>();
+            builder.Services.AddScoped<IDesignTaskService, DesignTaskService>();
 
             // PlantInstance Management APIs
             builder.Services.AddScoped<IPlantInstanceService, PlantInstanceService>();

@@ -41,6 +41,7 @@ public partial class Order
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual ServiceRegistration? ServiceRegistration { get; set; }
+    public virtual DesignRegistration? DesignRegistration { get; set; }
 
     public virtual User Customer { get; set; } = null!;
 }

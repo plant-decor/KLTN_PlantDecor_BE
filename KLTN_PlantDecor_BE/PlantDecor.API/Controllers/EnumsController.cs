@@ -37,6 +37,7 @@ namespace PlantDecor.API.Controllers
             ["Gender"] = typeof(GenderEnum),
             ["PlacementType"] = typeof(PlacementTypeEnum),
             ["PlantSize"] = typeof(PlantSizeEnum),
+            ["GrowthRate"] = typeof(GrowthRateEnum),
             ["CareLevelType"] = typeof(CareLevelTypeEnum),
             ["PlantSortBy"] = typeof(PlantSortByEnum),
             ["CommonPlantSortBy"] = typeof(CommonPlantSortByEnum),
@@ -59,6 +60,9 @@ namespace PlantDecor.API.Controllers
             ["CareServiceType"] = typeof(CareServiceTypeEnum),
             ["ServiceRegistrationStatus"] = typeof(ServiceRegistrationStatusEnum),
             ["ServiceProgressStatus"] = typeof(ServiceProgressStatusEnum),
+            ["DesignRegistrationStatus"] = typeof(DesignRegistrationStatus),
+            ["DesignTaskStatus"] = typeof(DesignTaskStatusEnum),
+            ["TaskType"] = typeof(TaskTypeEnum),
             ["DayOfWeek"] = typeof(DayOfWeek)
         };
 
@@ -191,6 +195,28 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Enum cho DesignRegistration/DesignTask
+        /// GET /api/system/enums/design-flow
+        /// </summary>
+        [HttpGet("design-flow")]
+        [AllowAnonymous]
+        public IActionResult GetDesignFlowEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get design flow enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("DesignRegistrationStatus", typeof(DesignRegistrationStatus)),
+                    CreateEnumGroup("DesignTaskStatus", typeof(DesignTaskStatusEnum)),
+                    CreateEnumGroup("TaskType", typeof(TaskTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
         /// Enum + dữ liệu phục vụ flow ServiceRegistration/ServiceProgress trong 1 lần fetch
         /// GET /api/system/enums/service-flow
         /// </summary>
@@ -236,6 +262,7 @@ namespace PlantDecor.API.Controllers
                 {
                     CreateEnumGroup("PlacementType", typeof(PlacementTypeEnum)),
                     CreateEnumGroup("PlantSize", typeof(PlantSizeEnum)),
+                    CreateEnumGroup("GrowthRate", typeof(GrowthRateEnum)),
                     CreateEnumGroup("CareLevelType", typeof(CareLevelTypeEnum))
                 }
             });

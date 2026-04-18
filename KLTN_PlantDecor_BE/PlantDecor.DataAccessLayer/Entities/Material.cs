@@ -38,4 +38,8 @@ public partial class Material
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
+
+    public virtual ICollection<TaskMaterialUsage> TaskMaterialUsages { get; set; } = new List<TaskMaterialUsage>();
+
+    public virtual ICollection<DesignTemplateTierItem> DesignTemplateTierItems { get; set; } = new List<DesignTemplateTierItem>();
 }

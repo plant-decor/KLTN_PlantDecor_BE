@@ -14,6 +14,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/nursery-care-services")]
     [ApiController]
+    [Authorize]
     public class NurseryCareServicesController : ControllerBase
     {
         private readonly INurseryCareServiceService _nurseryCareServiceService;
@@ -28,9 +29,27 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Public] Lấy danh sách NurseryCareService đang active theo gói dịch vụ
+        /// </summary>
+        [HttpGet("by-package")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetActiveByPackage([FromQuery] int careServicePackageId)
+        {
+            var result = await _nurseryCareServiceService.GetActiveByPackageIdAsync(careServicePackageId);
+            return Ok(new ApiResponse<List<NurseryCareServiceResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get nursery care services by package successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Public] Lấy các gói dịch vụ đang active của một vựa
         /// </summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetActiveByNursery([FromQuery] int nurseryId)
         {
             var result = await _nurseryCareServiceService.GetActiveByNurseryIdAsync(nurseryId);

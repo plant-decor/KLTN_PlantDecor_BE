@@ -19,6 +19,14 @@ public partial class ServiceProgress
 
     public DateOnly? TaskDate { get; set; }
 
+    public string? CustomerNote { get; set; }
+
+    public bool HasIncidents { get; set; }
+
+    public string? IncidentImageUrl { get; set; }
+
+    public string? IncidentReason { get; set; }
+
     public int? Status { get; set; }
 
     public DateTime? ActualStartTime { get; set; }

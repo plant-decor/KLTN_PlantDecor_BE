@@ -56,11 +56,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<CommonPlantResponseDto?> GetCommonPlantByIdAsync(int id)
+        public async Task<CommonPlantResponseDto> GetCommonPlantByIdAsync(int id)
         {
             var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
             if (commonPlant == null)
-                return null;
+                throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
 
             return commonPlant.ToResponse();
         }

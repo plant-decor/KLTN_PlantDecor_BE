@@ -36,6 +36,18 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<CustomerSurvey> CustomerSurveys { get; set; }
 
+    public virtual DbSet<DesignRegistration> DesignRegistrations { get; set; }
+
+    public virtual DbSet<DesignTask> DesignTasks { get; set; }
+
+    public virtual DbSet<DesignTemplate> DesignTemplates { get; set; }
+
+    public virtual DbSet<DesignTemplateTier> DesignTemplateTiers { get; set; }
+
+    public virtual DbSet<DesignTemplateTierItem> DesignTemplateTierItems { get; set; }
+
+    public virtual DbSet<DesignTemplateSpecialization> DesignTemplateSpecializations { get; set; }
+
     public virtual DbSet<Embedding> Embeddings { get; set; }
 
     public virtual DbSet<Material> Materials { get; set; }
@@ -80,6 +92,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<NurseryCareService> NurseryCareServices { get; set; }
 
+    public virtual DbSet<NurseryDesignTemplate> NurseryDesignTemplates { get; set; }
+
     public virtual DbSet<NurseryMaterial> NurseryMaterials { get; set; }
 
     public virtual DbSet<PlantRating> PlantRatings { get; set; }
@@ -115,6 +129,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<StaffSpecialization> StaffSpecializations { get; set; }
 
     public virtual DbSet<Tag> Tags { get; set; }
+
+    public virtual DbSet<TaskMaterialUsage> TaskMaterialUsages { get; set; }
 
     public virtual DbSet<Transaction> Transactions { get; set; }
 
@@ -294,6 +310,130 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("CustomerSurvey_UserId_fkey");
         });
 
+        modelBuilder.Entity<DesignRegistration>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DesignRegistration_pkey");
+
+            entity.ToTable("DesignRegistration");
+
+            entity.Property(e => e.Address).HasMaxLength(255);
+            entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.TotalPrice).HasPrecision(18, 2);
+            entity.Property(e => e.DepositAmount).HasPrecision(18, 2);
+            entity.Property(e => e.Latitude).HasPrecision(10, 7);
+            entity.Property(e => e.Longitude).HasPrecision(10, 7);
+            entity.Property(e => e.Width).HasPrecision(10, 2);
+            entity.Property(e => e.Length).HasPrecision(10, 2);
+            entity.Property(e => e.CurrentStateImageUrl).HasMaxLength(512);
+            entity.Property(e => e.CustomerNote).HasMaxLength(1000);
+            entity.Property(e => e.CancelReason).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.User).WithMany(p => p.DesignRegistrationsUser)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("DesignRegistration_UserId_fkey");
+
+            entity.HasOne(d => d.AssignedCaretaker).WithMany(p => p.DesignRegistrationsAssignedCaretaker)
+                .HasForeignKey(d => d.AssignedCaretakerId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("DesignRegistration_AssignedCaretakerId_fkey");
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.DesignRegistrations)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("DesignRegistration_NurseryId_fkey");
+
+            entity.HasOne(d => d.DesignTemplateTier).WithMany(p => p.DesignRegistrations)
+                .HasForeignKey(d => d.DesignTemplateTierId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("DesignRegistration_DesignTemplateTierId_fkey");
+
+            entity.HasOne(d => d.Order).WithOne(p => p.DesignRegistration)
+                .HasForeignKey<DesignRegistration>(d => d.OrderId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("DesignRegistration_OrderId_fkey");
+        });
+
+        modelBuilder.Entity<DesignTask>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DesignTask_pkey");
+
+            entity.ToTable("DesignTask");
+
+            entity.Property(e => e.ReportImageUrl).HasMaxLength(512);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.DesignRegistration).WithMany(p => p.DesignTasks)
+                .HasForeignKey(d => d.DesignRegistrationId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("DesignTask_DesignRegistrationId_fkey");
+
+            entity.HasOne(d => d.AssignedStaff).WithMany(p => p.AssignedDesignTasks)
+                .HasForeignKey(d => d.AssignedStaffId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("DesignTask_AssignedStaffId_fkey");
+        });
+
+        modelBuilder.Entity<DesignTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DesignTemplate_pkey");
+
+            entity.ToTable("DesignTemplate");
+
+            entity.Property(e => e.Name).HasMaxLength(255);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.RoomTypes).HasColumnType("integer[]");
+            entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+        });
+
+        modelBuilder.Entity<DesignTemplateTier>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DesignTemplateTier_pkey");
+
+            entity.ToTable("DesignTemplateTier");
+
+            entity.Property(e => e.TierName).HasMaxLength(100);
+            entity.Property(e => e.MinArea).HasPrecision(10, 2);
+            entity.Property(e => e.MaxArea).HasPrecision(10, 2);
+            entity.Property(e => e.PackagePrice).HasPrecision(18, 2);
+            entity.Property(e => e.ScopedOfWork).HasMaxLength(2000);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.DesignTemplate).WithMany(p => p.DesignTemplateTiers)
+                .HasForeignKey(d => d.DesignTemplateId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("DesignTemplateTier_DesignTemplateId_fkey");
+        });
+
+        modelBuilder.Entity<DesignTemplateTierItem>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DesignTemplateTierItem_pkey");
+
+            entity.ToTable("DesignTemplateTierItem");
+
+            entity.Property(e => e.Quantity).HasPrecision(18, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.DesignTemplateTier).WithMany(p => p.DesignTemplateTierItems)
+                .HasForeignKey(d => d.DesignTemplateTierId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("DesignTemplateTierItem_DesignTemplateTierId_fkey");
+
+            entity.HasOne<Material>().WithMany()
+                .HasForeignKey(d => d.MaterialId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("DesignTemplateTierItem_MaterialId_fkey");
+
+            entity.HasOne<Plant>().WithMany()
+                .HasForeignKey(d => d.PlantId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("DesignTemplateTierItem_PlantId_fkey");
+        });
+
         modelBuilder.Entity<Material>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Material_pkey");
@@ -469,6 +609,29 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.NurseryId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("NurseryCareService_NurseryId_fkey");
+        });
+
+        modelBuilder.Entity<NurseryDesignTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("NurseryDesignTemplate_pkey");
+
+            entity.ToTable("NurseryDesignTemplate");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => new { e.NurseryId, e.DesignTemplateId }, "IX_NurseryDesignTemplate_NurseryId_DesignTemplateId")
+                .IsUnique();
+
+            entity.HasOne(d => d.Nursery).WithMany(p => p.NurseryDesignTemplates)
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("NurseryDesignTemplate_NurseryId_fkey");
+
+            entity.HasOne(d => d.DesignTemplate).WithMany(p => p.NurseryDesignTemplates)
+                .HasForeignKey(d => d.DesignTemplateId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("NurseryDesignTemplate_DesignTemplateId_fkey");
         });
 
         modelBuilder.Entity<NurseryMaterial>(entity =>
@@ -770,7 +933,6 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
-            entity.Property(e => e.GrowthRate).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.RoomStyle).HasColumnType("integer[]");
             entity.Property(e => e.RoomType).HasColumnType("integer[]");
@@ -1072,6 +1234,8 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.EvidenceImageUrl).HasMaxLength(512);
+            entity.Property(e => e.IncidentImageUrl).HasMaxLength(512);
+            entity.Property(e => e.HasIncidents).HasDefaultValue(false);
 
             entity.HasOne(d => d.Caretaker).WithMany(p => p.ServiceProgresses)
                 .HasForeignKey(d => d.CaretakerId)
@@ -1193,6 +1357,22 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("StaffSpecialization_SpecializationId_fkey");
         });
 
+        modelBuilder.Entity<DesignTemplateSpecialization>(entity =>
+        {
+            entity.HasKey(e => new { e.SpecializationId, e.DesignTemplateId }).HasName("DesignTemplateSpecialization_pkey");
+            entity.ToTable("DesignTemplateSpecialization");
+
+            entity.HasOne(d => d.DesignTemplate).WithMany(p => p.DesignTemplateSpecializations)
+                .HasForeignKey(d => d.DesignTemplateId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("DesignTemplateSpecialization_DesignTemplateId_fkey");
+
+            entity.HasOne(d => d.Specialization).WithMany(p => p.DesignTemplateSpecializations)
+                .HasForeignKey(d => d.SpecializationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("DesignTemplateSpecialization_SpecializationId_fkey");
+        });
+
         modelBuilder.Entity<Tag>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Tag_pkey");
@@ -1200,6 +1380,27 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("Tag");
 
             entity.Property(e => e.TagName).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<TaskMaterialUsage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("TaskMaterialUsage_pkey");
+
+            entity.ToTable("TaskMaterialUsage");
+
+            entity.Property(e => e.ActualQuantity).HasPrecision(18, 2);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.DesignTask).WithMany(p => p.TaskMaterialUsages)
+                .HasForeignKey(d => d.DesignTaskId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("TaskMaterialUsage_DesignTaskId_fkey");
+
+            entity.HasOne(d => d.Material).WithMany(p => p.TaskMaterialUsages)
+                .HasForeignKey(d => d.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("TaskMaterialUsage_MaterialId_fkey");
         });
 
         modelBuilder.Entity<Transaction>(entity =>

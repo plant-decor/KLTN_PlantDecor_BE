@@ -160,17 +160,6 @@ namespace PlantDecor.API.Controllers
             var userId = GetUserId();
             var conversation = await _chatService.GetLatestActiveConversationAsync(userId);
 
-            if (conversation == null)
-            {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = "No active conversation found",
-                    Payload = null
-                });
-            }
-
             return Ok(new ApiResponse<ConversationResponseDto>
             {
                 Success = true,

@@ -5,6 +5,7 @@
         OtherProduct = 1,
         PlantInstance = 2,
         OtherProductBuyNow = 3,
-        Service = 4
+        Service = 4,
+        Design = 5
     }
 }
