@@ -167,9 +167,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
                     else
                     {
-                        parentOrder.Status = parentOrder.OrderType == (int)OrderTypeEnum.PlantInstance
-                            ? (int)OrderStatusEnum.RemainingPaymentPending
-                            : (int)OrderStatusEnum.Delivered;
+                        parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
                     }
 
                     parentOrder.UpdatedAt = now;

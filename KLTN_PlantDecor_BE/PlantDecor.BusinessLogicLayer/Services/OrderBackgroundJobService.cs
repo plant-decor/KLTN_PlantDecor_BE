@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -100,6 +100,53 @@ namespace PlantDecor.BusinessLogicLayer.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing order delivery for Order {OrderId}", orderId);
+                throw;
+            }
+        }
+
+        public async Task AutoCompletePendingConfirmationOrdersAsync()
+        {
+            try
+            {
+                var threshold = DateTime.Now.AddDays(-3);
+                _logger.LogInformation(
+                    "Start auto-completing PendingConfirmation orders. Threshold: {Threshold}",
+                    threshold);
+
+                var orders = await _unitOfWork.OrderRepository.GetPendingConfirmationOrdersOlderThanAsync(threshold);
+
+                if (!orders.Any())
+                {
+                    _logger.LogInformation("No PendingConfirmation orders older than 3 days found");
+                    return;
+                }
+
+                var now = DateTime.Now;
+
+                foreach (var order in orders)
+                {
+                    order.Status = (int)OrderStatusEnum.Completed;
+                    order.CompletedAt = now;
+                    order.UpdatedAt = now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(order);
+
+                    foreach (var nurseryOrder in order.NurseryOrders)
+                    {
+                        nurseryOrder.Status = (int)OrderStatusEnum.Completed;
+                        nurseryOrder.UpdatedAt = now;
+                        _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+                    }
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                _logger.LogInformation(
+                    "Auto-completed {Count} orders from PendingConfirmation to Completed",
+                    orders.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while auto-completing PendingConfirmation orders");
                 throw;
             }
         }

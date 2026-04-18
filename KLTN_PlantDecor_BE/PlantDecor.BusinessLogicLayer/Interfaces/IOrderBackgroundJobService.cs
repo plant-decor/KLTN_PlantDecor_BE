@@ -1,4 +1,4 @@
-namespace PlantDecor.BusinessLogicLayer.Interfaces
+﻿namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IOrderBackgroundJobService
     {
@@ -7,5 +7,10 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// </summary>
         /// <param name="orderId">Order ID to process</param>
         Task ProcessOrderDeliveryAsync(int orderId);
+
+        /// <summary>
+        /// Auto-complete orders that stay in PendingConfirmation for 3 days
+        /// </summary>
+        Task AutoCompletePendingConfirmationOrdersAsync();
     }
 }
