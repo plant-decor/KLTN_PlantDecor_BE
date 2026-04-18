@@ -53,6 +53,8 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         ISpecializationRepository SpecializationRepository { get; }
         IServiceRatingRepository ServiceRatingRepository { get; }
         IShiftRepository ShiftRepository { get; }
+        IReturnTicketRepository ReturnTicketRepository { get; }
+        IReturnTicketAssignmentRepository ReturnTicketAssignmentRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

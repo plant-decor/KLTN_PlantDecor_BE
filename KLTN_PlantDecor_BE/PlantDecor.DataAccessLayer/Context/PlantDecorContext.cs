@@ -100,6 +100,14 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    public virtual DbSet<ReturnTicket> ReturnTickets { get; set; }
+
+    public virtual DbSet<ReturnTicketItem> ReturnTicketItems { get; set; }
+
+    public virtual DbSet<ReturnTicketItemImage> ReturnTicketItemImages { get; set; }
+
+    public virtual DbSet<ReturnTicketAssignment> ReturnTicketAssignments { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<RoomImage> RoomImages { get; set; }
@@ -786,6 +794,115 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReturnTicket>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ReturnTicket_pkey");
+
+            entity.ToTable("ReturnTicket");
+
+            entity.HasIndex(e => e.OrderId, "IX_ReturnTicket_OrderId");
+            entity.HasIndex(e => e.CustomerId, "IX_ReturnTicket_CustomerId");
+            entity.HasIndex(e => e.Status, "IX_ReturnTicket_Status");
+
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.TotalRefundedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.Order)
+                .WithMany()
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("ReturnTicket_OrderId_fkey");
+
+            entity.HasOne(d => d.Customer)
+                .WithMany()
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("ReturnTicket_CustomerId_fkey");
+        });
+
+        modelBuilder.Entity<ReturnTicketItem>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ReturnTicketItem_pkey");
+
+            entity.ToTable("ReturnTicketItem");
+
+            entity.HasIndex(e => e.ReturnTicketId, "IX_ReturnTicketItem_ReturnTicketId");
+            entity.HasIndex(e => e.NurseryOrderDetailId, "IX_ReturnTicketItem_NurseryOrderDetailId");
+            entity.HasIndex(e => e.Status, "IX_ReturnTicketItem_Status");
+
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.ManagerDecisionNote).HasMaxLength(500);
+            entity.Property(e => e.RefundedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.RefundReference).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.ReturnTicket)
+                .WithMany(p => p.ReturnTicketItems)
+                .HasForeignKey(d => d.ReturnTicketId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("ReturnTicketItem_ReturnTicketId_fkey");
+
+            entity.HasOne(d => d.NurseryOrderDetail)
+                .WithMany()
+                .HasForeignKey(d => d.NurseryOrderDetailId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("ReturnTicketItem_NurseryOrderDetailId_fkey");
+        });
+
+        modelBuilder.Entity<ReturnTicketItemImage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ReturnTicketItemImage_pkey");
+
+            entity.ToTable("ReturnTicketItemImage");
+
+            entity.HasIndex(e => e.ReturnTicketItemId, "IX_ReturnTicketItemImage_ReturnTicketItemId");
+
+            entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.PublicId).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.ReturnTicketItem)
+                .WithMany(p => p.ReturnTicketItemImages)
+                .HasForeignKey(d => d.ReturnTicketItemId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("ReturnTicketItemImage_ReturnTicketItemId_fkey");
+        });
+
+        modelBuilder.Entity<ReturnTicketAssignment>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ReturnTicketAssignment_pkey");
+
+            entity.ToTable("ReturnTicketAssignment");
+
+            entity.HasIndex(e => e.ReturnTicketId, "IX_ReturnTicketAssignment_ReturnTicketId");
+            entity.HasIndex(e => e.NurseryId, "IX_ReturnTicketAssignment_NurseryId");
+            entity.HasIndex(e => e.ManagerId, "IX_ReturnTicketAssignment_ManagerId");
+
+            entity.Property(e => e.AssignedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.ReturnTicket)
+                .WithMany(p => p.ReturnTicketAssignments)
+                .HasForeignKey(d => d.ReturnTicketId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("ReturnTicketAssignment_ReturnTicketId_fkey");
+
+            entity.HasOne(d => d.Nursery)
+                .WithMany()
+                .HasForeignKey(d => d.NurseryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("ReturnTicketAssignment_NurseryId_fkey");
+
+            entity.HasOne(d => d.Manager)
+                .WithMany()
+                .HasForeignKey(d => d.ManagerId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("ReturnTicketAssignment_ManagerId_fkey");
         });
 
         modelBuilder.Entity<Payment>(entity =>

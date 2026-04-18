@@ -1,4 +1,4 @@
-
+﻿
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -154,6 +154,8 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddScoped<INurseryOrderService, NurseryOrderService>();
+            builder.Services.AddScoped<IReturnTicketService, ReturnTicketService>();
+            builder.Services.AddScoped<IReturnTicketManagerService, ReturnTicketManagerService>();
 
             // Nursery Management APIs
             builder.Services.AddScoped<INurseryService, NurseryService>();
