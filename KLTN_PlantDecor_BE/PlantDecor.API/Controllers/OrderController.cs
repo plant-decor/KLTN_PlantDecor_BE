@@ -63,6 +63,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách tất cả đơn hàng của user hiện tại
         /// </summary>
         [HttpGet("my")]
+        [Authorize(Roles = "Customer")]
         public async Task<IActionResult> GetMyOrders([FromQuery] OrderStatusEnum? orderStatus = null)
         {
             var userId = GetUserId();

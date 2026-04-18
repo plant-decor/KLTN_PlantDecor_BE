@@ -175,7 +175,7 @@ namespace PlantDecor.API.Controllers
             {
                 if (request.Image == null || request.Image.Length == 0)
                 {
-                    return BadRequest("Room image file is required");
+                    throw new BadRequestException("Room image file is required");
                 }
 
                 var userId = GetRequiredUserId();
@@ -268,12 +268,12 @@ namespace PlantDecor.API.Controllers
         {
             if (request.Image == null || request.Image.Length == 0)
             {
-                return BadRequest(new { success = false, message = "Room image file is required" });
+                throw new BadRequestException("Room image file is required");
             }
 
             if (request.Image.Length > 10 * 1024 * 1024) // 10MB limit
             {
-                return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
+                throw new BadRequestException("Image size exceeds 10MB limit");
             }
 
             try
@@ -284,21 +284,18 @@ namespace PlantDecor.API.Controllers
                 var imageBase64 = Convert.ToBase64String(memoryStream.ToArray());
 
                 var result = await _roomDesignService.AnalyzeRoomAsync(imageBase64);
-
-                return Ok(new
+                return Ok(new ApiResponse<RoomAnalysisDto>
                 {
-                    success = true,
-                    data = result
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Room analysis successful",
+                    Payload = result
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error analyzing room (multipart)");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room"
-                });
+                throw new Exception("Failed to analyze room. Please try again.");
             }
         }
 
@@ -322,13 +319,7 @@ namespace PlantDecor.API.Controllers
 
                 if (result.SuccessCount == 0)
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<LayoutDesignImageGenerationResultDto>
-                    {
-                        Success = false,
-                        StatusCode = StatusCodes.Status500InternalServerError,
-                        Message = "Image generation failed for all items",
-                        Payload = result
-                    });
+                    throw new Exception("Image generation failed for all items");
                 }
 
                 return Ok(new ApiResponse<LayoutDesignImageGenerationResultDto>
@@ -341,49 +332,24 @@ namespace PlantDecor.API.Controllers
             }
             catch (UnauthorizedException ex)
             {
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status401Unauthorized,
-                    Message = ex.Message
-                });
+                throw new UnauthorizedException(ex.Message);
             }
             catch (ForbiddenException ex)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status403Forbidden,
-                    Message = ex.Message
-                });
+                throw new ForbiddenException(ex.Message);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = ex.Message
-                });
+                throw new NotFoundException(ex.Message);
             }
             catch (BadRequestException ex)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status400BadRequest,
-                    Message = ex.Message
-                });
+                throw new BadRequestException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while generating images for LayoutDesign {LayoutDesignId}", layoutDesignId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    Message = "Failed to generate images"
-                });
+                throw new Exception("Failed to generate images. Please try again.");
             }
         }
 
@@ -413,40 +379,53 @@ namespace PlantDecor.API.Controllers
             }
             catch (UnauthorizedException ex)
             {
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status401Unauthorized,
-                    Message = ex.Message
-                });
+                throw new UnauthorizedException(ex.Message);
             }
             catch (ForbiddenException ex)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status403Forbidden,
-                    Message = ex.Message
-                });
+                throw new ForbiddenException(ex.Message);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = ex.Message
-                });
+                throw new NotFoundException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while listing generated images for LayoutDesign {LayoutDesignId}", layoutDesignId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
+                throw new Exception("Failed to fetch generated images. Please try again.");
+            }
+        }
+
+        /// <summary>
+        /// Get all generated AI images of the authenticated user.
+        /// </summary>
+        [HttpGet("generated-images")]
+        [Authorize]
+        [ProducesResponseType(typeof(List<LayoutDesignGeneratedImageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetAllGeneratedImagesByUserId()
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var result = await _layoutDesignImageGenerationService.GetAllGeneratedImagesByUserIdAsync(userId);
+
+                return Ok(new ApiResponse<List<LayoutDesignGeneratedImageDto>>
                 {
-                    Success = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    Message = "Failed to fetch generated images"
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = $"Found {result.Count} generated images",
+                    Payload = result
                 });
+            }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while listing generated images by user");
+                throw new Exception("Failed to fetch generated images. Please try again.");
             }
         }
 
