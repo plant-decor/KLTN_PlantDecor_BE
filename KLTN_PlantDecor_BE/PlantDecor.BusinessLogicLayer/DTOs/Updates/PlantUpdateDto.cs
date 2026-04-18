@@ -25,7 +25,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
 
         public int? Size { get; set; }
 
-        public string? GrowthRate { get; set; }
+        public int? GrowthRate { get; set; }
 
         public bool? Toxicity { get; set; }
 

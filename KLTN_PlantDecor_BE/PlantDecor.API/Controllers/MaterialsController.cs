@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class MaterialsController : ControllerBase
     {
         private readonly IMaterialService _materialService;
@@ -87,13 +87,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetMaterialById(int id)
         {
             var material = await _materialService.GetMaterialByIdAsync(id);
-            if (material == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Material with ID {id} not found"
-                });
 
             return Ok(new ApiResponse<MaterialResponseDto>
             {

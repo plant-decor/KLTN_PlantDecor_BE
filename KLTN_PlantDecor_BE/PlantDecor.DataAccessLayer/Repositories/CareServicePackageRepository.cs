@@ -28,6 +28,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task<CareServicePackage?> GetByIdWithNurseriesAsync(int id)
+        {
+            return await _context.CareServicePackages
+                .Include(p => p.CareServiceSpecializations)
+                    .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.NurseryCareServices.Where(ncs => ncs.IsActive))
+                    .ThenInclude(ncs => ncs.Nursery)
+                .FirstOrDefaultAsync(p => p.Id == id && p.IsActive == true);
+        }
+
         public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
         {
             var query = _context.CareServicePackages.Where(p => p.Name == name);
@@ -39,7 +49,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<CareServicePackage>> GetPackagesWithNurseriesAsync()
         {
             return await _context.CareServicePackages
-                .Where(p => p.IsActive == true && p.NurseryCareServices.Any())
+                .Include(p => p.CareServiceSpecializations)
+                    .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.NurseryCareServices.Where(ncs => ncs.IsActive))
+                    .ThenInclude(ncs => ncs.Nursery)
+                .Where(p => p.IsActive == true && p.NurseryCareServices.Any(ncs => ncs.IsActive))
                 .OrderBy(p => p.Id)
                 .ToListAsync();
         }

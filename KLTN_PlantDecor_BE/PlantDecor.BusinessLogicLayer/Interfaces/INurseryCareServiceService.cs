@@ -5,6 +5,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface INurseryCareServiceService
     {
+        /// <summary>Public: lấy các dịch vụ vựa đang active theo gói dịch vụ</summary>
+        Task<List<NurseryCareServiceResponseDto>> GetActiveByPackageIdAsync(int careServicePackageId);
+
         /// <summary>Public: lấy các gói dịch vụ đang active của một vựa</summary>
         Task<List<NurseryCareServiceResponseDto>> GetActiveByNurseryIdAsync(int nurseryId);
 

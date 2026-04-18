@@ -70,11 +70,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<MaterialResponseDto?> GetMaterialByIdAsync(int id)
+        public async Task<MaterialResponseDto> GetMaterialByIdAsync(int id)
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(id);
             if (material == null)
-                return null;
+                throw new NotFoundException($"Material với ID {id} không tồn tại");
 
             return material.ToResponse();
         }

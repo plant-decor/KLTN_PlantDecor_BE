@@ -11,7 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         // CRUD Operations
         Task<PaginatedResult<PlantComboListResponseDto>> GetAllCombosAsync(Pagination pagination);
         Task<PaginatedResult<PlantComboListResponseDto>> GetActiveCombosAsync(Pagination pagination);
-        Task<PlantComboResponseDto?> GetComboByIdAsync(int id);
+        Task<PlantComboResponseDto> GetComboByIdAsync(int id);
         Task<PlantComboResponseDto> CreateComboAsync(PlantComboRequestDto request);
         Task<PlantComboResponseDto> UpdateComboAsync(int id, PlantComboUpdateDto request);
         Task<PlantComboResponseDto> UploadPlantComboThumbnailAsync(int comboId, IFormFile file);

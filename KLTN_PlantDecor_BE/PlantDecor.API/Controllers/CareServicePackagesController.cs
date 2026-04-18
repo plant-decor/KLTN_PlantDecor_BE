@@ -12,6 +12,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/care-service-packages")]
     [ApiController]
+    [Authorize]
     public class CareServicePackagesController : ControllerBase
     {
         private readonly ICareServicePackageService _careServicePackageService;
@@ -22,9 +23,27 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Public] Lấy danh sách gói dịch vụ kèm các vựa đang cung cấp (trả về NurseryCareServiceId)
+        /// </summary>
+        [HttpGet("with-nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPackagesWithNurseries()
+        {
+            var result = await _careServicePackageService.GetPackagesWithNurseriesAsync();
+            return Ok(new ApiResponse<List<CareServicePackageWithNurseriesResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care service packages with nurseries successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Public] Lấy danh sách các gói dịch vụ đang active
         /// </summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllActive()
         {
             var result = await _careServicePackageService.GetAllActiveAsync();
@@ -58,6 +77,7 @@ namespace PlantDecor.API.Controllers
         /// [Public] Lấy chi tiết một gói dịch vụ
         /// </summary>
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _careServicePackageService.GetByIdAsync(id);
@@ -66,6 +86,23 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get care service package successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Public] Lấy chi tiết một gói dịch vụ kèm các vựa đang cung cấp
+        /// </summary>
+        [HttpGet("{id}/with-nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetByIdWithNurseries(int id)
+        {
+            var result = await _careServicePackageService.GetByIdWithNurseriesAsync(id);
+            return Ok(new ApiResponse<CareServicePackageWithNurseriesResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care service package with nurseries successfully",
                 Payload = result
             });
         }

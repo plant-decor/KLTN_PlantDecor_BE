@@ -19,7 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<ConversationResponseDto>> GetWaitingSupportConversationsAsync();
         Task<List<ConversationResponseDto>> GetMyClaimedSupportConversationsAsync(int consultantId);
         Task<bool> ClaimSupportConversationAsync(int consultantId, int conversationId);
-        Task<ConversationResponseDto?> GetLatestActiveConversationAsync(int customerId);
+        Task<ConversationResponseDto> GetLatestActiveConversationAsync(int customerId);
         Task CloseConversationAsync(int userId, int conversationId);
     }
 }

@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         // CRUD Operations
         Task<PaginatedResult<NurseryMaterialListResponseDto>> GetAllNurseryMaterialsAsync(Pagination pagination);
-        Task<NurseryMaterialResponseDto?> GetNurseryMaterialByIdAsync(int id);
+        Task<NurseryMaterialResponseDto> GetNurseryMaterialByIdAsync(int id);
         Task<NurseryMaterialResponseDto> CreateNurseryMaterialAsync(NurseryMaterialRequestDto request);
         Task<NurseryMaterialResponseDto> UpdateNurseryMaterialAsync(int id, NurseryMaterialUpdateDto request);
         Task<bool> DeleteNurseryMaterialAsync(int id);

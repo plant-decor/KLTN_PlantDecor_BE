@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         // CRUD Operations
         Task<PaginatedResult<CommonPlantListResponseDto>> GetAllCommonPlantsAsync(Pagination pagination);
-        Task<CommonPlantResponseDto?> GetCommonPlantByIdAsync(int id);
+        Task<CommonPlantResponseDto> GetCommonPlantByIdAsync(int id);
         Task<CommonPlantResponseDto> CreateCommonPlantAsync(int nurseryId, int managerId, CommonPlantRequestDto request);
         Task<CommonPlantResponseDto> UpdateCommonPlantAsync(int id, CommonPlantUpdateDto request);
         Task<bool> DeleteCommonPlantAsync(int id);

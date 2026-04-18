@@ -25,7 +25,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public int? Size { get; set; }
 
-        public string? GrowthRate { get; set; }
+        public int? GrowthRate { get; set; }
 
         public bool? Toxicity { get; set; }
 
@@ -46,8 +46,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string? PotSize { get; set; }
 
         public int? CareLevelType { get; set; }
-
-        public string? CareLevel { get; set; }
 
         public bool IsActive { get; set; } = true;
 

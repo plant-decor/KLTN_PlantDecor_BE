@@ -6,6 +6,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<List<CareServicePackage>> GetAllActiveAsync();
         Task<CareServicePackage?> GetByIdWithDetailsAsync(int id);
+        Task<CareServicePackage?> GetByIdWithNurseriesAsync(int id);
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
         /// <summary>Trả về các gói dịch vụ có ít nhất 1 vựa đang kinh doanh</summary>
         Task<List<CareServicePackage>> GetPackagesWithNurseriesAsync();

@@ -17,6 +17,19 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(ncs => ncs.Id == id);
         }
 
+        public async Task<List<NurseryCareService>> GetActiveByPackageIdAsync(int careServicePackageId)
+        {
+            return await _context.NurseryCareServices
+                .Include(ncs => ncs.CareServicePackage)
+                .Include(ncs => ncs.Nursery)
+                .Where(ncs => ncs.CareServicePackageId == careServicePackageId
+                    && ncs.IsActive
+                    && ncs.CareServicePackage.IsActive == true
+                    && ncs.Nursery.IsActive == true)
+                .OrderBy(ncs => ncs.NurseryId)
+                .ToListAsync();
+        }
+
         public async Task<List<NurseryCareService>> GetByNurseryIdAsync(int nurseryId)
         {
             return await _context.NurseryCareServices

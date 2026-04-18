@@ -1,6 +1,7 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 
@@ -34,6 +35,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Size = plant.Size,
                 SizeName = GetPlantSizeName(plant.Size),
                 GrowthRate = plant.GrowthRate,
+                GrowthRateName = GetGrowthRateName(plant.GrowthRate),
                 Toxicity = plant.Toxicity,
                 AirPurifying = plant.AirPurifying,
                 HasFlower = plant.HasFlower,
@@ -46,7 +48,6 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PotSize = plant.PotSize,
                 CareLevelType = plant.CareLevelType,
                 CareLevelTypeName = GetCareLevelName(plant.CareLevelType),
-                CareLevel = GetCareLevelName(plant.CareLevelType),
                 IsUniqueInstance = plant.IsUniqueInstance,
                 IsActive = plant.IsActive,
                 CreatedAt = plant.CreatedAt,
@@ -138,7 +139,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 RoomStyle = request.RoomStyle?.Distinct().ToList(),
                 RoomType = request.RoomType?.Distinct().ToList(),
                 Size = request.Size,
-                GrowthRate = request.GrowthRate,
+                GrowthRate = ResolveGrowthRate(request.GrowthRate),
                 Toxicity = request.Toxicity,
                 AirPurifying = request.AirPurifying,
                 HasFlower = request.HasFlower,
@@ -148,7 +149,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 FengShuiMeaning = request.FengShuiMeaning,
                 PotIncluded = request.PotIncluded,
                 PotSize = request.PotSize,
-                CareLevelType = ResolveCareLevelType(request.CareLevelType, request.CareLevel),
+                CareLevelType = request.CareLevelType,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
@@ -180,8 +181,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (request.Size != null)
                 plant.Size = request.Size;
 
-            if (request.GrowthRate != null)
-                plant.GrowthRate = request.GrowthRate;
+            if (request.GrowthRate.HasValue)
+                plant.GrowthRate = ResolveGrowthRate(request.GrowthRate);
 
             if (request.PlacementType != null)
                 plant.PlacementType = request.PlacementType.Value;
@@ -275,6 +276,28 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             return Enum.IsDefined(typeof(PlantSizeEnum), size.Value)
                 ? ((PlantSizeEnum)size.Value).ToString()
+                : null;
+        }
+
+        private static int ResolveGrowthRate(int? growthRate)
+        {
+            if (!growthRate.HasValue)
+            {
+                return (int)GrowthRateEnum.Moderate;
+            }
+
+            if (!Enum.IsDefined(typeof(GrowthRateEnum), growthRate.Value))
+            {
+                throw new BadRequestException("GrowthRate is invalid");
+            }
+
+            return growthRate.Value;
+        }
+
+        private static string? GetGrowthRateName(int growthRate)
+        {
+            return Enum.IsDefined(typeof(GrowthRateEnum), growthRate)
+                ? ((GrowthRateEnum)growthRate).ToString()
                 : null;
         }
 

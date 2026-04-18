@@ -11,6 +11,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public DateTime? ActualEndTime { get; set; }
         public string? Description { get; set; }
         public string? EvidenceImageUrl { get; set; }
+        public int? CareServiceType { get; set; }
+        public string? CareServiceTypeName { get; set; }
+        public bool HasIncidents { get; set; }
+        public string? IncidentReason { get; set; }
+        public string? IncidentImageUrl { get; set; }
 
         public ShiftSummaryDto? Shift { get; set; }
         public UserSummaryDto? Caretaker { get; set; }

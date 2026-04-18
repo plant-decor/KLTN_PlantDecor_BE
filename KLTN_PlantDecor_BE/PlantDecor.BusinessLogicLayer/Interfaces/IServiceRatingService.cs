@@ -6,6 +6,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IServiceRatingService
     {
         Task<ServiceRatingResponseDto> CreateRatingAsync(int userId, CreateServiceRatingRequestDto request);
-        Task<ServiceRatingResponseDto?> GetByRegistrationIdAsync(int registrationId);
+        Task<ServiceRatingResponseDto> GetByRegistrationIdAsync(int registrationId);
     }
 }

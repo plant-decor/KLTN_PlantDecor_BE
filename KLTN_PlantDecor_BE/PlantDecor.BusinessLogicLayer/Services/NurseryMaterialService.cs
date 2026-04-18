@@ -54,11 +54,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<NurseryMaterialResponseDto?> GetNurseryMaterialByIdAsync(int id)
+        public async Task<NurseryMaterialResponseDto> GetNurseryMaterialByIdAsync(int id)
         {
             var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
             if (nurseryMaterial == null)
-                return null;
+                throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
 
             return nurseryMaterial.ToResponse();
         }

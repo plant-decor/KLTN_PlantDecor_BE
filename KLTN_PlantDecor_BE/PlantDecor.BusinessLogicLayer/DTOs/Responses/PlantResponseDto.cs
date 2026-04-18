@@ -16,7 +16,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public List<string>? RoomTypeNames { get; set; }
         public int? Size { get; set; }
         public string? SizeName { get; set; }
-        public string? GrowthRate { get; set; }
+        public int GrowthRate { get; set; }
+        public string? GrowthRateName { get; set; }
         public bool? Toxicity { get; set; }
         public bool? AirPurifying { get; set; }
         public bool? HasFlower { get; set; }
@@ -29,7 +30,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PotSize { get; set; }
         public int? CareLevelType { get; set; }
         public string? CareLevelTypeName { get; set; }
-        public string? CareLevel { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsUniqueInstance { get; set; }
         public DateTime? CreatedAt { get; set; }

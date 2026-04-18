@@ -20,6 +20,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _cacheService = cacheService;
         }
 
+        public async Task<List<NurseryCareServiceResponseDto>> GetActiveByPackageIdAsync(int careServicePackageId)
+        {
+            var package = await _unitOfWork.CareServicePackageRepository.GetByIdAsync(careServicePackageId);
+            if (package == null || package.IsActive != true)
+                throw new NotFoundException($"CareServicePackage {careServicePackageId} not found");
+
+            var items = await _unitOfWork.NurseryCareServiceRepository.GetActiveByPackageIdAsync(careServicePackageId);
+            return items.Select(MapToDto).ToList();
+        }
+
         public async Task<List<NurseryCareServiceResponseDto>> GetActiveByNurseryIdAsync(int nurseryId)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(nurseryId);

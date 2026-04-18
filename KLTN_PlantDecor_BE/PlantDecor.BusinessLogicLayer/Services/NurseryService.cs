@@ -65,24 +65,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<NurseryResponseDto?> GetNurseryByIdAsync(int id)
+        public async Task<NurseryResponseDto> GetNurseryByIdAsync(int id)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(id);
             if (nursery == null)
-                return null;
+                throw new NotFoundException($"Vựa với ID {id} không tồn tại");
 
             return nursery.ToResponse();
         }
 
-        public async Task<NurseryResponseDto?> GetMyNurseryAsync(int managerId)
+        public async Task<NurseryResponseDto> GetMyNurseryAsync(int managerId)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                return null;
+                throw new NotFoundException("Bạn chưa có vựa nào");
 
             // Load full details
             var fullNursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(nursery.Id);
-            return fullNursery?.ToResponse();
+            if (fullNursery == null)
+                throw new NotFoundException($"Vựa với ID {nursery.Id} không tồn tại");
+
+            return fullNursery.ToResponse();
         }
 
         public async Task<NurseryResponseDto> CreateNurseryAsync(NurseryRequestDto request)

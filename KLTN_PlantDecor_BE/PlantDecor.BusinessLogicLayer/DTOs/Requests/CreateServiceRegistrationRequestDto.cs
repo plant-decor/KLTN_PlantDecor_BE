@@ -4,8 +4,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateServiceRegistrationRequestDto
     {
+        /// <summary>
+        /// Gói dịch vụ chăm sóc do hệ thống cung cấp (bắt buộc).
+        /// </summary>
         [Required]
-        public int NurseryCareServiceId { get; set; }
+        [Range(1, int.MaxValue)]
+        public int CareServicePackageId { get; set; }
+
+        /// <summary>
+        /// Vựa ruột khách hàng muốn ưu tiên (tùy chọn).
+        /// </summary>
+        public int? PreferredNurseryId { get; set; }
 
         [Required]
         public DateOnly ServiceDate { get; set; }

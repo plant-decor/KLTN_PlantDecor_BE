@@ -8,10 +8,10 @@ namespace PlantDecor.DataAccessLayer.Enums
 {
     public enum FengShuiElementTypeEnum
     {
-        Kim = 1,
-        Moc = 2,
-        Thuy = 3,
-        Hoa = 4,
-        Tho = 5
+        Metal = 1,
+        Wood = 2,
+        Water = 3,
+        Fire = 4,
+        Earth = 5
     }
 }

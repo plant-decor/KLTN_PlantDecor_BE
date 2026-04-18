@@ -17,7 +17,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Manager")]
+    [Authorize]
     public class NurseriesController : ControllerBase
     {
         private readonly INurseryService _nurseryService;
@@ -37,18 +37,11 @@ namespace PlantDecor.API.Controllers
         /// Lấy thông tin vựa của Manager đang đăng nhập
         /// </summary>
         [HttpGet("my-nursery")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetMyNursery()
         {
             var managerId = GetCurrentUserId();
             var nursery = await _nurseryService.GetMyNurseryAsync(managerId);
-            
-            if (nursery == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = "Bạn chưa có vựa nào"
-                });
 
             return Ok(new ApiResponse<NurseryResponseDto>
             {
@@ -63,6 +56,7 @@ namespace PlantDecor.API.Controllers
         /// Tạo vựa mới cho Manager
         /// </summary>
         [HttpPost("/api/admin/nurseries")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateNursery([FromBody] NurseryRequestDto request)
         {
             var nursery = await _nurseryService.CreateNurseryAsync(request);
@@ -79,6 +73,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật thông tin vựa của Manager
         /// </summary>
         [HttpPatch("/api/manager/my-nursery")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdateMyNursery([FromBody] NurseryUpdateDto request)
         {
             var managerId = GetCurrentUserId();
@@ -96,6 +91,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách vật tư sắp hết hạn của vựa hiện tại
         /// </summary>
         [HttpGet("my-nursery/materials/expiring-soon")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetMyNurseryExpiringMaterials([FromQuery] int daysAhead = 30)
         {
             var managerId = GetCurrentUserId();
@@ -113,6 +109,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách sản phẩm sắp hết hàng của vựa hiện tại
         /// </summary>
         [HttpGet("my-nursery/products/low-stock")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetMyNurseryLowStockProducts([FromQuery] int threshold = 5)
         {
             var managerId = GetCurrentUserId();
@@ -130,6 +127,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy summary chung của vựa: cây đại trà, cây định danh và vật tư
         /// </summary>
         [HttpGet("my-nursery/material-summary")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetMyNurseryMaterialSummary([FromQuery] int lowStockThreshold = 5, [FromQuery] int expiringInDays = 30)
         {
             var managerId = GetCurrentUserId();
@@ -155,7 +153,7 @@ namespace PlantDecor.API.Controllers
         /// [System] Tìm kiếm tất cả vựa (phân trang)
         /// </summary>
         [HttpPost("/api/system/nurseries/search")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SearchAllNurseries([FromBody] PaginationSearchRequestDto request)
         {
             var pagination = request?.Pagination ?? new Pagination();
@@ -173,17 +171,10 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Lấy vựa theo ID
         /// </summary>
         [HttpGet("/api/nurseries/{id}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetNurseryById(int id)
         {
             var nursery = await _nurseryService.GetNurseryByIdAsync(id);
-            if (nursery == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Vựa với ID {id} không tồn tại"
-                });
 
             return Ok(new ApiResponse<NurseryResponseDto>
             {
@@ -198,7 +189,7 @@ namespace PlantDecor.API.Controllers
         /// [Admin] Cập nhật vựa theo ID
         /// </summary>
         [HttpPatch("/api/admin/nurseries/{id}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateNursery(int id, [FromBody] NurseryUpdateDto request)
         {
             var nursery = await _nurseryService.UpdateNurseryAsync(id, request);
@@ -215,6 +206,7 @@ namespace PlantDecor.API.Controllers
         /// Bật/tắt trạng thái active của nursery
         /// </summary>
         [HttpPatch("/api/admin/nurseries/{id}/toggle-active")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleActive(int id)
         {
             var isActive = await _nurseryService.ToggleActiveAsync(id);
@@ -411,16 +403,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetCommonPlantDetail(int commonPlantId)
         {
             var result = await _commonPlantService.GetCommonPlantByIdAsync(commonPlantId);
-            if (result == null)
-            {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Không tìm thấy cây đại trà với ID {commonPlantId}"
-                });
-            }
-
             return Ok(new ApiResponse<CommonPlantResponseDto>
             {
                 Success = true,

@@ -42,11 +42,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<TagResponseDto?> GetTagByIdAsync(int id)
+        public async Task<TagResponseDto> GetTagByIdAsync(int id)
         {
             var tag = await _unitOfWork.TagRepository.GetByIdAsync(id);
             if (tag == null)
-                return null;
+                throw new NotFoundException($"Tag với ID {id} không tồn tại");
 
             return tag.ToResponse();
         }

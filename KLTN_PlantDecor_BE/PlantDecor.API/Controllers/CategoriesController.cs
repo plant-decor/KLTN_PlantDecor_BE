@@ -14,7 +14,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class CategoriesController : ControllerBase
     {
         private readonly ICategoryService _categoryService;
@@ -45,7 +45,6 @@ namespace PlantDecor.API.Controllers
         /// Lấy categories gốc (có cấu trúc cây)
         /// </summary>
         [HttpGet("admin/tree")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetAdminCategoryTree()
         {
             var categories = await _categoryService.GetRootCategoriesAsync();
@@ -83,14 +82,6 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetCategoryById(int id)
         {
             var category = await _categoryService.GetCategoryByIdAsync(id);
-            if (category == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Category with ID {id} not exist"
-                });
-
             return Ok(new ApiResponse<CategoryResponseDto>
             {
                 Success = true,

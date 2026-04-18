@@ -544,11 +544,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return result switch
                 {
-                    1 => (int)FengShuiElementTypeEnum.Kim,
-                    2 => (int)FengShuiElementTypeEnum.Thuy,
-                    3 => (int)FengShuiElementTypeEnum.Hoa,
-                    4 => (int)FengShuiElementTypeEnum.Tho,
-                    5 => (int)FengShuiElementTypeEnum.Moc,
+                    1 => (int)FengShuiElementTypeEnum.Metal,
+                    2 => (int)FengShuiElementTypeEnum.Water,
+                    3 => (int)FengShuiElementTypeEnum.Fire,
+                    4 => (int)FengShuiElementTypeEnum.Earth,
+                    5 => (int)FengShuiElementTypeEnum.Wood,
                     _ => null
                 };
             }
@@ -586,11 +586,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (userValue == plantValue)
                 return 5;
 
-            var kim = (int)FengShuiElementTypeEnum.Kim;
-            var moc = (int)FengShuiElementTypeEnum.Moc;
-            var thuy = (int)FengShuiElementTypeEnum.Thuy;
-            var hoa = (int)FengShuiElementTypeEnum.Hoa;
-            var tho = (int)FengShuiElementTypeEnum.Tho;
+            var kim = (int)FengShuiElementTypeEnum.Metal;
+            var moc = (int)FengShuiElementTypeEnum.Wood;
+            var thuy = (int)FengShuiElementTypeEnum.Water;
+            var hoa = (int)FengShuiElementTypeEnum.Fire;
+            var tho = (int)FengShuiElementTypeEnum.Earth;
 
             bool isTuongSinh =
                 (userValue == thuy && plantValue == moc) ||

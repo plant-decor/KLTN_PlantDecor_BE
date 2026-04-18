@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager")]
     [ApiController]
-    //[Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager")]
     public class PlantInstancesController : ControllerBase
     {
         private readonly IPlantInstanceService _plantInstanceService;
