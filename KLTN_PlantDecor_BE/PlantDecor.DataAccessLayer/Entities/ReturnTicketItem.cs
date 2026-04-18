@@ -14,6 +14,8 @@ public partial class ReturnTicketItem
 
     public string? Reason { get; set; }
 
+    public string? ManagerDecisionNote { get; set; }
+
     public int Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }

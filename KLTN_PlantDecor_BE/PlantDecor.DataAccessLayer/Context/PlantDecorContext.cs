@@ -671,6 +671,7 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Status, "IX_ReturnTicketItem_Status");
 
             entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.ManagerDecisionNote).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 

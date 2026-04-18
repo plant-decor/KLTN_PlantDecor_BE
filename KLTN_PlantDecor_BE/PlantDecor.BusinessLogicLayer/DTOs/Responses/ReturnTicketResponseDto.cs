@@ -21,6 +21,7 @@
         public int RequestedQuantity { get; set; }
         public int? ApprovedQuantity { get; set; }
         public string? Reason { get; set; }
+        public string? ManagerDecisionNote { get; set; }
         public int Status { get; set; }
         public string? StatusName { get; set; }
         public int? NurseryOrderId { get; set; }
