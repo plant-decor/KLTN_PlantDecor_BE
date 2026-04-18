@@ -12,12 +12,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public RoomTypeEnum RoomType { get; set; }
         [Required(ErrorMessage = "RoomStyle is required")]
         public RoomStyleEnum RoomStyle { get; set; }
-        public int? RoomArea { get; set; }
         public decimal? MinBudget { get; set; }
         public decimal? MaxBudget { get; set; }
         public CareLevelTypeEnum? CareLevelType { get; set; }
-        public bool? IsOftenAway { get; set; }
-        public LightRequirementEnum? NaturalLightLevel { get; set; }
         public bool? HasAllergy { get; set; }
         public string? AllergyNote { get; set; }
         public List<int>? AllergicPlantIds { get; set; }

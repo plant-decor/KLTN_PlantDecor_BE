@@ -12,6 +12,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<ServiceProgressResponseDto> CheckInAsync(int caretakerId, int progressId);
         Task<ServiceProgressResponseDto> CheckOutAsync(int caretakerId, int progressId, CheckOutRequestDto request, IFormFile? evidenceImage);
         Task<ServiceProgressResponseDto> ReassignCaretakerAsync(int managerId, int progressId, int newCaretakerId);
+        Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForProgressAsync(int managerId, int progressId);
         Task<List<ServiceProgressResponseDto>> GetNurseryScheduleAsync(int managerId, DateOnly date);
         Task<List<ServiceProgressResponseDto>> GetCaretakerScheduleAsync(int managerId, int caretakerId, DateOnly from, DateOnly to);
         Task<List<ServiceProgressResponseDto>> GetMyScheduleAsync(int caretakerId, DateOnly from, DateOnly to);

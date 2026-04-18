@@ -23,6 +23,16 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         /// Processing time in milliseconds
         /// </summary>
         public long ProcessingTimeMs { get; set; }
+
+        /// <summary>
+        /// Authenticated user id for upload flow
+        /// </summary>
+        public int? UserId { get; set; }
+
+        /// <summary>
+        /// Persisted LayoutDesign id for downstream image generation flow
+        /// </summary>
+        public int? LayoutDesignId { get; set; }
     }
 
     public class RoomAnalysisDto

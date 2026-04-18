@@ -172,24 +172,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return entityType switch
             {
                 EmbeddingEntityTypes.CommonPlant when entity is CommonPlantEmbeddingDto cpDto
-                    => AddPlantGuideMetadata(
+                    => AddPlantGuideAndRoomMetadata(
                         _textSerializer.ExtractMetadata(
                             cpDto.NurseryId,
                             cpDto.Price ?? cpDto.BasePrice,
                             cpDto.IsActive ? "Active" : "Inactive",
                             cpDto.CommonPlantId),
                         cpDto.GuideLightRequirement,
-                        cpDto.GuideLightRequirementName),
+                        cpDto.GuideLightRequirementName,
+                        cpDto.RoomTypes,
+                        cpDto.RoomTypeNames,
+                        cpDto.RoomStyles,
+                        cpDto.RoomStyleNames),
 
                 EmbeddingEntityTypes.PlantInstance when entity is PlantInstanceEmbeddingDto piDto
-                    => AddPlantGuideMetadata(
+                    => AddPlantGuideAndRoomMetadata(
                         _textSerializer.ExtractMetadata(
                             piDto.NurseryId,
                             piDto.Price ?? piDto.SpecificPrice ?? piDto.BasePrice,
                             piDto.Status == 1 ? "Available" : "Unavailable",
                             piDto.PlantInstanceId),
                         piDto.GuideLightRequirement,
-                        piDto.GuideLightRequirementName),
+                        piDto.GuideLightRequirementName,
+                        piDto.RoomTypes,
+                        piDto.RoomTypeNames,
+                        piDto.RoomStyles,
+                        piDto.RoomStyleNames),
 
                 EmbeddingEntityTypes.NurseryPlantCombo when entity is NurseryPlantComboEmbeddingDto npcDto
                     => _textSerializer.ExtractMetadata(
@@ -210,10 +218,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
-        private static Dictionary<string, object> AddPlantGuideMetadata(
+        private static Dictionary<string, object> AddPlantGuideAndRoomMetadata(
             Dictionary<string, object> metadata,
             int? guideLightRequirement,
-            string? guideLightRequirementName)
+            string? guideLightRequirementName,
+            List<int>? roomTypes,
+            List<string>? roomTypeNames,
+            List<int>? roomStyles,
+            List<string>? roomStyleNames)
         {
             if (guideLightRequirement.HasValue)
             {
@@ -223,6 +235,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!string.IsNullOrWhiteSpace(guideLightRequirementName))
             {
                 metadata["GuideLightRequirementName"] = guideLightRequirementName;
+            }
+
+            if (roomTypes != null && roomTypes.Count > 0)
+            {
+                metadata["RoomTypes"] = roomTypes;
+            }
+
+            if (roomTypeNames != null && roomTypeNames.Count > 0)
+            {
+                metadata["RoomTypeNames"] = roomTypeNames;
+            }
+
+            if (roomStyles != null && roomStyles.Count > 0)
+            {
+                metadata["RoomStyles"] = roomStyles;
+            }
+
+            if (roomStyleNames != null && roomStyleNames.Count > 0)
+            {
+                metadata["RoomStyleNames"] = roomStyleNames;
             }
 
             return metadata;

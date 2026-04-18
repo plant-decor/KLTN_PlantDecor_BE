@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Interfaces;
@@ -28,11 +28,43 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Order>> GetPendingConfirmationOrdersOlderThanAsync(DateTime threshold)
+        {
+            return await _context.Orders
+                .Include(o => o.NurseryOrders)
+                .Where(o => o.Status == (int)Enums.OrderStatusEnum.PendingConfirmation
+                    && o.UpdatedAt.HasValue
+                    && o.UpdatedAt.Value <= threshold)
+                .ToListAsync();
+        }
+
         private IQueryable<Order> BuildDetailedQuery()
         {
             return _context.Orders
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.CommonPlant)
+                            .ThenInclude(cp => cp!.Plant)
+                                .ThenInclude(p => p!.PlantImages)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.PlantInstance)
+                            .ThenInclude(pi => pi!.PlantImages)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.PlantInstance)
+                            .ThenInclude(pi => pi!.Plant)
+                                .ThenInclude(p => p!.PlantImages)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.NurseryPlantCombo)
+                            .ThenInclude(npc => npc!.PlantCombo)
+                                .ThenInclude(pc => pc!.PlantComboImages)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.NurseryMaterial)
+                            .ThenInclude(nm => nm!.Material)
+                                .ThenInclude(m => m!.MaterialImages)
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.Nursery)
                 .Include(o => o.NurseryOrders)

@@ -249,10 +249,11 @@ namespace PlantDecor.API.Controllers
         #region Manager - Staff
 
         /// <summary>
-        /// [Manager] Lấy danh sách nhân viên (caretaker) của vựa
+        /// [Manager, Staff] Lấy danh sách Caretaker của vựa
         /// GET /api/manager/nurseries/my-nursery/staff
         /// </summary>
         [HttpGet("my-nursery/staff")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetNurseryStaff()
         {
             var managerId = GetCurrentUserId();
@@ -261,16 +262,17 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách nhân viên thành công",
+                    Message = "Lấy danh sách caretaker thành công",
                 Payload = result
             });
         }
 
         /// <summary>
-        /// [Manager] Lấy chi tiết nhân viên kèm chuyên môn
+        /// [Manager, Staff] Lấy chi tiết Caretaker kèm chuyên môn
         /// GET /api/manager/nurseries/my-nursery/staff/{staffId}
         /// </summary>
         [HttpGet("my-nursery/staff/{staffId}")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetNurseryStaffDetail(int staffId)
         {
             var managerId = GetCurrentUserId();
@@ -279,7 +281,45 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết nhân viên thành công",
+                Message = "Lấy chi tiết caretaker thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager] Lấy danh sách Staff + Caretaker của vựa
+        /// GET /api/manager/nurseries/my-nursery/team
+        /// </summary>
+        [HttpGet("my-nursery/team")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetNurseryTeamForManager()
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetNurseryTeamForManagerAsync(managerId);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách staff và caretaker thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager] Lấy chi tiết Staff hoặc Caretaker kèm chuyên môn
+        /// GET /api/manager/nurseries/my-nursery/team/{staffId}
+        /// </summary>
+        [HttpGet("my-nursery/team/{staffId}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetNurseryTeamDetailForManager(int staffId)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _nurseryService.GetNurseryTeamDetailForManagerAsync(managerId, staffId);
+            return Ok(new ApiResponse<StaffWithSpecializationsResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết staff/caretaker thành công",
                 Payload = result
             });
         }

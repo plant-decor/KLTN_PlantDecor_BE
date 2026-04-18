@@ -51,9 +51,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return _unitOfWork.UserRepository.IsEmailExistsForOtherUserAsync(email, currentUserId);
         }
 
-        public Task<bool> IsPhoneExistsForOtherUserAsync(string phone, int currentUserId)
+        public async Task<bool> IsPhoneExistsForOtherUserAsync(string phone, int currentUserId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(phone))
+                return false;
+
+            var existingUser = await _unitOfWork.UserRepository.GetByPhoneAsync(phone.Trim());
+            return existingUser != null && existingUser.Id != currentUserId;
         }
 
         public Task<bool> SetActive(int userId)
@@ -84,6 +88,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     throw new NotFoundException($"User with ID {id} not found");
+                }
+
+                if (!string.IsNullOrWhiteSpace(userUpdate.PhoneNumber))
+                {
+                    var normalizedPhone = userUpdate.PhoneNumber.Trim();
+                    var currentPhone = existingUser.PhoneNumber?.Trim();
+
+                    if (!normalizedPhone.Equals(currentPhone, StringComparison.Ordinal))
+                    {
+                        var isPhoneExists = await IsPhoneExistsForOtherUserAsync(normalizedPhone, id);
+                        if (isPhoneExists)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            throw new BadRequestException($"Phone number '{normalizedPhone}' is already in use");
+                        }
+                    }
                 }
 
                 // Map về lại Entity
@@ -180,7 +200,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public Task<bool> UpdatePasswordAsync(int userId, PasswordUpdate passwordUpdate)
         {
-            throw new NotImplementedException();
+            if (userId <= 0)
+                throw new BadRequestException("Invalid user ID");
+
+            if (passwordUpdate == null)
+                throw new BadRequestException("Password update data cannot be null");
+
+            if (string.IsNullOrWhiteSpace(passwordUpdate.CurrentPassword) ||
+                string.IsNullOrWhiteSpace(passwordUpdate.NewPassword) ||
+                string.IsNullOrWhiteSpace(passwordUpdate.ConfirmNewPassword))
+                throw new BadRequestException("Current password, new password, and confirmation password are required");
+
+            if (passwordUpdate.NewPassword != passwordUpdate.ConfirmNewPassword)
+                throw new BadRequestException("Password and confirmation password do not match");
+
+            ValidatePassword(passwordUpdate.NewPassword);
+
+            return UpdatePasswordInternalAsync(userId, passwordUpdate);
+        }
+
+        private async Task<bool> UpdatePasswordInternalAsync(int userId, PasswordUpdate passwordUpdate)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new NotFoundException($"User with ID {userId} not found");
+                }
+
+                if (string.IsNullOrWhiteSpace(user.PasswordHash))
+                {
+                    throw new BadRequestException("This account does not have a password yet. Please set a password first.");
+                }
+
+                var isCurrentPasswordValid = await _unitOfWork.UserRepository.VerifyPasswordAsync(user, passwordUpdate.CurrentPassword);
+                if (!isCurrentPasswordValid)
+                {
+                    throw new BadRequestException("Current password is incorrect");
+                }
+
+                if (BCrypt.Net.BCrypt.Verify(passwordUpdate.NewPassword, user.PasswordHash))
+                {
+                    throw new BadRequestException("New password cannot be the same as current password");
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordUpdate.NewPassword);
+                await user.InvalidateAllTokensAsync(_securityStampCacheService);
+
+                var updateResult = await _unitOfWork.UserRepository.UpdateAsync(user);
+                if (updateResult == 0)
+                {
+                    throw new Exception("Failed to change password");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<bool> SetPasswordAsync(int userId, SetPasswordDto dto)

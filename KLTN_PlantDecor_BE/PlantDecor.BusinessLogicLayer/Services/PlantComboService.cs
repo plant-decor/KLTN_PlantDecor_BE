@@ -22,7 +22,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMBOS_KEY = "combos_all";
         private const string ACTIVE_COMBOS_KEY = "combos_active";
@@ -33,14 +32,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -107,6 +104,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode))
                         throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
+
+                ValidateEnumBackedFields(request.SuitableSpace, request.SuitableRooms);
 
                 var combo = request.ToEntity();
                 combo.ComboCode = normalizedComboCode ?? PlantComboMapper.GenerateComboCode();
@@ -190,6 +189,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode, id))
                         throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
+
+                ValidateEnumBackedFields(request.SuitableSpace, request.SuitableRooms);
 
                 request.ComboCode = normalizedComboCode;
 
@@ -1002,6 +1003,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IQueryable<NurseryPlantCombo> query = _unitOfWork.NurseryPlantComboRepository.GetQuery()
                 .Where(npc => npc.Quantity > 0 && npc.PlantCombo.IsActive == true);
 
+            if (searchDto.NurseryId.HasValue)
+            {
+                query = query.Where(npc => npc.NurseryId == searchDto.NurseryId.Value);
+            }
+
             query = query
                 .Include(npc => npc.PlantCombo)
                     .ThenInclude(pc => pc.PlantComboImages)
@@ -1207,8 +1213,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     IsActive = entity.IsActive,
                     ComboName = combo.ComboName ?? string.Empty,
                     Description = combo.Description,
-                    SuitableSpace = combo.SuitableSpace,
-                    SuitableRooms = combo.SuitableRooms?.ToList() ?? new List<string>(),
+                    SuitableSpace = FormatLightRequirementName(combo.SuitableSpace),
+                    SuitableRooms = FormatRoomTypeNames(combo.SuitableRooms),
                     FengShuiElement = combo.FengShuiElement,
                     FengShuiPurpose = combo.FengShuiPurpose,
                     ThemeName = combo.ThemeName,
@@ -1233,10 +1239,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessNurseryPlantComboEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessNurseryPlantComboIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryPlantCombo));
             }
             catch
             {
@@ -1259,6 +1261,54 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private static Guid ConvertToGuid(int id)
             => new Guid(id.ToString().PadLeft(32, '0'));
+
+        private static void ValidateEnumBackedFields(int? suitableSpace, List<int>? suitableRooms)
+        {
+            if (suitableSpace.HasValue && !Enum.IsDefined(typeof(LightRequirementEnum), suitableSpace.Value))
+            {
+                throw new BadRequestException($"SuitableSpace '{suitableSpace.Value}' không hợp lệ theo LightRequirementEnum");
+            }
+
+            if (suitableRooms == null)
+            {
+                return;
+            }
+
+            var invalidRoomTypes = suitableRooms
+                .Where(room => !Enum.IsDefined(typeof(RoomTypeEnum), room))
+                .Distinct()
+                .ToList();
+
+            if (invalidRoomTypes.Any())
+            {
+                throw new BadRequestException($"SuitableRooms chứa giá trị không hợp lệ theo RoomTypeEnum: {string.Join(", ", invalidRoomTypes)}");
+            }
+        }
+
+        private static string? FormatLightRequirementName(int? suitableSpace)
+        {
+            if (!suitableSpace.HasValue || !Enum.IsDefined(typeof(LightRequirementEnum), suitableSpace.Value))
+            {
+                return null;
+            }
+
+            return ((LightRequirementEnum)suitableSpace.Value).ToString();
+        }
+
+        private static List<string> FormatRoomTypeNames(List<int>? suitableRooms)
+        {
+            if (suitableRooms == null || suitableRooms.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return suitableRooms
+                .Distinct()
+                .Select(room => Enum.IsDefined(typeof(RoomTypeEnum), room)
+                    ? ((RoomTypeEnum)room).ToString()
+                    : room.ToString())
+                .ToList();
+        }
 
         private static string ExtractCloudinaryPublicId(string? imageUrl)
         {

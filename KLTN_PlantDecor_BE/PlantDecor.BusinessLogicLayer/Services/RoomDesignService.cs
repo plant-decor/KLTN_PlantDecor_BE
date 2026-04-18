@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Diagnostics;
 using System.Globalization;
@@ -45,6 +46,7 @@ Bạn là chuyên gia thiết kế nội thất và cây cảnh. Hãy phân tíc
 
 Lưu ý:
 - Đánh giá ánh sáng dựa trên cửa sổ, đèn, góc chụp
+- Trường lightingCondition phải được suy luận từ ảnh phòng, không dựa vào thông tin do người dùng nhập
 - Xác định không gian trống có thể đặt cây
 - Đề xuất vị trí đặt cây phù hợp với phong thủy và thẩm mỹ
 - Trường roomType, interiorStyle, lightingCondition PHẢI dùng đúng các giá trị enum đã liệt kê ở trên
@@ -59,6 +61,7 @@ Dựa vào phân tích căn phòng:
 - Ánh sáng: {2}
 - Phong cách: {3}
 - Vị trí đặt cây: {4}
+- Ảnh để hiểu rõ hơn kèm phân tích trên: {8}
 
 Và danh sách các cây có sẵn trong hệ thống:
 {5}
@@ -103,7 +106,24 @@ Chỉ trả về JSON array, không có text khác.
             _logger = logger;
         }
 
-        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int? userId = null)
+        public async Task<PaginatedResult<LayoutDesignListResponseDto>> GetAllLayoutsAsync(int userId, Pagination pagination)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var paginatedLayouts = await _unitOfWork.LayoutDesignRepository.GetAllByUserIdWithDetailsAsync(userId, pagination);
+
+            var layoutDtos = paginatedLayouts.Items.ToLayoutDesignListResponseList();
+            return new PaginatedResult<LayoutDesignListResponseDto>(
+                layoutDtos,
+                paginatedLayouts.TotalCount,
+                paginatedLayouts.PageNumber,
+                paginatedLayouts.PageSize);
+        }
+
+        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(AnalyzeAndRecommendUploadRequest request, int userId)
         {
             if (request == null)
             {
@@ -160,7 +180,7 @@ Chỉ trả về JSON array, không có text khác.
                 throw new BadRequestException(message);
             }
 
-            if (request.Image == null)
+            if (request.Image == null || request.Image.Length == 0)
             {
                 const string message = "Room image file is required";
                 var status = IsImageRelatedError(message)
@@ -210,12 +230,9 @@ Chỉ trả về JSON array, không có text khác.
                     FengShuiElement = request.FengShuiElement,
                     RoomType = request.RoomType,
                     RoomStyle = request.RoomStyle,
-                    RoomArea = request.RoomArea,
                     MinBudget = request.MinBudget,
                     MaxBudget = request.MaxBudget,
                     CareLevelType = request.CareLevelType,
-                    IsOftenAway = request.IsOftenAway,
-                    NaturalLightLevel = request.NaturalLightLevel,
                     HasAllergy = request.HasAllergy,
                     AllergyNote = request.AllergyNote,
                     AllergicPlantIds = request.AllergicPlantIds,
@@ -227,7 +244,7 @@ Chỉ trả về JSON array, không có text khác.
                     UploadedImageUrl = uploadedImage.SecureUrl
                 };
 
-                var result = await AnalyzeAndRecommendAsync(dto);
+                var result = await AnalyzeAndRecommendAsync(dto, inferNaturalLightFromAi: true);
                 await SaveRoomUploadModerationAsync(roomImage.Id, RoomUploadModerationStatusEnum.Approved, "Image validated successfully");
                 return result;
             }
@@ -252,7 +269,9 @@ Chỉ trả về JSON array, không có text khác.
             }
         }
 
-        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(RoomDesignRequestDto request)
+        public async Task<RoomDesignResponseDto> AnalyzeAndRecommendAsync(
+            RoomDesignRequestDto request,
+            bool inferNaturalLightFromAi = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -275,6 +294,20 @@ Chỉ trả về JSON array, không có text khác.
                 // Step 1: Analyze room image using Vision API
                 _logger.LogInformation("Starting room analysis...");
                 var roomAnalysis = await AnalyzeRoomAsync(request.RoomImageBase64);
+
+                if (inferNaturalLightFromAi && !request.NaturalLightLevel.HasValue)
+                {
+                    var inferredNaturalLightLevel = MapLightingConditionToLightRequirement(roomAnalysis.LightingCondition);
+                    if (inferredNaturalLightLevel.HasValue)
+                    {
+                        request.NaturalLightLevel = inferredNaturalLightLevel.Value;
+                        _logger.LogInformation(
+                            "NaturalLightLevel inferred from AI room analysis. LightingCondition={LightingCondition}, NaturalLightLevel={NaturalLightLevel}",
+                            roomAnalysis.LightingCondition,
+                            request.NaturalLightLevel.Value);
+                    }
+                }
+
                 ApplyRequestPreferencesToRoomAnalysis(roomAnalysis, request);
 
                 // Step 2: Build search query based on room analysis
@@ -297,7 +330,7 @@ Chỉ trả về JSON array, không có text khác.
                 // Overwrite AI vision summary with a grounded summary based on DB-backed recommendations.
                 roomAnalysis.Summary = BuildGroundedSummary(roomAnalysis, recommendations);
 
-                await PersistDesignArtifactsAsync(request, roomAnalysis, recommendations, searchQuery);
+                var layoutDesignId = await PersistDesignArtifactsAsync(request, roomAnalysis, recommendations, searchQuery);
 
                 stopwatch.Stop();
 
@@ -306,7 +339,9 @@ Chỉ trả về JSON array, không có text khác.
                     RoomAnalysis = roomAnalysis,
                     Recommendations = recommendations,
                     TotalCount = recommendations.Count,
-                    ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+                    ProcessingTimeMs = stopwatch.ElapsedMilliseconds,
+                    UserId = request.UserId,
+                    LayoutDesignId = layoutDesignId
                 };
             }
             catch (Exception ex)
@@ -532,6 +567,7 @@ Chỉ trả về JSON array, không có text khác.
             var rejectedLightRequirementFromEntity = 0;
             var deferredLightRequirementChecks = 0;
             var rejectedCareLevel = 0;
+            var rejectedRoomType = 0;
             var rejectedPetSafe = 0;
             var rejectedChildSafe = 0;
             var rejectedAllergy = 0;
@@ -552,6 +588,13 @@ Chỉ trả về JSON array, không có text khác.
                 if (!seenEntities.Add(dedupeKey))
                 {
                     rejectedDuplicate++;
+                    continue;
+                }
+
+                // RoomType is a strict hard filter. Missing metadata is treated as not matched.
+                if (!IsEmbeddingRoomTypeMatch(embedding.Metadata, request.RoomType))
+                {
+                    rejectedRoomType++;
                     continue;
                 }
 
@@ -682,7 +725,7 @@ Chỉ trả về JSON array, không có text khác.
                 .ToList();
 
             _logger.LogInformation(
-                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedCareLevel={RejectedCareLevel}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RejectedAllergy={RejectedAllergy}, RejectedFengShui={RejectedFengShui}, RejectedLightRequirement={RejectedLightRequirement}, RejectedLightRequirementFromMetadata={RejectedLightRequirementFromMetadata}, RejectedLightRequirementFromEntity={RejectedLightRequirementFromEntity}, DeferredLightRequirementChecks={DeferredLightRequirementChecks}, BoostedLightMatch={BoostedLightMatch}, PenalizedMissingLightMetadata={PenalizedMissingLightMetadata}",
+                "Room design candidate search completed. Query='{Query}', Embeddings={Embeddings}, Candidates={Candidates}, RejectedMissingOriginalId={RejectedMissingOriginalId}, RejectedDuplicate={RejectedDuplicate}, RejectedDuplicatePlantName={RejectedDuplicatePlantName}, RejectedNotPurchasable={RejectedNotPurchasable}, RejectedNullCandidate={RejectedNullCandidate}, RejectedBudget={RejectedBudget}, RejectedPreferredNursery={RejectedPreferredNursery}, RejectedCareLevel={RejectedCareLevel}, RejectedRoomType={RejectedRoomType}, RejectedPetSafe={RejectedPetSafe}, RejectedChildSafe={RejectedChildSafe}, RejectedAllergy={RejectedAllergy}, RejectedFengShui={RejectedFengShui}, RejectedLightRequirement={RejectedLightRequirement}, RejectedLightRequirementFromMetadata={RejectedLightRequirementFromMetadata}, RejectedLightRequirementFromEntity={RejectedLightRequirementFromEntity}, DeferredLightRequirementChecks={DeferredLightRequirementChecks}, BoostedLightMatch={BoostedLightMatch}, PenalizedMissingLightMetadata={PenalizedMissingLightMetadata}",
                 searchQuery,
                 embeddings.Count,
                 candidates.Count,
@@ -694,6 +737,7 @@ Chỉ trả về JSON array, không có text khác.
                 rejectedBudget,
                 rejectedPreferredNursery,
                 rejectedCareLevel,
+                rejectedRoomType,
                 rejectedPetSafe,
                 rejectedChildSafe,
                 rejectedAllergy,
@@ -756,7 +800,8 @@ Chỉ trả về JSON array, không có text khác.
                     roomAnalysis.AvailableSpace,
                     candidatesJson,
                     limit,
-                    additionalCriteria);
+                    additionalCriteria,
+                    request.RoomImageBase64);
 
                 var response = await _azureOpenAIService.GenerateChatCompletionAsync(
                     "Bạn là chuyên gia về cây cảnh và thiết kế nội thất. Trả lời bằng JSON array.",
@@ -963,6 +1008,18 @@ Chỉ trả về JSON array, không có text khác.
             };
         }
 
+        private static LightRequirementEnum? MapLightingConditionToLightRequirement(string? lightingCondition)
+        {
+            return lightingCondition?.Trim() switch
+            {
+                "LowLight" or "low" => LightRequirementEnum.LowLight,
+                "IndirectLight" or "medium" => LightRequirementEnum.IndirectLight,
+                "PartialSun" => LightRequirementEnum.PartialSun,
+                "FullSun" or "high" or "natural" => LightRequirementEnum.FullSun,
+                _ => null
+            };
+        }
+
         private string GenerateBasicReason(PlantRecommendationDto plant, RoomAnalysisDto room)
         {
             var reasons = new List<string>();
@@ -1055,6 +1112,39 @@ Chỉ trả về JSON array, không có text khác.
             }
 
             return 0;
+        }
+
+        private static bool IsEmbeddingRoomTypeMatch(
+            Dictionary<string, object>? metadata,
+            RoomTypeEnum requestedRoomType)
+        {
+            var roomTypes = ExtractEmbeddingRoomTypes(metadata);
+            if (roomTypes.Count == 0)
+            {
+                return false;
+            }
+
+            return roomTypes.Contains((int)requestedRoomType);
+        }
+
+        private static HashSet<int> ExtractEmbeddingRoomTypes(Dictionary<string, object>? metadata)
+        {
+            if (metadata == null)
+            {
+                return new HashSet<int>();
+            }
+
+            if (TryReadMetadataIntSet(metadata, "RoomTypes", out var roomTypes) && roomTypes.Count > 0)
+            {
+                return roomTypes;
+            }
+
+            if (TryReadMetadataIntSet(metadata, "RoomType", out roomTypes) && roomTypes.Count > 0)
+            {
+                return roomTypes;
+            }
+
+            return new HashSet<int>();
         }
 
         private static bool IsEmbeddingLightRequirementMatch(
@@ -1199,6 +1289,161 @@ Chỉ trả về JSON array, không có text khác.
                     }
 
                     return false;
+                default:
+                    return int.TryParse(rawValue.ToString(), out value);
+            }
+        }
+
+        private static bool TryReadMetadataIntSet(Dictionary<string, object> metadata, string key, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (!metadata.TryGetValue(key, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            switch (rawValue)
+            {
+                case List<int> listInt:
+                    values = listInt.ToHashSet();
+                    return values.Count > 0;
+
+                case int[] intArray:
+                    values = intArray.ToHashSet();
+                    return values.Count > 0;
+
+                case JsonElement jsonElement:
+                    return TryReadIntSetFromJsonElement(jsonElement, out values);
+
+                case string str:
+                    return TryReadIntSetFromString(str, out values);
+
+                case IEnumerable<object> objectEnumerable:
+                    foreach (var item in objectEnumerable)
+                    {
+                        if (TryConvertToInt(item, out var parsed))
+                        {
+                            values.Add(parsed);
+                        }
+                    }
+
+                    return values.Count > 0;
+
+                default:
+                    if (TryConvertToInt(rawValue, out var single))
+                    {
+                        values.Add(single);
+                        return true;
+                    }
+
+                    return false;
+            }
+        }
+
+        private static bool TryReadIntSetFromJsonElement(JsonElement jsonElement, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in jsonElement.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out var numberValue))
+                    {
+                        values.Add(numberValue);
+                        continue;
+                    }
+
+                    if (item.ValueKind == JsonValueKind.String &&
+                        int.TryParse(item.GetString(), out var stringValue))
+                    {
+                        values.Add(stringValue);
+                    }
+                }
+
+                return values.Count > 0;
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out var singleNumber))
+            {
+                values.Add(singleNumber);
+                return true;
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.String)
+            {
+                return TryReadIntSetFromString(jsonElement.GetString(), out values);
+            }
+
+            return false;
+        }
+
+        private static bool TryReadIntSetFromString(string? raw, out HashSet<int> values)
+        {
+            values = new HashSet<int>();
+
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            var normalized = raw.Trim();
+            if (normalized.StartsWith('[') && normalized.EndsWith(']'))
+            {
+                try
+                {
+                    using var jsonDoc = JsonDocument.Parse(normalized);
+                    return TryReadIntSetFromJsonElement(jsonDoc.RootElement, out values);
+                }
+                catch
+                {
+                    // Fall through to delimiter-based parsing for malformed payloads.
+                }
+            }
+
+            var segments = normalized
+                .Split(new[] { ',', '|', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var segment in segments)
+            {
+                if (int.TryParse(segment, out var parsed))
+                {
+                    values.Add(parsed);
+                }
+            }
+
+            return values.Count > 0;
+        }
+
+        private static bool TryConvertToInt(object rawValue, out int value)
+        {
+            value = 0;
+
+            switch (rawValue)
+            {
+                case int intValue:
+                    value = intValue;
+                    return true;
+
+                case long longValue when longValue <= int.MaxValue && longValue >= int.MinValue:
+                    value = (int)longValue;
+                    return true;
+
+                case JsonElement jsonElement:
+                    if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out value))
+                    {
+                        return true;
+                    }
+
+                    if (jsonElement.ValueKind == JsonValueKind.String &&
+                        int.TryParse(jsonElement.GetString(), out value))
+                    {
+                        return true;
+                    }
+
+                    return false;
+
                 default:
                     return int.TryParse(rawValue.ToString(), out value);
             }
@@ -2035,7 +2280,7 @@ Chỉ trả về JSON array, không có text khác.
             return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
-        private async Task PersistDesignArtifactsAsync(
+        private async Task<int?> PersistDesignArtifactsAsync(
             RoomDesignRequestDto request,
             RoomAnalysisDto roomAnalysis,
             IReadOnlyCollection<PlantRecommendationDto> recommendations,
@@ -2043,7 +2288,7 @@ Chỉ trả về JSON array, không có text khác.
         {
             if (!request.RoomImageId.HasValue)
             {
-                return;
+                return null;
             }
 
             await _unitOfWork.BeginTransactionAsync();
@@ -2101,6 +2346,7 @@ Chỉ trả về JSON array, không có text khác.
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
+                return layoutDesign.Id;
             }
             catch (Exception ex)
             {

@@ -37,6 +37,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             sb.AppendLine($"Vị trí: {GetPlacementDescription(dto.PlacementType)}");
 
+            if (dto.RoomTypeNames.Any())
+                sb.AppendLine($"Không gian phù hợp: {string.Join(", ", dto.RoomTypeNames)}");
+
+            if (dto.RoomStyleNames.Any())
+                sb.AppendLine($"Phong cách phù hợp: {string.Join(", ", dto.RoomStyleNames)}");
+
             // Safety info
             var safetyFeatures = new List<string>();
             if (dto.PetSafe == true) safetyFeatures.Add("An toàn cho thú cưng");
@@ -116,6 +122,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Price
             if (dto.Price.HasValue || dto.SpecificPrice.HasValue || dto.BasePrice.HasValue)
                 sb.AppendLine($"Giá: {(dto.Price ?? dto.SpecificPrice ?? dto.BasePrice):N0} VND");
+
+            if (dto.RoomTypeNames.Any())
+                sb.AppendLine($"Không gian phù hợp: {string.Join(", ", dto.RoomTypeNames)}");
+
+            if (dto.RoomStyleNames.Any())
+                sb.AppendLine($"Phong cách phù hợp: {string.Join(", ", dto.RoomStyleNames)}");
 
             // Safety from plant
             var safetyFeatures = new List<string>();

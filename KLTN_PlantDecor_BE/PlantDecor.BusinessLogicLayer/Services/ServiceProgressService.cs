@@ -35,10 +35,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (!isCaretaker && !isCustomer && !isMainCaretaker && !isCurrentCaretaker)
             {
-                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(userId);
-                var isManager = nursery != null &&
-                    registration?.NurseryCareService?.NurseryId == nursery.Id;
-                if (!isManager)
+                var nursery = await ResolveOperatorNurseryAsync(userId);
+                var canViewAsOperator = registration?.NurseryCareService?.NurseryId == nursery.Id;
+                if (!canViewAsOperator)
                     throw new ForbiddenException("You don't have access to this progress");
             }
 
@@ -58,10 +57,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration == null)
                 throw new NotFoundException($"ServiceRegistration {registrationId} not found");
 
-            if (registration.UserId != userId &&
-                registration.MainCaretakerId != userId &&
-                registration.CurrentCaretakerId != userId)
-                throw new ForbiddenException("You don't have access to this registration");
+            var hasDirectAccess = registration.UserId == userId ||
+                                  registration.MainCaretakerId == userId ||
+                                  registration.CurrentCaretakerId == userId;
+
+            if (!hasDirectAccess)
+            {
+                var nursery = await ResolveOperatorNurseryAsync(userId);
+                if (registration.NurseryCareService?.NurseryId != nursery.Id)
+                    throw new ForbiddenException("You don't have access to this registration");
+            }
 
             var progresses = await _unitOfWork.ServiceProgressRepository.GetByServiceRegistrationIdAsync(registrationId);
             return progresses.Select(MapToDto).ToList();
@@ -162,15 +167,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
             }
 
+            if (progress.ServiceRegistrationId.HasValue)
+                await SyncCurrentCaretakerForRegistrationAsync(progress.ServiceRegistrationId.Value);
+
             var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
             return MapToDto(updated!);
         }
 
         public async Task<ServiceProgressResponseDto> ReassignCaretakerAsync(int managerId, int progressId, int newCaretakerId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
             if (progress == null)
@@ -209,23 +215,67 @@ namespace PlantDecor.BusinessLogicLayer.Services
             progress.Status = (int)ServiceProgressStatusEnum.Assigned;
             _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
 
-            if (progress.ServiceRegistration != null)
-            {
-                progress.ServiceRegistration.CurrentCaretakerId = newCaretakerId;
-                _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(progress.ServiceRegistration);
-            }
-
             await _unitOfWork.SaveAsync();
+
+            if (progress.ServiceRegistrationId.HasValue)
+                await SyncCurrentCaretakerForRegistrationAsync(progress.ServiceRegistrationId.Value);
 
             var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
             return MapToDto(updated!);
         }
 
+        public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForProgressAsync(int managerId, int progressId)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            if (progress == null)
+                throw new NotFoundException($"ServiceProgress {progressId} not found");
+
+            if (progress.ServiceRegistration?.NurseryCareService?.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            if (progress.Status == (int)ServiceProgressStatusEnum.Completed ||
+                progress.Status == (int)ServiceProgressStatusEnum.Cancelled)
+                throw new BadRequestException("Cannot get eligible caretakers for a completed or cancelled task");
+
+            var allCaretakers = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
+
+            IEnumerable<User> eligible = allCaretakers
+                .Where(u => u.RoleId == (int)RoleEnum.Caretaker)
+                .Where(u => u.Status == (int)UserStatusEnum.Active && u.IsVerified);
+
+            var packageId = progress.ServiceRegistration?.NurseryCareService?.CareServicePackageId;
+            if (packageId.HasValue)
+            {
+                var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId.Value);
+                if (pkg != null && pkg.CareServiceSpecializations.Count > 0)
+                {
+                    var requiredSpecIds = pkg.CareServiceSpecializations.Select(cs => cs.SpecializationId).ToHashSet();
+                    eligible = eligible
+                        .Where(u => requiredSpecIds.All(reqId => u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+                }
+            }
+
+            if (progress.TaskDate.HasValue)
+            {
+                var conflictingIds = await _unitOfWork.ServiceProgressRepository
+                    .GetConflictingCaretakerIdsAsync(progress.ShiftId, new List<DateOnly> { progress.TaskDate.Value });
+                eligible = eligible.Where(u => !conflictingIds.Contains(u.Id));
+            }
+
+            if (progress.CaretakerId.HasValue)
+                eligible = eligible.Where(u => u.Id != progress.CaretakerId.Value);
+
+            return eligible
+                .OrderBy(u => u.Username)
+                .Select(NurseryService.MapToStaffDtoPublic)
+                .ToList();
+        }
+
         public async Task<List<ServiceProgressResponseDto>> GetNurseryScheduleAsync(int managerId, DateOnly date)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             var progresses = await _unitOfWork.ServiceProgressRepository.GetByNurseryAndDateAsync(nursery.Id, date);
             return progresses.Select(MapToDto).ToList();
@@ -233,9 +283,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<ServiceProgressResponseDto>> GetCaretakerScheduleAsync(int managerId, int caretakerId, DateOnly from, DateOnly to)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new ForbiddenException("You are not a manager of any nursery");
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
 
             if (to < from)
                 throw new BadRequestException("'to' date must be >= 'from' date");
@@ -257,6 +305,49 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var progresses = await _unitOfWork.ServiceProgressRepository.GetByCaretakerSelfDateRangeAsync(caretakerId, from, to);
             return progresses.Select(MapToDto).ToList();
+        }
+
+        private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new ForbiddenException("You are not a manager/staff of any nursery");
+        }
+
+        private async Task SyncCurrentCaretakerForRegistrationAsync(int registrationId)
+        {
+            var registration = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registrationId);
+            if (registration == null)
+                return;
+
+            var nextCaretakerId = registration.ServiceProgresses
+                .Where(sp => sp.Status != (int)ServiceProgressStatusEnum.Completed &&
+                             sp.Status != (int)ServiceProgressStatusEnum.Cancelled &&
+                             sp.CaretakerId.HasValue)
+                .OrderBy(sp => sp.TaskDate ?? DateOnly.MaxValue)
+                .ThenBy(sp => sp.Shift?.StartTime ?? TimeOnly.MaxValue)
+                .ThenBy(sp => sp.Id)
+                .Select(sp => sp.CaretakerId)
+                .FirstOrDefault();
+
+            var resolvedCurrentCaretakerId = nextCaretakerId ?? registration.MainCaretakerId;
+
+            if (registration.CurrentCaretakerId == resolvedCurrentCaretakerId)
+                return;
+
+            registration.CurrentCaretakerId = resolvedCurrentCaretakerId;
+            _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
+            await _unitOfWork.SaveAsync();
         }
 
         #region Mapping

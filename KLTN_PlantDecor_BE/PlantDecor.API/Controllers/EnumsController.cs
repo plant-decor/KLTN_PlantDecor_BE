@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.API.Controllers
@@ -12,6 +14,13 @@ namespace PlantDecor.API.Controllers
     [ApiController]
     public class EnumsController : ControllerBase
     {
+        private readonly IShiftService _shiftService;
+
+        public EnumsController(IShiftService shiftService)
+        {
+            _shiftService = shiftService;
+        }
+
         private static readonly Dictionary<string, Type> EnumMap = new(StringComparer.OrdinalIgnoreCase)
         {
             ["CategoryType"] = typeof(CategoryTypeEnum),
@@ -41,12 +50,15 @@ namespace PlantDecor.API.Controllers
             ["LightRequirement"] = typeof(LightRequirementEnum),
             ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
             ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
+            ["AiLayoutResponseModerationStatus"] = typeof(AilayoutResponseModerationStatus),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
             ["WishlistItemType"] = typeof(WishlistItemType),
             ["UserActionType"] = typeof(UserActionTypeEnum),
             ["UserStatus"] = typeof(UserStatusEnum),
             ["CareServiceType"] = typeof(CareServiceTypeEnum),
+            ["ServiceRegistrationStatus"] = typeof(ServiceRegistrationStatusEnum),
+            ["ServiceProgressStatus"] = typeof(ServiceProgressStatusEnum),
             ["DayOfWeek"] = typeof(DayOfWeek)
         };
 
@@ -139,6 +151,75 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Enum cho ServiceRegistration
+        /// GET /api/system/enums/service-registrations
+        /// </summary>
+        [HttpGet("service-registrations")]
+        [AllowAnonymous]
+        public IActionResult GetServiceRegistrationEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get service registration enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("ServiceRegistrationStatus", typeof(ServiceRegistrationStatusEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho ServiceProgress
+        /// GET /api/system/enums/service-progress
+        /// </summary>
+        [HttpGet("service-progress")]
+        [AllowAnonymous]
+        public IActionResult GetServiceProgressEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get service progress enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("ServiceProgressStatus", typeof(ServiceProgressStatusEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum + dữ liệu phục vụ flow ServiceRegistration/ServiceProgress trong 1 lần fetch
+        /// GET /api/system/enums/service-flow
+        /// </summary>
+        [HttpGet("service-flow")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetServiceFlowEnums()
+        {
+            var shifts = await _shiftService.GetAllAsync();
+
+            return Ok(new ApiResponse<ServiceFlowEnumsResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get service flow enums successfully",
+                Payload = new ServiceFlowEnumsResponseDto
+                {
+                    Enums = new List<EnumGroupResponseDto>
+                    {
+                        CreateEnumGroup("ServiceRegistrationStatus", typeof(ServiceRegistrationStatusEnum)),
+                        CreateEnumGroup("ServiceProgressStatus", typeof(ServiceProgressStatusEnum)),
+                        CreateServiceDayOfWeekGroup(),
+                        CreateEnumGroup("CareServiceType", typeof(CareServiceTypeEnum))
+                    },
+                    Shifts = shifts
+                }
+            });
+        }
+
+        /// <summary>
         /// Enum cho Plant
         /// GET /api/system/enums/plants
         /// </summary>
@@ -179,7 +260,8 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
                     CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
-                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum))
+                    CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),
+                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus))
                 }
             });
         }
@@ -536,6 +618,23 @@ namespace PlantDecor.API.Controllers
                 })
                 .OrderBy(item => item.Value)
                 .ToList();
+        }
+
+        private static EnumGroupResponseDto CreateServiceDayOfWeekGroup()
+        {
+            return new EnumGroupResponseDto
+            {
+                EnumName = "DayOfWeek",
+                Values = GetEnumValues(typeof(DayOfWeek))
+                    .Where(item => item.Value >= 1 && item.Value <= 6)
+                    .ToList()
+            };
+        }
+
+        public class ServiceFlowEnumsResponseDto
+        {
+            public List<EnumGroupResponseDto> Enums { get; set; } = new List<EnumGroupResponseDto>();
+            public List<ShiftResponseDto> Shifts { get; set; } = new List<ShiftResponseDto>();
         }
 
         public class EnumGroupResponseDto

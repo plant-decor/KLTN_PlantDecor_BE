@@ -7,9 +7,13 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? CommonPlantId { get; set; }
         public int? NurseryPlantComboId { get; set; }
         public int? NurseryMaterialId { get; set; }
+        public int? PlantId { get; set; }
+        public int? PlantComboId { get; set; }
+        public int? MaterialId { get; set; }
         public int NurseryId { get; set; }
         public string NurseryName { get; set; } = null!;
         public string? ProductName { get; set; }
+        public string? PrimaryImageUrl { get; set; }
         public int? Quantity { get; set; }
         public decimal? Price { get; set; }
         public decimal? SubTotal => (Quantity ?? 0) * (Price ?? 0);

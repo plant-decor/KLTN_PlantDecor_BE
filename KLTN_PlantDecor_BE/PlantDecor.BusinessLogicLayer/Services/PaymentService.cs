@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -307,7 +307,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         nurseryOrder.UpdatedAt = DateTime.Now;
                     }
 
-                    if (newOrderStatus == (int)OrderStatusEnum.Paid)
+                    if (newOrderStatus == (int)OrderStatusEnum.Paid
+                        || newOrderStatus == (int)OrderStatusEnum.DepositPaid)
                     {
                         await AssignShippersForPaidOrderAsync(order);
                     }
@@ -560,7 +561,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 now, todayStart, tomorrowStart);
 
             var paidNurseryOrders = order.NurseryOrders
-                .Where(no => no.Status == (int)OrderStatusEnum.Paid)
+                .Where(no => no.Status == (int)OrderStatusEnum.Paid
+                    || no.Status == (int)OrderStatusEnum.DepositPaid)
                 .ToList();
 
             _logger.LogInformation(

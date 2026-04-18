@@ -20,7 +20,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string NURSERY_INSTANCES_KEY = "nursery_instances";
         private const string PLANT_NURSERIES_KEY = "plant_nurseries";
@@ -30,14 +29,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region Manager Operations
@@ -711,6 +708,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(t => t.TagName)
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToList() ?? new List<string>(),
+                    RoomTypes = plant?.RoomType?.ToList() ?? new List<int>(),
+                    RoomTypeNames = GetRoomTypeNames(plant?.RoomType),
+                    RoomStyles = plant?.RoomStyle?.ToList() ?? new List<int>(),
+                    RoomStyleNames = GetRoomStyleNames(plant?.RoomStyle),
                     NurseryId = entity.CurrentNurseryId ?? 0,
                     NurseryName = entity.CurrentNursery?.Name,
                     GuideLightRequirement = guide?.LightRequirement
@@ -721,10 +722,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessPlantInstanceEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.PlantInstance));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessPlantInstanceIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.PlantInstance));
             }
             catch
             {
@@ -743,6 +740,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Log but don't fail
             }
+        }
+
+        private static List<string> GetRoomTypeNames(List<int>? roomTypes)
+        {
+            if (roomTypes == null || roomTypes.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomTypes
+                .Distinct()
+                .Select(roomType => Enum.IsDefined(typeof(RoomTypeEnum), roomType)
+                    ? ((RoomTypeEnum)roomType).ToString()
+                    : roomType.ToString())
+                .ToList();
+        }
+
+        private static List<string> GetRoomStyleNames(List<int>? roomStyles)
+        {
+            if (roomStyles == null || roomStyles.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomStyles
+                .Distinct()
+                .Select(roomStyle => Enum.IsDefined(typeof(RoomStyleEnum), roomStyle)
+                    ? ((RoomStyleEnum)roomStyle).ToString()
+                    : roomStyle.ToString())
+                .ToList();
         }
 
         private static Guid ConvertToGuid(int id)

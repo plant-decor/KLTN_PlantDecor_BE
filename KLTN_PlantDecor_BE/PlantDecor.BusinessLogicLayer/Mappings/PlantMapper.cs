@@ -27,6 +27,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 BasePrice = plant.BasePrice,
                 PlacementType = plant.PlacementType,
                 PlacementTypeName = ((PlacementTypeEnum)plant.PlacementType).ToString(),
+                RoomStyle = plant.RoomStyle,
+                RoomStyleNames = GetEnumNames<RoomStyleEnum>(plant.RoomStyle),
+                RoomType = plant.RoomType,
+                RoomTypeNames = GetEnumNames<RoomTypeEnum>(plant.RoomType),
                 Size = plant.Size,
                 SizeName = GetPlantSizeName(plant.Size),
                 GrowthRate = plant.GrowthRate,
@@ -131,6 +135,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Description = request.Description,
                 BasePrice = request.BasePrice,
                 PlacementType = request.PlacementType,
+                RoomStyle = request.RoomStyle?.Distinct().ToList(),
+                RoomType = request.RoomType?.Distinct().ToList(),
                 Size = request.Size,
                 GrowthRate = request.GrowthRate,
                 Toxicity = request.Toxicity,
@@ -179,6 +185,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
             if (request.PlacementType != null)
                 plant.PlacementType = request.PlacementType.Value;
+
+            if (request.RoomStyle != null)
+                plant.RoomStyle = request.RoomStyle.Distinct().ToList();
+
+            if (request.RoomType != null)
+                plant.RoomType = request.RoomType.Distinct().ToList();
 
             if (request.Toxicity.HasValue)
                 plant.Toxicity = request.Toxicity.Value;
@@ -276,6 +288,20 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
                 ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
                 : null;
+        }
+
+        private static List<string>? GetEnumNames<TEnum>(List<int>? values) where TEnum : struct, Enum
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            return values
+                .Where(v => Enum.IsDefined(typeof(TEnum), v))
+                .Select(v => ((TEnum)Enum.ToObject(typeof(TEnum), v)).ToString())
+                .Distinct()
+                .ToList();
         }
 
 

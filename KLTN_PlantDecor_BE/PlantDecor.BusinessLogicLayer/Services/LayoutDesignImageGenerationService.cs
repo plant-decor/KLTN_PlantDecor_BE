@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -49,132 +50,159 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<LayoutDesignImageGenerationResultDto> GenerateImagesAsync(int layoutDesignId, int userId)
         {
-            // nếu endpoint hoặc api key chưa cấu hình thì không nên tiếp tục, tránh mất công tải ảnh về rồi mới báo lỗi
-            EnsureFluxConfigured();
-
-            var layout = await _unitOfWork.LayoutDesignRepository.GetGenerationContextByIdAsync(layoutDesignId);
-            if (layout == null)
-            {
-                throw new NotFoundException($"LayoutDesign {layoutDesignId} was not found");
-            }
-
-            // kiểm tra quyền sở hữu có đúng của user không
-            EnsureLayoutOwnership(layout, userId);
-            // chỉ cho phép khi status là ImageGenerationCompleted hoặc PlantRecommendationCompleted
-            EnsureLayoutStatusAllowed(layout.Status);
-
-            var roomImageUrl = ResolveRoomImageUrl(layout);
-            if (string.IsNullOrWhiteSpace(roomImageUrl))
-            {
-                throw new BadRequestException("Room image URL is missing for the selected layout");
-            }
-
-            var layoutPlants = layout.LayoutDesignPlants
-                .OrderBy(item => item.Id)
-                .ToList();
-
-            if (layoutPlants.Count == 0)
-            {
-                throw new BadRequestException("LayoutDesign does not contain any recommended plants");
-            }
-
-            // down ảnh phòng và mã hóa base64
-            var roomImageBase64 = await DownloadAsBase64Async(roomImageUrl, layoutDesignId, 0);
-
-            // lấy ra danh sách commonPlant từ LayoutDesignPlant
-            var commonPlantIds = layoutPlants
-                .Where(item => item.CommonPlantId.HasValue)
-                .Select(item => item.CommonPlantId!.Value)
-                .Distinct()
-                .ToList();
-
-            // lấy ra danh sách PlantInstance từ LayoutDesignPlant
-            var plantInstanceIds = layoutPlants
-                .Where(item => item.PlantInstanceId.HasValue)
-                .Select(item => item.PlantInstanceId!.Value)
-                .Distinct()
-                .ToList();
-
-            // Lấy ra URL ảnh chính của CommonPlant và PlantInstance để dùng làm ảnh nguồn cho việc tạo ảnh mới với Flux
-            var commonPlantImageUrls = await _unitOfWork.CommonPlantRepository.GetPrimaryImageUrlsAsync(commonPlantIds);
-            var plantInstanceImageUrls = await _unitOfWork.PlantInstanceRepository.GetPrimaryImageUrlsAsync(plantInstanceIds);
-
             var itemResults = new List<LayoutDesignImageGenerationItemResultDto>();
-            var candidates = BuildCandidates(layoutPlants, commonPlantImageUrls, plantInstanceImageUrls, itemResults);
+            var transactionStarted = false;
+            var transactionCommitted = false;
 
-            if (candidates.Count == 0)
-            {
-                throw new BadRequestException("No valid plant rows found for image generation");
-            }
-
-            await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var existingImages = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-                foreach (var existingImage in existingImages)
+                // nếu endpoint hoặc api key chưa cấu hình thì không nên tiếp tục, tránh mất công tải ảnh về rồi mới báo lỗi
+                EnsureFluxConfigured();
+
+                var layout = await _unitOfWork.LayoutDesignRepository.GetGenerationContextByIdAsync(layoutDesignId);
+                if (layout == null)
                 {
-                    var deleted = false;
+                    throw new NotFoundException($"LayoutDesign {layoutDesignId} was not found");
+                }
 
-                    if (!string.IsNullOrWhiteSpace(existingImage.PublicId))
+                // kiểm tra quyền sở hữu có đúng của user không
+                EnsureLayoutOwnership(layout, userId);
+                // chỉ cho phép khi status là ImageGenerationCompleted hoặc PlantRecommendationCompleted
+                EnsureLayoutStatusAllowed(layout.Status);
+
+                var roomImageUrl = ResolveRoomImageUrl(layout);
+                if (string.IsNullOrWhiteSpace(roomImageUrl))
+                {
+                    throw new BadRequestException("Room image URL is missing for the selected layout");
+                }
+
+                var layoutPlants = layout.LayoutDesignPlants
+                    .OrderBy(item => item.Id)
+                    .ToList();
+
+                if (layoutPlants.Count == 0)
+                {
+                    throw new BadRequestException("LayoutDesign does not contain any recommended plants");
+                }
+
+                // down ảnh phòng và mã hóa base64
+                var roomImageBase64 = await DownloadAsBase64Async(roomImageUrl, layoutDesignId, 0);
+
+                // lấy ra danh sách commonPlant từ LayoutDesignPlant
+                var commonPlantIds = layoutPlants
+                    .Where(item => item.CommonPlantId.HasValue)
+                    .Select(item => item.CommonPlantId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                // lấy ra danh sách PlantInstance từ LayoutDesignPlant
+                var plantInstanceIds = layoutPlants
+                    .Where(item => item.PlantInstanceId.HasValue)
+                    .Select(item => item.PlantInstanceId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                // Lấy ra URL ảnh chính của CommonPlant và PlantInstance để dùng làm ảnh nguồn cho việc tạo ảnh mới với Flux
+                var commonPlantImageUrls = await _unitOfWork.CommonPlantRepository.GetPrimaryImageUrlsAsync(commonPlantIds);
+                var plantInstanceImageUrls = await _unitOfWork.PlantInstanceRepository.GetPrimaryImageUrlsAsync(plantInstanceIds);
+
+                var candidates = BuildCandidates(layoutPlants, commonPlantImageUrls, plantInstanceImageUrls, itemResults);
+
+                await _unitOfWork.BeginTransactionAsync();
+                transactionStarted = true;
+
+                try
+                {
+                    if (candidates.Count == 0)
                     {
-                        deleted = await _cloudinaryService.DeleteFileAsync(existingImage.PublicId);
+                        QueueAiLayoutItemModerations(layoutDesignId, itemResults);
+                        await _unitOfWork.CommitTransactionAsync();
+                        transactionCommitted = true;
+                        throw new BadRequestException("No valid plant rows found for image generation");
                     }
-                    else if (!string.IsNullOrWhiteSpace(existingImage.ImageUrl))
-                    {
-                        deleted = await _cloudinaryService.DeleteFileByUrlAsync(existingImage.ImageUrl);
-                    }
 
-                    if (!deleted && (!string.IsNullOrWhiteSpace(existingImage.PublicId) || !string.IsNullOrWhiteSpace(existingImage.ImageUrl)))
+                    var existingImages = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
+                    foreach (var existingImage in existingImages)
                     {
-                        _logger.LogWarning(
-                            "Failed to delete old Cloudinary image for layout {LayoutDesignId}: PublicId={PublicId}, ImageUrl={ImageUrl}",
-                            layoutDesignId,
-                            existingImage.PublicId,
-                            existingImage.ImageUrl);
+                        var deleted = false;
 
-                        if (!string.IsNullOrWhiteSpace(existingImage.PublicId) && !string.IsNullOrWhiteSpace(existingImage.ImageUrl))
+                        if (!string.IsNullOrWhiteSpace(existingImage.PublicId))
+                        {
+                            deleted = await _cloudinaryService.DeleteFileAsync(existingImage.PublicId);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(existingImage.ImageUrl))
                         {
                             deleted = await _cloudinaryService.DeleteFileByUrlAsync(existingImage.ImageUrl);
                         }
+
+                        if (!deleted && (!string.IsNullOrWhiteSpace(existingImage.PublicId) || !string.IsNullOrWhiteSpace(existingImage.ImageUrl)))
+                        {
+                            _logger.LogWarning(
+                                "Failed to delete old Cloudinary image for layout {LayoutDesignId}: PublicId={PublicId}, ImageUrl={ImageUrl}",
+                                layoutDesignId,
+                                existingImage.PublicId,
+                                existingImage.ImageUrl);
+
+                            if (!string.IsNullOrWhiteSpace(existingImage.PublicId) && !string.IsNullOrWhiteSpace(existingImage.ImageUrl))
+                            {
+                                deleted = await _cloudinaryService.DeleteFileByUrlAsync(existingImage.ImageUrl);
+                            }
+                        }
+
+                        _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareRemove(existingImage);
                     }
 
-                    _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareRemove(existingImage);
+                    foreach (var candidate in candidates)
+                    {
+                        await ProcessCandidateAsync(layout, candidate, roomImageBase64, itemResults);
+                    }
+
+                    var trackedLayout = await _unitOfWork.LayoutDesignRepository.GetByIdAsync(layoutDesignId);
+                    if (trackedLayout != null)
+                    {
+                        var allSucceeded = itemResults.Count > 0 && itemResults.All(item => item.IsSuccess);
+                        trackedLayout.Status = allSucceeded
+                            ? (int)LayoutDesignStatusEnum.ImageGenerationCompleted
+                            : (int)LayoutDesignStatusEnum.PlantRecommendationCompleted;
+
+                        _unitOfWork.LayoutDesignRepository.PrepareUpdate(trackedLayout);
+                    }
+
+                    QueueAiLayoutItemModerations(layoutDesignId, itemResults);
+                    await _unitOfWork.CommitTransactionAsync();
+                    transactionCommitted = true;
+
+                    var successCount = itemResults.Count(item => item.IsSuccess);
+                    return new LayoutDesignImageGenerationResultDto
+                    {
+                        LayoutDesignId = layoutDesignId,
+                        TotalItems = itemResults.Count,
+                        SuccessCount = successCount,
+                        FailureCount = itemResults.Count - successCount,
+                        StatusAfter = itemResults.All(item => item.IsSuccess)
+                            ? (int)LayoutDesignStatusEnum.ImageGenerationCompleted
+                            : (int)LayoutDesignStatusEnum.PlantRecommendationCompleted,
+                        Items = itemResults
+                    };
                 }
-
-                foreach (var candidate in candidates)
+                catch
                 {
-                    await ProcessCandidateAsync(layout, candidate, roomImageBase64, itemResults);
+                    if (transactionStarted && !transactionCommitted)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                    }
+
+                    throw;
                 }
-
-                var trackedLayout = await _unitOfWork.LayoutDesignRepository.GetByIdAsync(layoutDesignId);
-                if (trackedLayout != null)
-                {
-                    var allSucceeded = itemResults.Count > 0 && itemResults.All(item => item.IsSuccess);
-                    trackedLayout.Status = allSucceeded
-                        ? (int)LayoutDesignStatusEnum.ImageGenerationCompleted
-                        : (int)LayoutDesignStatusEnum.PlantRecommendationCompleted;
-
-                    _unitOfWork.LayoutDesignRepository.PrepareUpdate(trackedLayout);
-                }
-
-                await _unitOfWork.CommitTransactionAsync();
-
-                var successCount = itemResults.Count(item => item.IsSuccess);
-                return new LayoutDesignImageGenerationResultDto
-                {
-                    LayoutDesignId = layoutDesignId,
-                    TotalItems = itemResults.Count,
-                    SuccessCount = successCount,
-                    FailureCount = itemResults.Count - successCount,
-                    StatusAfter = itemResults.All(item => item.IsSuccess)
-                        ? (int)LayoutDesignStatusEnum.ImageGenerationCompleted
-                        : (int)LayoutDesignStatusEnum.PlantRecommendationCompleted,
-                    Items = itemResults
-                };
             }
-            catch
+            catch (Exception ex)
             {
-                await _unitOfWork.RollbackTransactionAsync();
+                // fallback moderation chỉ thực hiện cho lỗi sớm trước transaction để tránh lưu nhầm pending changes sau rollback
+                if (!transactionStarted)
+                {
+                    await SaveAiLayoutModerationAsync(layoutDesignId, AilayoutResponseModerationStatus.Rejected, ex.Message);
+                }
+
                 throw;
             }
         }
@@ -190,13 +218,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             EnsureLayoutOwnership(layout, userId);
 
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-            return images.Select(image => new LayoutDesignGeneratedImageDto
-            {
-                Id = image.Id,
-                ImageUrl = image.ImageUrl,
-                FluxPromptUsed = image.FluxPromptUsed,
-                CreatedAt = image.CreatedAt
-            }).ToList();
+            return images.ToLayoutDesignGeneratedImageDtoList();
+        }
+
+        public async Task<List<LayoutDesignGeneratedImageDto>> GetAllGeneratedImagesByUserIdAsync(int userId)
+        {
+            var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetAllGeneratedImagesByUserIdAsync(userId);
+            return images.ToLayoutDesignGeneratedImageDtoList();
         }
 
         private async Task ProcessCandidateAsync(
@@ -438,6 +466,80 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             base64 = b64Element.GetString();
             return !string.IsNullOrWhiteSpace(base64);
+        }
+
+        private void QueueAiLayoutItemModerations(int layoutDesignId, IEnumerable<LayoutDesignImageGenerationItemResultDto> itemResults)
+        {
+            foreach (var item in itemResults)
+            {
+                var status = item.IsSuccess
+                    ? AilayoutResponseModerationStatus.Approved
+                    : AilayoutResponseModerationStatus.Rejected;
+
+                var moderation = new AilayoutResponseModeration
+                {
+                    LayoutDesignId = layoutDesignId,
+                    Status = (int)status,
+                    Reason = TrimAndLimit(BuildAiLayoutModerationReason(item), 255),
+                    ReviewedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.AiLayoutResponseModerationRepository.PrepareCreate(moderation);
+            }
+        }
+
+        private async Task SaveAiLayoutModerationAsync(
+            int? layoutDesignId,
+            AilayoutResponseModerationStatus status,
+            string? reason)
+        {
+            try
+            {
+                var defaultReason = status == AilayoutResponseModerationStatus.Approved
+                    ? "AI layout image generated successfully"
+                    : "AI layout image generation failed";
+
+                var moderation = new AilayoutResponseModeration
+                {
+                    LayoutDesignId = layoutDesignId,
+                    Status = (int)status,
+                    Reason = TrimAndLimit(string.IsNullOrWhiteSpace(reason) ? defaultReason : reason, 255),
+                    ReviewedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.AiLayoutResponseModerationRepository.PrepareCreate(moderation);
+                await _unitOfWork.SaveAsync();
+            }
+            catch (Exception saveEx)
+            {
+                _logger.LogError(saveEx, "Failed to save AI layout moderation. LayoutDesignId={LayoutDesignId}", layoutDesignId);
+            }
+        }
+
+        private static string BuildAiLayoutModerationReason(LayoutDesignImageGenerationItemResultDto item)
+        {
+            if (item.IsSuccess)
+            {
+                return $"LayoutDesignPlantId={item.LayoutDesignPlantId}: image generated successfully";
+            }
+
+            var errorCode = string.IsNullOrWhiteSpace(item.ErrorCode) ? "GENERATION_FAILED" : item.ErrorCode;
+            var errorMessage = string.IsNullOrWhiteSpace(item.ErrorMessage) ? "Image generation failed" : item.ErrorMessage;
+
+            return $"LayoutDesignPlantId={item.LayoutDesignPlantId}: {errorCode} - {errorMessage}";
+        }
+
+        private static string? TrimAndLimit(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength
+                ? trimmed
+                : trimmed[..maxLength];
         }
 
         private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate)

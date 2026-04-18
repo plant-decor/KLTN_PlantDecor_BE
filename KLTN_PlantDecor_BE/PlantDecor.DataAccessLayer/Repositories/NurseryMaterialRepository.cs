@@ -99,6 +99,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<PaginatedResult<NurseryMaterial>> SearchForShopAsync(
             Pagination pagination,
+            int? nurseryId,
             string? searchTerm,
             List<int>? categoryIds,
             List<int>? tagIds,
@@ -113,6 +114,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(nm => nm.Material).ThenInclude(m => m.MaterialImages)
                 .Include(nm => nm.Nursery)
                 .Where(nm => nm.IsActive && nm.Quantity > 0 && nm.Nursery.IsActive == true);
+
+            if (nurseryId.HasValue)
+            {
+                query = query.Where(nm => nm.NurseryId == nurseryId.Value);
+            }
 
             // Search term
             if (!string.IsNullOrWhiteSpace(searchTerm))

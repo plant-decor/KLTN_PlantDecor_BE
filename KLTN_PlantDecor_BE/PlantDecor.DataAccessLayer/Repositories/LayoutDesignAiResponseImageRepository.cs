@@ -14,7 +14,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<LayoutDesignAiResponseImage>> GetByLayoutDesignIdAsync(int layoutDesignId)
         {
             return await _context.LayoutDesignAiResponseImages
+                .Include(image => image.LayoutDesignPlant)
                 .Where(image => image.LayoutDesignId == layoutDesignId)
+                .OrderByDescending(image => image.CreatedAt)
+                .ThenByDescending(image => image.Id)
+                .ToListAsync();
+        }
+
+        public async Task<List<LayoutDesignAiResponseImage>> GetAllGeneratedImagesByUserIdAsync(int userId)
+        {
+            return await _context.LayoutDesignAiResponseImages
+                .Include(image => image.LayoutDesignPlant)
+                .Where(image => image.LayoutDesign.UserId == userId)
                 .OrderByDescending(image => image.CreatedAt)
                 .ThenByDescending(image => image.Id)
                 .ToListAsync();

@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -209,7 +209,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (order.UserId != userId)
                 throw new ForbiddenException("You don't have access to this order");
 
-            var cancellableStatuses = new[] { (int)OrderStatusEnum.Pending, (int)OrderStatusEnum.DepositPaid };
+            var cancellableStatuses = new[] { (int)OrderStatusEnum.Pending, (int)OrderStatusEnum.DepositPaid, (int)OrderStatusEnum.Paid };
             if (!cancellableStatuses.Contains(order.Status ?? -1))
                 throw new BadRequestException("Order cannot be cancelled in its current status");
 
@@ -227,9 +227,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Update NurseryOrderDetails status to Cancelled (except already delivered items)
                 foreach (var detail in nurseryOrder.NurseryOrderDetails
-                             .Where(d => d.Status != (int)NurseryOrderStatus.Delivered))
+                             .Where(d => d.Status != (int)OrderStatusEnum.Delivered))
                 {
-                    detail.Status = (int)NurseryOrderStatus.Cancelled;
+                    detail.Status = (int)OrderStatusEnum.Cancelled;
                 }
             }
 
@@ -257,7 +257,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Update all NurseryOrder status to match parent Order status
             foreach (var nurseryOrder in order.NurseryOrders)
             {
-                nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
+                nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
                 nurseryOrder.UpdatedAt = DateTime.Now;
             }
 
@@ -500,7 +500,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Quantity = i.Quantity,
                     UnitPrice = i.Price,
                     Amount = i.Price * i.Quantity,
-                    Status = (int)NurseryOrderStatus.Pending
+                    Status = (int)OrderStatusEnum.Pending
                 }).ToList();
 
                 // Add invoice details for Order invoice
@@ -519,7 +519,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     DepositAmount = depositAmount,
                     RemainingAmount = remainingAmount,
                     PaymentStrategy = request.PaymentStrategy,
-                    Status = (int)NurseryOrderStatus.Pending,
+                    Status = (int)OrderStatusEnum.Pending,
                     Note = request.Note,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now,

@@ -655,6 +655,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.GrowthRate).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.RoomStyle).HasColumnType("integer[]");
+            entity.Property(e => e.RoomType).HasColumnType("integer[]");
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.Origin).HasMaxLength(100);
             entity.Property(e => e.PotSize).HasMaxLength(50);
@@ -709,8 +711,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.PurchaseCount).HasDefaultValue(0);
             entity.Property(e => e.ComboPrice).HasPrecision(18, 2);
-            entity.Property(e => e.SuitableRooms).HasColumnType("jsonb");
-            entity.Property(e => e.SuitableSpace).HasMaxLength(100);
+            entity.Property(e => e.SuitableRooms).HasColumnType("integer[]");
             entity.Property(e => e.ThemeDescription).HasMaxLength(500);
             entity.Property(e => e.ThemeName).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");

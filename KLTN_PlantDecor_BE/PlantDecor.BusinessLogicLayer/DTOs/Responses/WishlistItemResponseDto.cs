@@ -7,6 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int Id { get; set; }
         public WishlistItemType ItemType { get; set; }
         public int ItemId { get; set; }
+        public int? PlantId { get; set; }
         public string ItemName { get; set; } = null!;
         public string? ItemImageUrl { get; set; }
         public decimal? Price { get; set; }

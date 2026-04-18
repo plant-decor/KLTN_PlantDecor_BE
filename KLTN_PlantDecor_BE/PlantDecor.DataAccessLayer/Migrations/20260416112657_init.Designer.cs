@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260413064538_init")]
+    [Migration("20260416112657_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1344,6 +1344,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.PrimitiveCollection<List<int>>("RoomStyle")
+                        .HasColumnType("integer[]");
+
+                    b.PrimitiveCollection<List<int>>("RoomType")
+                        .HasColumnType("integer[]");
+
                     b.Property<int?>("Size")
                         .HasColumnType("integer");
 
@@ -1424,12 +1430,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Season")
                         .HasColumnType("integer");
 
-                    b.PrimitiveCollection<List<string>>("SuitableRooms")
-                        .HasColumnType("jsonb");
+                    b.PrimitiveCollection<List<int>>("SuitableRooms")
+                        .HasColumnType("integer[]");
 
-                    b.Property<string>("SuitableSpace")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<int?>("SuitableSpace")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ThemeDescription")
                         .HasMaxLength(500)

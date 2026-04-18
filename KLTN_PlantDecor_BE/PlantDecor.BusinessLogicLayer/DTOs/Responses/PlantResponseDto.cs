@@ -10,6 +10,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? BasePrice { get; set; }
         public int? PlacementType { get; set; }
         public string PlacementTypeName { get; set; } = null!;
+        public List<int>? RoomStyle { get; set; }
+        public List<string>? RoomStyleNames { get; set; }
+        public List<int>? RoomType { get; set; }
+        public List<string>? RoomTypeNames { get; set; }
         public int? Size { get; set; }
         public string? SizeName { get; set; }
         public string? GrowthRate { get; set; }

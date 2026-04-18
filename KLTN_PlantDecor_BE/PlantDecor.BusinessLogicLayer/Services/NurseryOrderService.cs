@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -37,6 +38,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 pagination.PageSize);
         }
 
+        public async Task<List<InvoiceResponseDto>> GetPendingInvoicesForMyNurseryAsync(int currentUserId)
+        {
+            var currentUser = await GetValidatedShipperAsync(currentUserId);
+
+            var invoices = await _unitOfWork.InvoiceRepository.GetPendingRemainingInvoicesForShipperAsync(
+                currentUserId,
+                currentUser.NurseryId!.Value);
+
+            return invoices.Select(MapInvoiceToDto).ToList();
+        }
+
+        public async Task<NurseryOrderResponseDto> GetNurseryOrderDetailForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
+                ?? throw new UnauthorizedException("Unable to identify user from token");
+
+            if (currentUser.RoleId != (int)RoleEnum.Manager)
+                throw new ForbiddenException("Only manager can access this resource");
+
+            if (!currentUser.NurseryId.HasValue)
+                throw new ForbiddenException("Manager is not assigned to any nursery");
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to access this nursery order");
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
@@ -69,19 +101,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Assigned)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Assigned)
                 throw new BadRequestException("Đơn không ở trạng thái có thể bắt đầu giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.Shipping;
+            nurseryOrder.Status = (int)OrderStatusEnum.Shipping;
             nurseryOrder.ShippingStartedAt = now;
             nurseryOrder.ShipperNote = request.ShipperNote;
             nurseryOrder.UpdatedAt = now;
+
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                if (parentOrder.Status != (int)OrderStatusEnum.Shipping)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Shipping;
+                    parentOrder.UpdatedAt = now;
+                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+                }
+            }
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
 
             return MapToDto(nurseryOrder);
+
+
         }
 
         public async Task<NurseryOrderResponseDto> MarkDeliveredAsync(int currentUserId, int nurseryOrderId, MarkDeliveredRequestDto request)
@@ -92,14 +137,44 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.Delivered;
+            nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
             nurseryOrder.DeliveredAt = now;
             nurseryOrder.DeliveryNote = request.DeliveryNote;
             nurseryOrder.UpdatedAt = now;
+
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                if (parentOrder.Status != (int)OrderStatusEnum.Delivered)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Delivered;
+                    parentOrder.UpdatedAt = now;
+                }
+
+                var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
+                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)OrderStatusEnum.Delivered));
+
+                if (areAllNurseryOrdersDeliveredOrAbove)
+                {
+                    if (parentOrder.PaymentStrategy == (int)PaymentStrategiesEnum.Deposit)
+                    {
+                        await EnsureRemainingBalanceInvoiceForDepositAsync(parentOrder, now);
+                        parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                    }
+                    else
+                    {
+                        parentOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                    }
+
+                    parentOrder.UpdatedAt = now;
+                }
+
+                _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+            }
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
@@ -115,11 +190,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             ValidateOwnership(currentUser, nurseryOrder);
 
-            if (nurseryOrder.Status != (int)NurseryOrderStatus.Shipping)
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
 
             var now = GetCurrentVietnamTime();
-            nurseryOrder.Status = (int)NurseryOrderStatus.DeliveryFailed;
+            nurseryOrder.Status = (int)OrderStatusEnum.Failed;
             nurseryOrder.DeliveryNote = request.FailureReason;
             nurseryOrder.UpdatedAt = now;
 
@@ -155,24 +230,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private static NurseryOrderResponseDto MapToDto(NurseryOrder order) => new()
         {
             Id = order.Id,
+            OrderId = order.OrderId,
             NurseryId = order.NurseryId,
             NurseryName = order.Nursery?.Name,
             ShipperId = order.ShipperId,
             ShipperName = order.Shipper?.Username ?? order.Shipper?.Email,
+            ShipperEmail = order.Shipper?.Email,
+            ShipperPhone = order.Shipper?.PhoneNumber,
+            CustomerId = order.Order?.UserId ?? 0,
+            CustomerName = order.Order?.CustomerName,
+            CustomerEmail = order.Order?.Customer?.Email,
+            CustomerPhone = order.Order?.Phone ?? order.Order?.Customer?.PhoneNumber,
+            CustomerAddress = order.Order?.Address,
             SubTotalAmount = order.SubTotalAmount,
             Status = order.Status,
-            StatusName = order.Status.HasValue ? ((NurseryOrderStatus)order.Status.Value).ToString() : null,
+            StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
             Note = order.Note,
-            Items = order.NurseryOrderDetails.Select(d => new OrderItemResponseDto
+            Items = order.NurseryOrderDetails
+                .Select(d => d.ToOrderItemResponse())
+                .ToList()
+        };
+
+        private static InvoiceResponseDto MapInvoiceToDto(Invoice invoice) => new()
+        {
+            Id = invoice.Id,
+            OrderId = invoice.OrderId,
+            IssuedDate = invoice.IssuedDate,
+            TotalAmount = invoice.TotalAmount,
+            Type = invoice.Type,
+            TypeName = invoice.Type.HasValue ? ((InvoiceTypeEnum)invoice.Type.Value).ToString() : null,
+            Status = invoice.Status,
+            StatusName = invoice.Status.HasValue ? ((InvoiceStatusEnum)invoice.Status.Value).ToString() : null,
+            Details = invoice.InvoiceDetails.Select(d => new InvoiceDetailResponseDto
             {
                 Id = d.Id,
                 ItemName = d.ItemName,
+                UnitPrice = d.UnitPrice,
                 Quantity = d.Quantity,
-                Price = d.UnitPrice,
-                Status = d.Status,
-                StatusName = d.Status.HasValue ? ((NurseryOrderStatus)d.Status.Value).ToString() : null
+                Amount = d.Amount
             }).ToList()
         };
 
@@ -187,6 +284,51 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 return DateTime.UtcNow.AddHours(7);
             }
+        }
+
+        private async Task EnsureRemainingBalanceInvoiceForDepositAsync(Order order, DateTime issuedDate)
+        {
+            if ((order.RemainingAmount ?? 0) <= 0)
+            {
+                return;
+            }
+
+            var hasExistingRemainingInvoice = order.Invoices.Any(i =>
+                i.Type == (int)InvoiceTypeEnum.RemainingBalance &&
+                i.Status != (int)InvoiceStatusEnum.Cancelled);
+
+            if (hasExistingRemainingInvoice)
+            {
+                return;
+            }
+
+            var invoiceDetails = order.NurseryOrders
+                .SelectMany(no => no.NurseryOrderDetails)
+                .Select(d => new InvoiceDetail
+                {
+                    ItemName = d.ItemName,
+                    UnitPrice = d.UnitPrice,
+                    Quantity = d.Quantity,
+                    Amount = d.Amount
+                })
+                .ToList();
+
+            if (!invoiceDetails.Any())
+            {
+                throw new BadRequestException($"Cannot create remaining invoice for order {order.Id} because no invoice details were found");
+            }
+
+            var remainingInvoice = new Invoice
+            {
+                OrderId = order.Id,
+                Type = (int)InvoiceTypeEnum.RemainingBalance,
+                TotalAmount = order.RemainingAmount,
+                Status = (int)InvoiceStatusEnum.Pending,
+                IssuedDate = issuedDate,
+                InvoiceDetails = invoiceDetails
+            };
+
+            _unitOfWork.InvoiceRepository.PrepareCreate(remainingInvoice);
         }
     }
 }

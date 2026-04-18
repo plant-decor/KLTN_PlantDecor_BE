@@ -176,6 +176,32 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("create-caretaker")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> CreateCaretakerAccount([FromBody] CreateCaretakerWithSpecializationsRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var managerIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(managerIdClaim) || !int.TryParse(managerIdClaim, out int managerId))
+            {
+                throw new UnauthorizedException("Unable to identify manager from token");
+            }
+
+            var result = await _authenticationService.CreateCaretakerAsync(managerId, request);
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<StaffWithSpecializationsResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Caretaker account created with specializations successfully!",
+                Payload = result
+            });
+        }
+
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout(LogoutRequest request)

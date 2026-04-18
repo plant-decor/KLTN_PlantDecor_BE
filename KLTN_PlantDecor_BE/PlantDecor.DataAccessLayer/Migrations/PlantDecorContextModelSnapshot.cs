@@ -1341,6 +1341,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.PrimitiveCollection<List<int>>("RoomStyle")
+                        .HasColumnType("integer[]");
+
+                    b.PrimitiveCollection<List<int>>("RoomType")
+                        .HasColumnType("integer[]");
+
                     b.Property<int?>("Size")
                         .HasColumnType("integer");
 
@@ -1421,12 +1427,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Season")
                         .HasColumnType("integer");
 
-                    b.PrimitiveCollection<List<string>>("SuitableRooms")
-                        .HasColumnType("jsonb");
+                    b.PrimitiveCollection<List<int>>("SuitableRooms")
+                        .HasColumnType("integer[]");
 
-                    b.Property<string>("SuitableSpace")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<int?>("SuitableSpace")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ThemeDescription")
                         .HasMaxLength(500)

@@ -12,6 +12,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             CommonPlantId = item.CommonPlantId,
             NurseryPlantComboId = item.NurseryPlantComboId,
             NurseryMaterialId = item.NurseryMaterialId,
+            PlantId = item.CommonPlant?.PlantId,
+            PlantComboId = item.NurseryPlantCombo?.PlantComboId,
+            MaterialId = item.NurseryMaterial?.MaterialId,
             NurseryId = item.CommonPlant?.NurseryId
                 ?? item.NurseryPlantCombo?.NurseryId
                 ?? item.NurseryMaterial?.NurseryId
@@ -23,6 +26,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             ProductName = item.CommonPlant?.Plant?.Name
                 ?? item.NurseryPlantCombo?.PlantCombo?.ComboName
                 ?? item.NurseryMaterial?.Material?.Name,
+            PrimaryImageUrl = item.CommonPlant?.Plant?.PlantImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.CommonPlant?.Plant?.PlantImages.FirstOrDefault()?.ImageUrl
+                ?? item.NurseryPlantCombo?.PlantCombo?.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.NurseryPlantCombo?.PlantCombo?.PlantComboImages.FirstOrDefault()?.ImageUrl
+                ?? item.NurseryMaterial?.Material?.MaterialImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl
+                ?? item.NurseryMaterial?.Material?.MaterialImages.FirstOrDefault()?.ImageUrl,
             Quantity = item.Quantity,
             Price = item.Price,
             CreatedAt = item.CreatedAt

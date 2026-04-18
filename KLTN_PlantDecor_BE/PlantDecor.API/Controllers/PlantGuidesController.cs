@@ -32,6 +32,17 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> GetAllPlantGuides([FromQuery] Pagination pagination)
         {
             var guides = await _plantGuideService.GetAllPlantGuidesAsync(pagination);
+
+            if (guides == null || guides.TotalCount == 0)
+            {
+                return Ok(new ApiResponse<object>
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "No plant guides found"
+                });
+            }
+
             return Ok(new ApiResponse<PaginatedResult<PlantGuideResponseDto>>
             {
                 Success = true,
@@ -51,10 +62,10 @@ namespace PlantDecor.API.Controllers
             var guide = await _plantGuideService.GetPlantGuideByIdAsync(id);
             if (guide == null)
             {
-                return NotFound(new ApiResponse<object>
+                return Ok(new ApiResponse<object>
                 {
                     Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusCode = StatusCodes.Status200OK,
                     Message = $"PlantGuide with ID {id} not found"
                 });
             }
@@ -78,10 +89,10 @@ namespace PlantDecor.API.Controllers
             var guide = await _plantGuideService.GetPlantGuideByPlantIdAsync(plantId);
             if (guide == null)
             {
-                return NotFound(new ApiResponse<object>
+                return Ok(new ApiResponse<object>
                 {
                     Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusCode = StatusCodes.Status200OK,
                     Message = $"PlantGuide for Plant ID {plantId} not found"
                 });
             }
@@ -99,6 +110,7 @@ namespace PlantDecor.API.Controllers
         /// Tạo PlantGuide mới
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreatePlantGuide([FromBody] PlantGuideRequestDto request)
         {
             var guide = await _plantGuideService.CreatePlantGuideAsync(request);
@@ -115,6 +127,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật PlantGuide
         /// </summary>
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdatePlantGuide(int id, [FromBody] PlantGuideUpdateDto request)
         {
             var guide = await _plantGuideService.UpdatePlantGuideAsync(id, request);
@@ -131,6 +144,7 @@ namespace PlantDecor.API.Controllers
         /// Xóa PlantGuide
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePlantGuide(int id)
         {
             await _plantGuideService.DeletePlantGuideAsync(id);

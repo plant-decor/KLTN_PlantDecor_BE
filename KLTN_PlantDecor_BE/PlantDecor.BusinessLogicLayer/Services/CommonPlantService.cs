@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -18,7 +19,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
         private const string NURSERY_COMMON_PLANTS_KEY = "nursery_common_plants";
@@ -28,13 +28,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public CommonPlantService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -510,6 +508,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Select(t => t.TagName)
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToList() ?? new List<string>(),
+                    RoomTypes = plant?.RoomType?.ToList() ?? new List<int>(),
+                    RoomTypeNames = GetRoomTypeNames(plant?.RoomType),
+                    RoomStyles = plant?.RoomStyle?.ToList() ?? new List<int>(),
+                    RoomStyleNames = GetRoomStyleNames(plant?.RoomStyle),
                     NurseryId = entity.NurseryId,
                     NurseryName = entity.Nursery?.Name,
                     Price = plant?.BasePrice,
@@ -521,10 +523,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessCommonPlantEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessCommonPlantIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.CommonPlant));
             }
             catch
             {
@@ -543,6 +541,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Log but don't fail
             }
+        }
+
+        private static List<string> GetRoomTypeNames(List<int>? roomTypes)
+        {
+            if (roomTypes == null || roomTypes.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomTypes
+                .Distinct()
+                .Select(roomType => Enum.IsDefined(typeof(RoomTypeEnum), roomType)
+                    ? ((RoomTypeEnum)roomType).ToString()
+                    : roomType.ToString())
+                .ToList();
+        }
+
+        private static List<string> GetRoomStyleNames(List<int>? roomStyles)
+        {
+            if (roomStyles == null || roomStyles.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return roomStyles
+                .Distinct()
+                .Select(roomStyle => Enum.IsDefined(typeof(RoomStyleEnum), roomStyle)
+                    ? ((RoomStyleEnum)roomStyle).ToString()
+                    : roomStyle.ToString())
+                .ToList();
         }
 
         private static Guid ConvertToGuid(int id)

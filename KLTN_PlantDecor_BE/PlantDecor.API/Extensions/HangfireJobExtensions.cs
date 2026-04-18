@@ -158,62 +158,6 @@ namespace PlantDecor.API.Extensions
 
         #endregion
 
-        #region Langflow Ingestion Jobs
-
-        /// <summary>
-        /// Enqueue CommonPlant langflow ingestion
-        /// </summary>
-        public static string EnqueueCommonPlantLangflowIngestion(
-            this IBackgroundJobClient backgroundJobClient,
-            CommonPlantEmbeddingDto dto,
-            Guid entityId,
-            string entityType)
-        {
-            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                service => service.ProcessCommonPlantIngestionAsync(dto, entityId, entityType));
-        }
-
-        /// <summary>
-        /// Enqueue PlantInstance langflow ingestion
-        /// </summary>
-        public static string EnqueuePlantInstanceLangflowIngestion(
-            this IBackgroundJobClient backgroundJobClient,
-            PlantInstanceEmbeddingDto dto,
-            Guid entityId,
-            string entityType)
-        {
-            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                service => service.ProcessPlantInstanceIngestionAsync(dto, entityId, entityType));
-        }
-
-        /// <summary>
-        /// Enqueue NurseryPlantCombo langflow ingestion
-        /// </summary>
-        public static string EnqueueNurseryPlantComboLangflowIngestion(
-            this IBackgroundJobClient backgroundJobClient,
-            NurseryPlantComboEmbeddingDto dto,
-            Guid entityId,
-            string entityType)
-        {
-            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                service => service.ProcessNurseryPlantComboIngestionAsync(dto, entityId, entityType));
-        }
-
-        /// <summary>
-        /// Enqueue NurseryMaterial langflow ingestion
-        /// </summary>
-        public static string EnqueueNurseryMaterialLangflowIngestion(
-            this IBackgroundJobClient backgroundJobClient,
-            NurseryMaterialEmbeddingDto dto,
-            Guid entityId,
-            string entityType)
-        {
-            return backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                service => service.ProcessNurseryMaterialIngestionAsync(dto, entityId, entityType));
-        }
-
-        #endregion
-
         /// <summary>
         /// Enqueue service care schedule generation after a Service order is paid
         /// </summary>
@@ -249,6 +193,12 @@ namespace PlantDecor.API.Extensions
                 "recalculate-user-preferences",
                 service => service.CalculatedAllUserPreferenceAsync(),
                 "0 8 * * *");
+
+            // Auto-complete orders in PendingConfirmation for at least 3 days (run daily)
+            recurringJobManager.AddOrUpdate<IOrderBackgroundJobService>(
+                "auto-complete-pending-confirmation-orders",
+                service => service.AutoCompletePendingConfirmationOrdersAsync(),
+                "0 0 * * *");
         }
     }
 }

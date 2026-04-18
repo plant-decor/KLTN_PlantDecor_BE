@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -18,7 +19,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
-        private readonly ILangflowService _langflowService;
 
         private const string ALL_NURSERY_MATERIALS_KEY = "nursery_materials_all";
         private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
@@ -26,13 +26,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public NurseryMaterialService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient,
-            ILangflowService langflowService)
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
-            _langflowService = langflowService;
         }
 
         #region CRUD Operations
@@ -329,9 +327,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<NurseryMaterialListResponseDto>> GetMyNurseryMaterialsAsync(int managerId, Pagination pagination)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
 
             return await GetByNurseryIdAsync(nursery.Id, pagination);
         }
@@ -350,6 +346,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return imported;
         }
 
+        private async Task<Nursery> ResolveOperatorNurseryForReadAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new NotFoundException("Bạn chưa có vựa nào");
+        }
+
         #endregion
 
         #region Shop Operations
@@ -358,6 +371,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var paginatedEntities = await _unitOfWork.NurseryMaterialRepository.SearchForShopAsync(
                 pagination,
+                searchRequest.NurseryId,
                 searchRequest.SearchTerm,
                 searchRequest.CategoryIds,
                 searchRequest.TagIds,
@@ -435,10 +449,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Queue Hangfire background job for local PostgreSQL
                 _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
                     service => service.ProcessNurseryMaterialEmbeddingAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
-
-                // Send to Langflow webhook via Hangfire
-                //_backgroundJobClient.Enqueue<ILangflowBackgroundJobService>(
-                //    service => service.ProcessNurseryMaterialIngestionAsync(embeddingDto, entityId, EmbeddingEntityTypes.NurseryMaterial));
             }
             catch
             {

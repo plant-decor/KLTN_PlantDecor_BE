@@ -1,11 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
@@ -47,7 +48,102 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// Analyze room image and get plant recommendations
+        /// Get all layout designs of the authenticated user.
+        /// Each layout includes related layout plants and generated AI response images.
+        /// </summary>
+        [HttpGet("layouts")]
+        [Authorize]
+        [ProducesResponseType(typeof(PaginatedResult<LayoutDesignListResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllLayouts([FromQuery] Pagination pagination)
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var layouts = await _roomDesignService.GetAllLayoutsAsync(userId, pagination);
+
+                return Ok(new ApiResponse<PaginatedResult<LayoutDesignListResponseDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Get all layouts successfully",
+                    Payload = layouts
+                });
+            }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while getting layouts");
+                throw new Exception("Failed to get layouts. Please try again.");
+            }
+        }
+
+        // Analyze room image and get plant recommendations.
+        // Kept as commented reference for the legacy JSON base64 endpoint.
+        //[HttpPost("analyze")]
+        //[ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        //public async Task<IActionResult> AnalyzeAndRecommend([FromBody] RoomDesignRequestDto request)
+        //{
+        //    if (string.IsNullOrWhiteSpace(request.RoomImageBase64))
+        //    {
+        //        return BadRequest(new { success = false, message = "Room image is required" });
+        //    }
+
+        //    // Validate base64 image
+        //    var normalizedImageBase64 = NormalizeBase64(request.RoomImageBase64);
+        //    try
+        //    {
+        //        var imageBytes = Convert.FromBase64String(normalizedImageBase64);
+        //        if (imageBytes.Length > 10 * 1024 * 1024) // 10MB limit
+        //        {
+        //            return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
+        //        }
+        //    }
+        //    catch (FormatException)
+        //    {
+        //        return BadRequest(new { success = false, message = "Invalid base64 image format" });
+        //    }
+
+        //    try
+        //    {
+        //        request.RoomImageBase64 = normalizedImageBase64;
+        //        var result = await _roomDesignService.AnalyzeAndRecommendAsync(request);
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            data = result,
+        //            message = $"Found {result.TotalCount} plant recommendations"
+        //        });
+        //    }
+        //    catch (BadRequestException ex)
+        //    {
+        //        _logger.LogWarning(ex, "Invalid room design request");
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error in room design analysis");
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = "Failed to analyze room. Please try again."
+        //        });
+        //    }
+        //}
+
+        /// <summary>
+        /// Analyze room image and get plant recommendations from multipart form-data upload.
         /// </summary>
         /// <remarks>
         /// This endpoint uses AI to:
@@ -60,84 +156,29 @@ namespace PlantDecor.API.Controllers
         /// - Currently purchasable (in stock)
         /// - Matching the specified filters (budget, feng shui, etc.)
         /// </remarks>
-        /// <param name="request">Room design request with image and optional filters</param>
+        /// <param name="request">Multipart request containing image and optional filters</param>
         /// <returns>Room analysis and plant recommendations</returns>
         /// <response code="200">Successfully analyzed room and generated recommendations</response>
         /// <response code="400">Invalid request (missing image, etc.)</response>
+        /// <response code="401">Unauthorized request (user not logged in)</response>
         /// <response code="500">AI processing error</response>
-        [HttpPost("analyze")]
-        [ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AnalyzeAndRecommend([FromBody] RoomDesignRequestDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.RoomImageBase64))
-            {
-                return BadRequest(new { success = false, message = "Room image is required" });
-            }
-
-            // Validate base64 image
-            var normalizedImageBase64 = NormalizeBase64(request.RoomImageBase64);
-            try
-            {
-                var imageBytes = Convert.FromBase64String(normalizedImageBase64);
-                if (imageBytes.Length > 10 * 1024 * 1024) // 10MB limit
-                {
-                    return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
-                }
-            }
-            catch (FormatException)
-            {
-                return BadRequest(new { success = false, message = "Invalid base64 image format" });
-            }
-
-            try
-            {
-                request.RoomImageBase64 = normalizedImageBase64;
-                var result = await _roomDesignService.AnalyzeAndRecommendAsync(request);
-
-                return Ok(new
-                {
-                    success = true,
-                    data = result,
-                    message = $"Found {result.TotalCount} plant recommendations"
-                });
-            }
-            catch (BadRequestException ex)
-            {
-                _logger.LogWarning(ex, "Invalid room design request");
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in room design analysis");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room. Please try again."
-                });
-            }
-        }
-
-        /// <summary>
-        /// Analyze room image and get plant recommendations from multipart form-data upload.
-        /// </summary>
-        /// <param name="request">Multipart request containing image file and optional filters</param>
-        /// <returns>Room analysis and plant recommendations</returns>
         [HttpPost("analyze-upload")]
+        [Authorize(Roles = "Customer")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AnalyzeAndRecommendUpload([FromForm] AnalyzeAndRecommendUploadRequest request)
         {
             try
             {
-                var userId = GetOptionalUserId();
+                if (request.Image == null || request.Image.Length == 0)
+                {
+                    throw new BadRequestException("Room image file is required");
+                }
+
+                var userId = GetRequiredUserId();
                 var result = await _roomDesignService.AnalyzeAndRecommendUploadAsync(request, userId);
 
                 return Ok(new
@@ -147,89 +188,76 @@ namespace PlantDecor.API.Controllers
                     message = $"Found {result.TotalCount} plant recommendations"
                 });
             }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
             catch (BadRequestException ex)
             {
                 _logger.LogWarning(ex, "Invalid room design upload request");
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
+                throw new BadRequestException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in room design analysis (multipart)");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room. Please try again."
-                });
+                throw new Exception("Failed to analyze room. Please try again.");
             }
         }
 
-        private int? GetOptionalUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.TryParse(userIdClaim, out var userId) ? userId : null;
-        }
+        // Analyze room image only (without plant recommendations).
+        // Kept as commented reference for the legacy JSON base64 endpoint.
+        //[HttpPost("analyze-room-only")]
+        //[ProducesResponseType(typeof(RoomAnalysisDto), StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //public async Task<IActionResult> AnalyzeRoomOnly([FromBody] AnalyzeRoomOnlyRequest request)
+        //{
+        //    if (string.IsNullOrWhiteSpace(request.ImageBase64))
+        //    {
+        //        return BadRequest(new { success = false, message = "Room image is required" });
+        //    }
+
+        //    var normalizedImageBase64 = NormalizeBase64(request.ImageBase64);
+        //    try
+        //    {
+        //        var imageBytes = Convert.FromBase64String(normalizedImageBase64);
+        //        if (imageBytes.Length > 10 * 1024 * 1024) // 10MB limit
+        //        {
+        //            return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
+        //        }
+        //    }
+        //    catch (FormatException)
+        //    {
+        //        return BadRequest(new { success = false, message = "Invalid base64 image format" });
+        //    }
+
+        //    try
+        //    {
+        //        var result = await _roomDesignService.AnalyzeRoomAsync(normalizedImageBase64);
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            data = result
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error analyzing room");
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = "Failed to analyze room"
+        //        });
+        //    }
+        //}
 
         /// <summary>
-        /// Analyze room image only (without plant recommendations)
+        /// Analyze room image only from multipart form-data upload.
         /// </summary>
         /// <remarks>
         /// Quick analysis of room characteristics without searching for plants.
         /// Useful for previewing the analysis before getting recommendations.
         /// </remarks>
-        /// <param name="request">Request containing a base64 encoded room image</param>
-        /// <returns>Room analysis result</returns>
-        [HttpPost("analyze-room-only")]
-        [ProducesResponseType(typeof(RoomAnalysisDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> AnalyzeRoomOnly([FromBody] AnalyzeRoomOnlyRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.ImageBase64))
-            {
-                return BadRequest(new { success = false, message = "Room image is required" });
-            }
-
-            var normalizedImageBase64 = NormalizeBase64(request.ImageBase64);
-            try
-            {
-                var imageBytes = Convert.FromBase64String(normalizedImageBase64);
-                if (imageBytes.Length > 10 * 1024 * 1024) // 10MB limit
-                {
-                    return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
-                }
-            }
-            catch (FormatException)
-            {
-                return BadRequest(new { success = false, message = "Invalid base64 image format" });
-            }
-
-            try
-            {
-                var result = await _roomDesignService.AnalyzeRoomAsync(normalizedImageBase64);
-
-                return Ok(new
-                {
-                    success = true,
-                    data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error analyzing room");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room"
-                });
-            }
-        }
-
-        /// <summary>
-        /// Analyze room image only from multipart form-data upload.
-        /// </summary>
         /// <param name="request">Multipart request containing image file</param>
         /// <returns>Room analysis result</returns>
         [HttpPost("analyze-room-only-upload")]
@@ -240,12 +268,12 @@ namespace PlantDecor.API.Controllers
         {
             if (request.Image == null || request.Image.Length == 0)
             {
-                return BadRequest(new { success = false, message = "Room image file is required" });
+                throw new BadRequestException("Room image file is required");
             }
 
             if (request.Image.Length > 10 * 1024 * 1024) // 10MB limit
             {
-                return BadRequest(new { success = false, message = "Image size exceeds 10MB limit" });
+                throw new BadRequestException("Image size exceeds 10MB limit");
             }
 
             try
@@ -256,21 +284,18 @@ namespace PlantDecor.API.Controllers
                 var imageBase64 = Convert.ToBase64String(memoryStream.ToArray());
 
                 var result = await _roomDesignService.AnalyzeRoomAsync(imageBase64);
-
-                return Ok(new
+                return Ok(new ApiResponse<RoomAnalysisDto>
                 {
-                    success = true,
-                    data = result
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Room analysis successful",
+                    Payload = result
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error analyzing room (multipart)");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to analyze room"
-                });
+                throw new Exception("Failed to analyze room. Please try again.");
             }
         }
 
@@ -294,13 +319,7 @@ namespace PlantDecor.API.Controllers
 
                 if (result.SuccessCount == 0)
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<LayoutDesignImageGenerationResultDto>
-                    {
-                        Success = false,
-                        StatusCode = StatusCodes.Status500InternalServerError,
-                        Message = "Image generation failed for all items",
-                        Payload = result
-                    });
+                    throw new Exception("Image generation failed for all items");
                 }
 
                 return Ok(new ApiResponse<LayoutDesignImageGenerationResultDto>
@@ -313,49 +332,24 @@ namespace PlantDecor.API.Controllers
             }
             catch (UnauthorizedException ex)
             {
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status401Unauthorized,
-                    Message = ex.Message
-                });
+                throw new UnauthorizedException(ex.Message);
             }
             catch (ForbiddenException ex)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status403Forbidden,
-                    Message = ex.Message
-                });
+                throw new ForbiddenException(ex.Message);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = ex.Message
-                });
+                throw new NotFoundException(ex.Message);
             }
             catch (BadRequestException ex)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status400BadRequest,
-                    Message = ex.Message
-                });
+                throw new BadRequestException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while generating images for LayoutDesign {LayoutDesignId}", layoutDesignId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    Message = "Failed to generate images"
-                });
+                throw new Exception("Failed to generate images. Please try again.");
             }
         }
 
@@ -385,40 +379,53 @@ namespace PlantDecor.API.Controllers
             }
             catch (UnauthorizedException ex)
             {
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status401Unauthorized,
-                    Message = ex.Message
-                });
+                throw new UnauthorizedException(ex.Message);
             }
             catch (ForbiddenException ex)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status403Forbidden,
-                    Message = ex.Message
-                });
+                throw new ForbiddenException(ex.Message);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = ex.Message
-                });
+                throw new NotFoundException(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while listing generated images for LayoutDesign {LayoutDesignId}", layoutDesignId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
+                throw new Exception("Failed to fetch generated images. Please try again.");
+            }
+        }
+
+        /// <summary>
+        /// Get all generated AI images of the authenticated user.
+        /// </summary>
+        [HttpGet("generated-images")]
+        [Authorize]
+        [ProducesResponseType(typeof(List<LayoutDesignGeneratedImageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetAllGeneratedImagesByUserId()
+        {
+            try
+            {
+                var userId = GetRequiredUserId();
+                var result = await _layoutDesignImageGenerationService.GetAllGeneratedImagesByUserIdAsync(userId);
+
+                return Ok(new ApiResponse<List<LayoutDesignGeneratedImageDto>>
                 {
-                    Success = false,
-                    StatusCode = StatusCodes.Status500InternalServerError,
-                    Message = "Failed to fetch generated images"
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = $"Found {result.Count} generated images",
+                    Payload = result
                 });
+            }
+            catch (UnauthorizedException ex)
+            {
+                throw new UnauthorizedException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while listing generated images by user");
+                throw new Exception("Failed to fetch generated images. Please try again.");
             }
         }
 
@@ -433,17 +440,17 @@ namespace PlantDecor.API.Controllers
             return userId;
         }
 
-        private static string NormalizeBase64(string value)
-        {
-            const string marker = "base64,";
-            var markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (markerIndex >= 0)
-            {
-                return value[(markerIndex + marker.Length)..].Trim();
-            }
+        //private static string NormalizeBase64(string value)
+        //{
+        //    const string marker = "base64,";
+        //    var markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        //    if (markerIndex >= 0)
+        //    {
+        //        return value[(markerIndex + marker.Length)..].Trim();
+        //    }
 
-            return value.Trim();
-        }
+        //    return value.Trim();
+        //}
     }
 
 }
