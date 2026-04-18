@@ -440,17 +440,17 @@ namespace PlantDecor.API.Controllers
             return userId;
         }
 
-        private static string NormalizeBase64(string value)
-        {
-            const string marker = "base64,";
-            var markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (markerIndex >= 0)
-            {
-                return value[(markerIndex + marker.Length)..].Trim();
-            }
+        //private static string NormalizeBase64(string value)
+        //{
+        //    const string marker = "base64,";
+        //    var markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        //    if (markerIndex >= 0)
+        //    {
+        //        return value[(markerIndex + marker.Length)..].Trim();
+        //    }
 
-            return value.Trim();
-        }
+        //    return value.Trim();
+        //}
     }
 
 }
