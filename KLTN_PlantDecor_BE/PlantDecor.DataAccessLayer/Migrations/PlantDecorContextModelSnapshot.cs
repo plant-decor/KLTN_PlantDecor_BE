@@ -1765,6 +1765,173 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("RefreshToken", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("ReturnTicket_pkey");
+
+                    b.HasIndex(new[] { "CustomerId" }, "IX_ReturnTicket_CustomerId");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_ReturnTicket_OrderId");
+
+                    b.HasIndex(new[] { "Status" }, "IX_ReturnTicket_Status");
+
+                    b.ToTable("ReturnTicket", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AssignedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int?>("ManagerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NurseryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReturnTicketId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("ReturnTicketAssignment_pkey");
+
+                    b.HasIndex(new[] { "ManagerId" }, "IX_ReturnTicketAssignment_ManagerId");
+
+                    b.HasIndex(new[] { "NurseryId" }, "IX_ReturnTicketAssignment_NurseryId");
+
+                    b.HasIndex(new[] { "ReturnTicketId" }, "IX_ReturnTicketAssignment_ReturnTicketId");
+
+                    b.ToTable("ReturnTicketAssignment", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ApprovedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int>("NurseryOrderDetailId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("RequestedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReturnTicketId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("ReturnTicketItem_pkey");
+
+                    b.HasIndex(new[] { "NurseryOrderDetailId" }, "IX_ReturnTicketItem_NurseryOrderDetailId");
+
+                    b.HasIndex(new[] { "ReturnTicketId" }, "IX_ReturnTicketItem_ReturnTicketId");
+
+                    b.HasIndex(new[] { "Status" }, "IX_ReturnTicketItem_Status");
+
+                    b.ToTable("ReturnTicketItem", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketItemImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("PublicId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("ReturnTicketItemId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("ReturnTicketItemImage_pkey");
+
+                    b.HasIndex(new[] { "ReturnTicketItemId" }, "IX_ReturnTicketItemImage_ReturnTicketItemId");
+
+                    b.ToTable("ReturnTicketItemImage", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -3158,6 +3325,89 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicket", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicket_CustomerId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicket_OrderId_fkey");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketAssignment", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("ReturnTicketAssignment_ManagerId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Nursery", "Nursery")
+                        .WithMany()
+                        .HasForeignKey("NurseryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicketAssignment_NurseryId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.ReturnTicket", "ReturnTicket")
+                        .WithMany("ReturnTicketAssignments")
+                        .HasForeignKey("ReturnTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicketAssignment_ReturnTicketId_fkey");
+
+                    b.Navigation("Manager");
+
+                    b.Navigation("Nursery");
+
+                    b.Navigation("ReturnTicket");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketItem", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.NurseryOrderDetail", "NurseryOrderDetail")
+                        .WithMany()
+                        .HasForeignKey("NurseryOrderDetailId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicketItem_NurseryOrderDetailId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.ReturnTicket", "ReturnTicket")
+                        .WithMany("ReturnTicketItems")
+                        .HasForeignKey("ReturnTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicketItem_ReturnTicketId_fkey");
+
+                    b.Navigation("NurseryOrderDetail");
+
+                    b.Navigation("ReturnTicket");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketItemImage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.ReturnTicketItem", "ReturnTicketItem")
+                        .WithMany("ReturnTicketItemImages")
+                        .HasForeignKey("ReturnTicketItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("ReturnTicketItemImage_ReturnTicketItemId_fkey");
+
+                    b.Navigation("ReturnTicketItem");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.RoomDesignPreferences", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.RoomImage", "RoomImage")
@@ -3637,6 +3887,18 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("UserPlant");
 
                     b.Navigation("Wishlists");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicket", b =>
+                {
+                    b.Navigation("ReturnTicketAssignments");
+
+                    b.Navigation("ReturnTicketItems");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ReturnTicketItem", b =>
+                {
+                    b.Navigation("ReturnTicketItemImages");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Role", b =>

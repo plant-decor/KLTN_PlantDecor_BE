@@ -1301,6 +1301,36 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ReturnTicket",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    OrderId = table.Column<int>(type: "integer", nullable: false),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
+                    Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ReturnTicket_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ReturnTicket_CustomerId_fkey",
+                        column: x => x.CustomerId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "ReturnTicket_OrderId_fkey",
+                        column: x => x.OrderId,
+                        principalTable: "Order",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ServiceRegistration",
                 columns: table => new
                 {
@@ -1484,6 +1514,42 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ReturnTicketAssignment",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ReturnTicketId = table.Column<int>(type: "integer", nullable: false),
+                    NurseryId = table.Column<int>(type: "integer", nullable: false),
+                    ManagerId = table.Column<int>(type: "integer", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ReturnTicketAssignment_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ReturnTicketAssignment_ManagerId_fkey",
+                        column: x => x.ManagerId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "ReturnTicketAssignment_NurseryId_fkey",
+                        column: x => x.NurseryId,
+                        principalTable: "Nursery",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "ReturnTicketAssignment_ReturnTicketId_fkey",
+                        column: x => x.ReturnTicketId,
+                        principalTable: "ReturnTicket",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ServiceProgress",
                 columns: table => new
                 {
@@ -1587,6 +1653,60 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         name: "PlantRating_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReturnTicketItem",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ReturnTicketId = table.Column<int>(type: "integer", nullable: false),
+                    NurseryOrderDetailId = table.Column<int>(type: "integer", nullable: false),
+                    RequestedQuantity = table.Column<int>(type: "integer", nullable: false),
+                    ApprovedQuantity = table.Column<int>(type: "integer", nullable: true),
+                    Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ReturnTicketItem_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ReturnTicketItem_NurseryOrderDetailId_fkey",
+                        column: x => x.NurseryOrderDetailId,
+                        principalTable: "NurseryOrderDetail",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "ReturnTicketItem_ReturnTicketId_fkey",
+                        column: x => x.ReturnTicketId,
+                        principalTable: "ReturnTicket",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReturnTicketItemImage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ReturnTicketItemId = table.Column<int>(type: "integer", nullable: false),
+                    ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    PublicId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ReturnTicketItemImage_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ReturnTicketItemImage_ReturnTicketItemId_fkey",
+                        column: x => x.ReturnTicketItemId,
+                        principalTable: "ReturnTicketItem",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1920,6 +2040,56 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "IX_RefreshToken_UserId",
                 table: "RefreshToken",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicket_CustomerId",
+                table: "ReturnTicket",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicket_OrderId",
+                table: "ReturnTicket",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicket_Status",
+                table: "ReturnTicket",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketAssignment_ManagerId",
+                table: "ReturnTicketAssignment",
+                column: "ManagerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketAssignment_NurseryId",
+                table: "ReturnTicketAssignment",
+                column: "NurseryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketAssignment_ReturnTicketId",
+                table: "ReturnTicketAssignment",
+                column: "ReturnTicketId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketItem_NurseryOrderDetailId",
+                table: "ReturnTicketItem",
+                column: "NurseryOrderDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketItem_ReturnTicketId",
+                table: "ReturnTicketItem",
+                column: "ReturnTicketId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketItem_Status",
+                table: "ReturnTicketItem",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReturnTicketItemImage_ReturnTicketItemId",
+                table: "ReturnTicketItemImage",
+                column: "ReturnTicketItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomDesignPreferences_RoomImageId",
@@ -2276,6 +2446,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "RefreshToken");
 
             migrationBuilder.DropTable(
+                name: "ReturnTicketAssignment");
+
+            migrationBuilder.DropTable(
+                name: "ReturnTicketItemImage");
+
+            migrationBuilder.DropTable(
                 name: "RoomDesignPreferences");
 
             migrationBuilder.DropTable(
@@ -2321,10 +2497,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "Category");
 
             migrationBuilder.DropTable(
-                name: "NurseryOrderDetail");
+                name: "Tag");
 
             migrationBuilder.DropTable(
-                name: "Tag");
+                name: "ReturnTicketItem");
 
             migrationBuilder.DropTable(
                 name: "ServiceRegistration");
@@ -2337,6 +2513,24 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "LayoutDesign");
+
+            migrationBuilder.DropTable(
+                name: "NurseryOrderDetail");
+
+            migrationBuilder.DropTable(
+                name: "ReturnTicket");
+
+            migrationBuilder.DropTable(
+                name: "NurseryCareService");
+
+            migrationBuilder.DropTable(
+                name: "Shift");
+
+            migrationBuilder.DropTable(
+                name: "Invoice");
+
+            migrationBuilder.DropTable(
+                name: "RoomImage");
 
             migrationBuilder.DropTable(
                 name: "CommonPlant");
@@ -2354,31 +2548,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "PlantInstance");
 
             migrationBuilder.DropTable(
-                name: "NurseryCareService");
-
-            migrationBuilder.DropTable(
-                name: "Shift");
-
-            migrationBuilder.DropTable(
-                name: "Invoice");
-
-            migrationBuilder.DropTable(
-                name: "RoomImage");
+                name: "CareServicePackage");
 
             migrationBuilder.DropTable(
                 name: "Material");
+
+            migrationBuilder.DropTable(
+                name: "Order");
 
             migrationBuilder.DropTable(
                 name: "PlantCombo");
 
             migrationBuilder.DropTable(
                 name: "Plant");
-
-            migrationBuilder.DropTable(
-                name: "CareServicePackage");
-
-            migrationBuilder.DropTable(
-                name: "Order");
 
             migrationBuilder.DropTable(
                 name: "User");
