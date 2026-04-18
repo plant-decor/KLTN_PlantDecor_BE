@@ -56,6 +56,12 @@ public partial class User
 
     public virtual ICollection<ServiceRegistration> ServiceRegistrationUsers { get; set; } = new List<ServiceRegistration>();
 
+    public virtual ICollection<DesignRegistration> DesignRegistrationsUser { get; set; } = new List<DesignRegistration>();
+
+    public virtual ICollection<DesignTask> AssignedDesignTasks { get; set; } = new List<DesignTask>();
+
+    public virtual ICollection<DesignRegistration> DesignRegistrationsAssignedCaretaker { get; set; } = new List<DesignRegistration>();
+
     public virtual ICollection<UserBehaviorLog> UserBehaviorLogs { get; set; } = new List<UserBehaviorLog>();
 
     public virtual ICollection<UserPlant> UserPlants { get; set; } = new List<UserPlant>();

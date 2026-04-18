@@ -15,5 +15,6 @@ namespace PlantDecor.DataAccessLayer.Entities
 
         public ICollection<CareServiceSpecialization> CareServiceSpecializations { get; set; } = new List<CareServiceSpecialization>();
         public ICollection<StaffSpecialization> StaffSpecializations { get; set; } = new List<StaffSpecialization>();
+        public ICollection<DesignTemplateSpecialization> DesignTemplateSpecializations { get; set; } = new List<DesignTemplateSpecialization>();
     }
 }

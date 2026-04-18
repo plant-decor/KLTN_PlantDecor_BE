@@ -25,7 +25,7 @@ public partial class Plant
 
     public int? Size { get; set; }
 
-    public string? GrowthRate { get; set; }
+    public int GrowthRate { get; set; }
 
     public bool? Toxicity { get; set; }
 
@@ -78,4 +78,6 @@ public partial class Plant
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
+
+    public virtual ICollection<DesignTemplateTierItem> DesignTemplateTierItems { get; set; } = new List<DesignTemplateTierItem>();
 }
