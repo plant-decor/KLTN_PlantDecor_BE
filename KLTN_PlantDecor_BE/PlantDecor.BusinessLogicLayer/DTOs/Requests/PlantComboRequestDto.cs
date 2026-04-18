@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
@@ -14,9 +15,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public string? Description { get; set; }
 
-        public string? SuitableSpace { get; set; }
+        [EnumDataType(typeof(LightRequirementEnum), ErrorMessage = "SuitableSpace không hợp lệ")]
+        public int? SuitableSpace { get; set; }
 
-        public List<string>? SuitableRooms { get; set; }
+        public List<int>? SuitableRooms { get; set; }
 
         public int? FengShuiElement { get; set; }
 

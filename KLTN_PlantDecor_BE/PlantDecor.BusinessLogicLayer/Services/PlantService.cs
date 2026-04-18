@@ -8,6 +8,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -117,6 +118,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name))
                     throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
 
+                ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
+
                 var plant = request.ToEntity();
 
                 _unitOfWork.PlantRepository.PrepareCreate(plant);
@@ -145,8 +148,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
                 // Check if plant name already exists (excluding current plant)
-                if (await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name, id))
+                if (!string.IsNullOrWhiteSpace(request.Name)
+                    && await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name, id))
                     throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
+
+                ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
 
                 request.ToUpdate(plant);
 
@@ -694,6 +700,35 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 : "none";
 
             return $"{prefix}_kwv3_p{pagination.PageNumber}_s{pagination.PageSize}_k{filter.Keyword}_a{filter.IsActive}_pt{filter.PlacementType}_clt{filter.CareLevelType}_cl{filter.CareLevel}_tx{filter.Toxicity}_ap{filter.AirPurifying}_hf{filter.HasFlower}_ps{filter.PetSafe}_cs{filter.ChildSafe}_ui{filter.IsUniqueInstance}_min{filter.MinBasePrice}_max{filter.MaxBasePrice}_cat{categoryPart}_tag{tagPart}_sz{sizePart}_fe{fengShuiPart}_n{filter.NurseryId}_sb{filter.SortBy}_sd{filter.SortDirection}";
+        }
+
+        private static void ValidateEnumBackedFields(List<int>? roomStyles, List<int>? roomTypes)
+        {
+            if (roomStyles != null)
+            {
+                var invalidRoomStyles = roomStyles
+                    .Where(v => !Enum.IsDefined(typeof(RoomStyleEnum), v))
+                    .Distinct()
+                    .ToList();
+
+                if (invalidRoomStyles.Count > 0)
+                {
+                    throw new BadRequestException($"RoomStyle không hợp lệ: {string.Join(", ", invalidRoomStyles)}");
+                }
+            }
+
+            if (roomTypes != null)
+            {
+                var invalidRoomTypes = roomTypes
+                    .Where(v => !Enum.IsDefined(typeof(RoomTypeEnum), v))
+                    .Distinct()
+                    .ToList();
+
+                if (invalidRoomTypes.Count > 0)
+                {
+                    throw new BadRequestException($"RoomType không hợp lệ: {string.Join(", ", invalidRoomTypes)}");
+                }
+            }
         }
 
         #endregion

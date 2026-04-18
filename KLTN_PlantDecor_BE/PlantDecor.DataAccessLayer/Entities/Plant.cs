@@ -19,6 +19,10 @@ public partial class Plant
 
     public int PlacementType { get; set; }
 
+    public List<int>? RoomStyle { get; set; }
+
+    public List<int>? RoomType { get; set; }
+
     public int? Size { get; set; }
 
     public string? GrowthRate { get; set; }
