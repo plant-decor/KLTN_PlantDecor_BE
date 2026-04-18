@@ -193,6 +193,12 @@ namespace PlantDecor.API.Extensions
                 "recalculate-user-preferences",
                 service => service.CalculatedAllUserPreferenceAsync(),
                 "0 8 * * *");
+
+            // Auto-complete orders in PendingConfirmation for at least 3 days (run daily)
+            recurringJobManager.AddOrUpdate<IOrderBackgroundJobService>(
+                "auto-complete-pending-confirmation-orders",
+                service => service.AutoCompletePendingConfirmationOrdersAsync(),
+                "0 0 * * *");
         }
     }
 }

@@ -1,4 +1,4 @@
-using PlantDecor.DataAccessLayer.Entities;
+﻿using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
@@ -6,5 +6,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<Order?> GetByIdWithDetailsAsync(int orderId);
         Task<List<Order>> GetByUserIdWithDetailsAsync(int userId, int? orderStatus = null);
+        Task<List<Order>> GetPendingConfirmationOrdersOlderThanAsync(DateTime threshold);
     }
 }
