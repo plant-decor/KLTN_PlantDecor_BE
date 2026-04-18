@@ -8,6 +8,7 @@
         public string? Reason { get; set; }
         public int Status { get; set; }
         public string? StatusName { get; set; }
+        public decimal? TotalRefundedAmount { get; set; }
         public DateTime? CreatedAt { get; set; }
         public List<ReturnTicketItemResponseDto> Items { get; set; } = new();
         public List<ReturnTicketAssignmentResponseDto> Assignments { get; set; } = new();
@@ -22,6 +23,9 @@
         public int? ApprovedQuantity { get; set; }
         public string? Reason { get; set; }
         public string? ManagerDecisionNote { get; set; }
+        public decimal? RefundedAmount { get; set; }
+        public string? RefundReference { get; set; }
+        public DateTime? RefundedAt { get; set; }
         public int Status { get; set; }
         public string? StatusName { get; set; }
         public int? NurseryOrderId { get; set; }

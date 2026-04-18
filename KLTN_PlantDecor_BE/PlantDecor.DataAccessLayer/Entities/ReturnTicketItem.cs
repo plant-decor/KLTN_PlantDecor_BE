@@ -16,6 +16,12 @@ public partial class ReturnTicketItem
 
     public string? ManagerDecisionNote { get; set; }
 
+    public decimal? RefundedAmount { get; set; }
+
+    public string? RefundReference { get; set; }
+
+    public DateTime? RefundedAt { get; set; }
+
     public int Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }

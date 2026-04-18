@@ -644,6 +644,7 @@ public partial class PlantDecorContext : DbContext
             entity.HasIndex(e => e.Status, "IX_ReturnTicket_Status");
 
             entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.TotalRefundedAmount).HasPrecision(18, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
@@ -672,6 +673,8 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.ManagerDecisionNote).HasMaxLength(500);
+            entity.Property(e => e.RefundedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.RefundReference).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 

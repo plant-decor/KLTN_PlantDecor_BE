@@ -36,6 +36,21 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPatch("{assignmentId:int}/items/{itemId:int}/refund")]
+        public async Task<IActionResult> RefundItem(int assignmentId, int itemId, [FromBody] RefundReturnTicketItemRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _returnTicketManagerService.RefundItemAsync(managerId, assignmentId, itemId, request);
+
+            return Ok(new ApiResponse<ReturnTicketItemResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Return ticket item refunded successfully",
+                Payload = result
+            });
+        }
+
         [HttpGet("{assignmentId:int}")]
         public async Task<IActionResult> GetAssignmentDetail(int assignmentId)
         {

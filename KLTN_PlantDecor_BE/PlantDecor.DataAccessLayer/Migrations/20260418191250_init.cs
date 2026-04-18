@@ -1310,6 +1310,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CustomerId = table.Column<int>(type: "integer", nullable: false),
                     Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
+                    TotalRefundedAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
@@ -1668,6 +1669,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     RequestedQuantity = table.Column<int>(type: "integer", nullable: false),
                     ApprovedQuantity = table.Column<int>(type: "integer", nullable: true),
                     Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ManagerDecisionNote = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    RefundedAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
+                    RefundReference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    RefundedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")

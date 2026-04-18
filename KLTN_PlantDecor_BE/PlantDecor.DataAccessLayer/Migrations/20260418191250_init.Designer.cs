@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260418053644_init")]
+    [Migration("20260418191250_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1794,6 +1794,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("TotalRefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -1869,12 +1873,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
+                    b.Property<string>("ManagerDecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<int>("NurseryOrderDetailId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RefundReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("RefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("RequestedQuantity")
                         .HasColumnType("integer");

@@ -17,6 +17,7 @@
         public string? TicketReason { get; set; }
         public int TicketStatus { get; set; }
         public string? TicketStatusName { get; set; }
+        public decimal? TicketTotalRefundedAmount { get; set; }
         public List<ReturnTicketItemResponseDto> Items { get; set; } = new();
     }
 }

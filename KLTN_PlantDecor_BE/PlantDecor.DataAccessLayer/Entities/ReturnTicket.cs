@@ -12,6 +12,8 @@ public partial class ReturnTicket
 
     public int Status { get; set; }
 
+    public decimal? TotalRefundedAmount { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

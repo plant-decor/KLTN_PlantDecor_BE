@@ -94,6 +94,52 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapItemToResponse(item);
         }
 
+        public async Task<ReturnTicketItemResponseDto> RefundItemAsync(int managerId, int assignmentId, int itemId, RefundReturnTicketItemRequestDto request)
+        {
+            var manager = await GetValidatedManagerAsync(managerId);
+            var assignment = await GetOwnedAssignmentAsync(manager, assignmentId);
+
+            var item = GetAssignmentItem(assignment, itemId);
+
+            if (item.Status != (int)ReturnTicketItemStatusEnum.Approved)
+                throw new BadRequestException("Only approved item can be marked as refunded");
+
+            var approvedQuantity = item.ApprovedQuantity ?? 0;
+            if (approvedQuantity <= 0)
+                throw new BadRequestException("ApprovedQuantity is invalid for refund");
+
+            var unitPrice = item.NurseryOrderDetail?.UnitPrice ?? 0;
+            var maxRefundAmount = unitPrice * approvedQuantity;
+            var refundAmount = request.RefundedAmount ?? maxRefundAmount;
+
+            if (refundAmount <= 0)
+                throw new BadRequestException("RefundedAmount must be greater than 0");
+
+            if (refundAmount > maxRefundAmount)
+                throw new BadRequestException("RefundedAmount cannot exceed approved refundable amount");
+
+            var now = DateTime.Now;
+            item.Status = (int)ReturnTicketItemStatusEnum.Refunded;
+            item.RefundedAmount = refundAmount;
+            item.RefundReference = request.RefundReference;
+            item.RefundedAt = now;
+            item.ManagerDecisionNote = string.IsNullOrWhiteSpace(request.Note) ? item.ManagerDecisionNote : request.Note;
+            item.UpdatedAt = now;
+
+            if (item.NurseryOrderDetail != null)
+            {
+                item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Refunded;
+            }
+
+            FinalizeAssignmentAndTicketStatus(assignment, now);
+            UpdateOrderStatusesAfterRefund(assignment.ReturnTicket, now);
+
+            _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
+            await _unitOfWork.SaveAsync();
+
+            return MapItemToResponse(item);
+        }
+
         public async Task<ReturnTicketItemResponseDto> RejectItemAsync(int managerId, int assignmentId, int itemId, RejectReturnTicketItemRequestDto request)
         {
             var manager = await GetValidatedManagerAsync(managerId);
@@ -109,6 +155,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             item.ManagerDecisionNote = request.Note;
             item.Status = (int)ReturnTicketItemStatusEnum.Rejected;
             item.UpdatedAt = now;
+
+            if (item.NurseryOrderDetail != null)
+            {
+                item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Rejected;
+            }
 
             FinalizeAssignmentAndTicketStatus(assignment, now);
 
@@ -156,6 +207,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var ticket = assignment.ReturnTicket;
             var allItems = ticket.ReturnTicketItems;
+            ticket.TotalRefundedAmount = allItems
+                .Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
+                .Sum(i => i.RefundedAmount ?? 0);
 
             var allResolved = allItems.All(i =>
                 i.Status == (int)ReturnTicketItemStatusEnum.Approved ||
@@ -184,7 +238,43 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ticket.Status = allApprovedOrRefunded
                 ? (int)ReturnTicketStatusEnum.Approved
                 : (int)ReturnTicketStatusEnum.PartiallyApproved;
+
+            var refundableItems = allItems.Where(i =>
+                i.Status == (int)ReturnTicketItemStatusEnum.Approved ||
+                i.Status == (int)ReturnTicketItemStatusEnum.Refunded).ToList();
+
+            if (refundableItems.Any() && refundableItems.All(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded))
+            {
+                ticket.Status = (int)ReturnTicketStatusEnum.Refunded;
+            }
+
             ticket.UpdatedAt = now;
+        }
+
+        private static void UpdateOrderStatusesAfterRefund(ReturnTicket ticket, DateTime now)
+        {
+            if (ticket.Order == null)
+                return;
+
+            var order = ticket.Order;
+            var allOrderDetails = order.NurseryOrders.SelectMany(no => no.NurseryOrderDetails).ToList();
+            if (!allOrderDetails.Any())
+                return;
+
+            foreach (var nurseryOrder in order.NurseryOrders)
+            {
+                if (nurseryOrder.NurseryOrderDetails.Any() && nurseryOrder.NurseryOrderDetails.All(d => d.Status == (int)OrderStatusEnum.Refunded))
+                {
+                    nurseryOrder.Status = (int)OrderStatusEnum.Refunded;
+                    nurseryOrder.UpdatedAt = now;
+                }
+            }
+
+            if (allOrderDetails.All(d => d.Status == (int)OrderStatusEnum.Refunded))
+            {
+                order.Status = (int)OrderStatusEnum.Refunded;
+                order.UpdatedAt = now;
+            }
         }
 
         private async Task<User> GetValidatedManagerAsync(int managerId)
@@ -215,6 +305,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (!assignment.ManagerId.HasValue)
             {
                 assignment.ManagerId = manager.Id;
+                assignment.Manager = manager;
             }
 
             return assignment;
@@ -245,6 +336,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 TicketReason = ticket.Reason,
                 TicketStatus = ticket.Status,
                 TicketStatusName = ((ReturnTicketStatusEnum)ticket.Status).ToString(),
+                TicketTotalRefundedAmount = ticket.TotalRefundedAmount,
                 Items = nurseryItems
             };
         }
@@ -260,6 +352,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ApprovedQuantity = item.ApprovedQuantity,
                 Reason = item.Reason,
                 ManagerDecisionNote = item.ManagerDecisionNote,
+                RefundedAmount = item.RefundedAmount,
+                RefundReference = item.RefundReference,
+                RefundedAt = item.RefundedAt,
                 Status = item.Status,
                 StatusName = ((ReturnTicketItemStatusEnum)item.Status).ToString(),
                 NurseryOrderId = item.NurseryOrderDetail?.NurseryOrderId,

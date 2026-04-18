@@ -55,6 +55,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 CustomerId = customerId,
                 Reason = request.Reason,
                 Status = (int)ReturnTicketStatusEnum.Pending,
+                TotalRefundedAmount = 0,
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -175,6 +176,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Reason = ticket.Reason,
                 Status = ticket.Status,
                 StatusName = ((ReturnTicketStatusEnum)ticket.Status).ToString(),
+                TotalRefundedAmount = ticket.TotalRefundedAmount,
                 CreatedAt = ticket.CreatedAt,
                 Items = ticket.ReturnTicketItems.Select(i => new ReturnTicketItemResponseDto
                 {
@@ -185,6 +187,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ApprovedQuantity = i.ApprovedQuantity,
                     Reason = i.Reason,
                     ManagerDecisionNote = i.ManagerDecisionNote,
+                    RefundedAmount = i.RefundedAmount,
+                    RefundReference = i.RefundReference,
+                    RefundedAt = i.RefundedAt,
                     Status = i.Status,
                     StatusName = ((ReturnTicketItemStatusEnum)i.Status).ToString(),
                     NurseryOrderId = i.NurseryOrderDetail?.NurseryOrderId,
@@ -215,6 +220,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ApprovedQuantity = item.ApprovedQuantity,
                 Reason = item.Reason,
                 ManagerDecisionNote = item.ManagerDecisionNote,
+                RefundedAmount = item.RefundedAmount,
+                RefundReference = item.RefundReference,
+                RefundedAt = item.RefundedAt,
                 Status = item.Status,
                 StatusName = ((ReturnTicketItemStatusEnum)item.Status).ToString(),
                 NurseryOrderId = item.NurseryOrderDetail?.NurseryOrderId,

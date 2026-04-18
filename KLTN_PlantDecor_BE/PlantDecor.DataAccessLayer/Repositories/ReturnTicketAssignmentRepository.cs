@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Interfaces;
@@ -40,7 +41,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenInclude(rt => rt.ReturnTicketItems)
                         .ThenInclude(i => i.ReturnTicketItemImages)
                 .Include(a => a.ReturnTicket)
-                    .ThenInclude(rt => rt.ReturnTicketAssignments);
+                    .ThenInclude(rt => rt.ReturnTicketAssignments)
+                .Include(a => a.ReturnTicket)
+                    .ThenInclude(rt => rt.Order)
+                        .ThenInclude(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails);
         }
     }
 }
