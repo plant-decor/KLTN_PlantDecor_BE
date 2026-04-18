@@ -209,7 +209,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (order.UserId != userId)
                 throw new ForbiddenException("You don't have access to this order");
 
-            var cancellableStatuses = new[] { (int)OrderStatusEnum.Pending, (int)OrderStatusEnum.DepositPaid };
+            var cancellableStatuses = new[] { (int)OrderStatusEnum.Pending, (int)OrderStatusEnum.DepositPaid, (int)OrderStatusEnum.Paid };
             if (!cancellableStatuses.Contains(order.Status ?? -1))
                 throw new BadRequestException("Order cannot be cancelled in its current status");
 

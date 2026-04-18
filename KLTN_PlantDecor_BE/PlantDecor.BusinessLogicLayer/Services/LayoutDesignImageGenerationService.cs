@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -217,13 +218,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             EnsureLayoutOwnership(layout, userId);
 
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-            return images.Select(image => new LayoutDesignGeneratedImageDto
-            {
-                Id = image.Id,
-                ImageUrl = image.ImageUrl,
-                FluxPromptUsed = image.FluxPromptUsed,
-                CreatedAt = image.CreatedAt
-            }).ToList();
+            return images.ToLayoutDesignGeneratedImageDtoList();
+        }
+
+        public async Task<List<LayoutDesignGeneratedImageDto>> GetAllGeneratedImagesByUserIdAsync(int userId)
+        {
+            var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetAllGeneratedImagesByUserIdAsync(userId);
+            return images.ToLayoutDesignGeneratedImageDtoList();
         }
 
         private async Task ProcessCandidateAsync(

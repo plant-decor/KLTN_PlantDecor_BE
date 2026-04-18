@@ -26,6 +26,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     public class LayoutDesignGeneratedImageDto
     {
         public int Id { get; set; }
+        public int LayoutDesignId { get; set; }
+        public int? LayoutDesignPlantId { get; set; }
+        public int? CommonPlantId { get; set; }
+        public int? PlantInstanceId { get; set; }
         public string? ImageUrl { get; set; }
         public string? FluxPromptUsed { get; set; }
         public DateTime? CreatedAt { get; set; }

@@ -6,5 +6,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         Task<LayoutDesignImageGenerationResultDto> GenerateImagesAsync(int layoutDesignId, int userId);
         Task<List<LayoutDesignGeneratedImageDto>> GetGeneratedImagesAsync(int layoutDesignId, int userId);
+        Task<List<LayoutDesignGeneratedImageDto>> GetAllGeneratedImagesByUserIdAsync(int userId);
     }
 }
