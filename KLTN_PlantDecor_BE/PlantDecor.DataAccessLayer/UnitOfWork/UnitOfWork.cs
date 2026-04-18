@@ -43,6 +43,14 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ILayoutDesignRepository? _layoutDesignRepository;
         private ILayoutDesignAiResponseImageRepository? _layoutDesignAiResponseImageRepository;
         private ILayoutDesignPlantRepository? _layoutDesignPlantRepository;
+        private IDesignTemplateRepository? _designTemplateRepository;
+        private IDesignTemplateTierRepository? _designTemplateTierRepository;
+        private IDesignTemplateTierItemRepository? _designTemplateTierItemRepository;
+        private IDesignTemplateSpecializationRepository? _designTemplateSpecializationRepository;
+        private INurseryDesignTemplateRepository? _nurseryDesignTemplateRepository;
+        private IDesignRegistrationRepository? _designRegistrationRepository;
+        private IDesignTaskRepository? _designTaskRepository;
+        private ITaskMaterialUsageRepository? _taskMaterialUsageRepository;
         private IAiLayoutResponseModerationRepository? _aiLayoutResponseModerationRepository;
         private IRoomUploadModerationRepository? _roomUploadModerationRepository;
         private IServiceRegistrationRepository? _serviceRegistrationRepository;
@@ -211,6 +219,46 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public ILayoutDesignPlantRepository LayoutDesignPlantRepository
         {
             get { return _layoutDesignPlantRepository ??= new LayoutDesignPlantRepository(_context); }
+        }
+
+        public IDesignTemplateRepository DesignTemplateRepository
+        {
+            get { return _designTemplateRepository ??= new DesignTemplateRepository(_context); }
+        }
+
+        public IDesignTemplateTierRepository DesignTemplateTierRepository
+        {
+            get { return _designTemplateTierRepository ??= new DesignTemplateTierRepository(_context); }
+        }
+
+        public IDesignTemplateTierItemRepository DesignTemplateTierItemRepository
+        {
+            get { return _designTemplateTierItemRepository ??= new DesignTemplateTierItemRepository(_context); }
+        }
+
+        public IDesignTemplateSpecializationRepository DesignTemplateSpecializationRepository
+        {
+            get { return _designTemplateSpecializationRepository ??= new DesignTemplateSpecializationRepository(_context); }
+        }
+
+        public INurseryDesignTemplateRepository NurseryDesignTemplateRepository
+        {
+            get { return _nurseryDesignTemplateRepository ??= new NurseryDesignTemplateRepository(_context); }
+        }
+
+        public IDesignRegistrationRepository DesignRegistrationRepository
+        {
+            get { return _designRegistrationRepository ??= new DesignRegistrationRepository(_context); }
+        }
+
+        public IDesignTaskRepository DesignTaskRepository
+        {
+            get { return _designTaskRepository ??= new DesignTaskRepository(_context); }
+        }
+
+        public ITaskMaterialUsageRepository TaskMaterialUsageRepository
+        {
+            get { return _taskMaterialUsageRepository ??= new TaskMaterialUsageRepository(_context); }
         }
 
         public IAiLayoutResponseModerationRepository AiLayoutResponseModerationRepository
