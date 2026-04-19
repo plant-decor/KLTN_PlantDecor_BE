@@ -18,8 +18,10 @@
                 box-shadow:0 2px 8px rgba(0,0,0,0.1);'>
 
         <div style='text-align:center;'>
-            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg'
-                 alt='PlantDecor Logo' width='130' style='margin-bottom:15px;'/>
+            <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
+                <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg'
+                     alt='PlantDecor Logo' width='196' style='margin-bottom:15px;'/>
+            </a>
             <h2 style='color:#28a745;'>Thanh toán thành công!</h2>
         </div>
 

@@ -9,7 +9,9 @@
         <body style='font-family: Arial;'>
             <h2>Xin chào {userName},</h2>
             <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>PlantDecor</b>.</p>
-            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='120'/>
+            <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
+                <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
+            </a>
             <p>Vui lòng xác nhận email của bạn bằng cách nhấn nút bên dưới:</p>
             <p>
                 <a href='{confirmUrl}' 
@@ -42,7 +44,9 @@
                     <h2 style='color: #34495e; font-size: 20px; margin-bottom: 10px;'>
                         Xin chào {userName},
                     </h2>
-                        <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='120'/>
+                        <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
+                            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
+                        </a>
                     <p style='color: #7f8c8d; font-size: 16px; margin-bottom: 30px;'>
                         Mã xác thực email của bạn là:
                     </p>
@@ -105,7 +109,9 @@
                     <h2 style='color: #34495e; font-size: 20px; margin-bottom: 10px;'>
                         Xin chào {userName},
                     </h2>
-                        <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='120'/>
+                        <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
+                            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
+                        </a>
                     <p style='color: #7f8c8d; font-size: 16px; margin-bottom: 30px;'>
                         Mã đặt lại mật khẩu của bạn là:
                     </p>
