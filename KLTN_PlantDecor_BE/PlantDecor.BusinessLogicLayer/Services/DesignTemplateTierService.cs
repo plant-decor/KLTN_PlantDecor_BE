@@ -22,6 +22,67 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _cacheService = cacheService;
         }
 
+        public async Task<List<DesignTemplateTierResponseDto>> GetMarketedTiersAsync()
+        {
+            var templates = await _unitOfWork.DesignTemplateRepository.GetAllAsync();
+            var activeTemplates = templates
+                .OrderBy(t => t.Id)
+                .ToList();
+
+            var result = new List<DesignTemplateTierResponseDto>();
+
+            foreach (var template in activeTemplates)
+            {
+                var activeMappings = await _unitOfWork.NurseryDesignTemplateRepository
+                    .GetByTemplateIdAsync(template.Id, activeOnly: true);
+
+                if (!activeMappings.Any(x => x.Nursery?.IsActive == true))
+                {
+                    continue;
+                }
+
+                var tiers = await _unitOfWork.DesignTemplateTierRepository
+                    .GetByTemplateIdWithItemsAsync(template.Id, activeOnly: true);
+
+                result.AddRange(tiers
+                    .OrderBy(t => t.MinArea)
+                    .ThenBy(t => t.Id)
+                    .Select(MapToDto));
+            }
+
+            return result;
+        }
+
+        public async Task<List<NurseryDesignTemplateResponseDto>> GetActiveNurseriesByTierIdAsync(int designTemplateTierId)
+        {
+            var tier = await _unitOfWork.DesignTemplateTierRepository.GetByIdAsync(designTemplateTierId)
+                ?? throw new NotFoundException($"DesignTemplateTier {designTemplateTierId} not found");
+
+            if (!tier.IsActive)
+                throw new BadRequestException("Selected design template tier is inactive");
+
+            var template = await _unitOfWork.DesignTemplateRepository.GetByIdAsync(tier.DesignTemplateId)
+                ?? throw new NotFoundException($"DesignTemplate {tier.DesignTemplateId} not found");
+
+            var activeMappings = await _unitOfWork.NurseryDesignTemplateRepository
+                .GetByTemplateIdAsync(tier.DesignTemplateId, activeOnly: true);
+
+            return activeMappings
+                .Where(x => x.Nursery?.IsActive == true)
+                .OrderBy(x => x.NurseryId)
+                .Select(x => new NurseryDesignTemplateResponseDto
+                {
+                    Id = x.Id,
+                    NurseryId = x.NurseryId,
+                    NurseryName = x.Nursery?.Name,
+                    DesignTemplateId = x.DesignTemplateId,
+                    DesignTemplateName = template.Name,
+                    IsActive = x.IsActive,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToList();
+        }
+
         public async Task<List<DesignTemplateTierResponseDto>> GetByTemplateIdAsync(int designTemplateId, bool includeInactive = false)
         {
             var template = await _unitOfWork.DesignTemplateRepository.GetByIdAsync(designTemplateId);

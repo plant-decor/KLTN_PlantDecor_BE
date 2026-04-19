@@ -61,14 +61,18 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Staff/Caretaker] Lấy danh sách task được giao
+        /// [Staff/Caretaker] Lấy danh sách task được giao (hỗ trợ lọc theo khoảng ngày ScheduledDate)
         /// </summary>
         [HttpGet("my")]
         [Authorize(Roles = "Staff,Caretaker")]
-        public async Task<IActionResult> GetMyTasks([FromQuery] Pagination pagination, [FromQuery] int? status = null)
+        public async Task<IActionResult> GetMyTasks(
+            [FromQuery] Pagination pagination,
+            [FromQuery] int? status = null,
+            [FromQuery] DateOnly? from = null,
+            [FromQuery] DateOnly? to = null)
         {
             var userId = GetUserId();
-            var result = await _designTaskService.GetMyTasksAsync(userId, pagination, status);
+            var result = await _designTaskService.GetMyTasksAsync(userId, pagination, status, from, to);
             return Ok(new ApiResponse<PaginatedResult<DesignTaskResponseDto>>
             {
                 Success = true,
@@ -92,6 +96,42 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Design task assigned successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Staff/Caretaker] Lấy danh sách vật tư đề xuất theo gói của task để báo cáo đúng vật tư
+        /// </summary>
+        [HttpGet("{id}/package-materials")]
+        [Authorize(Roles = "Staff,Caretaker")]
+        public async Task<IActionResult> GetPackageMaterials(int id)
+        {
+            var userId = GetUserId();
+            var result = await _designTaskService.GetPackageMaterialsForTaskAsync(userId, id);
+            return Ok(new ApiResponse<List<DesignTaskPackageMaterialResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get package materials successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Staff/Caretaker] Báo cáo vật tư đã sử dụng cho buổi làm và trừ kho ngay (không cần duyệt)
+        /// </summary>
+        [HttpPost("{id}/material-usage")]
+        [Authorize(Roles = "Staff,Caretaker")]
+        public async Task<IActionResult> ReportMaterialUsage(int id, [FromBody] ReportDesignTaskMaterialUsageRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _designTaskService.ReportMaterialUsageAsync(userId, id, request);
+            return Ok(new ApiResponse<DesignTaskResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Material usage reported successfully",
                 Payload = result
             });
         }

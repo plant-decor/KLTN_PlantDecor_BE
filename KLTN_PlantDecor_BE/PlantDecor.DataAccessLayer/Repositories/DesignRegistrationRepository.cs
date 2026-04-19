@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
@@ -39,6 +40,27 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<DesignRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<PaginatedResult<DesignRegistration>> GetPendingByNurseryIdAsync(int nurseryId, Pagination pagination)
+        {
+            var pendingStatuses = new[]
+            {
+                (int)DesignRegistrationStatus.WaitingForNursery,
+                (int)DesignRegistrationStatus.PendingApproval
+            };
+
+            var query = BuildDetailedQuery()
+                .Where(x => x.NurseryId == nurseryId && pendingStatuses.Contains(x.Status))
+                .OrderByDescending(x => x.Id);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<DesignRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         public async Task<PaginatedResult<DesignRegistration>> GetByNurseryIdAsync(int nurseryId, Pagination pagination, int? status = null)
         {
             var query = BuildDetailedQuery()
@@ -64,6 +86,29 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await BuildDetailedQuery()
                 .FirstOrDefaultAsync(x => x.OrderId == orderId);
+        }
+
+        public async Task<Dictionary<int, int>> CountOpenByNurseryIdsAsync(List<int> nurseryIds)
+        {
+            if (nurseryIds == null || nurseryIds.Count == 0)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            var openStatuses = new[]
+            {
+                (int)DesignRegistrationStatus.WaitingForNursery,
+                (int)DesignRegistrationStatus.PendingApproval,
+                (int)DesignRegistrationStatus.AwaitDeposit,
+                (int)DesignRegistrationStatus.Active
+            };
+
+            return await _context.DesignRegistrations
+                .Where(x => nurseryIds.Contains(x.NurseryId)
+                            && openStatuses.Contains(x.Status))
+                .GroupBy(x => x.NurseryId)
+                .Select(g => new { NurseryId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.NurseryId, x => x.Count);
         }
 
         private IQueryable<DesignRegistration> BuildDetailedQuery()

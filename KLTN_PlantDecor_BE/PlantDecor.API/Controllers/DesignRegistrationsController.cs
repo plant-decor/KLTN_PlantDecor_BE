@@ -117,6 +117,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Manager/Staff] Lấy danh sách đăng ký thiết kế chờ duyệt của vựa
+        /// </summary>
+        [HttpGet("pending")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetPendingForNursery([FromQuery] Pagination pagination)
+        {
+            var managerId = GetUserId();
+            var result = await _designRegistrationService.GetPendingForNurseryAsync(managerId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<DesignRegistrationResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get pending design registrations successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Manager/Staff] Lấy danh sách đăng ký thiết kế theo vựa
         /// </summary>
         [HttpGet("nursery")]

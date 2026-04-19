@@ -8,6 +8,7 @@ namespace PlantDecor.DataAccessLayer.Enums
 {
     public enum DesignRegistrationStatus
     {
+        WaitingForNursery = 0, // Chờ vựa đủ điều kiện tiếp nhận
         PendingApproval = 1, // Đang chờ xử lý
         AwaitDeposit = 2, // Đã được phê duyệt, chờ đặt cọc
         Active = 3, // Đã được phê duyệt

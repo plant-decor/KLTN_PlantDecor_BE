@@ -32,26 +32,62 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (string.IsNullOrWhiteSpace(request.Phone))
                 throw new BadRequestException("Phone is required");
 
-            var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(request.NurseryId)
-                ?? throw new NotFoundException($"Nursery {request.NurseryId} not found");
-
-            if (nursery.IsActive != true)
-                throw new BadRequestException("Selected nursery is inactive");
-
             var tier = await _unitOfWork.DesignTemplateTierRepository.GetByIdAsync(request.DesignTemplateTierId)
                 ?? throw new NotFoundException($"DesignTemplateTier {request.DesignTemplateTierId} not found");
 
             if (!tier.IsActive)
                 throw new BadRequestException("Selected design template tier is inactive");
 
-            var nurseryDesignTemplates = await _unitOfWork.NurseryDesignTemplateRepository.GetAllAsync();
-            var isTemplateSupported = nurseryDesignTemplates.Any(x =>
-                x.NurseryId == request.NurseryId
-                && x.DesignTemplateId == tier.DesignTemplateId
-                && x.IsActive);
+            var nurseryTemplateMappings = await _unitOfWork.NurseryDesignTemplateRepository
+                .GetByTemplateIdAsync(tier.DesignTemplateId, activeOnly: true);
 
-            if (!isTemplateSupported)
-                throw new BadRequestException("Selected nursery does not offer this design template");
+            var candidateNurseries = nurseryTemplateMappings
+                .Where(x => x.Nursery != null && x.Nursery.IsActive == true)
+                .Select(x => x.Nursery!)
+                .GroupBy(x => x.Id)
+                .Select(g => g.First())
+                .ToList();
+
+            if (request.NurseryId.HasValue)
+            {
+                var preferredNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(request.NurseryId.Value)
+                    ?? throw new NotFoundException($"Preferred nursery {request.NurseryId.Value} not found");
+
+                if (preferredNursery.IsActive != true)
+                    throw new BadRequestException("Preferred nursery is inactive");
+
+                candidateNurseries = candidateNurseries
+                    .Where(x => x.Id == request.NurseryId.Value)
+                    .ToList();
+
+                if (!candidateNurseries.Any())
+                    throw new BadRequestException("Preferred nursery does not offer this design template");
+            }
+
+            if (!candidateNurseries.Any())
+                throw new BadRequestException("No nursery is available for the selected design template at the moment");
+
+            var requiredSpecIds = (await _unitOfWork.DesignTemplateSpecializationRepository
+                    .GetByTemplateIdAsync(tier.DesignTemplateId))
+                .Select(x => x.SpecializationId)
+                .ToHashSet();
+
+            var selectedNursery = await SelectBestNurseryAsync(
+                candidateNurseries,
+                requiredSpecIds,
+                request.Latitude,
+                request.Longitude);
+
+            var initialStatus = DesignRegistrationStatus.PendingApproval;
+            if (selectedNursery == null)
+            {
+                selectedNursery = await SelectFallbackNurseryAsync(
+                    candidateNurseries,
+                    request.Latitude,
+                    request.Longitude);
+
+                initialStatus = DesignRegistrationStatus.WaitingForNursery;
+            }
 
             var totalPrice = tier.PackagePrice;
             var depositAmount = Math.Round(totalPrice * 0.3m, 2, MidpointRounding.AwayFromZero);
@@ -59,19 +95,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var registration = new DesignRegistration
             {
                 UserId = userId,
-                NurseryId = request.NurseryId,
+                NurseryId = selectedNursery.Id,
                 DesignTemplateTierId = request.DesignTemplateTierId,
                 TotalPrice = totalPrice,
                 DepositAmount = depositAmount,
-                Latitude = null,
-                Longitude = null,
-                Width = null,
-                Length = null,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
                 CurrentStateImageUrl = null,
                 Address = request.Address.Trim(),
                 Phone = request.Phone.Trim(),
                 CustomerNote = string.IsNullOrWhiteSpace(request.CustomerNote) ? null : request.CustomerNote.Trim(),
-                Status = (int)DesignRegistrationStatus.PendingApproval,
+                Status = (int)initialStatus,
                 CreatedAt = DateTime.Now
             };
 
@@ -87,6 +121,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination, int? status = null)
         {
             var result = await _unitOfWork.DesignRegistrationRepository.GetByUserIdAsync(userId, pagination, status);
+            return new PaginatedResult<DesignRegistrationResponseDto>(
+                result.Items.Select(MapToDto).ToList(),
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
+        }
+
+        public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetPendingForNurseryAsync(int managerId, Pagination pagination)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+            var result = await _unitOfWork.DesignRegistrationRepository.GetPendingByNurseryIdAsync(nursery.Id, pagination);
+
             return new PaginatedResult<DesignRegistrationResponseDto>(
                 result.Items.Select(MapToDto).ToList(),
                 result.TotalCount,
@@ -140,8 +186,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval)
-                throw new BadRequestException("Only pending registrations can be approved");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval
+                && registrationDetail.Status != (int)DesignRegistrationStatus.WaitingForNursery)
+                throw new BadRequestException("Only waiting or pending registrations can be approved");
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
@@ -220,8 +267,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval)
-                throw new BadRequestException("Only pending registrations can be rejected");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval
+                && registrationDetail.Status != (int)DesignRegistrationStatus.WaitingForNursery)
+                throw new BadRequestException("Only waiting or pending registrations can be rejected");
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
@@ -390,9 +438,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.UserId != userId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            if (registration.Status != (int)DesignRegistrationStatus.PendingApproval
+            if (registration.Status != (int)DesignRegistrationStatus.WaitingForNursery
+                && registration.Status != (int)DesignRegistrationStatus.PendingApproval
                 && registration.Status != (int)DesignRegistrationStatus.AwaitDeposit)
-                throw new BadRequestException("You can only cancel registrations in PendingApproval or AwaitDeposit status");
+                throw new BadRequestException("You can only cancel registrations in WaitingForNursery, PendingApproval or AwaitDeposit status");
 
             var tracked = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
@@ -451,6 +500,105 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after manager cancel");
 
             return MapToDto(updated);
+        }
+
+        private async Task<Nursery?> SelectBestNurseryAsync(
+            List<Nursery> candidateNurseries,
+            HashSet<int> requiredSpecIds,
+            decimal? latitude,
+            decimal? longitude)
+        {
+            if (candidateNurseries == null || candidateNurseries.Count == 0)
+            {
+                return null;
+            }
+
+            var nurseryIds = candidateNurseries.Select(x => x.Id).Distinct().ToList();
+            var openWorkloads = await _unitOfWork.DesignRegistrationRepository.CountOpenByNurseryIdsAsync(nurseryIds);
+            var useDistance = latitude.HasValue && longitude.HasValue;
+
+            var scoredCandidates = new List<(Nursery Nursery, int EligibleCount, int Workload, double DistanceKm)>();
+
+            foreach (var nursery in candidateNurseries)
+            {
+                var staffs = await _unitOfWork.UserRepository.GetStaffAndCaretakersByNurseryIdAsync(nursery.Id);
+
+                IEnumerable<User> eligible = staffs
+                    .Where(u => u.Status == (int)UserStatusEnum.Active && u.IsVerified);
+
+                if (requiredSpecIds.Count > 0)
+                {
+                    eligible = eligible.Where(u => requiredSpecIds.All(reqId =>
+                        u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+                }
+
+                var eligibleCount = eligible.Count();
+                if (eligibleCount == 0)
+                {
+                    continue;
+                }
+
+                var workload = openWorkloads.TryGetValue(nursery.Id, out var count) ? count : 0;
+                var distanceKm = useDistance && nursery.Latitude.HasValue && nursery.Longitude.HasValue
+                    ? HaversineKm(latitude!.Value, longitude!.Value, nursery.Latitude.Value, nursery.Longitude.Value)
+                    : double.MaxValue;
+
+                scoredCandidates.Add((nursery, eligibleCount, workload, distanceKm));
+            }
+
+            return scoredCandidates
+                .OrderByDescending(x => x.EligibleCount)
+                .ThenBy(x => x.Workload)
+                .ThenBy(x => x.DistanceKm)
+                .ThenBy(x => x.Nursery.Id)
+                .Select(x => x.Nursery)
+                .FirstOrDefault();
+        }
+
+        private async Task<Nursery?> SelectFallbackNurseryAsync(
+            List<Nursery> candidateNurseries,
+            decimal? latitude,
+            decimal? longitude)
+        {
+            if (candidateNurseries == null || candidateNurseries.Count == 0)
+            {
+                return null;
+            }
+
+            var nurseryIds = candidateNurseries.Select(x => x.Id).Distinct().ToList();
+            var openWorkloads = await _unitOfWork.DesignRegistrationRepository.CountOpenByNurseryIdsAsync(nurseryIds);
+            var useDistance = latitude.HasValue && longitude.HasValue;
+
+            return candidateNurseries
+                .Select(nursery => new
+                {
+                    Nursery = nursery,
+                    Workload = openWorkloads.TryGetValue(nursery.Id, out var count) ? count : 0,
+                    DistanceKm = useDistance && nursery.Latitude.HasValue && nursery.Longitude.HasValue
+                        ? HaversineKm(latitude!.Value, longitude!.Value, nursery.Latitude.Value, nursery.Longitude.Value)
+                        : double.MaxValue
+                })
+                .OrderBy(x => x.Workload)
+                .ThenBy(x => x.DistanceKm)
+                .ThenBy(x => x.Nursery.Id)
+                .Select(x => x.Nursery)
+                .FirstOrDefault();
+        }
+
+        private static double HaversineKm(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+        {
+            const double earthRadiusKm = 6371.0;
+
+            var dLat = (double)(lat2 - lat1) * Math.PI / 180.0;
+            var dLon = (double)(lon2 - lon1) * Math.PI / 180.0;
+            var originLat = (double)lat1 * Math.PI / 180.0;
+            var targetLat = (double)lat2 * Math.PI / 180.0;
+
+            var a = Math.Sin(dLat / 2.0) * Math.Sin(dLat / 2.0)
+                    + Math.Cos(originLat) * Math.Cos(targetLat)
+                    * Math.Sin(dLon / 2.0) * Math.Sin(dLon / 2.0);
+
+            return earthRadiusKm * 2.0 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1.0 - a));
         }
 
         private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)
