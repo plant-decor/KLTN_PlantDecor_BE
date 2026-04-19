@@ -351,8 +351,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (request == null)
                 throw new BadRequestException("Request body is required");
 
-            if (!request.Latitude.HasValue && !request.Longitude.HasValue
-                && !request.Width.HasValue && !request.Length.HasValue
+            if (!request.Width.HasValue && !request.Length.HasValue
                 && currentStateImage == null)
                 throw new BadRequestException("At least one survey field or current-state image must be provided");
 
@@ -365,17 +364,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.Status != (int)DesignRegistrationStatus.Active)
                 throw new BadRequestException("Survey info can only be updated when registration is Active");
 
-            if (request.Latitude.HasValue != request.Longitude.HasValue)
-                throw new BadRequestException("Latitude and Longitude must be provided together");
-
             if (request.Width.HasValue != request.Length.HasValue)
                 throw new BadRequestException("Width and Length must be provided together");
-
-            if (request.Latitude.HasValue && (request.Latitude.Value < -90 || request.Latitude.Value > 90))
-                throw new BadRequestException("Latitude must be between -90 and 90");
-
-            if (request.Longitude.HasValue && (request.Longitude.Value < -180 || request.Longitude.Value > 180))
-                throw new BadRequestException("Longitude must be between -180 and 180");
 
             if (request.Width.HasValue && request.Width.Value <= 0)
                 throw new BadRequestException("Width must be greater than 0");
@@ -402,12 +392,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
-
-            if (request.Latitude.HasValue)
-                registration.Latitude = request.Latitude.Value;
-
-            if (request.Longitude.HasValue)
-                registration.Longitude = request.Longitude.Value;
 
             if (request.Width.HasValue)
                 registration.Width = request.Width.Value;

@@ -27,6 +27,7 @@ namespace PlantDecor.API.Controllers
             ["OrderStatus"] = typeof(OrderStatusEnum),
             ["OrderType"] = typeof(OrderTypeEnum),
             ["BuyNowItemType"] = typeof(BuyNowItemTypeEnum),
+            ["ItemType"] = typeof(ItemTypeEnum),
             ["InvoiceStatus"] = typeof(InvoiceStatusEnum),
             ["InvoiceType"] = typeof(InvoiceTypeEnum),
             ["PaymentStatus"] = typeof(PaymentStatusEnum),
