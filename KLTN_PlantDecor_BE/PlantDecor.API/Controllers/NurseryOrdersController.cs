@@ -43,6 +43,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Lấy chi tiết một nursery order của shipper hiện tại
+        /// </summary>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetNurseryOrderDetail(int id)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetNurseryOrderDetailForShipperAsync(currentUserId, id);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy chi tiết đơn hàng của shipper thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Xác nhận đã lấy hàng -> Shipping
         /// </summary>
         [HttpPut("{id}/start-shipping")]
