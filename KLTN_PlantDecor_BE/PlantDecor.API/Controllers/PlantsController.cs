@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class PlantsController : ControllerBase
     {
         private readonly IPlantService _plantService;
@@ -33,7 +33,7 @@ namespace PlantDecor.API.Controllers
         /// [System] Tìm kiếm danh sách tất cả plants (phân trang)
         /// </summary>
         [HttpPost("/api/system/plants/search")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager, Admin")]
         public async Task<IActionResult> SearchAllPlants([FromBody] PlantSearchRequestDto request)
         {
             var plants = await _plantService.SearchAllPlantsAsync(request);
@@ -85,6 +85,7 @@ namespace PlantDecor.API.Controllers
         /// Tạo plant mới
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreatePlant([FromBody] PlantRequestDto request)
         {
             var plant = await _plantService.CreatePlantAsync(request);
@@ -101,6 +102,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật plant
         /// </summary>
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdatePlant(int id, [FromBody] PlantUpdateDto request)
         {
             var plant = await _plantService.UpdatePlantAsync(id, request);
@@ -118,6 +120,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("{id}/thumbnail")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadPlantThumbnail(int id, IFormFile file)
         {
             if (file == null)
@@ -140,6 +143,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadPlantImages(int id, List<IFormFile> files)
         {
             if (files == null || files.Count == 0)
@@ -162,6 +166,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPut("{id}/images/{imageId}")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ReplacePlantImage(int id, int imageId, IFormFile file)
         {
             var plant = await _plantService.ReplaceImageAsync(id, imageId, file);
@@ -178,6 +183,7 @@ namespace PlantDecor.API.Controllers
         /// Đặt thumbnail cho plant theo imageId
         /// </summary>
         [HttpPatch("{id}/images/{imageId}/set-primary")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetPrimaryPlantImage(int id, int imageId)
         {
             var plant = await _plantService.SetPrimaryPlantImageAsync(id, imageId);
@@ -194,6 +200,7 @@ namespace PlantDecor.API.Controllers
         /// Xóa ảnh plant theo imageId
         /// </summary>
         [HttpDelete("{id}/images/{imageId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePlantImage(int id, int imageId)
         {
             var plant = await _plantService.DeletePlantImageAsync(id, imageId);
@@ -210,6 +217,7 @@ namespace PlantDecor.API.Controllers
         /// Bật/tắt trạng thái active của plant
         /// </summary>
         [HttpPatch("{id}/toggle-active")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleActive(int id)
         {
             var isActive = await _plantService.ToggleActiveAsync(id);
@@ -230,6 +238,7 @@ namespace PlantDecor.API.Controllers
         /// Gắn categories cho plant
         /// </summary>
         [HttpPost("assign-categories")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignCategories([FromBody] AssignCategoriesDto request)
         {
             var plant = await _plantService.AssignCategoriesToPlantAsync(request);
@@ -246,6 +255,7 @@ namespace PlantDecor.API.Controllers
         /// Gắn tags cho plant
         /// </summary>
         [HttpPost("assign-tags")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignTags([FromBody] AssignTagsDto request)
         {
             var plant = await _plantService.AssignTagsToPlantAsync(request);
@@ -262,6 +272,7 @@ namespace PlantDecor.API.Controllers
         /// Gỡ category khỏi plant
         /// </summary>
         [HttpDelete("{plantId}/categories/{categoryId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveCategory(int plantId, int categoryId)
         {
             var plant = await _plantService.RemoveCategoryFromPlantAsync(plantId, categoryId);
@@ -278,6 +289,7 @@ namespace PlantDecor.API.Controllers
         /// Gỡ tag khỏi plant
         /// </summary>
         [HttpDelete("{plantId}/tags/{tagId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveTag(int plantId, int tagId)
         {
             var plant = await _plantService.RemoveTagFromPlantAsync(plantId, tagId);

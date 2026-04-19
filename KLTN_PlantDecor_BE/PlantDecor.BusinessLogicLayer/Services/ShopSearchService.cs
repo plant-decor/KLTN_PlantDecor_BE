@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 {
     public class ShopSearchService : IShopSearchService
     {
-        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v7";
+        private const string SHOP_UNIFIED_SEARCH_KEY = "shop_unified_search_v8";
 
         private readonly IPlantService _plantService;
         private readonly INurseryMaterialService _nurseryMaterialService;
@@ -153,10 +153,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             const int batchSize = 100;
             var collected = new List<ShopSearchItemDto>();
+            var seenMaterialIds = new HashSet<int>();
             var pageNumber = 1;
-            var totalCount = 0;
 
-            while (collected.Count < windowSize)
+            while (true)
             {
                 var materialPagination = new Pagination(pageNumber, batchSize);
                 var batchResult = await _nurseryMaterialService.SearchNurseryMaterialsForShopAsync(
@@ -174,27 +174,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     },
                     materialPagination);
 
-                totalCount = batchResult.TotalCount;
-                var batchItems = batchResult.Items
-                    .Select(m => new ShopSearchItemDto
-                    {
-                        Type = "Material",
-                        Material = m
-                    })
-                    .ToList();
+                var batchItems = batchResult.Items.ToList();
 
                 if (batchItems.Count == 0)
                     break;
 
-                collected.AddRange(batchItems);
+                foreach (var material in batchItems)
+                {
+                    // Unified search should return each base Material once,
+                    // even when multiple nurseries import the same material.
+                    if (!seenMaterialIds.Add(material.MaterialId))
+                    {
+                        continue;
+                    }
 
-                if (collected.Count >= totalCount)
+                    if (collected.Count < windowSize)
+                    {
+                        collected.Add(new ShopSearchItemDto
+                        {
+                            Type = "Material",
+                            Material = material
+                        });
+                    }
+                }
+
+                if (batchItems.Count < batchSize || pageNumber * batchSize >= batchResult.TotalCount)
                     break;
 
                 pageNumber++;
             }
 
-            return (collected.Take(windowSize).ToList(), totalCount);
+            return (collected, seenMaterialIds.Count);
         }
 
         private async Task<(List<ShopSearchItemDto> Items, int TotalCount)> FetchComboWindowItemsAsync(

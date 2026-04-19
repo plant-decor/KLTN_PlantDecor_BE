@@ -20,10 +20,12 @@ namespace PlantDecor.API.Controllers
     public class NurseryMaterialsController : ControllerBase
     {
         private readonly INurseryMaterialService _nurseryMaterialService;
+        private readonly IMaterialService _materialService;
 
-        public NurseryMaterialsController(INurseryMaterialService nurseryMaterialService)
+        public NurseryMaterialsController(INurseryMaterialService nurseryMaterialService, IMaterialService materialService)
         {
             _nurseryMaterialService = nurseryMaterialService;
+            _materialService = materialService;
         }
 
         #region Manager Operations
@@ -42,6 +44,24 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy danh sách vật tư thành công",
+                Payload = materials
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách material hệ thống đang active để Manager nhập về vựa
+        /// </summary>
+        [HttpPost("/api/manager/materials/active/search")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> SearchActiveSystemMaterials([FromBody] PaginationSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var materials = await _materialService.GetActiveMaterialsAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách vật tư active của hệ thống thành công",
                 Payload = materials
             });
         }

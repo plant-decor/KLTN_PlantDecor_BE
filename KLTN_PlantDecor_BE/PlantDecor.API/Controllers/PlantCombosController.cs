@@ -16,7 +16,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class PlantCombosController : ControllerBase
     {
         private readonly IPlantComboService _plantComboService;
@@ -50,6 +50,7 @@ namespace PlantDecor.API.Controllers
         #region CRUD Operations
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllCombos([FromQuery] Pagination pagination)
         {
             var combos = await _plantComboService.GetAllCombosAsync(pagination);
@@ -63,7 +64,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpGet("active")]
-        [AllowAnonymous]
+        [Authorize(Roles ="Manager, Admin")]
         public async Task<IActionResult> GetActiveCombos([FromQuery] Pagination pagination)
         {
             var combos = await _plantComboService.GetActiveCombosAsync(pagination);
@@ -92,6 +93,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateCombo([FromBody] PlantComboRequestDto request)
         {
             var combo = await _plantComboService.CreateComboAsync(request);
@@ -105,6 +107,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateCombo(int id, [FromBody] PlantComboUpdateDto request)
         {
             var combo = await _plantComboService.UpdateComboAsync(id, request);
@@ -119,6 +122,7 @@ namespace PlantDecor.API.Controllers
 
         [HttpPost("{id}/thumbnail")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadComboThumbnail(int id, IFormFile file)
         {
             if (file == null)
@@ -138,6 +142,7 @@ namespace PlantDecor.API.Controllers
 
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadComboImages(int id, List<IFormFile> files)
         {
             var combo = await _plantComboService.UploadPlantComboImagesAsync(id, files);
@@ -155,6 +160,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPut("{id}/images/{imageId}")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ReplaceComboImage(int id, int imageId, IFormFile file)
         {
             var combo = await _plantComboService.ReplaceImageAsync(id, imageId, file);
@@ -171,6 +177,7 @@ namespace PlantDecor.API.Controllers
         /// Đặt ảnh primary cho combo theo imageId
         /// </summary>
         [HttpPatch("{id}/images/{imageId}/set-primary")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetPrimaryComboImage(int id, int imageId)
         {
             var combo = await _plantComboService.SetPrimaryPlantComboImageAsync(id, imageId);
@@ -187,6 +194,7 @@ namespace PlantDecor.API.Controllers
         /// Xóa ảnh combo theo imageId
         /// </summary>
         [HttpDelete("{id}/images/{imageId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteComboImage(int id, int imageId)
         {
             var combo = await _plantComboService.DeletePlantComboImageAsync(id, imageId);
@@ -200,6 +208,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPatch("{id}/toggle-active")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleActive(int id)
         {
             var isActive = await _plantComboService.ToggleActiveAsync(id);
@@ -297,6 +306,7 @@ namespace PlantDecor.API.Controllers
         #region Combo Items Management
 
         [HttpPost("{comboId}/items")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddComboItem(int comboId, [FromBody] PlantComboItemRequestDto request)
         {
             var combo = await _plantComboService.AddComboItemAsync(comboId, request);
@@ -310,6 +320,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpPut("items/{comboItemId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateComboItem(int comboItemId, [FromBody] PlantComboItemRequestDto request)
         {
             var combo = await _plantComboService.UpdateComboItemAsync(comboItemId, request);
@@ -323,6 +334,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpDelete("{comboId}/items/{comboItemId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveComboItem(int comboId, int comboItemId)
         {
             var combo = await _plantComboService.RemoveComboItemAsync(comboId, comboItemId);
@@ -340,6 +352,7 @@ namespace PlantDecor.API.Controllers
         #region Tag Assignment
 
         [HttpPost("assign-tags")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignTags([FromBody] AssignComboTagsDto request)
         {
             var combo = await _plantComboService.AssignTagsToComboAsync(request);
@@ -353,6 +366,7 @@ namespace PlantDecor.API.Controllers
         }
 
         [HttpDelete("{comboId}/tags/{tagId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveTag(int comboId, int tagId)
         {
             var combo = await _plantComboService.RemoveTagFromComboAsync(comboId, tagId);
