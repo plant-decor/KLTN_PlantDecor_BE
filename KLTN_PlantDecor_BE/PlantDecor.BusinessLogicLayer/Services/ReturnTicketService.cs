@@ -183,6 +183,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Id = i.Id,
                     NurseryOrderDetailId = i.NurseryOrderDetailId,
                     ItemName = i.NurseryOrderDetail?.ItemName,
+                    ProductImageUrl = GetProductImageUrl(i.NurseryOrderDetail),
                     RequestedQuantity = i.RequestedQuantity,
                     ApprovedQuantity = i.ApprovedQuantity,
                     Reason = i.Reason,
@@ -216,6 +217,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Id = item.Id,
                 NurseryOrderDetailId = item.NurseryOrderDetailId,
                 ItemName = item.NurseryOrderDetail?.ItemName,
+                ProductImageUrl = GetProductImageUrl(item.NurseryOrderDetail),
                 RequestedQuantity = item.RequestedQuantity,
                 ApprovedQuantity = item.ApprovedQuantity,
                 Reason = item.Reason,
@@ -229,6 +231,55 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 NurseryId = item.NurseryOrderDetail?.NurseryOrder?.NurseryId,
                 ImageUrls = item.ReturnTicketItemImages.Select(i => i.ImageUrl).ToList()
             };
+        }
+
+        private static string? GetProductImageUrl(NurseryOrderDetail? detail)
+        {
+            if (detail == null)
+            {
+                return null;
+            }
+
+            var plantInstanceImage = detail.PlantInstance?.PlantImages
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(plantInstanceImage))
+            {
+                return plantInstanceImage;
+            }
+
+            var commonPlantImage = detail.CommonPlant?.Plant?.PlantImages
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(commonPlantImage))
+            {
+                return commonPlantImage;
+            }
+
+            var plantImage = detail.PlantInstance?.Plant?.PlantImages
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(plantImage))
+            {
+                return plantImage;
+            }
+
+            var comboImage = detail.NurseryPlantCombo?.PlantCombo?.PlantComboImages
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+            if (!string.IsNullOrWhiteSpace(comboImage))
+            {
+                return comboImage;
+            }
+
+            return detail.NurseryMaterial?.Material?.MaterialImages
+                .OrderByDescending(i => i.IsPrimary == true)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
         }
     }
 }

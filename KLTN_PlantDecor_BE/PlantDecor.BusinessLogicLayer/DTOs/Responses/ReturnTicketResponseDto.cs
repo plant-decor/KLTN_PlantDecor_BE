@@ -19,6 +19,7 @@
         public int Id { get; set; }
         public int NurseryOrderDetailId { get; set; }
         public string? ItemName { get; set; }
+        public string? ProductImageUrl { get; set; }
         public int RequestedQuantity { get; set; }
         public int? ApprovedQuantity { get; set; }
         public string? Reason { get; set; }
