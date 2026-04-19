@@ -163,6 +163,7 @@ namespace PlantDecor.API.Controllers
             var managerId = GetUserId();
             var result = await _serviceRegistrationService.RejectAsync(managerId, id, rejectReason);
             var message = result.Status == (int)ServiceRegistrationStatusEnum.PendingApproval
+                          || result.Status == (int)ServiceRegistrationStatusEnum.WaitingForNursery
                 ? "Registration moved to another nursery and is pending approval"
                 : "Registration rejected successfully";
 
@@ -194,7 +195,7 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Customer] Hủy đăng ký dịch vụ (chỉ khi PendingApproval hoặc AwaitPayment)
+        /// [Customer] Hủy đăng ký dịch vụ (chỉ khi WaitingForNursery, PendingApproval hoặc AwaitPayment)
         /// </summary>
         [HttpPost("{id}/cancel")]
         public async Task<IActionResult> Cancel(int id, [FromQuery] string? cancelReason = null)

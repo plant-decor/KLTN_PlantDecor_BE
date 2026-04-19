@@ -5,7 +5,6 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
-using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -307,38 +306,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .OrderBy(u => u.Username)
                 .Select(NurseryService.MapToStaffDtoPublic)
                 .ToList();
-        }
-
-        public async Task<PaginatedResult<ServiceProgressResponseDto>> GetIncidentProgressesAsync(
-            int managerId,
-            Pagination pagination,
-            DateOnly? from,
-            DateOnly? to,
-            bool openOnly)
-        {
-            var nursery = await ResolveOperatorNurseryAsync(managerId);
-
-            if (from.HasValue && to.HasValue && to.Value < from.Value)
-                throw new BadRequestException("'to' date must be >= 'from' date");
-
-            if (from.HasValue && to.HasValue &&
-                (to.Value.ToDateTime(TimeOnly.MinValue) - from.Value.ToDateTime(TimeOnly.MinValue)).TotalDays > 90)
-            {
-                throw new BadRequestException("Date range cannot exceed 90 days");
-            }
-
-            var result = await _unitOfWork.ServiceProgressRepository.GetIncidentsByNurseryAsync(
-                nursery.Id,
-                pagination,
-                from,
-                to,
-                openOnly);
-
-            return new PaginatedResult<ServiceProgressResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
-                result.TotalCount,
-                result.PageNumber,
-                result.PageSize);
         }
 
         public async Task<List<ServiceProgressResponseDto>> GetNurseryScheduleAsync(int managerId, DateOnly date)

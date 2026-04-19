@@ -8,6 +8,7 @@ namespace PlantDecor.DataAccessLayer.Enums
 {
     public enum ServiceRegistrationStatusEnum
     {
+        WaitingForNursery = 0, // Đăng ký dịch vụ đang chờ vựa đủ điều kiện tiếp nhận
         PendingApproval = 1, // Đăng ký dịch vụ đang chờ phê duyệt
         AwaitPayment = 2, // Đăng ký dịch vụ đã được phê duyệt nhưng chưa thanh toán
         Active = 3, // Đăng ký dịch vụ đã được phê duyệt và thanh toán, đang hoạt động
