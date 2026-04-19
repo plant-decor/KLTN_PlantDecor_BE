@@ -9,6 +9,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API quản lý mẫu thiết kế được cung cấp theo vườn ươm
+    /// </summary>
     [Route("api")]
     [ApiController]
     [Authorize]
@@ -21,6 +24,9 @@ namespace PlantDecor.API.Controllers
             _nurseryDesignTemplateService = nurseryDesignTemplateService;
         }
 
+        /// <summary>
+        /// [Public] Lấy danh sách mẫu thiết kế đang được vườn ươm cung cấp
+        /// </summary>
         [HttpGet("public/nursery-design-templates")]
         [AllowAnonymous]
         public async Task<IActionResult> GetActiveByNursery([FromQuery] int nurseryId)
@@ -35,6 +41,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Public] Lấy danh sách vườn ươm đang cung cấp một mẫu thiết kế
+        /// </summary>
         [HttpGet("public/nursery-design-templates/by-template")]
         [AllowAnonymous]
         public async Task<IActionResult> GetActiveByTemplate([FromQuery] int designTemplateId)
@@ -49,6 +58,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Lấy danh sách mapping mẫu thiết kế của vườn ươm hiện tại
+        /// </summary>
         [HttpGet("manager/nursery-design-templates/my")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetMine([FromQuery] bool activeOnly = false)
@@ -64,6 +76,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Lấy danh sách mẫu thiết kế chưa được vườn ươm cung cấp
+        /// </summary>
         [HttpGet("manager/nursery-design-templates/not-offered-templates")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetNotOfferedTemplates()
@@ -79,6 +94,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Thêm mẫu thiết kế vào danh sách cung cấp của vườn ươm
+        /// </summary>
         [HttpPost("manager/nursery-design-templates")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Add([FromBody] CreateNurseryDesignTemplateRequestDto request)
@@ -94,6 +112,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Bật/tắt trạng thái hoạt động của mapping mẫu thiết kế
+        /// </summary>
         [HttpPatch("manager/nursery-design-templates/{id:int}/toggle")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Toggle(int id)
@@ -109,6 +130,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Manager] Xóa mẫu thiết kế khỏi danh sách cung cấp của vườn ươm
+        /// </summary>
         [HttpDelete("manager/nursery-design-templates/{id:int}")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Remove(int id)

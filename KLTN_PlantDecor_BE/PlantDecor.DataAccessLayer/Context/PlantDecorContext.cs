@@ -423,12 +423,12 @@ public partial class PlantDecorContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("DesignTemplateTierItem_DesignTemplateTierId_fkey");
 
-            entity.HasOne<Material>().WithMany()
+            entity.HasOne(d => d.Material).WithMany(p => p.DesignTemplateTierItems)
                 .HasForeignKey(d => d.MaterialId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("DesignTemplateTierItem_MaterialId_fkey");
 
-            entity.HasOne<Plant>().WithMany()
+            entity.HasOne(d => d.Plant).WithMany(p => p.DesignTemplateTierItems)
                 .HasForeignKey(d => d.PlantId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("DesignTemplateTierItem_PlantId_fkey");

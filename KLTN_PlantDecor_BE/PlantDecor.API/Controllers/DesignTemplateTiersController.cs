@@ -7,6 +7,9 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API quản lý hạng mục tầng của mẫu thiết kế
+    /// </summary>
     [Route("api")]
     [ApiController]
     [Authorize]
@@ -19,6 +22,9 @@ namespace PlantDecor.API.Controllers
             _designTemplateTierService = designTemplateTierService;
         }
 
+        /// <summary>
+        /// [Public] Lấy danh sách tier theo mẫu thiết kế
+        /// </summary>
         [HttpGet("public/design-template-tiers")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByTemplate([FromQuery] int designTemplateId, [FromQuery] bool includeInactive = false)
@@ -33,6 +39,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Public] Lấy chi tiết tier của mẫu thiết kế
+        /// </summary>
         [HttpGet("public/design-template-tiers/{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -47,6 +56,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Tạo tier mới cho mẫu thiết kế
+        /// </summary>
         [HttpPost("admin/design-template-tiers")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateDesignTemplateTierRequestDto request)
@@ -61,6 +73,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Cập nhật thông tin tier của mẫu thiết kế
+        /// </summary>
         [HttpPut("admin/design-template-tiers/{id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateDesignTemplateTierRequestDto request)
@@ -75,6 +90,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Cập nhật danh sách item trong tier
+        /// </summary>
         [HttpPut("admin/design-template-tiers/{id:int}/items")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetItems(int id, [FromBody] SetDesignTemplateTierItemsRequestDto request)
@@ -89,6 +107,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Hủy kích hoạt tier của mẫu thiết kế
+        /// </summary>
         [HttpDelete("admin/design-template-tiers/{id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
