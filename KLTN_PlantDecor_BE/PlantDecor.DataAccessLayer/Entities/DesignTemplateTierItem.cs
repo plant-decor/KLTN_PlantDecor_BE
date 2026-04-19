@@ -16,5 +16,7 @@ namespace PlantDecor.DataAccessLayer.Entities
         public decimal Quantity { get; set; }
         public DateTime? CreatedAt { get; set; }
         public virtual DesignTemplateTier DesignTemplateTier { get; set; } = null!;
+        public virtual Material? Material { get; set; }
+        public virtual Plant? Plant { get; set; }
     }
 }
