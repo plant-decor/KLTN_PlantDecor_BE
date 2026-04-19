@@ -1,4 +1,5 @@
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
@@ -10,6 +11,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<ServiceProgress>> GetByNurseryAndDateAsync(int nurseryId, DateOnly date);
         Task<List<ServiceProgress>> GetByCaretakerAndDateRangeAsync(int nurseryId, int caretakerId, DateOnly from, DateOnly to);
         Task<List<ServiceProgress>> GetByCaretakerSelfDateRangeAsync(int caretakerId, DateOnly from, DateOnly to);
+        Task<PaginatedResult<ServiceProgress>> GetIncidentsByNurseryAsync(int nurseryId, Pagination pagination, DateOnly? from, DateOnly? to, bool openOnly);
         Task<HashSet<int>> GetConflictingCaretakerIdsAsync(int shiftId, List<DateOnly> dates);
     }
 }

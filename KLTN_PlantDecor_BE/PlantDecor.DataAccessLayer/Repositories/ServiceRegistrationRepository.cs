@@ -97,14 +97,38 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<ServiceRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<Dictionary<int, int>> CountOpenAssignmentsByCaretakerIdsAsync(List<int> caretakerIds, int nurseryId)
+        {
+            if (caretakerIds == null || caretakerIds.Count == 0)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            var openStatuses = new[]
+            {
+                (int)ServiceRegistrationStatusEnum.Active
+            };
+
+            return await _context.ServiceRegistrations
+                .Where(r => r.NurseryCareService != null
+                            && r.NurseryCareService.NurseryId == nurseryId
+                            && r.CurrentCaretakerId.HasValue
+                            && caretakerIds.Contains(r.CurrentCaretakerId.Value)
+                            && r.Status.HasValue
+                            && openStatuses.Contains(r.Status.Value))
+                .GroupBy(r => r.CurrentCaretakerId!.Value)
+                .Select(g => new { CaretakerId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.CaretakerId, x => x.Count);
+        }
+
         private IQueryable<ServiceRegistration> BuildDetailedQuery()
         {
             return _context.ServiceRegistrations
                 .Include(r => r.User)
                 .Include(r => r.NurseryCareService)
-                    .ThenInclude(ncs => ncs.CareServicePackage)
+                    .ThenInclude(ncs => ncs!.CareServicePackage)
                 .Include(r => r.NurseryCareService)
-                    .ThenInclude(ncs => ncs.Nursery)
+                    .ThenInclude(ncs => ncs!.Nursery)
                 .Include(r => r.MainCaretaker)
                 .Include(r => r.CurrentCaretaker)
                 .Include(r => r.PrefferedShift)
