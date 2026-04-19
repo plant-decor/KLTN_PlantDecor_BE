@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
@@ -60,6 +60,9 @@ namespace PlantDecor.API.Controllers
             ["CareServiceType"] = typeof(CareServiceTypeEnum),
             ["ServiceRegistrationStatus"] = typeof(ServiceRegistrationStatusEnum),
             ["ServiceProgressStatus"] = typeof(ServiceProgressStatusEnum),
+            ["ReturnTicketStatus"] = typeof(ReturnTicketStatusEnum),
+            ["ReturnTicketItemStatus"] = typeof(ReturnTicketItemStatusEnum),
+            ["ReturnTicketAssignmentStatus"] = typeof(ReturnTicketAssignmentStatusEnum),
             ["DesignRegistrationStatus"] = typeof(DesignRegistrationStatus),
             ["DesignTaskStatus"] = typeof(DesignTaskStatusEnum),
             ["TaskType"] = typeof(TaskTypeEnum),
@@ -190,6 +193,66 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("ServiceProgressStatus", typeof(ServiceProgressStatusEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho ReturnTicket
+        /// GET /api/system/enums/return-tickets
+        /// </summary>
+        [HttpGet("return-tickets")]
+        [AllowAnonymous]
+        public IActionResult GetReturnTicketEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get return ticket enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("ReturnTicketStatus", typeof(ReturnTicketStatusEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho ReturnTicketItem
+        /// GET /api/system/enums/return-ticket-items
+        /// </summary>
+        [HttpGet("return-ticket-items")]
+        [AllowAnonymous]
+        public IActionResult GetReturnTicketItemEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get return ticket item enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("ReturnTicketItemStatus", typeof(ReturnTicketItemStatusEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho ReturnTicketAssignment
+        /// GET /api/system/enums/return-ticket-assignments
+        /// </summary>
+        [HttpGet("return-ticket-assignments")]
+        [AllowAnonymous]
+        public IActionResult GetReturnTicketAssignmentEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get return ticket assignment enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("ReturnTicketAssignmentStatus", typeof(ReturnTicketAssignmentStatusEnum))
                 }
             });
         }
