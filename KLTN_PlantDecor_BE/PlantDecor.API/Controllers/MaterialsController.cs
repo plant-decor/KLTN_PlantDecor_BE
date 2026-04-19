@@ -15,7 +15,7 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class MaterialsController : ControllerBase
     {
         private readonly IMaterialService _materialService;
@@ -31,10 +31,13 @@ namespace PlantDecor.API.Controllers
         /// [System] Tìm kiếm danh sách tất cả materials (phân trang)
         /// </summary>
         [HttpPost("/api/system/materials/search")]
+        [Authorize(Roles = "Manager, Admin")]
         public async Task<IActionResult> SearchAllMaterials([FromBody] PaginationSearchRequestDto request)
         {
             var pagination = request?.Pagination ?? new Pagination();
-            var materials = await _materialService.GetAllMaterialsAsync(pagination);
+            var materials = request?.IsActive == true
+                ? await _materialService.GetActiveMaterialsAsync(pagination)
+                : await _materialService.GetAllMaterialsAsync(pagination);
             return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,
@@ -101,6 +104,7 @@ namespace PlantDecor.API.Controllers
         /// Tạo material mới
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateMaterial([FromBody] MaterialRequestDto request)
         {
             var material = await _materialService.CreateMaterialAsync(request);
@@ -117,6 +121,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật material
         /// </summary>
         [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateMaterial(int id, [FromBody] MaterialUpdateDto request)
         {
             var material = await _materialService.UpdateMaterialAsync(id, request);
@@ -134,6 +139,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("{id}/thumbnail")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadMaterialThumbnail(int id, IFormFile file)
         {
             if (file == null)
@@ -156,6 +162,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadMaterialImages(int id, List<IFormFile> files)
         {
             var material = await _materialService.UploadMaterialImagesAsync(id, files);
@@ -173,6 +180,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPut("{id}/images/{imageId}")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ReplaceMaterialImage(int id, int imageId, IFormFile file)
         {
             var material = await _materialService.ReplaceImageAsync(id, imageId, file);
@@ -189,6 +197,7 @@ namespace PlantDecor.API.Controllers
         /// Đặt ảnh primary cho material theo imageId
         /// </summary>
         [HttpPatch("{id}/images/{imageId}/set-primary")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SetPrimaryMaterialImage(int id, int imageId)
         {
             var material = await _materialService.SetPrimaryMaterialImageAsync(id, imageId);
@@ -205,6 +214,7 @@ namespace PlantDecor.API.Controllers
         /// Xóa ảnh material theo imageId
         /// </summary>
         [HttpDelete("{id}/images/{imageId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteMaterialImage(int id, int imageId)
         {
             var material = await _materialService.DeleteMaterialImageAsync(id, imageId);
@@ -221,6 +231,7 @@ namespace PlantDecor.API.Controllers
         /// Bật/tắt trạng thái active của material
         /// </summary>
         [HttpPatch("{id}/toggle-active")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleActive(int id)
         {
             var isActive = await _materialService.ToggleActiveAsync(id);
@@ -241,6 +252,7 @@ namespace PlantDecor.API.Controllers
         /// Gắn categories cho material
         /// </summary>
         [HttpPost("assign-categories")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignCategories([FromBody] AssignMaterialCategoriesDto request)
         {
             var material = await _materialService.AssignCategoriesToMaterialAsync(request);
@@ -257,6 +269,7 @@ namespace PlantDecor.API.Controllers
         /// Gắn tags cho material
         /// </summary>
         [HttpPost("assign-tags")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignTags([FromBody] AssignMaterialTagsDto request)
         {
             var material = await _materialService.AssignTagsToMaterialAsync(request);
@@ -273,6 +286,7 @@ namespace PlantDecor.API.Controllers
         /// Gỡ category khỏi material
         /// </summary>
         [HttpDelete("{materialId}/categories/{categoryId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveCategory(int materialId, int categoryId)
         {
             var material = await _materialService.RemoveCategoryFromMaterialAsync(materialId, categoryId);
@@ -289,6 +303,7 @@ namespace PlantDecor.API.Controllers
         /// Gỡ tag khỏi material
         /// </summary>
         [HttpDelete("{materialId}/tags/{tagId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveTag(int materialId, int tagId)
         {
             var material = await _materialService.RemoveTagFromMaterialAsync(materialId, tagId);
