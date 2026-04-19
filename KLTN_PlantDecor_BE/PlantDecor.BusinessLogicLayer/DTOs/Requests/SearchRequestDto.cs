@@ -6,6 +6,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     public class PaginationSearchRequestDto
     {
         public Pagination Pagination { get; set; } = new Pagination();
+        public bool? IsActive { get; set; }
     }
 
     public class PlantSearchRequestDto
