@@ -32,6 +32,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.Orders
                 .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.CommonPlant)
+                .Include(o => o.NurseryOrders)
+                    .ThenInclude(no => no.NurseryOrderDetails)
+                        .ThenInclude(d => d.PlantInstance)
                 .Where(o => o.Status == (int)Enums.OrderStatusEnum.PendingConfirmation
                     && o.UpdatedAt.HasValue
                     && o.UpdatedAt.Value.Date <= threshold.Date)

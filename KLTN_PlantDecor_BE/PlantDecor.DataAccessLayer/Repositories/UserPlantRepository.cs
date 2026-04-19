@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Interfaces;
@@ -25,6 +25,13 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .OrderByDescending(userPlant => userPlant.CreatedAt)
                 .ThenByDescending(userPlant => userPlant.Id)
                 .ToListAsync();
+        }
+
+        public async Task<bool> ExistsByUserIdAndPlantInstanceIdAsync(int userId, int plantInstanceId)
+        {
+            return await _context.UserPlants
+                .AsNoTracking()
+                .AnyAsync(userPlant => userPlant.UserId == userId && userPlant.PlantInstanceId == plantInstanceId);
         }
     }
 }

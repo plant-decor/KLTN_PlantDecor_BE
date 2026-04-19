@@ -136,6 +136,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         nurseryOrder.UpdatedAt = now;
                         _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
                     }
+
+                    await AddPurchasedPlantsToMyPlantAsync(order, now);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -148,6 +150,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 _logger.LogError(ex, "Error while auto-completing PendingConfirmation orders");
                 throw;
+            }
+        }
+
+        private async Task AddPurchasedPlantsToMyPlantAsync(Order order, DateTime now)
+        {
+            if (order.UserId <= 0)
+            {
+                return;
+            }
+
+            var purchaseDate = DateOnly.FromDateTime((order.CompletedAt ?? now).Date);
+
+            foreach (var nurseryOrder in order.NurseryOrders)
+            {
+                foreach (var detail in nurseryOrder.NurseryOrderDetails)
+                {
+                    if (detail.PlantInstanceId.HasValue)
+                    {
+                        var plantInstanceId = detail.PlantInstanceId.Value;
+                        var alreadyOwned = await _unitOfWork.UserPlantRepository
+                            .ExistsByUserIdAndPlantInstanceIdAsync(order.UserId, plantInstanceId);
+
+                        if (alreadyOwned)
+                        {
+                            continue;
+                        }
+
+                        var userPlantFromInstance = new UserPlant
+                        {
+                            UserId = order.UserId,
+                            PlantId = detail.PlantInstance?.PlantId,
+                            PlantInstanceId = plantInstanceId,
+                            PurchaseDate = purchaseDate,
+                            CurrentHeight = detail.PlantInstance?.Height,
+                            CurrentTrunkDiameter = detail.PlantInstance?.TrunkDiameter,
+                            HealthStatus = detail.PlantInstance?.HealthStatus,
+                            Age = detail.PlantInstance?.Age,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        };
+
+                        _unitOfWork.UserPlantRepository.PrepareCreate(userPlantFromInstance);
+                        continue;
+                    }
+
+                    if (detail.CommonPlant?.PlantId is int plantId)
+                    {
+                        var quantity = Math.Max(1, detail.Quantity ?? 1);
+
+                        for (var i = 0; i < quantity; i++)
+                        {
+                            var userPlant = new UserPlant
+                            {
+                                UserId = order.UserId,
+                                PlantId = plantId,
+                                PurchaseDate = purchaseDate,
+                                CreatedAt = now,
+                                UpdatedAt = now
+                            };
+
+                            _unitOfWork.UserPlantRepository.PrepareCreate(userPlant);
+                        }
+                    }
+                }
             }
         }
     }
