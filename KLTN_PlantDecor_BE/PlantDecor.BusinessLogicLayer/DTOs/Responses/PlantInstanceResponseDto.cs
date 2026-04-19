@@ -12,6 +12,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PlantName { get; set; }
         public int? CurrentNurseryId { get; set; }
         public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
+        public string? NurseryPhone { get; set; }
         public string? SKU { get; set; }
         public decimal? SpecificPrice { get; set; }
         public decimal? Height { get; set; }
@@ -36,6 +38,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PlantName { get; set; }
         public int? CurrentNurseryId { get; set; }
         public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
+        public string? NurseryPhone { get; set; }
         public string? SKU { get; set; }
         public decimal? SpecificPrice { get; set; }
         public decimal? Height { get; set; }

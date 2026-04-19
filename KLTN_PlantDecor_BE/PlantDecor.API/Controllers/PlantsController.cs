@@ -33,6 +33,7 @@ namespace PlantDecor.API.Controllers
         /// [System] Tìm kiếm danh sách tất cả plants (phân trang)
         /// </summary>
         [HttpPost("/api/system/plants/search")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> SearchAllPlants([FromBody] PlantSearchRequestDto request)
         {
             var plants = await _plantService.SearchAllPlantsAsync(request);
