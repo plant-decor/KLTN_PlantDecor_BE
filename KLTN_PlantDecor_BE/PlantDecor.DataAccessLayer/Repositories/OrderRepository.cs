@@ -34,7 +34,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(o => o.NurseryOrders)
                 .Where(o => o.Status == (int)Enums.OrderStatusEnum.PendingConfirmation
                     && o.UpdatedAt.HasValue
-                    && o.UpdatedAt.Value <= threshold)
+                    && o.UpdatedAt.Value.Date <= threshold.Date)
                 .ToListAsync();
         }
 
