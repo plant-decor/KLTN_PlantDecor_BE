@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
@@ -161,11 +162,15 @@ namespace PlantDecor.API.Controllers
         {
             var managerId = GetUserId();
             var result = await _serviceRegistrationService.RejectAsync(managerId, id, rejectReason);
+            var message = result.Status == (int)ServiceRegistrationStatusEnum.PendingApproval
+                ? "Registration moved to another nursery and is pending approval"
+                : "Registration rejected successfully";
+
             return Ok(new ApiResponse<ServiceRegistrationResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Registration rejected successfully",
+                Message = message,
                 Payload = result
             });
         }

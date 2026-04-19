@@ -7,6 +7,9 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API quản lý mẫu thiết kế
+    /// </summary>
     [Route("api")]
     [ApiController]
     [Authorize]
@@ -19,6 +22,9 @@ namespace PlantDecor.API.Controllers
             _designTemplateService = designTemplateService;
         }
 
+        /// <summary>
+        /// [Public] Lấy danh sách mẫu thiết kế
+        /// </summary>
         [HttpGet("public/design-templates")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll()
@@ -33,6 +39,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Public] Lấy chi tiết mẫu thiết kế
+        /// </summary>
         [HttpGet("public/design-templates/{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -47,6 +56,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Tạo mẫu thiết kế mới
+        /// </summary>
         [HttpPost("admin/design-templates")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateDesignTemplateRequestDto request)
@@ -61,6 +73,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Cập nhật thông tin mẫu thiết kế
+        /// </summary>
         [HttpPut("admin/design-templates/{id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateDesignTemplateRequestDto request)
@@ -75,6 +90,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Cập nhật danh sách chuyên môn của mẫu thiết kế
+        /// </summary>
         [HttpPut("admin/design-templates/{id:int}/specializations")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateSpecializations(int id, [FromBody] SetDesignTemplateSpecializationsRequestDto request)
@@ -89,6 +107,9 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// [Admin] Xóa mẫu thiết kế
+        /// </summary>
         [HttpDelete("admin/design-templates/{id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)

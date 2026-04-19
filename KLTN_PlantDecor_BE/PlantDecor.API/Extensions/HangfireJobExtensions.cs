@@ -67,18 +67,6 @@ namespace PlantDecor.API.Extensions
                 service => service.ProcessOrderDeliveryAsync(orderId));
         }
 
-        /// <summary>
-        /// Enqueue user preference recalculation job
-        /// </summary>
-        /// <param name="backgroundJobClient">Hangfire background job client</param>
-        /// <returns>Job ID</returns>
-        public static string EnqueueUserPreferenceRecalculation(
-            this IBackgroundJobClient backgroundJobClient)
-        {
-            return backgroundJobClient.Enqueue<IUserPreferenceService>(
-                service => service.CalculatedAllUserPreferenceAsync());
-        }
-
         #region Embedding Jobs
 
         /// <summary>
@@ -187,12 +175,6 @@ namespace PlantDecor.API.Extensions
                 "process-expired-payments",
                 service => service.ProcessExpiredPaymentsAsync(),
                 "*/1 * * * *");
-
-            // Recalculate user preferences once daily at 02:00 UTC
-            recurringJobManager.AddOrUpdate<IUserPreferenceService>(
-                "recalculate-user-preferences",
-                service => service.CalculatedAllUserPreferenceAsync(),
-                "0 8 * * *");
 
             // Auto-complete orders in PendingConfirmation for at least 3 days (run daily)
             recurringJobManager.AddOrUpdate<IOrderBackgroundJobService>(

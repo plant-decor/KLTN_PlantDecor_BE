@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
@@ -14,6 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<ServiceProgressResponseDto> CheckOutAsync(int caretakerId, int progressId, CheckOutRequestDto request, IFormFile? evidenceImage);
         Task<ServiceProgressResponseDto> ReassignCaretakerAsync(int managerId, int progressId, int newCaretakerId);
         Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForProgressAsync(int managerId, int progressId);
+        Task<PaginatedResult<ServiceProgressResponseDto>> GetIncidentProgressesAsync(int managerId, Pagination pagination, DateOnly? from, DateOnly? to, bool openOnly);
         Task<List<ServiceProgressResponseDto>> GetNurseryScheduleAsync(int managerId, DateOnly date);
         Task<List<ServiceProgressResponseDto>> GetCaretakerScheduleAsync(int managerId, int caretakerId, DateOnly from, DateOnly to);
         Task<List<ServiceProgressResponseDto>> GetMyScheduleAsync(int caretakerId, DateOnly from, DateOnly to);
