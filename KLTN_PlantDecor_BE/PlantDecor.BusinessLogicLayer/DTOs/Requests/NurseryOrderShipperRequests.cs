@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
@@ -13,6 +13,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     {
         [StringLength(255)]
         public string? DeliveryNote { get; set; }
+
+        public IFormFile? DeliveryImage { get; set; }
     }
 
     public class MarkDeliveryFailedRequestDto
