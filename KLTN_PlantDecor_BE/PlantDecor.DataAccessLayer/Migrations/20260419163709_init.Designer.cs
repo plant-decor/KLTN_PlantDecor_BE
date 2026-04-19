@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260419095049_init")]
+    [Migration("20260419163709_init")]
     partial class init
     {
         /// <inheritdoc />
