@@ -108,7 +108,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             try
             {
-                var threshold = DateTime.Now.AddDays(-3);
+                var threshold = DateTime.UtcNow.Date.AddDays(-3);
                 _logger.LogInformation(
                     "Start auto-completing PendingConfirmation orders. Threshold: {Threshold}",
                     threshold);
@@ -121,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return;
                 }
 
-                var now = DateTime.Now;
+                var now = DateTime.UtcNow;
 
                 foreach (var order in orders)
                 {
