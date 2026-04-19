@@ -95,6 +95,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 pagination.PageSize);
         }
 
+        public async Task<NurseryOrderResponseDto> GetNurseryOrderDetailForShipperAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await GetValidatedShipperAsync(currentUserId);
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            ValidateOwnership(currentUser, nurseryOrder);
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request)
         {
             var currentUser = await GetValidatedShipperAsync(currentUserId);
