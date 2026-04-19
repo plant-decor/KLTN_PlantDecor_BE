@@ -10,6 +10,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<DesignRegistrationResponseDto> CreateAsync(int userId, CreateDesignRegistrationRequestDto request);
         Task<PaginatedResult<DesignRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination, int? status = null);
         Task<DesignRegistrationResponseDto> GetByIdAsync(int id, int requesterId);
+        Task<PaginatedResult<DesignRegistrationResponseDto>> GetPendingForNurseryAsync(int managerId, Pagination pagination);
         Task<PaginatedResult<DesignRegistrationResponseDto>> GetAllForNurseryAsync(int managerId, Pagination pagination, int? status = null);
         Task<DesignRegistrationResponseDto> GetByIdAsOperatorAsync(int managerId, int id);
         Task<DesignRegistrationResponseDto> ApproveAsync(int managerId, int id);

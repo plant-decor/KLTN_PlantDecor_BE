@@ -5,6 +5,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IDesignTemplateTierService
     {
+        Task<List<DesignTemplateTierResponseDto>> GetMarketedTiersAsync();
+        Task<List<NurseryDesignTemplateResponseDto>> GetActiveNurseriesByTierIdAsync(int designTemplateTierId);
         Task<List<DesignTemplateTierResponseDto>> GetByTemplateIdAsync(int designTemplateId, bool includeInactive = false);
         Task<DesignTemplateTierResponseDto> GetByIdAsync(int id);
         Task<DesignTemplateTierResponseDto> CreateAsync(CreateDesignTemplateTierRequestDto request);

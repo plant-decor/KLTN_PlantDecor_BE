@@ -23,6 +23,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Public] Lấy danh sách tier đang được kinh doanh trên hệ thống
+        /// </summary>
+        [HttpGet("public/design-template-tiers/marketed")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetMarketedTiers()
+        {
+            var result = await _designTemplateTierService.GetMarketedTiersAsync();
+            return Ok(new ApiResponse<List<DesignTemplateTierResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get marketed design template tiers successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Public] Lấy danh sách tier theo mẫu thiết kế
         /// </summary>
         [HttpGet("public/design-template-tiers")]
@@ -52,6 +69,23 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get design template tier successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Public] Lấy danh sách vườn ươm đang kinh doanh một tier cụ thể
+        /// </summary>
+        [HttpGet("public/design-template-tiers/{id:int}/nurseries")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNurseriesByTier(int id)
+        {
+            var result = await _designTemplateTierService.GetActiveNurseriesByTierIdAsync(id);
+            return Ok(new ApiResponse<List<NurseryDesignTemplateResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get nurseries offering this tier successfully",
                 Payload = result
             });
         }

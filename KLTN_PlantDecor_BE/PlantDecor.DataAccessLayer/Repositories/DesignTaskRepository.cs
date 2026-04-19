@@ -27,7 +27,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
-        public async Task<PaginatedResult<DesignTask>> GetByAssignedStaffIdAsync(int assignedStaffId, Pagination pagination, int? status = null)
+        public async Task<PaginatedResult<DesignTask>> GetByAssignedStaffIdAsync(
+            int assignedStaffId,
+            Pagination pagination,
+            int? status = null,
+            DateOnly? from = null,
+            DateOnly? to = null)
         {
             var query = BuildDetailedQuery()
                 .Where(x => x.AssignedStaffId == assignedStaffId);
@@ -35,6 +40,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (status.HasValue)
             {
                 query = query.Where(x => x.Status == status.Value);
+            }
+
+            if (from.HasValue)
+            {
+                query = query.Where(x => x.ScheduledDate.HasValue && x.ScheduledDate.Value >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                query = query.Where(x => x.ScheduledDate.HasValue && x.ScheduledDate.Value <= to.Value);
             }
 
             query = query.OrderByDescending(x => x.Id);

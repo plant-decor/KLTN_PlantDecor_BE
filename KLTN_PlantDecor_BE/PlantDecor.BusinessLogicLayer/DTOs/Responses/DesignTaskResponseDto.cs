@@ -37,4 +37,14 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? ActualQuantity { get; set; }
         public string? Note { get; set; }
     }
+
+    public class DesignTaskPackageMaterialResponseDto
+    {
+        public int MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public decimal SuggestedQuantity { get; set; }
+        public int AvailableQuantity { get; set; }
+        public bool IsAvailableInNursery { get; set; }
+        public bool IsActiveInNursery { get; set; }
+    }
 }

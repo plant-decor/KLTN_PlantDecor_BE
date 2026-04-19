@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
-using PlantDecor.DataAccessLayer.Enums;
-using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -108,55 +106,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .OrderBy(sp => sp.TaskDate)
                     .ThenBy(sp => sp.Shift.StartTime)
                 .ToListAsync();
-        }
-
-        public async Task<PaginatedResult<ServiceProgress>> GetIncidentsByNurseryAsync(
-            int nurseryId,
-            Pagination pagination,
-            DateOnly? from,
-            DateOnly? to,
-            bool openOnly)
-        {
-            var query = _context.ServiceProgresses
-                .Include(sp => sp.Shift)
-                .Include(sp => sp.Caretaker)
-                .Include(sp => sp.ServiceRegistration)
-                    .ThenInclude(r => r!.NurseryCareService)
-                        .ThenInclude(ncs => ncs!.CareServicePackage)
-                .Include(sp => sp.ServiceRegistration)
-                    .ThenInclude(r => r!.User)
-                .Where(sp => sp.HasIncidents
-                    && sp.ServiceRegistration != null
-                    && sp.ServiceRegistration.NurseryCareService != null
-                    && sp.ServiceRegistration.NurseryCareService.NurseryId == nurseryId);
-
-            if (from.HasValue)
-            {
-                query = query.Where(sp => sp.TaskDate.HasValue && sp.TaskDate.Value >= from.Value);
-            }
-
-            if (to.HasValue)
-            {
-                query = query.Where(sp => sp.TaskDate.HasValue && sp.TaskDate.Value <= to.Value);
-            }
-
-            if (openOnly)
-            {
-                query = query.Where(sp => sp.Status != (int)ServiceProgressStatusEnum.Completed
-                    && sp.Status != (int)ServiceProgressStatusEnum.Cancelled);
-            }
-
-            query = query
-                .OrderByDescending(sp => sp.TaskDate)
-                .ThenByDescending(sp => sp.Id);
-
-            var totalCount = await query.CountAsync();
-            var items = await query
-                .Skip(pagination.Skip)
-                .Take(pagination.Take)
-                .ToListAsync();
-
-            return new PaginatedResult<ServiceProgress>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
         public async Task<HashSet<int>> GetConflictingCaretakerIdsAsync(int shiftId, List<DateOnly> dates)

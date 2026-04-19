@@ -38,10 +38,17 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<PaginatedResult<ServiceRegistration>> GetPendingByNurseryIdAsync(int nurseryId, Pagination pagination)
         {
+            var pendingStatuses = new[]
+            {
+                (int)ServiceRegistrationStatusEnum.WaitingForNursery,
+                (int)ServiceRegistrationStatusEnum.PendingApproval
+            };
+
             var query = BuildDetailedQuery()
                 .Where(r => r.NurseryCareService != null &&
                             r.NurseryCareService.NurseryId == nurseryId &&
-                            r.Status == (int)ServiceRegistrationStatusEnum.PendingApproval)
+                            r.Status.HasValue &&
+                            pendingStatuses.Contains(r.Status.Value))
                 .OrderByDescending(r => r.Id);
 
             var totalCount = await query.CountAsync();

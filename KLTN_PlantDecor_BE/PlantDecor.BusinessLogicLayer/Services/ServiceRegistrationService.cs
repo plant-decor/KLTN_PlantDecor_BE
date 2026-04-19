@@ -93,9 +93,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 sessionDates,
                 candidateServices);
 
+            var initialStatus = ServiceRegistrationStatusEnum.PendingApproval;
             if (selectedService == null)
             {
-                throw new BadRequestException("No nursery currently has qualified and available caretakers for your selected package and schedule");
+                selectedService = await SelectFallbackNurseryServiceAsync(
+                    candidateServices,
+                    request.Latitude,
+                    request.Longitude);
+
+                initialStatus = ServiceRegistrationStatusEnum.WaitingForNursery;
             }
 
             var registration = new ServiceRegistration
@@ -113,7 +119,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Note = request.Note,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                Status = (int)ServiceRegistrationStatusEnum.PendingApproval,
+                Status = (int)initialStatus,
                 CreatedAt = DateTime.Now
             };
 
@@ -313,8 +319,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.NurseryCareService?.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval)
-                throw new BadRequestException($"Registration is not in PendingApproval status");
+            if (registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval
+                && registration.Status != (int)ServiceRegistrationStatusEnum.WaitingForNursery)
+                throw new BadRequestException("Only registrations in WaitingForNursery or PendingApproval status can be approved");
 
             var pkg = registration.NurseryCareService!.CareServicePackage;
 
@@ -388,8 +395,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.NurseryCareService?.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval)
-                throw new BadRequestException("Only registrations in PendingApproval status can be rejected");
+            if (registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval
+                && registration.Status != (int)ServiceRegistrationStatusEnum.WaitingForNursery)
+                throw new BadRequestException("Only registrations in WaitingForNursery or PendingApproval status can be rejected");
 
             var packageId = registration.NurseryCareService?.CareServicePackageId;
             var currentNurseryId = registration.NurseryCareService?.NurseryId;
@@ -512,9 +520,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.UserId != userId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            if (registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval &&
+            if (registration.Status != (int)ServiceRegistrationStatusEnum.WaitingForNursery &&
+                registration.Status != (int)ServiceRegistrationStatusEnum.PendingApproval &&
                 registration.Status != (int)ServiceRegistrationStatusEnum.AwaitPayment)
-                throw new BadRequestException("Only registrations in PendingApproval or AwaitPayment status can be cancelled");
+                throw new BadRequestException("Only registrations in WaitingForNursery, PendingApproval or AwaitPayment status can be cancelled");
 
             registration.Status = (int)ServiceRegistrationStatusEnum.Cancelled;
             registration.CancelReason = cancelReason;
@@ -547,7 +556,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
             if (registration.Status != (int)ServiceRegistrationStatusEnum.Active)
-                throw new BadRequestException("Manager can only cancel registrations that are Active. Use reject for PendingApproval.");
+                throw new BadRequestException("Manager can only cancel registrations that are Active. Use reject for WaitingForNursery/PendingApproval.");
 
             // Cancel all pending/assigned service progress sessions
             foreach (var progress in registration.ServiceProgresses
@@ -721,6 +730,50 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .ThenBy(x => x.Service.NurseryId)
                 .Select(x => x.Service)
                 .FirstOrDefault();
+        }
+
+        private Task<NurseryCareService?> SelectFallbackNurseryServiceAsync(
+            List<NurseryCareService> candidateServices,
+            decimal? latitude,
+            decimal? longitude)
+        {
+            if (candidateServices == null || candidateServices.Count == 0)
+            {
+                return Task.FromResult<NurseryCareService?>(null);
+            }
+
+            var useDistance = latitude.HasValue && longitude.HasValue;
+
+            var selected = candidateServices
+                .OrderBy(s => useDistance
+                    ? HaversineKm(latitude!.Value, longitude!.Value, s.Nursery?.Latitude, s.Nursery?.Longitude)
+                    : double.MaxValue)
+                .ThenBy(s => s.NurseryId)
+                .ThenBy(s => s.Id)
+                .FirstOrDefault();
+
+            return Task.FromResult(selected);
+        }
+
+        private static double HaversineKm(decimal lat1, decimal lon1, decimal? lat2, decimal? lon2)
+        {
+            if (!lat2.HasValue || !lon2.HasValue)
+            {
+                return double.MaxValue;
+            }
+
+            const double earthRadiusKm = 6371.0;
+
+            var dLat = (double)(lat2.Value - lat1) * Math.PI / 180.0;
+            var dLon = (double)(lon2.Value - lon1) * Math.PI / 180.0;
+            var originLat = (double)lat1 * Math.PI / 180.0;
+            var targetLat = (double)lat2.Value * Math.PI / 180.0;
+
+            var a = Math.Sin(dLat / 2.0) * Math.Sin(dLat / 2.0)
+                    + Math.Cos(originLat) * Math.Cos(targetLat)
+                    * Math.Sin(dLon / 2.0) * Math.Sin(dLon / 2.0);
+
+            return earthRadiusKm * 2.0 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1.0 - a));
         }
 
         private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)

@@ -5,7 +5,6 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
-using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -179,29 +178,6 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get eligible caretakers for progress successfully",
-                Payload = result
-            });
-        }
-
-        /// <summary>
-        /// [Manager/Staff] Danh sách các phiên chăm sóc có incident để theo dõi xử lý kịp thời
-        /// GET /api/service-progress/incidents?pageNumber=1&amp;pageSize=10&amp;openOnly=true&amp;from=&amp;to=
-        /// </summary>
-        [HttpGet("incidents")]
-        [Authorize(Roles = "Manager,Staff")]
-        public async Task<IActionResult> GetIncidents(
-            [FromQuery] Pagination pagination,
-            [FromQuery] bool openOnly = true,
-            [FromQuery] DateOnly? from = null,
-            [FromQuery] DateOnly? to = null)
-        {
-            var managerId = GetUserId();
-            var result = await _serviceProgressService.GetIncidentProgressesAsync(managerId, pagination, from, to, openOnly);
-            return Ok(new ApiResponse<PaginatedResult<ServiceProgressResponseDto>>
-            {
-                Success = true,
-                StatusCode = StatusCodes.Status200OK,
-                Message = "Get incident progresses successfully",
                 Payload = result
             });
         }

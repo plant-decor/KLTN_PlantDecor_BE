@@ -7,6 +7,11 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<DesignTask?> GetByIdWithDetailsAsync(int id);
         Task<List<DesignTask>> GetByRegistrationIdAsync(int designRegistrationId);
-        Task<PaginatedResult<DesignTask>> GetByAssignedStaffIdAsync(int assignedStaffId, Pagination pagination, int? status = null);
+        Task<PaginatedResult<DesignTask>> GetByAssignedStaffIdAsync(
+            int assignedStaffId,
+            Pagination pagination,
+            int? status = null,
+            DateOnly? from = null,
+            DateOnly? to = null);
     }
 }

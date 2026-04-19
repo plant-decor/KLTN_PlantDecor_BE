@@ -15,6 +15,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.DesignTemplateTierItems
                 .AsNoTracking()
+                .Include(i => i.Material)
+                .Include(i => i.Plant)
                 .Where(i => i.DesignTemplateTierId == designTemplateTierId)
                 .OrderBy(i => i.Id)
                 .ToListAsync();

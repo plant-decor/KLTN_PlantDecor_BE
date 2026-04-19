@@ -8,7 +8,9 @@
         <html>
         <body style='font-family: Arial;'>
             <h2>Xin chào {userName},</h2>
-            <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='120'/>
+            <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
+                <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
+            </a>
             <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>PlantDecor</b>.</p>
             <p>Vui lòng nhấn nút bên dưới để có thể reset password:</p>
             <p>

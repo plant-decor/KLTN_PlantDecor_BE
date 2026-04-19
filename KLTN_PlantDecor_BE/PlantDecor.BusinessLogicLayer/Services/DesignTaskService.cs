@@ -55,9 +55,71 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return tasks.Select(MapToDto).ToList();
         }
 
-        public async Task<PaginatedResult<DesignTaskResponseDto>> GetMyTasksAsync(int userId, Pagination pagination, int? status = null)
+        public async Task<List<DesignTaskPackageMaterialResponseDto>> GetPackageMaterialsForTaskAsync(int userId, int taskId)
         {
-            var result = await _unitOfWork.DesignTaskRepository.GetByAssignedStaffIdAsync(userId, pagination, status);
+            var task = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            if (task.AssignedStaffId != userId)
+                throw new ForbiddenException("Only assigned staff can view package materials for this task");
+
+            var tierItems = await _unitOfWork.DesignTemplateTierItemRepository
+                .GetByTierIdAsync(task.DesignRegistration.DesignTemplateTierId);
+
+            var materialRequirements = tierItems
+                .Where(i => i.MaterialId.HasValue && i.Quantity > 0)
+                .GroupBy(i => i.MaterialId!.Value)
+                .Select(g => new
+                {
+                    MaterialId = g.Key,
+                    SuggestedQuantity = g.Sum(x => x.Quantity),
+                    MaterialName = g
+                        .Select(x => x.Material?.Name)
+                        .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+                })
+                .OrderBy(x => x.MaterialId)
+                .ToList();
+
+            var response = new List<DesignTaskPackageMaterialResponseDto>();
+
+            foreach (var item in materialRequirements)
+            {
+                var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository
+                    .GetByMaterialAndNurseryAsync(item.MaterialId, task.DesignRegistration.NurseryId);
+
+                var materialName = item.MaterialName;
+                if (string.IsNullOrWhiteSpace(materialName))
+                {
+                    var material = await _unitOfWork.MaterialRepository.GetByIdAsync(item.MaterialId);
+                    materialName = material?.Name;
+                }
+
+                response.Add(new DesignTaskPackageMaterialResponseDto
+                {
+                    MaterialId = item.MaterialId,
+                    MaterialName = materialName,
+                    SuggestedQuantity = item.SuggestedQuantity,
+                    AvailableQuantity = nurseryMaterial?.Quantity ?? 0,
+                    IsAvailableInNursery = nurseryMaterial != null,
+                    IsActiveInNursery = nurseryMaterial?.IsActive == true
+                });
+            }
+
+            return response;
+        }
+
+        public async Task<PaginatedResult<DesignTaskResponseDto>> GetMyTasksAsync(
+            int userId,
+            Pagination pagination,
+            int? status = null,
+            DateOnly? from = null,
+            DateOnly? to = null)
+        {
+            if (from.HasValue && to.HasValue && to.Value < from.Value)
+                throw new BadRequestException("'to' date must be greater than or equal to 'from' date");
+
+            var result = await _unitOfWork.DesignTaskRepository
+                .GetByAssignedStaffIdAsync(userId, pagination, status, from, to);
             return new PaginatedResult<DesignTaskResponseDto>(
                 result.Items.Select(MapToDto).ToList(),
                 result.TotalCount,
@@ -138,6 +200,108 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updated);
         }
 
+        public async Task<DesignTaskResponseDto> ReportMaterialUsageAsync(int userId, int taskId, ReportDesignTaskMaterialUsageRequestDto request)
+        {
+            if (request == null)
+                throw new BadRequestException("Request body is required");
+
+            var taskDetail = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            if (taskDetail.AssignedStaffId != userId)
+                throw new ForbiddenException("Only assigned staff can report material usage for this task");
+
+            if (taskDetail.Status == (int)DesignTaskStatusEnum.Cancelled)
+                throw new BadRequestException("Cannot report material usage for a cancelled task");
+
+            if (taskDetail.Status != (int)DesignTaskStatusEnum.Assigned
+                && taskDetail.Status != (int)DesignTaskStatusEnum.Completed)
+            {
+                throw new BadRequestException("Material usage can only be reported when task is Assigned or Completed");
+            }
+
+            var usageItems = request.MaterialUsages ?? new List<ReportDesignTaskMaterialUsageItemDto>();
+            var duplicateMaterialIds = usageItems
+                .GroupBy(x => x.MaterialId)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateMaterialIds.Any())
+                throw new BadRequestException("MaterialId must be unique in a report");
+
+            var nurseryId = taskDetail.DesignRegistration.NurseryId;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var existingUsages = await _unitOfWork.TaskMaterialUsageRepository.GetByTaskIdAsync(taskId);
+
+                foreach (var existing in existingUsages)
+                {
+                    if (existing.ActualQuantity.HasValue && existing.ActualQuantity.Value > 0)
+                    {
+                        var rollbackQty = ConvertToInventoryUnits(existing.ActualQuantity.Value);
+                        var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository
+                            .GetByMaterialAndNurseryAsync(existing.MaterialId, nurseryId);
+
+                        if (nurseryMaterial != null)
+                        {
+                            nurseryMaterial.Quantity += rollbackQty;
+                            _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                        }
+                    }
+
+                    _unitOfWork.TaskMaterialUsageRepository.PrepareRemove(existing);
+                }
+
+                foreach (var item in usageItems)
+                {
+                    if (item.MaterialId <= 0)
+                        throw new BadRequestException("MaterialId must be greater than 0");
+
+                    if (item.ActualQuantity <= 0)
+                        throw new BadRequestException("ActualQuantity must be greater than 0");
+
+                    var quantity = ConvertToInventoryUnits(item.ActualQuantity);
+                    var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository
+                        .GetByMaterialAndNurseryAsync(item.MaterialId, nurseryId)
+                        ?? throw new BadRequestException($"Material {item.MaterialId} is not available in nursery inventory");
+
+                    if (!nurseryMaterial.IsActive)
+                        throw new BadRequestException($"Material {item.MaterialId} is inactive in nursery inventory");
+
+                    if (nurseryMaterial.Quantity < quantity)
+                        throw new BadRequestException($"Insufficient stock for material {item.MaterialId}");
+
+                    nurseryMaterial.Quantity -= quantity;
+                    _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+
+                    _unitOfWork.TaskMaterialUsageRepository.PrepareCreate(new TaskMaterialUsage
+                    {
+                        DesignTaskId = taskId,
+                        MaterialId = item.MaterialId,
+                        ActualQuantity = item.ActualQuantity,
+                        Note = string.IsNullOrWhiteSpace(item.Note) ? null : item.Note.Trim(),
+                        CreatedAt = DateTime.Now
+                    });
+                }
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found after reporting material usage");
+
+            return MapToDto(updated);
+        }
+
         public async Task<DesignTaskResponseDto> UpdateStatusAsync(int userId, int taskId, UpdateDesignTaskStatusRequestDto request, IFormFile? reportImage = null)
         {
             if (request == null)
@@ -214,9 +378,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             _unitOfWork.DesignTaskRepository.PrepareUpdate(task);
-            await _unitOfWork.SaveAsync();
-
-            await SyncRegistrationCompletionStatusAsync(task.DesignRegistrationId);
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                await _unitOfWork.SaveAsync();
+                await SyncRegistrationCompletionStatusAsync(task.DesignRegistrationId);
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
 
             var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found after status update");
@@ -260,9 +433,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (tasks.All(x => x.Status == (int)DesignTaskStatusEnum.Completed))
             {
+                if (registration.Status == (int)DesignRegistrationStatus.Completed)
+                    return;
+
+                await DeductTierPlantsForCompletedRegistrationAsync(registration);
+
                 registration.Status = (int)DesignRegistrationStatus.Completed;
                 _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
                 await _unitOfWork.SaveAsync();
+            }
+        }
+
+        private async Task DeductTierPlantsForCompletedRegistrationAsync(DesignRegistration registration)
+        {
+            var tierItems = await _unitOfWork.DesignTemplateTierItemRepository
+                .GetByTierIdAsync(registration.DesignTemplateTierId);
+
+            var plantRequirements = tierItems
+                .Where(i => i.PlantId.HasValue && i.Quantity > 0)
+                .GroupBy(i => i.PlantId!.Value)
+                .Select(g => new
+                {
+                    PlantId = g.Key,
+                    RequiredQuantity = ConvertToInventoryUnits(g.Sum(x => x.Quantity))
+                })
+                .ToList();
+
+            foreach (var item in plantRequirements)
+            {
+                var commonPlant = await _unitOfWork.CommonPlantRepository
+                    .GetByPlantAndNurseryAsync(item.PlantId, registration.NurseryId)
+                    ?? throw new BadRequestException($"Plant {item.PlantId} is not available in nursery inventory");
+
+                if (!commonPlant.IsActive)
+                    throw new BadRequestException($"Plant {item.PlantId} is inactive in nursery inventory");
+
+                if (commonPlant.Quantity < item.RequiredQuantity)
+                    throw new BadRequestException($"Insufficient stock for plant {item.PlantId}");
+
+                commonPlant.Quantity -= item.RequiredQuantity;
+                _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
             }
         }
 
@@ -290,6 +500,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             return null;
+        }
+
+        private static int ConvertToInventoryUnits(decimal quantity)
+        {
+            if (quantity <= 0)
+                throw new BadRequestException("ActualQuantity must be greater than 0");
+
+            if (decimal.Truncate(quantity) != quantity)
+                throw new BadRequestException("ActualQuantity must be a whole number to match inventory unit");
+
+            if (quantity > int.MaxValue)
+                throw new BadRequestException("ActualQuantity is too large");
+
+            return (int)quantity;
         }
 
         public static DesignTaskResponseDto MapToDto(DesignTask task)

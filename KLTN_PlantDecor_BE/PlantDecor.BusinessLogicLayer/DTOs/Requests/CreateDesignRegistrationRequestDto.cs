@@ -4,9 +4,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class CreateDesignRegistrationRequestDto
     {
-        [Required]
         [Range(1, int.MaxValue)]
-        public int NurseryId { get; set; }
+        public int? NurseryId { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]
@@ -14,8 +13,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public decimal? Latitude { get; set; }
         public decimal? Longitude { get; set; }
-        public decimal? Width { get; set; }
-        public decimal? Length { get; set; }
 
         [Required]
         [MaxLength(255)]
