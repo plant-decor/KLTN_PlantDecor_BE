@@ -64,7 +64,8 @@ namespace PlantDecor.API.Controllers
         /// Xác nhận đã giao -> Delivered
         /// </summary>
         [HttpPut("{id}/mark-delivered")]
-        public async Task<IActionResult> MarkDelivered(int id, [FromBody] MarkDeliveredRequestDto request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> MarkDelivered(int id, [FromForm] MarkDeliveredRequestDto request)
         {
             var currentUserId = GetCurrentUserId();
             var result = await _nurseryOrderService.MarkDeliveredAsync(currentUserId, id, request);

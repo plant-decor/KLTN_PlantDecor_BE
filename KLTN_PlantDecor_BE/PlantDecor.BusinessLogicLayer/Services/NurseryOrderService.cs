@@ -14,10 +14,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class NurseryOrderService : INurseryOrderService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public NurseryOrderService(IUnitOfWork unitOfWork)
+        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService)
         {
             _unitOfWork = unitOfWork;
+            _cloudinaryService = cloudinaryService;
         }
 
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
@@ -140,10 +142,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
 
+            string? deliveryImageUrl = null;
+            if (request.DeliveryImage != null)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(request.DeliveryImage);
+                if (!isValid)
+                    throw new BadRequestException(errorMessage);
+
+                var uploadResult = await _cloudinaryService.UploadFileAsync(request.DeliveryImage, "NurseryOrderDelivery");
+                deliveryImageUrl = uploadResult.SecureUrl;
+            }
+
+            var deliveryNote = request.DeliveryNote;
+            if (!string.IsNullOrWhiteSpace(deliveryImageUrl))
+            {
+                deliveryNote = string.IsNullOrWhiteSpace(deliveryNote)
+                    ? $"Delivery Image: {deliveryImageUrl}"
+                    : $"{deliveryNote} | Delivery Image: {deliveryImageUrl}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(deliveryNote) && deliveryNote.Length > 255)
+                throw new BadRequestException("Delivery note is too long after attaching image URL");
+
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
             nurseryOrder.DeliveredAt = now;
-            nurseryOrder.DeliveryNote = request.DeliveryNote;
+            nurseryOrder.DeliveryNote = deliveryNote;
             nurseryOrder.UpdatedAt = now;
 
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
