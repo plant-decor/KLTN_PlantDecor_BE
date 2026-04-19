@@ -278,6 +278,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _unitOfWork.BeginTransactionAsync();
             var shouldInvalidateInventoryCaches = false;
+            var shouldEnqueueOrderSuccessEmail = false;
+            var orderIdForSuccessEmail = 0;
             try
             {
                 if (responseCode == "00")
@@ -287,6 +289,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var paymentType = (PaymentTypeEnum)payment.PaymentType!.Value;
                     // Load Order with details for status update and inventory adjustment
                     var order = await ResolveTargetOrderForPaymentAsync(payment);
+                    orderIdForSuccessEmail = order.Id;
 
                     // Update Transaction status to Completed
                     dbTransaction.Status = (int)TransactionStatusEnum.Paid;
@@ -353,6 +356,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
 
                     shouldInvalidateInventoryCaches = true;
+                    shouldEnqueueOrderSuccessEmail = true;
                 }
                 else
                 {
@@ -382,6 +386,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (shouldInvalidateInventoryCaches)
             {
                 await InvalidateInventoryAndShopCachesAsync();
+            }
+
+            if (shouldEnqueueOrderSuccessEmail && orderIdForSuccessEmail > 0)
+            {
+                try
+                {
+                    _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                        service => service.SendOrderSuccessEmailAsync(orderIdForSuccessEmail));
+                }
+                catch (Exception ex)
+                {
+                    // Payment was committed successfully; do not fail VNPay IPN confirmation because enqueue failed.
+                    _logger.LogError(
+                        ex,
+                        "Failed to enqueue order success email job for OrderId={OrderId}",
+                        orderIdForSuccessEmail);
+                }
             }
 
             return new VnpayIpnResponseDto { RspCode = "00", Message = "Confirm Success" };
