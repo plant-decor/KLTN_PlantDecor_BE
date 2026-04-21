@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -113,7 +114,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var ids = await _context.ServiceProgresses
                 .Where(sp => sp.ShiftId == shiftId
                     && sp.TaskDate.HasValue && dates.Contains(sp.TaskDate.Value)
-                    && sp.Status != (int)Enums.ServiceProgressStatusEnum.Cancelled
+                    && (sp.Status == (int)ServiceProgressStatusEnum.Pending
+                        || sp.Status == (int)ServiceProgressStatusEnum.InProgress
+                        || sp.Status == (int)ServiceProgressStatusEnum.Assigned)
                     && sp.CaretakerId != null)
                 .Select(sp => sp.CaretakerId!.Value)
                 .Distinct()

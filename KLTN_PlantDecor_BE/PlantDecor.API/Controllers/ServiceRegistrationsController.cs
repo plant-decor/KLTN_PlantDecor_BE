@@ -195,6 +195,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Manager/Staff] Cập nhật lại ngày bắt đầu hoặc ca ưu tiên của đăng ký dịch vụ sau khi thương thảo với khách
+        /// </summary>
+        [HttpPut("{id}/reschedule")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> Reschedule(int id, [FromBody] UpdateServiceRegistrationScheduleRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _serviceRegistrationService.RescheduleAsync(managerId, id, request);
+            return Ok(new ApiResponse<ServiceRegistrationResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Registration schedule updated successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Customer] Hủy đăng ký dịch vụ (chỉ khi WaitingForNursery, PendingApproval hoặc AwaitPayment)
         /// </summary>
         [HttpPost("{id}/cancel")]
