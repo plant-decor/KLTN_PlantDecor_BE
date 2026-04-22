@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace PlantDecor.DataAccessLayer.Entities;
@@ -34,6 +34,8 @@ public partial class NurseryOrder
     public string? ShipperNote { get; set; }
 
     public string? DeliveryNote { get; set; }
+
+    public string? DeliveryImageUrl { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -1468,6 +1468,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Note = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     ShipperNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DeliveryNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    DeliveryImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },

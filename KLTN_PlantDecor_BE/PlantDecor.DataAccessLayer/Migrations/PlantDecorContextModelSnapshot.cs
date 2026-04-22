@@ -1324,6 +1324,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("DeliveryImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<decimal?>("DepositAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
