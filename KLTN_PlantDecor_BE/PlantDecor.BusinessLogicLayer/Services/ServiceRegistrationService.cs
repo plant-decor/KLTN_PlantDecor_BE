@@ -194,7 +194,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             bool isOneTime = pkg.ServiceType.Value == (int)CareServiceTypeEnum.OneTime;
-            var minimumLeadHours = isOneTime ? 24 : 48;
+            var minimumLeadHours = isOneTime ? 6 : 24;
             var firstSessionStartAt = request.ServiceDate.ToDateTime(preferredShift.StartTime);
 
             if (firstSessionStartAt < DateTime.Now.AddHours(minimumLeadHours))
