@@ -538,6 +538,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Note).HasMaxLength(255);
             entity.Property(e => e.ShipperNote).HasMaxLength(255);
             entity.Property(e => e.DeliveryNote).HasMaxLength(255);
+            entity.Property(e => e.DeliveryImageUrl).HasMaxLength(512);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 

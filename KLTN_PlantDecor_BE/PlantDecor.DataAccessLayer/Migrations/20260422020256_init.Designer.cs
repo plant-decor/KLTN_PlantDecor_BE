@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260419163709_init")]
+    [Migration("20260422020256_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1326,6 +1326,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("DeliveryNote")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DeliveryImageUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<decimal?>("DepositAmount")
                         .HasPrecision(18, 2)
