@@ -42,6 +42,7 @@
         public string? StatusName { get; set; }
         public string? ShipperNote { get; set; }
         public string? DeliveryNote { get; set; }
+        public string? DeliveryImageUrl { get; set; }
         public string? Note { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
     }

@@ -164,21 +164,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 deliveryImageUrl = uploadResult.SecureUrl;
             }
 
-            var deliveryNote = request.DeliveryNote;
-            if (!string.IsNullOrWhiteSpace(deliveryImageUrl))
-            {
-                deliveryNote = string.IsNullOrWhiteSpace(deliveryNote)
-                    ? $"Delivery Image: {deliveryImageUrl}"
-                    : $"{deliveryNote} | Delivery Image: {deliveryImageUrl}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(deliveryNote) && deliveryNote.Length > 255)
-                throw new BadRequestException("Delivery note is too long after attaching image URL");
+            if (!string.IsNullOrWhiteSpace(request.DeliveryNote) && request.DeliveryNote.Length > 255)
+                throw new BadRequestException("Delivery note is too long");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
             nurseryOrder.DeliveredAt = now;
-            nurseryOrder.DeliveryNote = deliveryNote;
+            nurseryOrder.DeliveryNote = request.DeliveryNote;
+            nurseryOrder.DeliveryImageUrl = deliveryImageUrl;
             nurseryOrder.UpdatedAt = now;
 
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
@@ -282,6 +275,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
+            DeliveryImageUrl = order.DeliveryImageUrl,
             Note = order.Note,
             Items = order.NurseryOrderDetails
                 .Select(d => d.ToOrderItemResponse())
