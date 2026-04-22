@@ -9,7 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? BasePrice { get; set; }
         public string? Unit { get; set; }
         public string? Brand { get; set; }
-        public string? Specifications { get; set; }
+        public object? Specifications { get; set; }
         public int? ExpiryMonths { get; set; }
         public bool? IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
