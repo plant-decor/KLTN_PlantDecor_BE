@@ -680,6 +680,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (paymentType == PaymentTypeEnum.RemainingBalance)
                 return;
 
+            var paymentStrategies = (PaymentStrategiesEnum)order.PaymentStrategy;
+
             foreach (var nurseryOrder in order.NurseryOrders)
             {
                 foreach (var detail in nurseryOrder.NurseryOrderDetails)
@@ -687,9 +689,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (detail.PlantInstanceId.HasValue)
                     {
                         var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
-                        if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available)
+                        if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available && paymentStrategies == PaymentStrategiesEnum.Deposit)
                         {
                             plantInstance.Status = (int)PlantInstanceStatusEnum.Reserved;
+                            _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                        }
+                        else if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available && paymentStrategies == PaymentStrategiesEnum.FullPayment)
+                        {
+                            plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
                             _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
                         }
                     }
