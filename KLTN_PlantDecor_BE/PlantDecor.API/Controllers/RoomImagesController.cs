@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Enums;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -41,6 +42,43 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = $"Uploaded {result.RoomImages.Count} room images successfully",
+                Payload = result
+            });
+        }
+
+        [HttpGet("GetAllRoomImagesByUserId")]
+        [Authorize(Roles = "Customer")]
+        [ProducesResponseType(typeof(UploadRoomImagesResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetAllRoomImagesByUserId()
+        {
+            var userId = GetRequiredUserId();
+            var result = await _roomImageService.GetAllRoomImagesByUserIdAsync(userId);
+
+            return Ok(new ApiResponse<UploadRoomImagesResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved room images successfully",
+                Payload = result
+            });
+        }
+
+        [HttpGet("GetALLRoomImagesByUserIdAndViewAngle/{viewAngle}")]
+        [Authorize(Roles = "Customer")]
+        [ProducesResponseType(typeof(UploadRoomImagesResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetALLRoomImagesByUserIdAndViewAngle([FromRoute] RoomViewAngleEnum viewAngle)
+        {
+            var userId = GetRequiredUserId();
+            var result = await _roomImageService.GetAllRoomImagesByUserIdAndViewAngleAsync(userId, viewAngle);
+
+            return Ok(new ApiResponse<UploadRoomImagesResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved room images by view angle successfully",
                 Payload = result
             });
         }

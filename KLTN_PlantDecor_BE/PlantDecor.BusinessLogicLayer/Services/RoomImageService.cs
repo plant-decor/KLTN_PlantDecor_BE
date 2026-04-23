@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using Microsoft.Extensions.Logging;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -119,17 +120,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     RoomImages = uploadedRoomImages
                         .Where(image => image.Id > 0)
-                        .Select(image => new UploadedRoomImageDto
-                        {
-                            RoomImageId = image.Id,
-                            ImageUrl = image.ImageUrl ?? string.Empty,
-                            ViewAngle = Enum.IsDefined(typeof(RoomViewAngleEnum), image.ViewAngle ?? 0)
-                                ? (RoomViewAngleEnum)image.ViewAngle!.Value
-                                : RoomViewAngleEnum.Front,
-                            ModerationStatus = RoomUploadModerationStatusEnum.Approved,
-                            ModerationReason = "Image validated successfully",
-                            UploadedAt = image.UploadedAt ?? DateTime.UtcNow
-                        })
+                        .Select(image => image.ToUploadedRoomImageDto())
                         .ToList()
                 };
             }
@@ -155,6 +146,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 throw;
             }
+        }
+
+        public async Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAsync(int userId)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var roomImages = await _unitOfWork.RoomImageRepository.GetAllByUserIdAsync(userId);
+
+            return new UploadRoomImagesResponseDto
+            {
+                RoomImages = roomImages.Select(image => image.ToUploadedRoomImageDto()).ToList()
+            };
+        }
+
+        public async Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAndViewAngleAsync(int userId, RoomViewAngleEnum viewAngle)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (!Enum.IsDefined(typeof(RoomViewAngleEnum), viewAngle))
+            {
+                throw new BadRequestException("ViewAngle is invalid");
+            }
+
+            var roomImages = await _unitOfWork.RoomImageRepository.GetAllByUserIdAndViewAngleAsync(userId, (int)viewAngle);
+
+            return new UploadRoomImagesResponseDto
+            {
+                RoomImages = roomImages.Select(image => image.ToUploadedRoomImageDto()).ToList()
+            };
         }
 
         private async Task SaveRoomUploadModerationAsync(

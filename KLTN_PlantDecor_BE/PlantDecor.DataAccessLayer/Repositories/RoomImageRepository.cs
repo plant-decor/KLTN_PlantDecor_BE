@@ -32,5 +32,27 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(roomImage => roomImage.UserId == userId && normalizedIds.Contains(roomImage.Id))
                 .ToListAsync();
         }
+
+        public async Task<List<RoomImage>> GetAllByUserIdAsync(int userId)
+        {
+            return await _context.RoomImages
+                .AsNoTracking()
+                .Include(roomImage => roomImage.RoomUploadModerations)
+                .Where(roomImage => roomImage.UserId == userId)
+                .OrderByDescending(roomImage => roomImage.UploadedAt)
+                .ThenByDescending(roomImage => roomImage.Id)
+                .ToListAsync();
+        }
+
+        public async Task<List<RoomImage>> GetAllByUserIdAndViewAngleAsync(int userId, int viewAngle)
+        {
+            return await _context.RoomImages
+                .AsNoTracking()
+                .Include(roomImage => roomImage.RoomUploadModerations)
+                .Where(roomImage => roomImage.UserId == userId && roomImage.ViewAngle == viewAngle)
+                .OrderByDescending(roomImage => roomImage.UploadedAt)
+                .ThenByDescending(roomImage => roomImage.Id)
+                .ToListAsync();
+        }
     }
 }
