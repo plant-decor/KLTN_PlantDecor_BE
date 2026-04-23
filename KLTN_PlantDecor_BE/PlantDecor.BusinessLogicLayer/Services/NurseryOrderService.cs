@@ -335,7 +335,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             CustomerPhone = order.Order?.Phone ?? order.Order?.Customer?.PhoneNumber,
             CustomerAddress = order.Order?.Address,
             SubTotalAmount = order.SubTotalAmount,
-            TotalAmount = order.SubTotalAmount ?? order.Order?.TotalAmount,
+            TotalAmount = order.Order?.TotalAmount,
             DepositAmount = order.DepositAmount ?? order.Order?.DepositAmount,
             RemainingAmount = order.RemainingAmount ?? order.Order?.RemainingAmount,
             Status = order.Status,
