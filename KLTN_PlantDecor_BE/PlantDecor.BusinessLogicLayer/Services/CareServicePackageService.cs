@@ -264,7 +264,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         NurseryCareServiceId = ncs.Id,
                         NurseryId = ncs.NurseryId,
-                        NurseryName = ncs.Nursery.Name
+                        NurseryName = ncs.Nursery.Name,
+                        NurseryAddress = ncs.Nursery.Address,
+                        NurseryPhone = ncs.Nursery.Phone
                     })
                     .ToList()
             };

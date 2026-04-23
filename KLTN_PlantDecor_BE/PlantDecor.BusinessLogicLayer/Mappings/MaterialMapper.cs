@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Entities;
+using System.Text.Json;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -20,7 +21,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 BasePrice = material.BasePrice,
                 Unit = material.Unit,
                 Brand = material.Brand,
-                Specifications = material.Specifications,
+                Specifications = material.Specifications != null
+                                ? JsonSerializer.Deserialize<object>(material.Specifications)
+                                : null,
                 ExpiryMonths = material.ExpiryMonths,
                 IsActive = material.IsActive,
                 CreatedAt = material.CreatedAt,
@@ -88,7 +91,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 BasePrice = request.BasePrice,
                 Unit = request.Unit,
                 Brand = request.Brand,
-                Specifications = request.Specifications,
+                Specifications = request.Specifications != null
+                                ? JsonSerializer.Serialize(request.Specifications)
+                                : null,
                 ExpiryMonths = request.ExpiryMonths,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
@@ -108,7 +113,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             material.BasePrice = request.BasePrice;
             material.Unit = request.Unit;
             material.Brand = request.Brand;
-            material.Specifications = request.Specifications;
+            material.Specifications = request.Specifications != null
+                                        ? JsonSerializer.Serialize(request.Specifications)
+                                        : material.Specifications;
             material.ExpiryMonths = request.ExpiryMonths;
             material.IsActive = request.IsActive ?? material.IsActive;
             material.UpdatedAt = DateTime.Now;

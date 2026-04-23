@@ -85,23 +85,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
-                var materialCode = request.MaterialCode.Trim().ToUpper();
-                // Check if material code already exists
-                if (!string.IsNullOrEmpty(materialCode))
-                {
-                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(materialCode))
-                        throw new BadRequestException($"Material với mã '{materialCode}' đã tồn tại");
-                }
-
-                // Check if material name already exists
-                if (!string.IsNullOrWhiteSpace(request.Name))
-                {
-                    if (await _unitOfWork.MaterialRepository.ExistsByNameAsync(request.Name))
-                        throw new BadRequestException($"Material với tên '{request.Name}' đã tồn tại");
-                }
-
                 var material = request.ToEntity();
-                material.MaterialCode = materialCode; // Ensure code is stored in uppercase
+
+                material.Categories ??= new List<Category>();
+                material.Tags ??= new List<Tag>();
 
                 var categoryIds = (request.CategoryIds ?? new List<int>()).Distinct().ToList();
                 if (categoryIds.Any())
