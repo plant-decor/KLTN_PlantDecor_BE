@@ -50,6 +50,8 @@ namespace PlantDecor.API.Controllers
             ["RoomType"] = typeof(RoomTypeEnum),
             ["RoomStyle"] = typeof(RoomStyleEnum),
             ["LightRequirement"] = typeof(LightRequirementEnum),
+            ["Direction"] = typeof(DirectionEnum),
+            ["RoomViewAngle"] = typeof(RoomViewAngleEnum),
             ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
             ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
             ["AiLayoutResponseModerationStatus"] = typeof(AilayoutResponseModerationStatus),
@@ -350,6 +352,9 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomType", typeof(RoomTypeEnum)),
                     CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
                     CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
+                    CreateEnumGroup("LightDirection", typeof(DirectionEnum)),
+                    CreateEnumGroup("DominantDirection", typeof(DirectionEnum)),
+                    CreateEnumGroup("RoomViewAngle", typeof(RoomViewAngleEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
                     CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),
                     CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus))

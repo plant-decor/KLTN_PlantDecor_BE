@@ -11,61 +11,53 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var sb = new StringBuilder();
 
-            // Basic info
-            sb.AppendLine($"Loại sản phẩm: Cây cảnh phổ thông");
-            sb.AppendLine($"Tên cây: {dto.PlantName}");
+            sb.AppendLine("Product type: Common plant");
+            sb.AppendLine($"Plant name: {dto.PlantName}");
 
             if (!string.IsNullOrEmpty(dto.PlantSpecificName))
-                sb.AppendLine($"Tên khoa học: {dto.PlantSpecificName}");
+                sb.AppendLine($"Scientific name: {dto.PlantSpecificName}");
 
             if (!string.IsNullOrEmpty(dto.PlantDescription))
-                sb.AppendLine($"Mô tả: {dto.PlantDescription}");
+                sb.AppendLine($"Description: {dto.PlantDescription}");
 
             if (!string.IsNullOrEmpty(dto.PlantOrigin))
-                sb.AppendLine($"Nguồn gốc: {dto.PlantOrigin}");
+                sb.AppendLine($"Origin: {dto.PlantOrigin}");
 
-            // Feng Shui info
             if (dto.FengShuiElement.HasValue)
-                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
+                sb.AppendLine($"Feng Shui element: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiMeaning))
-                sb.AppendLine($"Ý nghĩa phong thủy: {dto.FengShuiMeaning}");
+                sb.AppendLine($"Feng Shui meaning: {dto.FengShuiMeaning}");
 
-            // Size and type
             if (dto.Size.HasValue)
-                sb.AppendLine($"Kích thước: {GetSizeDescription(dto.Size.Value)}");
+                sb.AppendLine($"Size: {GetSizeDescription(dto.Size.Value)}");
 
-            sb.AppendLine($"Vị trí: {GetPlacementDescription(dto.PlacementType)}");
+            sb.AppendLine($"Placement: {GetPlacementDescription(dto.PlacementType)}");
 
             if (dto.RoomTypeNames.Any())
-                sb.AppendLine($"Không gian phù hợp: {string.Join(", ", dto.RoomTypeNames)}");
+                sb.AppendLine($"Suitable spaces: {string.Join(", ", dto.RoomTypeNames)}");
 
             if (dto.RoomStyleNames.Any())
-                sb.AppendLine($"Phong cách phù hợp: {string.Join(", ", dto.RoomStyleNames)}");
+                sb.AppendLine($"Suitable styles: {string.Join(", ", dto.RoomStyleNames)}");
 
-            // Safety info
             var safetyFeatures = new List<string>();
-            if (dto.PetSafe == true) safetyFeatures.Add("An toàn cho thú cưng");
-            if (dto.ChildSafe == true) safetyFeatures.Add("An toàn cho trẻ em");
-            if (dto.AirPurifying == true) safetyFeatures.Add("Lọc không khí");
+            if (dto.PetSafe == true) safetyFeatures.Add("Pet-safe");
+            if (dto.ChildSafe == true) safetyFeatures.Add("Child-safe");
+            if (dto.AirPurifying == true) safetyFeatures.Add("Air purifying");
             if (safetyFeatures.Any())
-                sb.AppendLine($"Đặc điểm: {string.Join(", ", safetyFeatures)}");
+                sb.AppendLine($"Features: {string.Join(", ", safetyFeatures)}");
 
-            // Categories
             if (dto.CategoryNames.Any())
-                sb.AppendLine($"Danh mục: {string.Join(", ", dto.CategoryNames)}");
+                sb.AppendLine($"Categories: {string.Join(", ", dto.CategoryNames)}");
 
-            // Tags
             if (dto.TagNames.Any())
-                sb.AppendLine($"Từ khóa: {string.Join(", ", dto.TagNames)}");
+                sb.AppendLine($"Tags: {string.Join(", ", dto.TagNames)}");
 
-            // Price
             if (dto.Price.HasValue || dto.BasePrice.HasValue)
-                sb.AppendLine($"Giá: {(dto.Price ?? dto.BasePrice):N0} VND");
+                sb.AppendLine($"Price: {(dto.Price ?? dto.BasePrice):N0} VND");
 
-            // Nursery
             if (!string.IsNullOrEmpty(dto.NurseryName))
-                sb.AppendLine($"Vựa: {dto.NurseryName}");
+                sb.AppendLine($"Nursery: {dto.NurseryName}");
 
             AppendPlantGuideSection(
                 sb,
@@ -86,67 +78,61 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"Loại sản phẩm: Cây độc bản (cây đơn lẻ, unique)");
+            sb.AppendLine("Product type: Unique plant (single specimen)");
 
-            sb.AppendLine($"Tên cây: {dto.PlantName}");
+            sb.AppendLine($"Plant name: {dto.PlantName}");
 
             if (!string.IsNullOrEmpty(dto.PlantSpecificName))
-                sb.AppendLine($"Tên khoa học: {dto.PlantSpecificName}");
+                sb.AppendLine($"Scientific name: {dto.PlantSpecificName}");
 
-            // Feng Shui
             if (dto.FengShuiElement.HasValue)
-                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
+                sb.AppendLine($"Feng Shui element: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiMeaning))
-                sb.AppendLine($"Ý nghĩa phong thủy: {dto.FengShuiMeaning}");
+                sb.AppendLine($"Feng Shui meaning: {dto.FengShuiMeaning}");
 
-            // Instance specific info
             if (!string.IsNullOrEmpty(dto.Description))
-                sb.AppendLine($"Mô tả: {dto.Description}");
+                sb.AppendLine($"Description: {dto.Description}");
 
             if (!string.IsNullOrEmpty(dto.HealthStatus))
-                sb.AppendLine($"Tình trạng sức khỏe: {dto.HealthStatus}");
+                sb.AppendLine($"Health status: {dto.HealthStatus}");
 
             if (dto.Height.HasValue)
-                sb.AppendLine($"Chiều cao: {dto.Height} cm");
+                sb.AppendLine($"Height: {dto.Height} cm");
 
             if (dto.TrunkDiameter.HasValue)
-                sb.AppendLine($"Đường kính thân: {dto.TrunkDiameter} cm");
+                sb.AppendLine($"Trunk diameter: {dto.TrunkDiameter} cm");
 
             if (dto.Age.HasValue)
-                sb.AppendLine($"Tuổi cây: {dto.Age} năm");
+                sb.AppendLine($"Plant age: {dto.Age} years");
 
             if (!string.IsNullOrEmpty(dto.SKU))
-                sb.AppendLine($"Mã SKU: {dto.SKU}");
+                sb.AppendLine($"SKU: {dto.SKU}");
 
-            // Price
             if (dto.Price.HasValue || dto.SpecificPrice.HasValue || dto.BasePrice.HasValue)
-                sb.AppendLine($"Giá: {(dto.Price ?? dto.SpecificPrice ?? dto.BasePrice):N0} VND");
+                sb.AppendLine($"Price: {(dto.Price ?? dto.SpecificPrice ?? dto.BasePrice):N0} VND");
 
             if (dto.RoomTypeNames.Any())
-                sb.AppendLine($"Không gian phù hợp: {string.Join(", ", dto.RoomTypeNames)}");
+                sb.AppendLine($"Suitable spaces: {string.Join(", ", dto.RoomTypeNames)}");
 
             if (dto.RoomStyleNames.Any())
-                sb.AppendLine($"Phong cách phù hợp: {string.Join(", ", dto.RoomStyleNames)}");
+                sb.AppendLine($"Suitable styles: {string.Join(", ", dto.RoomStyleNames)}");
 
-            // Safety from plant
             var safetyFeatures = new List<string>();
-            if (dto.PetSafe == true) safetyFeatures.Add("An toàn cho thú cưng");
-            if (dto.ChildSafe == true) safetyFeatures.Add("An toàn cho trẻ em");
-            if (dto.AirPurifying == true) safetyFeatures.Add("Lọc không khí");
+            if (dto.PetSafe == true) safetyFeatures.Add("Pet-safe");
+            if (dto.ChildSafe == true) safetyFeatures.Add("Child-safe");
+            if (dto.AirPurifying == true) safetyFeatures.Add("Air purifying");
             if (safetyFeatures.Any())
-                sb.AppendLine($"Đặc điểm: {string.Join(", ", safetyFeatures)}");
+                sb.AppendLine($"Features: {string.Join(", ", safetyFeatures)}");
 
-            // Categories & Tags
             if (dto.CategoryNames.Any())
-                sb.AppendLine($"Danh mục: {string.Join(", ", dto.CategoryNames)}");
+                sb.AppendLine($"Categories: {string.Join(", ", dto.CategoryNames)}");
 
             if (dto.TagNames.Any())
-                sb.AppendLine($"Từ khóa: {string.Join(", ", dto.TagNames)}");
+                sb.AppendLine($"Tags: {string.Join(", ", dto.TagNames)}");
 
-            // Nursery
             if (!string.IsNullOrEmpty(dto.NurseryName))
-                sb.AppendLine($"Vựa: {dto.NurseryName}");
+                sb.AppendLine($"Nursery: {dto.NurseryName}");
 
             AppendPlantGuideSection(
                 sb,
@@ -167,57 +153,49 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"Loại sản phẩm: Combo cây cảnh");
+            sb.AppendLine("Product type: Plant combo");
 
             if (!string.IsNullOrEmpty(dto.ComboName))
-                sb.AppendLine($"Tên combo: {dto.ComboName}");
+                sb.AppendLine($"Combo name: {dto.ComboName}");
 
             if (!string.IsNullOrEmpty(dto.Description))
-                sb.AppendLine($"Mô tả: {dto.Description}");
+                sb.AppendLine($"Description: {dto.Description}");
 
-            // Suitable space
             if (!string.IsNullOrEmpty(dto.SuitableSpace))
-                sb.AppendLine($"Không gian phù hợp: {dto.SuitableSpace}");
+                sb.AppendLine($"Suitable space: {dto.SuitableSpace}");
 
             if (dto.SuitableRooms.Any())
-                sb.AppendLine($"Phòng phù hợp: {string.Join(", ", dto.SuitableRooms)}");
+                sb.AppendLine($"Suitable rooms: {string.Join(", ", dto.SuitableRooms)}");
 
-            // Feng Shui
             if (dto.FengShuiElement.HasValue)
-                sb.AppendLine($"Mệnh phong thủy: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
+                sb.AppendLine($"Feng Shui element: {GetFengShuiElementName(dto.FengShuiElement.Value)}");
 
             if (!string.IsNullOrEmpty(dto.FengShuiPurpose))
-                sb.AppendLine($"Mục đích phong thủy: {dto.FengShuiPurpose}");
+                sb.AppendLine($"Feng Shui purpose: {dto.FengShuiPurpose}");
 
-            // Theme
             if (!string.IsNullOrEmpty(dto.ThemeName))
-                sb.AppendLine($"Chủ đề: {dto.ThemeName}");
+                sb.AppendLine($"Theme: {dto.ThemeName}");
 
             if (!string.IsNullOrEmpty(dto.ThemeDescription))
-                sb.AppendLine($"Mô tả chủ đề: {dto.ThemeDescription}");
+                sb.AppendLine($"Theme description: {dto.ThemeDescription}");
 
-            // Season
             if (dto.Season.HasValue)
-                sb.AppendLine($"Mùa: {GetSeasonName(dto.Season.Value)}");
+                sb.AppendLine($"Season: {GetSeasonName(dto.Season.Value)}");
 
-            // Safety
             var safetyFeatures = new List<string>();
-            if (dto.PetSafe == true) safetyFeatures.Add("An toàn cho thú cưng");
-            if (dto.ChildSafe == true) safetyFeatures.Add("An toàn cho trẻ em");
+            if (dto.PetSafe == true) safetyFeatures.Add("Pet-safe");
+            if (dto.ChildSafe == true) safetyFeatures.Add("Child-safe");
             if (safetyFeatures.Any())
-                sb.AppendLine($"Đặc điểm: {string.Join(", ", safetyFeatures)}");
+                sb.AppendLine($"Features: {string.Join(", ", safetyFeatures)}");
 
-            // Price
             if (dto.Price.HasValue || dto.ComboPrice.HasValue)
-                sb.AppendLine($"Giá combo: {(dto.Price ?? dto.ComboPrice):N0} VND");
+                sb.AppendLine($"Combo price: {(dto.Price ?? dto.ComboPrice):N0} VND");
 
-            // Tags
             if (dto.TagNames.Any())
-                sb.AppendLine($"Từ khóa: {string.Join(", ", dto.TagNames)}");
+                sb.AppendLine($"Tags: {string.Join(", ", dto.TagNames)}");
 
-            // Nursery
             if (!string.IsNullOrEmpty(dto.NurseryName))
-                sb.AppendLine($"Vựa: {dto.NurseryName}");
+                sb.AppendLine($"Nursery: {dto.NurseryName}");
 
             return sb.ToString().Trim();
         }
@@ -226,42 +204,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"Loại sản phẩm: Vật tư làm vườn");
+            sb.AppendLine("Product type: Gardening material");
 
             if (!string.IsNullOrEmpty(dto.MaterialName))
-                sb.AppendLine($"Tên sản phẩm: {dto.MaterialName}");
+                sb.AppendLine($"Product name: {dto.MaterialName}");
 
             if (!string.IsNullOrEmpty(dto.Description))
-                sb.AppendLine($"Mô tả: {dto.Description}");
+                sb.AppendLine($"Description: {dto.Description}");
 
             if (!string.IsNullOrEmpty(dto.Brand))
-                sb.AppendLine($"Thương hiệu: {dto.Brand}");
+                sb.AppendLine($"Brand: {dto.Brand}");
 
             if (!string.IsNullOrEmpty(dto.Unit))
-                sb.AppendLine($"Đơn vị: {dto.Unit}");
+                sb.AppendLine($"Unit: {dto.Unit}");
 
             if (!string.IsNullOrEmpty(dto.Specifications))
-                sb.AppendLine($"Thông số kỹ thuật: {dto.Specifications}");
+                sb.AppendLine($"Specifications: {dto.Specifications}");
 
-            // Price
             if (dto.Price.HasValue || dto.BasePrice.HasValue)
-                sb.AppendLine($"Giá: {(dto.Price ?? dto.BasePrice):N0} VND");
+                sb.AppendLine($"Price: {(dto.Price ?? dto.BasePrice):N0} VND");
 
-            // Categories
             if (dto.CategoryNames.Any())
-                sb.AppendLine($"Danh mục: {string.Join(", ", dto.CategoryNames)}");
+                sb.AppendLine($"Categories: {string.Join(", ", dto.CategoryNames)}");
 
-            // Tags
             if (dto.TagNames.Any())
-                sb.AppendLine($"Từ khóa: {string.Join(", ", dto.TagNames)}");
+                sb.AppendLine($"Tags: {string.Join(", ", dto.TagNames)}");
 
-            // Expiry info
             if (dto.ExpiredDate.HasValue)
-                sb.AppendLine($"Hạn sử dụng: {dto.ExpiredDate.Value:dd/MM/yyyy}");
+                sb.AppendLine($"Expiry date: {dto.ExpiredDate.Value:dd/MM/yyyy}");
 
-            // Nursery
             if (!string.IsNullOrEmpty(dto.NurseryName))
-                sb.AppendLine($"Vựa: {dto.NurseryName}");
+                sb.AppendLine($"Nursery: {dto.NurseryName}");
 
             return sb.ToString().Trim();
         }
@@ -282,11 +255,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             return size switch
             {
-                1 => "Nhỏ (để bàn)",
-                2 => "Vừa",
-                3 => "Lớn",
-                4 => "Rất lớn (cây cổ thụ)",
-                _ => "Không xác định"
+                1 => "Small (desktop)",
+                2 => "Medium",
+                3 => "Large",
+                4 => "Very large (mature tree)",
+                _ => "Unknown"
             };
         }
 
@@ -294,10 +267,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             return placementType switch
             {
-                1 => "Trong nhà",
-                2 => "Ngoài trời",
-                3 => "Cả hai (trong nhà và ngoài trời)",
-                _ => "Không xác định"
+                1 => "Indoor",
+                2 => "Outdoor",
+                3 => "Both indoor and outdoor",
+                _ => "Unknown"
             };
         }
 
@@ -305,20 +278,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement)
                 ? ((FengShuiElementTypeEnum)fengShuiElement).ToString()
-                : "Không xác định";
+                : "Unknown";
         }
 
         private static string GetSeasonName(SeasonTypeEnum season)
         {
             return season switch
             {
-                SeasonTypeEnum.All => "Quanh năm",
-                SeasonTypeEnum.Spring => "Mùa xuân",
-                SeasonTypeEnum.Summer => "Mùa hè",
-                SeasonTypeEnum.Autumn => "Mùa thu",
-                SeasonTypeEnum.Winter => "Mùa đông",
-                SeasonTypeEnum.Tet => "Tết",
-                _ => "Không xác định"
+                SeasonTypeEnum.All => "All year round",
+                SeasonTypeEnum.Spring => "Spring",
+                SeasonTypeEnum.Summer => "Summer",
+                SeasonTypeEnum.Autumn => "Autumn",
+                SeasonTypeEnum.Winter => "Winter",
+                SeasonTypeEnum.Tet => "Tet",
+                _ => "Unknown"
             };
         }
 
@@ -350,37 +323,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return;
             }
 
-            sb.AppendLine("Hướng dẫn chăm sóc:");
+            sb.AppendLine("Care guide:");
 
             if (!string.IsNullOrWhiteSpace(lightRequirementName))
             {
-                sb.AppendLine($"Ánh sáng: {lightRequirementName}");
+                sb.AppendLine($"Light: {lightRequirementName}");
             }
             else if (lightRequirement.HasValue)
             {
-                sb.AppendLine($"Ánh sáng (mức): {lightRequirement.Value}");
+                sb.AppendLine($"Light level: {lightRequirement.Value}");
             }
 
             if (!string.IsNullOrWhiteSpace(watering))
-                sb.AppendLine($"Tưới nước: {watering}");
+                sb.AppendLine($"Watering: {watering}");
 
             if (!string.IsNullOrWhiteSpace(fertilizing))
-                sb.AppendLine($"Bón phân: {fertilizing}");
+                sb.AppendLine($"Fertilizing: {fertilizing}");
 
             if (!string.IsNullOrWhiteSpace(pruning))
-                sb.AppendLine($"Cắt tỉa: {pruning}");
+                sb.AppendLine($"Pruning: {pruning}");
 
             if (!string.IsNullOrWhiteSpace(temperature))
-                sb.AppendLine($"Nhiệt độ: {temperature}");
+                sb.AppendLine($"Temperature: {temperature}");
 
             if (!string.IsNullOrWhiteSpace(humidity))
-                sb.AppendLine($"Độ ẩm: {humidity}");
+                sb.AppendLine($"Humidity: {humidity}");
 
             if (!string.IsNullOrWhiteSpace(soil))
-                sb.AppendLine($"Đất trồng: {soil}");
+                sb.AppendLine($"Soil: {soil}");
 
             if (!string.IsNullOrWhiteSpace(careNotes))
-                sb.AppendLine($"Ghi chú chăm sóc: {careNotes}");
+                sb.AppendLine($"Care notes: {careNotes}");
         }
     }
 }
