@@ -36,6 +36,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<CustomerSurvey> CustomerSurveys { get; set; }
 
+    public virtual DbSet<DepositPolicy> DepositPolicies { get; set; }
+
     public virtual DbSet<DesignRegistration> DesignRegistrations { get; set; }
 
     public virtual DbSet<DesignTask> DesignTasks { get; set; }
@@ -310,6 +312,17 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("CustomerSurvey_UserId_fkey");
         });
 
+        modelBuilder.Entity<DepositPolicy>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("DepositPolicy_pkey");
+            entity.ToTable("DepositPolicy");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.MinPrice).HasPrecision(18, 2);
+            entity.Property(e => e.MaxPrice).HasPrecision(18, 2);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
         modelBuilder.Entity<DesignRegistration>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("DesignRegistration_pkey");
@@ -443,7 +456,6 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
             entity.Property(e => e.Brand).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
-            entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.MaterialCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(255);
