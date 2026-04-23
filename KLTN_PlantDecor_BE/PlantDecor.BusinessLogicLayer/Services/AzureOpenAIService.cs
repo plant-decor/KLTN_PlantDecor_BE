@@ -264,6 +264,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<string?> AnalyzeImagesAsync(IReadOnlyCollection<string> imageBase64List, string prompt)
+        {
+            if (imageBase64List == null || imageBase64List.Count == 0)
+            {
+                _logger.LogWarning("No images provided for multi-image analysis");
+                return null;
+            }
+
+            var normalizedImages = imageBase64List
+                .Where(image => !string.IsNullOrWhiteSpace(image))
+                .ToList();
+
+            if (normalizedImages.Count == 0)
+            {
+                _logger.LogWarning("Only empty images were provided for multi-image analysis");
+                return null;
+            }
+
+            try
+            {
+                var chatClient = _client.GetChatClient(_visionDeploymentName);
+
+                var contentParts = new List<ChatMessageContentPart>
+                {
+                    ChatMessageContentPart.CreateTextPart(prompt)
+                };
+
+                foreach (var imageBase64 in normalizedImages)
+                {
+                    contentParts.Add(
+                        ChatMessageContentPart.CreateImagePart(
+                            BinaryData.FromBytes(Convert.FromBase64String(imageBase64)),
+                            "image/jpeg"));
+                }
+
+                var messages = new List<ChatMessage>
+                {
+                    new UserChatMessage(contentParts.ToArray())
+                };
+
+                var options = new ChatCompletionOptions
+                {
+                    Temperature = 0.5f,
+                    MaxOutputTokenCount = 2000
+                };
+
+                var response = await chatClient.CompleteChatAsync(messages, options);
+
+                if (response?.Value?.Content?.Count > 0)
+                {
+                    var result = response.Value.Content[0].Text;
+                    _logger.LogInformation("Analyzed {ImageCount} images successfully in one request", normalizedImages.Count);
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error analyzing multiple images");
+                throw new BadRequestException("Failed to analyze images. Please ensure the images are valid and try again.");
+            }
+        }
+
         private static bool IsRateLimitException(Exception ex)
         {
             var current = ex;

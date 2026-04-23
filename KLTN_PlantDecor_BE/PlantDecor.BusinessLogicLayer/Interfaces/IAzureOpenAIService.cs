@@ -34,6 +34,14 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<string?> AnalyzeImageAsync(string imageBase64, string prompt);
 
         /// <summary>
+        /// Analyze multiple room images in a single Azure OpenAI Vision request.
+        /// </summary>
+        /// <param name="imageBase64List">Ordered list of base64 encoded images</param>
+        /// <param name="prompt">Analysis prompt</param>
+        /// <returns>AI analysis result</returns>
+        Task<string?> AnalyzeImagesAsync(IReadOnlyCollection<string> imageBase64List, string prompt);
+
+        /// <summary>
         /// Generate chat completion with JSON response mode
         /// </summary>
         /// <param name="systemPrompt">System prompt</param>

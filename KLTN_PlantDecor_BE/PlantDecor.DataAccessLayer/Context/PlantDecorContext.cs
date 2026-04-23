@@ -64,6 +64,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<LayoutDesignPlant> LayoutDesignPlants { get; set; }
 
+    public virtual DbSet<LayoutDesignRoomImage> LayoutDesignRoomImages { get; set; }
+
     public virtual DbSet<Nursery> Nurseries { get; set; }
 
     public virtual DbSet<NurseryOrder> NurseryOrders { get; set; }
@@ -694,10 +696,25 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("LayoutDesign_UserId_fkey");
+        });
 
-            entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesigns)
+        modelBuilder.Entity<LayoutDesignRoomImage>(entity =>
+        {
+            entity.HasKey(e => new { e.LayoutDesignId, e.RoomImageId });
+
+            entity.ToTable("LayoutDesignRoomImage");
+
+            entity.HasIndex(e => e.RoomImageId, "IX_LayoutDesignRoomImage_RoomImageId");
+
+            entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignRoomImages)
+                .HasForeignKey(d => d.LayoutDesignId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignRoomImage_LayoutDesignId_fkey");
+
+            entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesignRoomImages)
                 .HasForeignKey(d => d.RoomImageId)
-                .HasConstraintName("LayoutDesign_RoomImageId_fkey");
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignRoomImage_RoomImageId_fkey");
         });
 
         modelBuilder.Entity<LayoutDesignAiResponseImage>(entity =>
@@ -1216,6 +1233,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasIndex(e => e.RoomImageId, "IX_RoomDesignPreferences_RoomImageId");
 
+            entity.Property(e => e.RoomArea).HasPrecision(10, 2);
             entity.Property(e => e.MinBudget).HasPrecision(18, 2);
             entity.Property(e => e.MaxBudget).HasPrecision(18, 2);
             entity.Property(e => e.AllergyNote).HasMaxLength(500);

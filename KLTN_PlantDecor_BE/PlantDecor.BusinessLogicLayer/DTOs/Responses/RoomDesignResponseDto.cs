@@ -50,6 +50,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string RoomSize { get; set; } = null!;
 
         /// <summary>
+        /// AI-estimated number of plants suggested for this room
+        /// </summary>
+        public int? NumberOfPlantsSuggest { get; set; }
+
+        /// <summary>
         /// Lighting condition (low, medium, high, natural)
         /// </summary>
         [JsonIgnore]

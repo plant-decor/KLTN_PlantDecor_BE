@@ -24,13 +24,13 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
             bool inferNaturalLightFromAi = false);
 
         /// <summary>
-        /// Analyze uploaded room image and persist design artifacts
+        /// Analyze existing uploaded room images and persist design artifacts
         /// </summary>
-        /// <param name="request">Multipart upload request and optional filters/preferences</param>
+        /// <param name="request">Room image ids and optional filters/preferences</param>
         /// <param name="userId">Authenticated user id</param>
         /// <returns>Room analysis and plant recommendations</returns>
-        Task<RoomDesignResponseDto> AnalyzeAndRecommendUploadAsync(
-            AnalyzeAndRecommendUploadRequest request,
+        Task<RoomDesignResponseDto> AnalyzeAndRecommendByRoomImagesAsync(
+            AnalyzeAndRecommendByRoomImagesRequest request,
             int userId);
 
         /// <summary>

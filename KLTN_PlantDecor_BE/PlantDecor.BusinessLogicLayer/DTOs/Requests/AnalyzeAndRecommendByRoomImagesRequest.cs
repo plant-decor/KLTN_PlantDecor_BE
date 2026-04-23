@@ -1,18 +1,19 @@
-using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
-    public class AnalyzeAndRecommendUploadRequest
+    public class AnalyzeAndRecommendByRoomImagesRequest
     {
-        public List<IFormFile> Images { get; set; } = new();
-        public List<RoomViewAngleEnum> ViewAngles { get; set; } = new();
+        public List<int> RoomImageIds { get; set; } = new();
         public FengShuiElementTypeEnum? FengShuiElement { get; set; }
+
         [Required(ErrorMessage = "RoomType is required")]
         public RoomTypeEnum RoomType { get; set; }
+
         [Required(ErrorMessage = "RoomStyle is required")]
         public RoomStyleEnum RoomStyle { get; set; }
+
         public decimal? RoomArea { get; set; }
         public DirectionEnum? LightDirection { get; set; }
         public DirectionEnum? DominantDirection { get; set; }

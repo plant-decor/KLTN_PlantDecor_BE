@@ -8,9 +8,11 @@ public partial class RoomImage
 
     public string? ImageUrl { get; set; }
 
+    public int? ViewAngle { get; set; }
+
     public DateTime? UploadedAt { get; set; }
 
-    public virtual ICollection<LayoutDesign> LayoutDesigns { get; set; } = new List<LayoutDesign>();
+    public virtual ICollection<LayoutDesignRoomImage> LayoutDesignRoomImages { get; set; } = new List<LayoutDesignRoomImage>();
 
     public virtual ICollection<RoomUploadModeration> RoomUploadModerations { get; set; } = new List<RoomUploadModeration>();
 

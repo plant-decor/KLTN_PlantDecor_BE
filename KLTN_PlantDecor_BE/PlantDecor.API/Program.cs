@@ -186,6 +186,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IAISearchService, AISearchService>();
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
