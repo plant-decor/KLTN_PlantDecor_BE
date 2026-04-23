@@ -23,4 +23,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [StringLength(255)]
         public string FailureReason { get; set; } = null!;
     }
+
+    public class UpdateNurseryOrderShipperRequestDto
+    {
+        [Required(ErrorMessage = "ShipperId is required")]
+        public int ShipperId { get; set; }
+    }
 }

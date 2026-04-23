@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -73,6 +74,42 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Lấy chi tiết đơn hàng của vườn thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách shipper của vườn để gán đơn
+        /// </summary>
+        [HttpGet("shippers")]
+        public async Task<IActionResult> GetNurseryShippers()
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetNurseryShippersForManagerAsync(currentUserId);
+
+            return Ok(new ApiResponse<List<NurseryOrderShipperResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy danh sách shipper của vườn thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Cập nhật shipper cho nursery order
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/shipper")]
+        public async Task<IActionResult> UpdateNurseryOrderShipper([FromRoute] int nurseryOrderId, [FromBody] UpdateNurseryOrderShipperRequestDto request)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.UpdateNurseryOrderShipperForManagerAsync(currentUserId, nurseryOrderId, request.ShipperId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Cập nhật shipper cho đơn hàng thành công",
                 Payload = result
             });
         }
