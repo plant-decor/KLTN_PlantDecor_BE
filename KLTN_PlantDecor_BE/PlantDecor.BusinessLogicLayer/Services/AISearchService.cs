@@ -109,16 +109,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var queryParts = new List<string> { roomDescription };
 
                 if (!string.IsNullOrEmpty(fengShuiElement))
-                    queryParts.Add($"Phong thủy mệnh {fengShuiElement}");
+                    queryParts.Add($"Feng shui element {fengShuiElement}");
 
                 if (preferredRooms != null && preferredRooms.Any())
-                    queryParts.Add($"Phù hợp cho {string.Join(", ", preferredRooms)}");
+                    queryParts.Add($"Suitable for {string.Join(", ", preferredRooms)}");
 
                 if (petSafe == true)
-                    queryParts.Add("An toàn cho thú cưng");
+                    queryParts.Add("Safe for pets");
 
                 if (childSafe == true)
-                    queryParts.Add("An toàn cho trẻ em");
+                    queryParts.Add("Safe for children");
 
                 var query = string.Join(". ", queryParts);
 
@@ -222,13 +222,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     queryParts.Add(description);
 
                 if (!string.IsNullOrEmpty(fengShuiElement))
-                    queryParts.Add($"Mệnh phong thủy {fengShuiElement}");
+                    queryParts.Add($"Feng shui element {fengShuiElement}");
 
                 if (!string.IsNullOrEmpty(roomType))
-                    queryParts.Add($"Phù hợp cho {roomType}");
+                    queryParts.Add($"Suitable for {roomType}");
 
                 if (!queryParts.Any())
-                    queryParts.Add("Cây cảnh đẹp dễ chăm sóc");
+                    queryParts.Add("Beautiful and easy-care plants");
 
                 var query = string.Join(". ", queryParts);
 
@@ -432,20 +432,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (!string.IsNullOrEmpty(fengShuiElement) && item.FengShuiElement == fengShuiElement)
             {
-                reasons.Add($"Phù hợp mệnh {fengShuiElement}");
+                reasons.Add($"Compatible with feng shui element {fengShuiElement}");
             }
 
             if (item.SimilarityScore > 0.8)
             {
-                reasons.Add("Độ phù hợp cao với mô tả");
+                reasons.Add("Highly relevant to your description");
             }
 
             if (item.IsPurchasable)
             {
-                reasons.Add("Còn hàng, có thể mua ngay");
+                reasons.Add("In stock and available for purchase");
             }
 
-            return reasons.Any() ? string.Join(". ", reasons) : "Phù hợp với yêu cầu của bạn";
+            return reasons.Any() ? string.Join(". ", reasons) : "Matches your preferences";
         }
 
         private int ConvertToInt(object? obj)

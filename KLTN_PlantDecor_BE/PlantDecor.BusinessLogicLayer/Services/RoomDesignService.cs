@@ -35,7 +35,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ILogger<RoomDesignService> _logger;
 
         private const string ROOM_ANALYSIS_PROMPT = @"
-Bạn là chuyên gia thiết kế nội thất và cây cảnh. Tôi đang cung cấp cho bạn CÁC BỨC ẢNH CHỤP TỪ NHIỀU GÓC KHÁC NHAU của CÙNG MỘT CĂN PHÒNG. Hãy kết hợp thông tin từ tất cả các ảnh này để hiểu tổng thể không gian, sau đó trả về JSON với cấu trúc sau:
+    You are an interior design and houseplant expert. I am providing MULTIPLE PHOTOS OF THE SAME ROOM taken from different angles. Combine information from all images to understand the whole space, then return JSON with the following structure:
 {
     ""roomType"": ""LivingRoom|Bedroom|Kitchen|Bathroom|HomeOffice|Balcony|Corridor|DiningRoom"",
     ""roomSize"": ""small|medium|large"",
@@ -48,52 +48,52 @@ Bạn là chuyên gia thiết kế nội thất và cây cảnh. Tôi đang cung
     ""summary"": ""Summarize the overall room characteristics in a few sentences, highlighting key features relevant for plant selection""
 }
 
-Lưu ý:
-- Đánh giá ánh sáng DỰA TRÊN TỔNG THỂ CÁC NGUỒN SÁNG (cửa sổ, đèn) thấy được từ tất cả các góc.
-- Trường lightingCondition dựa vào thông tin do người dùng nhập
-- Trường NumberOfPlantsSuggest là ước lượng số cây sẽ dùng dựa trên diện tích người dùng nhập, không gian và phong cách, không phải số cây hiện có trong ảnh và trường này luôn lớn hơn 0 và bé hơn 6
-- Xác định không gian trống có thể đặt cây
-- Đề xuất vị trí (placementSuggestions) phải cụ thể và tham chiếu rõ ràng đến đặc điểm không gian phù hợp với phong thủy và thẩm mỹ
-- Trường roomType, interiorStyle, lightingCondition PHẢI dùng đúng các giá trị enum đã liệt kê ở trên
-- Hệ thống dùng trạng thái theo enum: LayoutDesignStatus(Processing|Completed|Failed) và RoomUploadModerationStatus(Pending|Approved|Rejected), không cần trả về 2 field này
-- Trả lời bằng tiếng Anh cho summary và placementSuggestions
+Notes:
+- Evaluate lighting based on the COMBINED visible light sources (windows, lamps) across all angles.
+- The lightingCondition field should follow user-provided lighting information.
+- NumberOfPlantsSuggest is an estimate based on user-provided area, available space, and style; it is NOT the number of plants currently visible in the photos. This value must be greater than 0 and less than 6.
+- Identify usable empty spaces where plants can be placed.
+- placementSuggestions must be specific and clearly reference spatial features suitable for aesthetics and feng shui.
+- roomType, interiorStyle, and lightingCondition MUST use exactly the enum values listed above.
+- The system uses enums LayoutDesignStatus(Processing|Completed|Failed) and RoomUploadModerationStatus(Pending|Approved|Rejected); do not return these two fields.
+- summary and placementSuggestions must be in English.
 ";
 
         private const string RECOMMENDATION_PROMPT_TEMPLATE = @"
-Dựa vào phân tích căn phòng:
-- Loại phòng: {0}
-- Kích thước: {1}
-- Ánh sáng: {2}
-- Phong cách: {3}
-- Vị trí đặt cây: {4}
+Based on room analysis:
+- Room type: {0}
+- Room size: {1}
+- Lighting: {2}
+- Interior style: {3}
+- Suggested placement zones: {4}
 
-Và danh sách các cây có sẵn trong hệ thống:
+And the list of available plants in the system:
 {5}
 
-Hãy chọn ra {6} cây phù hợp nhất và trả về JSON array với format:
+Select the {6} best-matching plants and return a JSON array in this format:
 [
     {{
         ""entityType"": ""CommonPlant|PlantInstance"",
         ""entityId"": 123,
-        ""reasonForRecommendation"": ""Lý do cây này phù hợp với căn phòng"",
+        ""reasonForRecommendation"": ""Why this plant fits the room"",
         ""suggestedPlacement"": ""Write a natural English sentence describing the specific location to place the plant in this room (e.g., Place on the desk, or in the corner next to the sofa)"",
         ""matchScore"": 0.95
     }}
 ]
 
-Tiêu chí đánh giá:
-1. Phù hợp với điều kiện ánh sáng của phòng
-2. Kích thước cây phù hợp với không gian
-3. Phong cách cây phù hợp với nội thất
-4. Dễ chăm sóc cho môi trường trong nhà
+Evaluation criteria:
+1. Matches the room's lighting condition
+2. Plant size fits the available space
+3. Style matches the interior
+4. Appropriate care difficulty for indoor use
 5. {7}
-6. Ưu tiên đa dạng loài, tránh lặp lại cùng một tên cây nếu còn lựa chọn phù hợp khác
+6. Prioritize species diversity and avoid repeating the same plant name if other suitable options are available
 
-Lưu ý quan trọng:
-- suggestedPlacement PHẢI là câu tiếng Anh đầy đủ, mô tả vị trí cụ thể phù hợp với từng cây
-- Tham khảo gợi ý bố trí từ phân tích ảnh nhưng điều chỉnh phù hợp với đặc tính từng cây
+Important notes:
+- suggestedPlacement MUST be a full English sentence with a specific location for each plant
+- Use placement hints from image analysis, but adapt them to each plant's characteristics
 
-Chỉ trả về JSON array, không có text khác.
+Return only the JSON array with no additional text.
 ";
 
         public RoomDesignService(
@@ -362,14 +362,14 @@ Chỉ trả về JSON array, không có text khác.
                 // Return default analysis if parsing fails
                 return new RoomAnalysisDto
                 {
-                    RoomType = "Phòng khách",
+                    RoomType = "Living Room",
                     RoomSize = "medium",
                     NumberOfPlantsSuggest = 3,
                     LightingCondition = "IndirectLight",
                     InteriorStyle = "Modern",
                     AvailableSpace = "floor",
                     ColorPalette = new List<string>(),
-                    Summary = "Không thể phân tích chi tiết, đề xuất cây phù hợp chung"
+                    Summary = "Unable to derive detailed room analysis. Returning general recommendations."
                 };
             }
         }
@@ -383,7 +383,7 @@ Chỉ trả về JSON array, không có text khác.
 
             var viewAngleLabel = MapRoomViewAngleToLabel(viewAngle);
 
-            return $"{ROOM_ANALYSIS_PROMPT}\n\nNgữ cảnh bổ sung:\n- Ảnh này chụp từ góc {viewAngleLabel} của căn phòng.\n- Hãy suy luận đúng theo góc nhìn này và giữ nhất quán khi tổng hợp nhiều góc.";
+            return $"{ROOM_ANALYSIS_PROMPT}\n\nAdditional context:\n- This image is taken from the {viewAngleLabel} angle of the room.\n- Reason correctly from this viewpoint and keep it consistent when aggregating multiple angles.";
         }
 
         private static string BuildRoomAnalysisPrompt(IReadOnlyCollection<RoomImageAnalysisInputDto> roomImageAnalyses)
@@ -394,7 +394,7 @@ Chỉ trả về JSON array, không có text khác.
             }
 
             var angleLines = roomImageAnalyses
-                .Select((roomImage, index) => $"- Ảnh {index + 1}: góc {MapRoomViewAngleToLabel(roomImage.ViewAngle)}")
+                .Select((roomImage, index) => $"- Image {index + 1}: angle {MapRoomViewAngleToLabel(roomImage.ViewAngle)}")
                 .ToList();
 
             if (angleLines.Count == 0)
@@ -402,22 +402,22 @@ Chỉ trả về JSON array, không có text khác.
                 return ROOM_ANALYSIS_PROMPT;
             }
 
-            return $"{ROOM_ANALYSIS_PROMPT}\n\nNgữ cảnh góc chụp theo thứ tự ảnh:\n{string.Join("\n", angleLines)}\n- Hãy phân tích đồng thời tất cả ảnh và trả về MỘT kết quả duy nhất cho toàn bộ căn phòng.";
+            return $"{ROOM_ANALYSIS_PROMPT}\n\nView-angle context by image order:\n{string.Join("\n", angleLines)}\n- Analyze all images together and return ONE consolidated result for the whole room.";
         }
 
         private static string MapRoomViewAngleToLabel(RoomViewAngleEnum? viewAngle)
         {
             if (!viewAngle.HasValue)
             {
-                return "không xác định";
+                return "unknown";
             }
 
             return viewAngle.Value switch
             {
-                RoomViewAngleEnum.Front => "chính diện",
-                RoomViewAngleEnum.Left => "bên trái",
-                RoomViewAngleEnum.Right => "bên phải",
-                RoomViewAngleEnum.Back => "phía sau",
+                RoomViewAngleEnum.Front => "front",
+                RoomViewAngleEnum.Left => "left",
+                RoomViewAngleEnum.Right => "right",
+                RoomViewAngleEnum.Back => "back",
                 _ => viewAngle.Value.ToString()
             };
         }
@@ -515,14 +515,14 @@ Chỉ trả về JSON array, không có text khác.
                 _logger.LogError(ex, "Error parsing room analysis JSON (multi-image)");
                 return new RoomAnalysisDto
                 {
-                    RoomType = "Phòng khách",
+                    RoomType = "Living Room",
                     RoomSize = "medium",
                     NumberOfPlantsSuggest = 3,
                     LightingCondition = "IndirectLight",
                     InteriorStyle = "Modern",
                     AvailableSpace = "floor",
                     ColorPalette = new List<string>(),
-                    Summary = "Không thể phân tích chi tiết, đề xuất cây phù hợp chung"
+                    Summary = "Can't determine specific recommendations"
                 };
             }
         }
@@ -536,7 +536,7 @@ Chỉ trả về JSON array, không có text khác.
                 .OrderByDescending(group => group.Count())
                 .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.Key)
-                .FirstOrDefault() ?? "Phòng";
+                .FirstOrDefault() ?? "Room";
         }
 
         private static string ResolveMergedInteriorStyle(IReadOnlyCollection<RoomAnalysisDto> analyses)
@@ -614,7 +614,7 @@ Chỉ trả về JSON array, không có text khác.
 
             if (summaries.Count == 0)
             {
-                return "Phân tích tổng hợp từ nhiều góc chụp của căn phòng";
+                return "Consolidated analysis from multiple room viewing angles";
             }
 
             return string.Join(" ", summaries);
@@ -704,62 +704,62 @@ Chỉ trả về JSON array, không có text khác.
             var fengShuiFilter = request.FengShuiElement?.ToString();
 
             // Room-based criteria
-            queryParts.Add($"Cây phù hợp cho {analysis.RoomType}");
+            queryParts.Add($"Plants suitable for {analysis.RoomType}");
 
             // Lighting
             var lightingQuery = analysis.LightingCondition switch
             {
-                "LowLight" or "low" => "cây chịu bóng, ít ánh sáng",
-                "IndirectLight" or "medium" => "cây bán bóng",
-                "PartialSun" or "high" => "cây ưa sáng nhẹ, cần nắng một phần",
-                "FullSun" or "natural" => "cây ưa nắng trực tiếp, cần nhiều ánh sáng",
-                _ => "cây bán bóng"
+                "LowLight" or "low" => "shade-tolerant plants for low light",
+                "IndirectLight" or "medium" => "plants suitable for indirect light",
+                "PartialSun" or "high" => "plants that prefer partial sunlight",
+                "FullSun" or "natural" => "plants that thrive in full sun",
+                _ => "plants suitable for indirect light"
             };
             queryParts.Add(lightingQuery);
 
             // Size
             var sizeQuery = analysis.RoomSize switch
             {
-                "small" => "cây nhỏ gọn, cây để bàn",
-                "large" => "cây lớn, cây trang trí",
-                _ => "cây vừa"
+                "small" => "compact plants, tabletop plants",
+                "large" => "large decorative plants",
+                _ => "medium-sized plants"
             };
             queryParts.Add(sizeQuery);
 
             // Style
             var styleQuery = analysis.InteriorStyle switch
             {
-                "Minimalist" or "minimalist" or "Scandinavian" or "scandinavian" => "cây đơn giản, thanh lịch",
-                "Tropical" or "tropical" => "cây nhiệt đới, lá lớn",
-                "Industrial" or "industrial" => "cây công nghiệp, xương rồng, sen đá",
-                "Bohemian" or "bohemian" => "cây dây leo, cây treo",
-                "Modern" or "modern" => "cây dáng gọn, hiện đại, tông xanh trung tính",
-                "Japanese" or "japanese" => "cây phong cách zen, bố cục gọn gàng",
-                "Mediterranean" or "mediterranean" => "cây thảo mộc, cây ưa sáng, phong cách địa trung hải",
-                "Rustic" or "rustic" => "cây mộc mạc, tự nhiên, dễ chăm sóc",
-                _ => "cây cảnh đẹp"
+                "Minimalist" or "minimalist" or "Scandinavian" or "scandinavian" => "simple, elegant plants",
+                "Tropical" or "tropical" => "tropical plants with broad foliage",
+                "Industrial" or "industrial" => "industrial-style plants, cacti, succulents",
+                "Bohemian" or "bohemian" => "trailing and hanging plants",
+                "Modern" or "modern" => "clean-form modern plants with neutral green tones",
+                "Japanese" or "japanese" => "zen-style plants with clean composition",
+                "Mediterranean" or "mediterranean" => "sun-loving herbs and Mediterranean-style plants",
+                "Rustic" or "rustic" => "natural, rustic, easy-care plants",
+                _ => "attractive ornamental plants"
             };
             queryParts.Add(styleQuery);
 
             // Feng shui element
             if (!string.IsNullOrEmpty(fengShuiFilter))
             {
-                queryParts.Add($"phong thủy mệnh {fengShuiFilter}");
+                queryParts.Add($"feng shui element {fengShuiFilter}");
             }
 
             // Safety
             if (request.PetSafe == true)
             {
-                queryParts.Add("an toàn cho thú cưng, không độc");
+                queryParts.Add("pet-safe, non-toxic");
             }
             if (request.ChildSafe == true)
             {
-                queryParts.Add("an toàn cho trẻ em");
+                queryParts.Add("child-safe");
             }
 
             if (!string.IsNullOrWhiteSpace(analysis.Summary))
             {
-                queryParts.Add($"tóm tắt phòng: {analysis.Summary}");
+                queryParts.Add($"room summary: {analysis.Summary}");
             }
 
             return string.Join(", ", queryParts);
@@ -784,7 +784,7 @@ Chỉ trả về JSON array, không có text khác.
 
             // Search for similar plants - get more than needed for filtering
             var searchLimit = (limit + 5) * 3;
-            // danh sách type gồm CommonPlant và PlantInstance
+            // Include both CommonPlant and PlantInstance entity types.
             var roomDesignEntityTypes = new[]
             {
                 EmbeddingEntityTypes.CommonPlant,
@@ -797,11 +797,11 @@ Chỉ trả về JSON array, không có text khác.
 
             foreach (var entityType in roomDesignEntityTypes)
             {
-                // sau khi search xong thì trong metadata đã được update thêm field "CosineSimilarityScore" để dùng làm feature khi re-rank với AI
+                // Metadata already includes "CosineSimilarityScore" and can be used as a feature during AI re-ranking.
                 var rawEmbeddings = await _unitOfWork.EmbeddingRepository
                     .SearchSimilarAsync(vector, perTypeLimit, entityType);
 
-                // tách thành 2 list embeddings có type là commonPlant và plantInstance để sau đó khi chọn lọc candidate sẽ ưu tiên đa dạng loại cây hơn là chỉ tập trung vào 1 loại có thể chiếm hết top-k
+                // Split embeddings by entity type so later candidate selection can preserve diversity instead of letting one type dominate top-k.
                 embeddingsByType[entityType] = rawEmbeddings
                     .Select(RoomDesignMapper.ToEmbeddingSearchItem)
                     .ToList();
@@ -814,9 +814,9 @@ Chỉ trả về JSON array, không có text khác.
                 var added = false;
                 foreach (var entityType in roomDesignEntityTypes)
                 {
-                    // Danh sách embedding đã được phân loại theo entityType, nên khi lấy ra sẽ có 2 list riêng biệt cho CommonPlant và PlantInstance. Việc này giúp đảm bảo rằng khi chọn lọc candidate ở bước sau sẽ có sự đa dạng giữa cây trong catalog (CommonPlant) và cây thực tế đã bán (PlantInstance), thay vì chỉ tập trung vào một loại có thể chiếm hết top-k.
+                    // Embeddings are grouped by entityType and interleaved so both catalog plants (CommonPlant) and real instances (PlantInstance) stay represented.
                     var typedEmbeddings = embeddingsByType[entityType];
-                    // nếu index vượt quá số lượng embedding của type này thì bỏ qua, tiếp tục lấy embedding của type khác. Việc này giúp đảm bảo rằng nếu một type có ít embedding hơn perTypeLimit thì vẫn có thể lấy đủ số lượng candidate cần thiết từ type còn lại.
+                    // Skip this type when index exceeds its count and continue with others so we can still fill candidates from remaining types.
                     if (index < typedEmbeddings.Count)
                     {
                         embeddings.Add(typedEmbeddings[index]);
@@ -1065,12 +1065,12 @@ Chỉ trả về JSON array, không có text khác.
                 }), new JsonSerializerOptions { WriteIndented = false });
 
                 var additionalCriteria = !string.IsNullOrEmpty(fengShuiFilter)
-                    ? $"Ưu tiên cây phù hợp mệnh {fengShuiFilter}"
-                    : "Cân nhắc phong thủy nếu có thông tin";
+                    ? $"Prioritize plants compatible with feng shui element {fengShuiFilter}"
+                    : "Consider feng shui compatibility when available";
 
                 if (allergyExclusionContext.HasAnyExclusion)
                 {
-                    additionalCriteria += $". Tuyệt đối không đề xuất cây thuộc danh sách dị ứng người dùng đã chọn hoặc nêu trong ghi chú dị ứng";
+                    additionalCriteria += ". Strictly exclude plants listed in the user's allergy selections or allergy note.";
                 }
 
                 var prompt = string.Format(
@@ -1085,7 +1085,7 @@ Chỉ trả về JSON array, không có text khác.
                     additionalCriteria);
 
                 var response = await _azureOpenAIService.GenerateChatCompletionAsync(
-                    "Bạn là chuyên gia về cây cảnh và thiết kế nội thất. Trả lời bằng JSON array.",
+                    "You are a houseplant and interior design expert. Respond with a JSON array.",
                     prompt,
                     0.3f);
 
@@ -1199,17 +1199,17 @@ Chỉ trả về JSON array, không có text khác.
 
         private static string BuildFallbackPlacementText(RoomAnalysisDto roomAnalysis)
         {
-            var availableSpaceSuggestions = MapAvailableSpaceToVietnamese(roomAnalysis.AvailableSpace);
+            var availableSpaceSuggestions = MapAvailableSpaceToPlacementPhrases(roomAnalysis.AvailableSpace);
             if (availableSpaceSuggestions.Count == 0)
             {
-                return "Đặt ở vị trí có ánh sáng và không gian phù hợp theo đặc tính của cây.";
+                return "Place the plant in a location with suitable light and enough space for its growth characteristics.";
             }
 
-            var merged = string.Join(" hoặc ", availableSpaceSuggestions);
-            return $"Vị trí tham khảo: {merged}.";
+            var merged = string.Join(" or ", availableSpaceSuggestions);
+            return $"Suggested placement: {merged}.";
         }
 
-        private static List<string> MapAvailableSpaceToVietnamese(string? availableSpace)
+        private static List<string> MapAvailableSpaceToPlacementPhrases(string? availableSpace)
         {
             if (string.IsNullOrWhiteSpace(availableSpace))
             {
@@ -1222,12 +1222,12 @@ Chỉ trả về JSON array, không có text khác.
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(token => token switch
                 {
-                    "floor" => "khu vực sàn gần góc thoáng",
-                    "table" => "trên bàn hoặc mặt kệ thấp",
-                    "corner" => "góc phòng",
-                    "shelf" => "trên kệ",
-                    "hanging" => "vị trí treo gần nguồn sáng tán xạ",
-                    "windowsill" => "khu vực gần bệ cửa sổ",
+                    "floor" => "on the floor near an open corner",
+                    "table" => "on a table or low surface",
+                    "corner" => "in a room corner",
+                    "shelf" => "on a shelf",
+                    "hanging" => "in a hanging spot with diffused light",
+                    "windowsill" => "near the windowsill",
                     _ => token
                 })
                 .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -1259,8 +1259,8 @@ Chỉ trả về JSON array, không có text khác.
                     return fallback;
                 }
 
-                var mapped = tokens.Select(MapPlacementTokenToVietnamese).ToList();
-                return $"Đặt cây ở {string.Join(" hoặc ", mapped)} để hài hòa không gian và thuận tiện chăm sóc.";
+                var mapped = tokens.Select(MapPlacementTokenToPhrase).ToList();
+                return $"Place the plant {string.Join(" or ", mapped)} to balance the space and keep maintenance convenient.";
             }
 
             if (!raw.EndsWith('.') && !raw.EndsWith('!') && !raw.EndsWith('?'))
@@ -1271,16 +1271,16 @@ Chỉ trả về JSON array, không có text khác.
             return raw;
         }
 
-        private static string MapPlacementTokenToVietnamese(string token)
+        private static string MapPlacementTokenToPhrase(string token)
         {
             return token.Trim().ToLowerInvariant() switch
             {
-                "floor" => "khu vực sàn gần góc thoáng",
-                "table" => "trên bàn hoặc mặt kệ thấp",
-                "corner" => "góc phòng",
-                "shelf" => "trên kệ",
-                "hanging" => "vị trí treo gần nguồn sáng tán xạ",
-                "windowsill" => "khu vực gần bệ cửa sổ",
+                "floor" => "on the floor near an open corner",
+                "table" => "on a table or low surface",
+                "corner" => "in a room corner",
+                "shelf" => "on a shelf",
+                "hanging" => "in a hanging spot with diffused light",
+                "windowsill" => "near the windowsill",
                 _ => token
             };
         }
@@ -1289,11 +1289,11 @@ Chỉ trả về JSON array, không có text khác.
             RoomAnalysisDto roomAnalysis,
             IReadOnlyCollection<PlantRecommendationDto> recommendations)
         {
-            var roomPart = $"{roomAnalysis.RoomType} phong cách {roomAnalysis.InteriorStyle}, ánh sáng {MapLightingConditionToVietnamese(roomAnalysis.LightingCondition)}.";
+            var roomPart = $"{roomAnalysis.RoomType} with {roomAnalysis.InteriorStyle} style and {MapLightingConditionToReadableText(roomAnalysis.LightingCondition)} lighting.";
 
             if (recommendations.Count == 0)
             {
-                return $"{roomPart} Hiện chưa có cây phù hợp theo các bộ lọc đã chọn trong dữ liệu hệ thống.";
+                return $"{roomPart} No matching plants are currently available under the selected filters in the system data.";
             }
 
             var topNames = recommendations
@@ -1305,26 +1305,22 @@ Chỉ trả về JSON array, không có text khác.
 
             if (topNames.Count == 0)
             {
-                return $"{roomPart} Đề xuất được tạo từ dữ liệu cây hiện có trong hệ thống.";
+                return $"{roomPart} Recommendations were generated from currently available plant data in the system.";
             }
 
             var namesPart = string.Join(", ", topNames);
-            return $"{roomPart} Dựa trên dữ liệu cây trong hệ thống, các lựa chọn phù hợp gồm: {namesPart}.";
+            return $"{roomPart} Based on system plant data, suitable options include: {namesPart}.";
         }
 
-        private static string MapLightingConditionToVietnamese(string? lightingCondition)
+        private static string MapLightingConditionToReadableText(string? lightingCondition)
         {
             return lightingCondition?.Trim() switch
             {
-                "LowLight" => "yếu",
-                "IndirectLight" => "gián tiếp",
-                "PartialSun" => "nắng một phần",
-                "FullSun" => "nắng trực tiếp",
-                // "low" => "thấp",
-                // "medium" => "trung bình",
-                // "high" => "cao",
-                // "natural" => "tự nhiên",
-                _ => lightingCondition ?? "không xác định"
+                "LowLight" => "low",
+                "IndirectLight" => "indirect",
+                "PartialSun" => "partial sun",
+                "FullSun" => "full sun",
+                _ => lightingCondition ?? "unknown"
             };
         }
 
@@ -1344,14 +1340,14 @@ Chỉ trả về JSON array, không có text khác.
         {
             var reasons = new List<string>();
 
-            reasons.Add($"Phù hợp với {room.RoomType}");
+            reasons.Add($"Suitable for {room.RoomType}");
 
             if (!string.IsNullOrEmpty(plant.FengShuiElement))
             {
-                reasons.Add($"mệnh {plant.FengShuiElement}");
+                reasons.Add($"feng shui element {plant.FengShuiElement}");
             }
 
-            reasons.Add("còn hàng, có thể mua ngay");
+            reasons.Add("In stock and available for purchase");
 
             return string.Join(", ", reasons);
         }
@@ -1471,7 +1467,7 @@ Chỉ trả về JSON array, không có text khác.
             Dictionary<string, object>? metadata,
             LightRequirementEnum? requestedLightRequirement)
         {
-            // Nếu người dùng không yêu cầu mức độ ánh sáng cụ thể, không cần so khớp
+            // No strict match is required when the user did not request a specific light requirement.
             if (!requestedLightRequirement.HasValue)
             {
                 return true;
@@ -1889,15 +1885,32 @@ Chỉ trả về JSON array, không có text khác.
                 .Replace(" ", string.Empty, StringComparison.Ordinal)
                 .ToUpperInvariant();
 
-            return normalized switch
+            if (normalized is "METAL" or "KIM" || normalized.EndsWith("KIM", StringComparison.Ordinal))
             {
-                "KIM" => "KIM",
-                "MOC" => "MOC",
-                "THUY" => "THUY",
-                "HOA" => "HOA",
-                "THO" => "THO",
-                _ => normalized
-            };
+                return "METAL";
+            }
+
+            if (normalized is "WOOD" or "MOC" || normalized.EndsWith("MOC", StringComparison.Ordinal))
+            {
+                return "WOOD";
+            }
+
+            if (normalized is "WATER" or "THUY" || normalized.EndsWith("THUY", StringComparison.Ordinal))
+            {
+                return "WATER";
+            }
+
+            if (normalized is "FIRE" or "HOA" || normalized.EndsWith("HOA", StringComparison.Ordinal))
+            {
+                return "FIRE";
+            }
+
+            if (normalized is "EARTH" or "THO" || normalized.EndsWith("THO", StringComparison.Ordinal))
+            {
+                return "EARTH";
+            }
+
+            return normalized;
         }
 
         private static List<PlantRecommendationDto> BuildDiverseRecommendations(
@@ -2192,11 +2205,11 @@ Chỉ trả về JSON array, không có text khác.
 
             return normalizedRequested switch
             {
-                "KIM" => normalizedCandidate == "THO",
-                "MOC" => normalizedCandidate == "THUY",
-                "THUY" => normalizedCandidate == "KIM",
-                "HOA" => normalizedCandidate == "MOC",
-                "THO" => normalizedCandidate == "HOA",
+                "METAL" => normalizedCandidate == "EARTH",
+                "WOOD" => normalizedCandidate == "WATER",
+                "WATER" => normalizedCandidate == "METAL",
+                "FIRE" => normalizedCandidate == "WOOD",
+                "EARTH" => normalizedCandidate == "FIRE",
                 _ => false
             };
         }
@@ -2821,15 +2834,15 @@ Chỉ trả về JSON array, không có text khác.
         {
             return roomType?.Trim() switch
             {
-                "LivingRoom" or "living_room" => "Phòng khách",
-                "Bedroom" or "bedroom" => "Phòng ngủ",
-                "Kitchen" or "kitchen" => "Phòng bếp",
-                "Bathroom" or "bathroom" => "Phòng tắm",
-                "HomeOffice" or "office" => "Phòng làm việc tại nhà",
-                "Balcony" or "balcony" => "Ban công",
-                "Corridor" or "corridor" => "Hành lang",
-                "DiningRoom" or "dining_room" => "Phòng ăn",
-                _ => roomType ?? "Phòng"
+                "LivingRoom" or "living_room" => "Living Room",
+                "Bedroom" or "bedroom" => "Bedroom",
+                "Kitchen" or "kitchen" => "Kitchen",
+                "Bathroom" or "bathroom" => "Bathroom",
+                "HomeOffice" or "office" => "Home Office",
+                "Balcony" or "balcony" => "Balcony",
+                "Corridor" or "corridor" => "Corridor",
+                "DiningRoom" or "dining_room" => "Dining Room",
+                _ => roomType ?? "Room"
             };
         }
 

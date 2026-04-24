@@ -679,38 +679,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ? "a visually appropriate position in the room"
                         : candidate.PlacementPosition;
 
-                    return $@"{index + 1}. Plant {(char)('A' + index)}:
-- Reference image: input_image_{inputImageIndex}
-- Description: plant from {candidate.SourceType} #{candidate.SourceEntityId}
-- Placement: {placement}";
+                    return $@"Insert Plant {(char)('A' + index)} using reference image input_image_{inputImageIndex}, which corresponds to {candidate.SourceType} #{candidate.SourceEntityId}. Keep Plant {(char)('A' + index)} visually consistent with its reference identity, including species silhouette, leaf/flower structure, dominant color appearance, and overall morphology. Place Plant {(char)('A' + index)} at {placement}. Plant {(char)('A' + index)} must appear exactly once and must not be duplicated, cloned, mirrored, or repeated as a similar variant.";
                 });
 
-            return $@"You are given a room image and multiple plant reference images.
+            return $@"You are given one room image (image 1) and multiple plant reference images. Compose one final image by inserting all required plants into image 1. Do not add any extra plants, decorative flowers, or additional potted vegetation. The final image must contain exactly {plantLines.Count()} inserted plants in total, no more and no less.
 
-Task:
-Create a new image by placing the specified plants into the room.
-
-Plants and placement:
+Execute these placement instructions exactly:
 
 {string.Join("\n\n", plantLines)}
 
-Requirements:
-- Place ALL plants in the SAME final image
-- Do NOT add any extra plants.
-- Do NOT duplicate any plants.
-- Maintain realistic lighting, shadows, and perspective
-- Match scale correctly for each plant
-- Do NOT modify existing furniture, walls, or layout
-- Ensure plants do not overlap unnaturally
-- Blend plants seamlessly into the environment
-- The plant must sit on a real surface (floor, table, or furniture)
-- The base of the plant must touch a surface
-- Respect perspective and depth
-
-Important:
-- Each plant must match its reference image exactly
-- Only the specified plants are allowed in the final image
-- This is a SINGLE composition task, not step-by-step edits";
+Hard constraints: keep all required plants in the same final image and never duplicate any plant. Never substitute a reference plant with another species or a visually similar alternative. Never split one reference into multiple plants. Never add background plants on balconies, shelves, corners, or outside the requested set. Preserve realistic lighting, shadows, perspective, and scale for every inserted plant. Do not modify existing furniture, walls, architecture, or room layout. Avoid unnatural overlap between plants and ensure each inserted plant is grounded on a real support surface such as floor, table, or furniture. Respect depth and camera perspective at all times. The output is valid only if every inserted plant matches its reference identity and the total inserted plant count is exactly {plantLines.Count()}.";
         }
 
         private string BuildFluxUrl()
