@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -148,7 +149,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var created = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registration.Id);
-            return MapToDto(created!);
+            return created!.ToResponse();
         }
 
         private static List<DateOnly> BuildScheduleFromPackageOrThrow(
@@ -260,7 +261,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var result = await _unitOfWork.ServiceRegistrationRepository.GetByUserIdAsync(userId, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -272,7 +273,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetPendingByNurseryIdAsync(nursery.Id, pagination);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -284,7 +285,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetAllByNurseryIdAsync(nursery.Id, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -302,7 +303,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 registration.CurrentCaretakerId != userId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> GetByIdAsManagerAsync(int managerId, int id)
@@ -316,7 +317,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.NurseryCareService?.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> ApproveAsync(int managerId, int id)
@@ -392,7 +393,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> RejectAsync(int managerId, int id, string? rejectReason)
@@ -454,7 +455,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         await _unitOfWork.SaveAsync();
 
                         var rerouted = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-                        return MapToDto(rerouted!);
+                        return rerouted!.ToResponse();
                     }
                 }
             }
@@ -488,7 +489,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId)
@@ -550,7 +551,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> RescheduleAsync(int managerId, int id, UpdateServiceRegistrationScheduleRequestDto request)
@@ -632,7 +633,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"ServiceRegistration {id} not found after reschedule");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> CancelAsync(int userId, int id, string? cancelReason)
@@ -655,14 +656,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyTasksAsync(int caretakerId, Pagination pagination, int? status)
         {
             var result = await _unitOfWork.ServiceRegistrationRepository.GetByCaretakerIdAsync(caretakerId, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -710,7 +711,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId)
@@ -1173,70 +1174,5 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
 
-        #region Mapping
-
-        public static ServiceRegistrationResponseDto MapToDto(ServiceRegistration r)
-        {
-            return new ServiceRegistrationResponseDto
-            {
-                Id = r.Id,
-                Status = r.Status,
-                StatusName = r.Status.HasValue ? ((ServiceRegistrationStatusEnum)r.Status.Value).ToString() : null,
-                ServiceDate = r.ServiceDate,
-                TotalSessions = r.TotalSessions,
-                Address = r.Address,
-                Phone = r.Phone,
-                Note = r.Note,
-                Latitude = r.Latitude,
-                Longitude = r.Longitude,
-                ScheduleDaysOfWeek = r.ScheduleDaysOfWeek,
-                CancelReason = ResolveDisplayCancelReason(r.Status, r.CancelReason),
-                CreatedAt = r.CreatedAt,
-                ApprovedAt = r.ApprovedAt,
-                OrderId = r.OrderId,
-                NurseryCareService = r.NurseryCareService == null ? null : new NurseryCareServiceSummaryDto
-                {
-                    Id = r.NurseryCareService.Id,
-                    NurseryId = r.NurseryCareService.NurseryId,
-                    NurseryName = r.NurseryCareService.Nursery?.Name,
-                    CareServicePackage = r.NurseryCareService.CareServicePackage == null ? null : new CareServicePackageSummaryDto
-                    {
-                        Id = r.NurseryCareService.CareServicePackage.Id,
-                        Name = r.NurseryCareService.CareServicePackage.Name,
-                        Description = r.NurseryCareService.CareServicePackage.Description,
-                        VisitPerWeek = r.NurseryCareService.CareServicePackage.VisitPerWeek,
-                        DurationDays = r.NurseryCareService.CareServicePackage.DurationDays,
-                        ServiceType = r.NurseryCareService.CareServicePackage.ServiceType,
-                        UnitPrice = r.NurseryCareService.CareServicePackage.UnitPrice,
-                    }
-                },
-                PrefferedShift = r.PrefferedShift == null ? null : new ShiftSummaryDto
-                {
-                    Id = r.PrefferedShift.Id,
-                    ShiftName = r.PrefferedShift.ShiftName,
-                    StartTime = r.PrefferedShift.StartTime,
-                    EndTime = r.PrefferedShift.EndTime
-                },
-                Customer = r.User == null ? null : MapUserSummary(r.User),
-                MainCaretaker = r.MainCaretaker == null ? null : MapUserSummary(r.MainCaretaker),
-                CurrentCaretaker = r.CurrentCaretaker == null ? null : MapUserSummary(r.CurrentCaretaker),
-                Progresses = r.ServiceProgresses
-                    .OrderBy(sp => sp.TaskDate)
-                    .Select(ServiceProgressService.MapToDto)
-                    .ToList(),
-                Rating = r.ServiceRating == null ? null : ServiceRatingService.MapToDto(r.ServiceRating)
-            };
-        }
-
-        public static UserSummaryDto MapUserSummary(User user) => new UserSummaryDto
-        {
-            Id = user.Id,
-            FullName = user.Username,
-            Email = user.Email,
-            Phone = user.PhoneNumber,
-            Avatar = user.AvatarUrl
-        };
-
-        #endregion
     }
 }
