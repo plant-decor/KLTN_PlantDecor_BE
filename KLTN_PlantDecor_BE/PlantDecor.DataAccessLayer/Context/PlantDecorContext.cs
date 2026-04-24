@@ -14,6 +14,10 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<AilayoutResponseModeration> AilayoutResponseModerations { get; set; }
 
+    public virtual DbSet<AIChatMessage> AIChatMessages { get; set; }
+
+    public virtual DbSet<AIChatSession> AIChatSessions { get; set; }
+
     public virtual DbSet<CareReminder> CareReminders { get; set; }
 
     public virtual DbSet<CareServicePackage> CareServicePackages { get; set; }
@@ -75,6 +79,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<Order> Orders { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
+
+    public virtual DbSet<PolicyContent> PolicyContents { get; set; }
 
     public virtual DbSet<Plant> Plants { get; set; }
 
@@ -296,6 +302,46 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("ChatSession");
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+        });
+
+        modelBuilder.Entity<AIChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("AIChatMessage_pkey");
+
+            entity.ToTable("AIChatMessage");
+
+            entity.Property(e => e.Content).HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.Intent).HasMaxLength(100);
+            entity.Property(e => e.IsFallback).HasDefaultValue(false);
+            entity.Property(e => e.IsPolicyResponse).HasDefaultValue(false);
+
+            entity.HasOne(d => d.AIChatSession).WithMany(p => p.AIChatMessages)
+                .HasForeignKey(d => d.AIChatSessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("AIChatMessage_AIChatSessionId_fkey");
+        });
+
+        modelBuilder.Entity<AIChatSession>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("AIChatSession_pkey");
+
+            entity.ToTable("AIChatSession");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.StartedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue(1);
+            entity.Property(e => e.Summary).HasMaxLength(1000);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.Status }, "IX_AIChatSession_User_Status");
+            entity.HasIndex(e => e.StartedAt, "IX_AIChatSession_StartedAt");
+
+            entity.HasOne(d => d.User).WithMany(p => p.AIChatSessions)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("AIChatSession_UserId_fkey");
         });
 
         modelBuilder.Entity<CustomerSurvey>(entity =>
@@ -938,6 +984,25 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("Payment_OrderId_fkey");
+        });
+
+        modelBuilder.Entity<PolicyContent>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PolicyContent_pkey");
+
+            entity.ToTable("PolicyContent");
+
+            entity.Property(e => e.Content).HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.DisplayOrder).HasDefaultValue(0);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Summary).HasMaxLength(1000);
+            entity.Property(e => e.Title).HasMaxLength(300);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => new { e.IsActive, e.Category }, "IX_PolicyContent_Active_Category");
+            entity.HasIndex(e => new { e.IsActive, e.DisplayOrder }, "IX_PolicyContent_Active_DisplayOrder");
+            entity.HasIndex(e => new { e.Category, e.Title }, "IX_PolicyContent_Category_Title");
         });
 
         modelBuilder.Entity<Plant>(entity =>

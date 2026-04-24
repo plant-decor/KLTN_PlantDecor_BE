@@ -67,4 +67,33 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public bool IsPurchasable { get; set; }
         public double RelevanceScore { get; set; }
     }
+
+    public class AIChatbotResponseDto
+    {
+        public string Intent { get; set; } = "general";
+        public string Reply { get; set; } = string.Empty;
+        public string? RoomEnvironmentSummary { get; set; }
+        public List<PlantSuggestionResponseDto> SuggestedPlants { get; set; } = new();
+        public List<string> CareTips { get; set; } = new();
+        public List<string> FollowUpQuestions { get; set; } = new();
+        public List<PolicyGroundingSourceDto> PolicySources { get; set; } = new();
+        public string? Disclaimer { get; set; }
+        public bool UsedFallback { get; set; }
+    }
+
+    public class PolicyGroundingSourceDto
+    {
+        public int PolicyContentId { get; set; }
+        public int? Category { get; set; }
+        public string? Title { get; set; }
+        public string? Excerpt { get; set; }
+    }
+
+    public class AIChatSessionResponseDto
+    {
+        public int SessionId { get; set; }
+        public string? Title { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public int Status { get; set; }
+    }
 }

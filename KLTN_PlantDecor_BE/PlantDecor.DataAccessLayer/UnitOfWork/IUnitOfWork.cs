@@ -27,6 +27,9 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IInvoiceRepository InvoiceRepository { get; }
         IUserBehaviorLogRepository UserBehaviorLogRepository { get; }
         IUserPlantRepository UserPlantRepository { get; }
+        IAIChatSessionRepository AIChatSessionRepository { get; }
+        IAIChatMessageRepository AIChatMessageRepository { get; }
+        IPolicyContentRepository PolicyContentRepository { get; }
         IChatSessionRepository ChatSessionRepository { get; }
         IChatMessageRepository ChatMessageRepository { get; }
         IChatParticipantRepository ChatParticipantRepository { get; }

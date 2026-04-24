@@ -41,5 +41,15 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// Check if an entity is purchasable
         /// </summary>
         Task<bool> CheckPurchasableAsync(string entityType, int entityId);
+
+        /// <summary>
+        /// Create a new AI chat session for authenticated user
+        /// </summary>
+        Task<AIChatSessionResponseDto> CreateChatSessionAsync(int userId, string? title = null);
+
+        /// <summary>
+        /// AI chatbot for plant selection, room understanding and care consultation
+        /// </summary>
+        Task<AIChatbotResponseDto> ChatbotAsync(AIChatbotRequestDto request, int userId);
     }
 }
