@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class LayoutDesignImageGenerationResultDto
@@ -9,10 +7,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int SuccessCount { get; set; }
         public int FailureCount { get; set; }
         public int StatusAfter { get; set; }
-        public string? ImageUrl { get; set; }
-        public string? FluxPromptUsed { get; set; }
-        public string? ErrorCode { get; set; }
-        public string? ErrorMessage { get; set; }
         public List<LayoutDesignImageGenerationItemResultDto> Items { get; set; } = new();
     }
 
@@ -23,13 +17,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? PlantInstanceId { get; set; }
         public string? PlacementPosition { get; set; }
         public bool IsSuccess { get; set; }
-        [JsonIgnore]
         public string? ImageUrl { get; set; }
-        [JsonIgnore]
         public string? FluxPromptUsed { get; set; }
-        [JsonIgnore]
         public string? ErrorCode { get; set; }
-        [JsonIgnore]
         public string? ErrorMessage { get; set; }
     }
 

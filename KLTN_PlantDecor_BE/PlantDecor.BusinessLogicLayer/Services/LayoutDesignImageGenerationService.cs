@@ -152,105 +152,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareRemove(existingImage);
                     }
 
-                    byte[]? finalGeneratedBytes = null;
-                    string? combinedPrompt = null;
-                    string? responseImageUrl = null;
-                    string? responseErrorCode = null;
-                    string? responseErrorMessage = null;
                     var orderedCandidates = candidates
                         .OrderBy(candidate => candidate.LayoutDesignPlantId)
                         .ToList();
 
                     try
                     {
-                        if (orderedCandidates.Count != layoutPlants.Count)
-                        {
-                            throw new BadRequestException("Unable to resolve source image URL for all plants in layout");
-                        }
-
-                        var plantReferenceBase64List = new List<string>();
                         foreach (var candidate in orderedCandidates)
                         {
-                            var plantImageBase64 = await DownloadAsBase64Async(
-                                candidate.PlantImageUrl,
-                                layout.Id,
-                                candidate.LayoutDesignPlantId);
-
-                            plantReferenceBase64List.Add(plantImageBase64);
+                            await ProcessCandidateAsync(layout, candidate, roomImageBase64, itemResults);
                         }
-
-                        combinedPrompt = BuildFluxMultiPlantPrompt(orderedCandidates);
-                        finalGeneratedBytes = await GenerateImageWithFluxSingleShotAsync(
-                            combinedPrompt,
-                            roomImageBase64,
-                            plantReferenceBase64List);
-
-                        if (finalGeneratedBytes == null)
-                        {
-                            throw new InvalidOperationException("Failed to generate final composed image");
-                        }
-
-                        var fileName = $"layout_{layout.Id}_combined_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png";
-                        var uploadResult = await _cloudinaryService.UploadImageBytesAsync(finalGeneratedBytes, fileName, "LayoutDesignAI");
-
-                        var entity = new LayoutDesignAiResponseImage
-                        {
-                            LayoutDesignId = layout.Id,
-                            LayoutDesignPlantId = null,
-                            ImageUrl = uploadResult.SecureUrl,
-                            PublicId = uploadResult.PublicId,
-                            FluxPromptUsed = combinedPrompt,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareCreate(entity);
-
-                        foreach (var candidate in orderedCandidates)
-                        {
-                            itemResults.Add(new LayoutDesignImageGenerationItemResultDto
-                            {
-                                LayoutDesignPlantId = candidate.LayoutDesignPlantId,
-                                CommonPlantId = candidate.CommonPlantId,
-                                PlantInstanceId = candidate.PlantInstanceId,
-                                PlacementPosition = candidate.PlacementPosition,
-                                IsSuccess = true
-                            });
-                        }
-
-                        responseImageUrl = uploadResult.SecureUrl;
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to generate combined image for layout {LayoutDesignId}", layout.Id);
-
-                        responseErrorCode = "GENERATION_FAILED";
-                        responseErrorMessage = ex.Message;
-
-                        foreach (var candidate in orderedCandidates)
-                        {
-                            itemResults.Add(new LayoutDesignImageGenerationItemResultDto
-                            {
-                                LayoutDesignPlantId = candidate.LayoutDesignPlantId,
-                                CommonPlantId = candidate.CommonPlantId,
-                                PlantInstanceId = candidate.PlantInstanceId,
-                                PlacementPosition = candidate.PlacementPosition,
-                                IsSuccess = false
-                            });
-                        }
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(responseImageUrl))
-                    {
-                        combinedPrompt ??= BuildFluxMultiPlantPrompt(orderedCandidates);
-                    }
-                    else if (string.IsNullOrWhiteSpace(responseErrorCode) && itemResults.Count > 0)
-                    {
-                        var firstFailure = itemResults.FirstOrDefault(item => !item.IsSuccess);
-                        if (firstFailure != null)
-                        {
-                            responseErrorCode = firstFailure.ErrorCode;
-                            responseErrorMessage = firstFailure.ErrorMessage;
-                        }
+                        _logger.LogError(ex, "Failed to generate images for layout {LayoutDesignId}", layout.Id);
+                        throw;
                     }
 
                     var trackedLayout = await _unitOfWork.LayoutDesignRepository.GetByIdAsync(layoutDesignId);
@@ -278,10 +194,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         StatusAfter = itemResults.All(item => item.IsSuccess)
                             ? (int)LayoutDesignStatusEnum.ImageGenerationCompleted
                             : (int)LayoutDesignStatusEnum.PlantRecommendationCompleted,
-                        ImageUrl = responseImageUrl,
-                        FluxPromptUsed = combinedPrompt,
-                        ErrorCode = responseErrorCode,
-                        ErrorMessage = responseErrorMessage,
                         Items = itemResults
                     };
                 }
@@ -546,7 +458,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate)
         {
             _ = layoutDesignId;
-            return BuildFluxMultiPlantPrompt(new[] { candidate });
+            return BuildFluxSinglePlantPrompt(candidate);
         }
 
         private Task<byte[]> GenerateImageWithFluxAsync(string prompt, string plantImageBase64, string roomImageBase64)
@@ -689,6 +601,37 @@ Execute these placement instructions exactly:
 {string.Join("\n\n", plantLines)}
 
 Hard constraints: keep all required plants in the same final image and never duplicate any plant. Never substitute a reference plant with another species or a visually similar alternative. Never split one reference into multiple plants. Never add background plants on balconies, shelves, corners, or outside the requested set. Preserve realistic lighting, shadows, perspective, and scale for every inserted plant. Do not modify existing furniture, walls, architecture, or room layout. Avoid unnatural overlap between plants and ensure each inserted plant is grounded on a real support surface such as floor, table, or furniture. Respect depth and camera perspective at all times. The output is valid only if every inserted plant matches its reference identity and the total inserted plant count is exactly {plantLines.Count()}.";
+        }
+
+        private static string BuildFluxSinglePlantPrompt(GenerationCandidate candidate)
+        {
+            var placement = string.IsNullOrWhiteSpace(candidate.PlacementPosition)
+                ? "a visually appropriate position in the room"
+                : candidate.PlacementPosition;
+
+            return $@"You are given one room image and one plant reference image.
+
+Task:
+Add the referenced plant into the room as a single realistic composition.
+
+Plant instructions:
+- Reference image: input_image_2
+- Description: plant from {candidate.SourceType} #{candidate.SourceEntityId}
+- Placement: {placement}
+
+Requirements:
+- Add exactly one plant in the final image
+- Maintain realistic lighting, shadows, and perspective
+- Match scale correctly for the plant
+- Do NOT modify existing furniture, walls, or layout
+- Ensure the plant does not overlap unnaturally with room objects
+- Blend the plant seamlessly into the environment
+- The plant must sit on a real surface (floor, table, or furniture)
+- The base of the plant must touch a surface
+- Respect perspective and depth
+
+Important:
+- This is a SINGLE plant composition task, not a multi-plant composition";
         }
 
         private string BuildFluxUrl()
