@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -412,7 +413,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     StartTime = sp.Shift.StartTime,
                     EndTime = sp.Shift.EndTime
                 },
-                Caretaker = sp.Caretaker == null ? null : ServiceRegistrationService.MapUserSummary(sp.Caretaker),
+                Caretaker = sp.Caretaker == null ? null : sp.Caretaker.ToUserSummary(),
                 ServiceRegistration = sp.ServiceRegistration == null ? null : new ServiceRegistrationBriefDto
                 {
                     Id = sp.ServiceRegistration.Id,
@@ -434,7 +435,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             UnitPrice = sp.ServiceRegistration.NurseryCareService.CareServicePackage.UnitPrice,
                         }
                     },
-                    Customer = sp.ServiceRegistration.User == null ? null : ServiceRegistrationService.MapUserSummary(sp.ServiceRegistration.User)
+                    Customer = sp.ServiceRegistration.User == null ? null : sp.ServiceRegistration.User.ToUserSummary()
                 }
             };
         }

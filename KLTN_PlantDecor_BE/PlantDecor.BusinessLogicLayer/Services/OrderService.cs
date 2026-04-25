@@ -15,7 +15,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly ICacheService _cacheService;
-        private const decimal DepositRatio = 0.3m;
         private const string ALL_CART_KEY = "cart_user";
 
         public OrderService(IUnitOfWork unitOfWork, IBackgroundJobClient backgroundJobClient, ICacheService cacheService)
@@ -131,13 +130,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (orderType != OrderTypeEnum.PlantInstance && strategy == PaymentStrategiesEnum.Deposit)
                 throw new BadRequestException("Deposit payment strategy is only available for PlantInstance orders");
 
+            decimal? depositRatio = null;
+            if (strategy == PaymentStrategiesEnum.Deposit)
+            {
+                var plantInstanceItem = orderItems.FirstOrDefault(i => i.PlantInstanceId.HasValue);
+                if (plantInstanceItem == null)
+                    throw new BadRequestException("Unable to resolve PlantInstance item for deposit order");
+
+                var matchedPolicy = await _unitOfWork.DepositPolicyRepository
+                    .GetMatchingActivePolicyByPriceAsync(plantInstanceItem.Price);
+
+                if (matchedPolicy == null)
+                    throw new BadRequestException($"No active deposit policy matched plant price {plantInstanceItem.Price}");
+
+                depositRatio = matchedPolicy.DepositPercentage / 100m;
+            }
+
             // Group items by nursery
             var groupedItems = orderItems
                 .GroupBy(x => x.NurseryId)
                 .ToList();
 
             // Build a single order with multiple nursery orders
-            var order = BuildOrder(userId, request, groupedItems);
+            var order = BuildOrder(userId, request, groupedItems, depositRatio);
 
             _unitOfWork.OrderRepository.PrepareCreate(order);
             await _unitOfWork.SaveAsync();
@@ -466,9 +481,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
-        private static Order BuildOrder(int userId, CreateOrderRequestDto request, List<IGrouping<int, OrderItemInfo>> groupedItems)
+        private static Order BuildOrder(
+            int userId,
+            CreateOrderRequestDto request,
+            List<IGrouping<int, OrderItemInfo>> groupedItems,
+            decimal? depositRatio = null)
         {
             var strategy = (PaymentStrategiesEnum)request.PaymentStrategy;
+
+            if(strategy != PaymentStrategiesEnum.Deposit)
+            {
+                depositRatio = null; // Ensure depositRatio is null if strategy is not Deposit
+            }
+
             var nurseryOrders = new List<NurseryOrder>();
             var allInvoiceDetails = new List<InvoiceDetail>();
 
@@ -477,6 +502,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var nurseryId = group.Key;
                 var items = group.ToList();
+
                 var subTotalAmount = items.Sum(i => i.Price * i.Quantity);
 
                 if (subTotalAmount <= 0)
@@ -486,8 +512,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 decimal? remainingAmount = null;
                 if (strategy == PaymentStrategiesEnum.Deposit)
                 {
-                    depositAmount = Math.Round(subTotalAmount * DepositRatio, 2);
-                    remainingAmount = subTotalAmount - depositAmount;
+                    if (!depositRatio.HasValue || depositRatio.Value <= 0 || depositRatio.Value > 1)
+                        throw new BadRequestException("Invalid deposit policy configuration");
+
+                    depositAmount = Math.Round(subTotalAmount * depositRatio.Value, MidpointRounding.AwayFromZero);
+                    remainingAmount = Math.Round(subTotalAmount - depositAmount.Value, MidpointRounding.AwayFromZero);
                 }
 
                 var nurseryOrderDetails = items.Select(i => new NurseryOrderDetail
@@ -530,9 +559,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             // Calculate Order totals
-            var totalAmount = nurseryOrders.Sum(no => no.SubTotalAmount ?? 0);
-            var totalDepositAmount = nurseryOrders.Sum(no => no.DepositAmount ?? 0);
-            var totalRemainingAmount = nurseryOrders.Sum(no => no.RemainingAmount ?? 0);
+            var totalAmount = Math.Round(nurseryOrders.Sum(no => no.SubTotalAmount ?? 0), 2);
+            var totalDepositAmount = Math.Round(nurseryOrders.Sum(no => no.DepositAmount ?? 0), 2);
+            var totalRemainingAmount = Math.Round(nurseryOrders.Sum(no => no.RemainingAmount ?? 0), 2);
 
             // Create single Invoice for Order (customer invoice)
             var invoiceType = strategy == PaymentStrategiesEnum.Deposit

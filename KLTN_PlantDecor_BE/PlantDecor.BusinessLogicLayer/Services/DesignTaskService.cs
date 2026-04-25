@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -27,7 +28,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ?? throw new NotFoundException($"DesignTask {taskId} not found");
 
             await EnsureCanAccessTaskAsync(userId, task);
-            return MapToDto(task);
+            return task.ToResponse();
         }
 
         public async Task<List<DesignTaskResponseDto>> GetByRegistrationIdAsync(int registrationId, int userId)
@@ -52,7 +53,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new ForbiddenException("You don't have access to this registration tasks");
 
             var tasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(registrationId);
-            return tasks.Select(MapToDto).ToList();
+            return tasks.Select(x => x.ToResponse()).ToList();
         }
 
         public async Task<List<DesignTaskPackageMaterialResponseDto>> GetPackageMaterialsForTaskAsync(int userId, int taskId)
@@ -121,7 +122,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var result = await _unitOfWork.DesignTaskRepository
                 .GetByAssignedStaffIdAsync(userId, pagination, status, from, to);
             return new PaginatedResult<DesignTaskResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -197,7 +198,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found after assign");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignTaskResponseDto> ReportMaterialUsageAsync(int userId, int taskId, ReportDesignTaskMaterialUsageRequestDto request)
@@ -299,7 +300,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found after reporting material usage");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignTaskResponseDto> UpdateStatusAsync(int userId, int taskId, UpdateDesignTaskStatusRequestDto request, IFormFile? reportImage = null)
@@ -394,7 +395,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found after status update");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         private async Task EnsureCanAccessTaskAsync(int userId, DesignTask task)
@@ -516,49 +517,5 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return (int)quantity;
         }
 
-        public static DesignTaskResponseDto MapToDto(DesignTask task)
-        {
-            return new DesignTaskResponseDto
-            {
-                Id = task.Id,
-                DesignRegistrationId = task.DesignRegistrationId,
-                AssignedStaffId = task.AssignedStaffId,
-                ScheduledDate = task.ScheduledDate,
-                TaskType = task.TaskType,
-                TaskTypeName = Enum.IsDefined(typeof(TaskTypeEnum), task.TaskType)
-                    ? ((TaskTypeEnum)task.TaskType).ToString()
-                    : $"Unknown({task.TaskType})",
-                ReportImageUrl = task.ReportImageUrl,
-                CreatedAt = task.CreatedAt,
-                Status = task.Status,
-                StatusName = Enum.IsDefined(typeof(DesignTaskStatusEnum), task.Status)
-                    ? ((DesignTaskStatusEnum)task.Status).ToString()
-                    : $"Unknown({task.Status})",
-                AssignedStaff = task.AssignedStaff == null ? null : ServiceRegistrationService.MapUserSummary(task.AssignedStaff),
-                Registration = task.DesignRegistration == null ? null : new DesignRegistrationTaskSummaryDto
-                {
-                    Id = task.DesignRegistration.Id,
-                    UserId = task.DesignRegistration.UserId,
-                    AssignedCaretakerId = task.DesignRegistration.AssignedCaretakerId,
-                    NurseryId = task.DesignRegistration.NurseryId,
-                    Status = task.DesignRegistration.Status,
-                    StatusName = Enum.IsDefined(typeof(DesignRegistrationStatus), task.DesignRegistration.Status)
-                        ? ((DesignRegistrationStatus)task.DesignRegistration.Status).ToString()
-                        : $"Unknown({task.DesignRegistration.Status})",
-                    Address = task.DesignRegistration.Address,
-                    Phone = task.DesignRegistration.Phone
-                },
-                TaskMaterialUsages = task.TaskMaterialUsages
-                    .Select(u => new TaskMaterialUsageResponseDto
-                    {
-                        Id = u.Id,
-                        MaterialId = u.MaterialId,
-                        MaterialName = u.Material?.Name,
-                        ActualQuantity = u.ActualQuantity,
-                        Note = u.Note
-                    })
-                    .ToList()
-            };
-        }
     }
 }
