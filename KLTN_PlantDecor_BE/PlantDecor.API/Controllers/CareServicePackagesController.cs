@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
@@ -108,6 +110,25 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Consultant] Gợi ý gói dịch vụ chăm sóc dựa trên dữ liệu cây trong đơn hàng
+        /// </summary>
+        [HttpGet("recommendations/orders/{orderId}")]
+        [Authorize(Roles = "Consultant")]
+        public async Task<IActionResult> RecommendByOrder(int orderId, [FromQuery] int top = 5)
+        {
+            var consultantId = GetUserId();
+            var result = await _careServicePackageService.RecommendByOrderAsync(consultantId, orderId, top);
+
+            return Ok(new ApiResponse<List<CareServicePackageRecommendationResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care service package recommendations successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Admin] Tạo gói dịch vụ mới
         /// </summary>
         [HttpPost]
@@ -172,6 +193,32 @@ namespace PlantDecor.API.Controllers
                 Message = "Package specializations updated successfully",
                 Payload = result
             });
+        }
+
+        /// <summary>
+        /// [Admin] Cập nhật (thay thế toàn bộ) danh sách điều kiện phù hợp của gói dịch vụ
+        /// </summary>
+        [HttpPut("{id}/suitability-rules")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateSuitabilityRules(int id, [FromBody] SetSuitabilityRulesDto request)
+        {
+            var result = await _careServicePackageService.UpdateSuitabilityRulesAsync(id, request.SuitabilityRules);
+            return Ok(new ApiResponse<CareServicePackageResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Package suitability rules updated successfully",
+                Payload = result
+            });
+        }
+
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                throw new UnauthorizedException("Unable to identify user from token");
+
+            return userId;
         }
 
     }

@@ -16,7 +16,11 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<CareServicePackageWithNurseriesResponseDto>> GetPackagesWithNurseriesAsync();
         /// <summary>Manager: các gói dịch vụ vựa mình chưa kinh doanh (active)</summary>
         Task<List<CareServicePackageResponseDto>> GetNotOfferedByManagerAsync(int managerId);
+        /// <summary>Consultant: gợi ý gói dịch vụ theo dữ liệu cây trong một đơn hàng</summary>
+        Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderAsync(int consultantId, int orderId, int top = 5);
         /// <summary>Admin: thay thế toàn bộ chuyên môn của gói dịch vụ</summary>
         Task<CareServicePackageResponseDto> UpdateSpecializationsAsync(int packageId, List<int> specializationIds);
+        /// <summary>Admin: thay thế toàn bộ rule phù hợp của gói dịch vụ</summary>
+        Task<CareServicePackageResponseDto> UpdateSuitabilityRulesAsync(int packageId, List<PackagePlantSuitabilityRuleRequestDto> rules);
     }
 }

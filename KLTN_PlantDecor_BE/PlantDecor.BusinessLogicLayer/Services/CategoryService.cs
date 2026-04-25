@@ -210,6 +210,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new NotImplementedException();
         }
 
+        public async Task<List<CategoryResponseDto>> GetCategoriesByTypeAsync(int categoryType, bool activeOnly = true)
+        {
+            if (!Enum.IsDefined(typeof(CategoryTypeEnum), categoryType))
+                throw new BadRequestException($"CategoryType {categoryType} is invalid");
+
+            var categories = await _unitOfWork.CategoryRepository.GetByCategoryTypeAsync(categoryType, activeOnly);
+            return categories.Select(c => c.ToResponse()).ToList();
+        }
+
         public async Task<List<CategoryResponseDto>> GetRootActiveCategoriesAsync()
         {
             var cachedData = await _cacheService.GetDataAsync<List<CategoryResponseDto>>(ROOT_ACTIVE_CATEGORIES_KEY);

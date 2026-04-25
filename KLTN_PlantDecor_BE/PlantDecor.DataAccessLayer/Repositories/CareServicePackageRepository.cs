@@ -14,6 +14,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CareServicePackages
                 .Include(p => p.CareServiceSpecializations)
                     .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.PackagePlantSuitabilities.Where(pps => pps.IsActive))
+                    .ThenInclude(pps => pps.Category)
                 .Where(p => p.IsActive == true
                     && p.NurseryCareServices.Any(ncs => ncs.IsActive))
                 .OrderBy(p => p.Id)
@@ -25,6 +27,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CareServicePackages
                 .Include(p => p.CareServiceSpecializations)
                     .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.PackagePlantSuitabilities.Where(pps => pps.IsActive))
+                    .ThenInclude(pps => pps.Category)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
@@ -33,6 +37,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CareServicePackages
                 .Include(p => p.CareServiceSpecializations)
                     .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.PackagePlantSuitabilities.Where(pps => pps.IsActive))
+                    .ThenInclude(pps => pps.Category)
                 .Include(p => p.NurseryCareServices.Where(ncs => ncs.IsActive))
                     .ThenInclude(ncs => ncs.Nursery)
                 .FirstOrDefaultAsync(p => p.Id == id && p.IsActive == true);
@@ -51,6 +57,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CareServicePackages
                 .Include(p => p.CareServiceSpecializations)
                     .ThenInclude(cs => cs.Specialization)
+                .Include(p => p.PackagePlantSuitabilities.Where(pps => pps.IsActive))
+                    .ThenInclude(pps => pps.Category)
                 .Include(p => p.NurseryCareServices.Where(ncs => ncs.IsActive))
                     .ThenInclude(ncs => ncs.Nursery)
                 .Where(p => p.IsActive == true && p.NurseryCareServices.Any(ncs => ncs.IsActive))
@@ -61,9 +69,23 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<CareServicePackage>> GetNotActivelyOfferedByNurseryAsync(int nurseryId)
         {
             return await _context.CareServicePackages
+                .Include(p => p.PackagePlantSuitabilities.Where(pps => pps.IsActive))
+                    .ThenInclude(pps => pps.Category)
                 .Where(p => p.IsActive == true
                     && !p.NurseryCareServices.Any(ncs => ncs.NurseryId == nurseryId && ncs.IsActive))
                 .OrderBy(p => p.Id)
+                .ToListAsync();
+        }
+
+        public async Task<List<PackagePlantSuitability>> GetActiveSuitabilityRulesByPackageIdsAsync(IEnumerable<int> packageIds)
+        {
+            var ids = packageIds?.Distinct().ToList() ?? new List<int>();
+            if (ids.Count == 0)
+                return new List<PackagePlantSuitability>();
+
+            return await _context.PackagePlantSuitabilities
+                .Include(r => r.Category)
+                .Where(r => r.IsActive && ids.Contains(r.CareServicePackageId))
                 .ToListAsync();
         }
 
@@ -109,6 +131,39 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 _context.CareServiceSpecializations.AddRange(newEntries);
 
             await _context.SaveChangesAsync();
+        }
+
+        public async Task AddSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules)
+        {
+            var normalizedRules = rules
+                .Where(r => r != null)
+                .Select(r => new PackagePlantSuitability
+                {
+                    CareServicePackageId = packageId,
+                    CategoryId = r.CategoryId,
+                    CareDifficultyLevel = r.CareDifficultyLevel,
+                    IsActive = r.IsActive,
+                    CreatedAt = r.CreatedAt
+                })
+                .ToList();
+
+            if (normalizedRules.Count == 0)
+                return;
+
+            _context.PackagePlantSuitabilities.AddRange(normalizedRules);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ReplaceSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules)
+        {
+            var existingRules = await _context.PackagePlantSuitabilities
+                .Where(r => r.CareServicePackageId == packageId)
+                .ToListAsync();
+
+            if (existingRules.Count > 0)
+                _context.PackagePlantSuitabilities.RemoveRange(existingRules);
+
+            await AddSuitabilityRulesAsync(packageId, rules);
         }
     }
 }
