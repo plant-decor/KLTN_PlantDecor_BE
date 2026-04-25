@@ -107,6 +107,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var plantInstanceImageUrls = await _unitOfWork.PlantInstanceRepository.GetPrimaryImageUrlsAsync(plantInstanceIds);
 
                 var candidates = BuildCandidates(layoutPlants, commonPlantImageUrls, plantInstanceImageUrls, itemResults);
+                var roomDesignContext = await BuildRoomDesignContextAsync(layout);
 
                 await _unitOfWork.BeginTransactionAsync();
                 transactionStarted = true;
@@ -160,7 +161,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         foreach (var candidate in orderedCandidates)
                         {
-                            await ProcessCandidateAsync(layout, candidate, roomImageBase64, itemResults);
+                            await ProcessCandidateAsync(layout, candidate, roomImageBase64, roomDesignContext, itemResults);
                         }
                     }
                     catch (Exception ex)
@@ -243,6 +244,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             LayoutDesign layout,
             GenerationCandidate candidate,
             string roomImageBase64,
+            string roomDesignContext,
             List<LayoutDesignImageGenerationItemResultDto> itemResults)
         {
             var result = new LayoutDesignImageGenerationItemResultDto
@@ -260,7 +262,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     layout.Id,
                     candidate.LayoutDesignPlantId);
 
-                var prompt = BuildFluxPrompt(layout.Id, candidate);
+                var prompt = BuildFluxPrompt(layout.Id, candidate, roomDesignContext);
                 var generatedBytes = await GenerateImageWithFluxAsync(prompt, plantImageBase64, roomImageBase64);
 
                 var fileName = $"layout_{layout.Id}_plant_{candidate.LayoutDesignPlantId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png";
@@ -455,10 +457,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
         // Backward-compatible wrappers kept for legacy helper usage.
-        private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate)
+        private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate, string roomDesignContext)
         {
             _ = layoutDesignId;
-            return BuildFluxSinglePlantPrompt(candidate);
+            return BuildFluxSinglePlantPrompt(candidate, roomDesignContext);
         }
 
         private Task<byte[]> GenerateImageWithFluxAsync(string prompt, string plantImageBase64, string roomImageBase64)
@@ -603,7 +605,7 @@ Execute these placement instructions exactly:
 Hard constraints: keep all required plants in the same final image and never duplicate any plant. Never substitute a reference plant with another species or a visually similar alternative. Never split one reference into multiple plants. Never add background plants on balconies, shelves, corners, or outside the requested set. Preserve realistic lighting, shadows, perspective, and scale for every inserted plant. Do not modify existing furniture, walls, architecture, or room layout. Avoid unnatural overlap between plants and ensure each inserted plant is grounded on a real support surface such as floor, table, or furniture. Respect depth and camera perspective at all times. The output is valid only if every inserted plant matches its reference identity and the total inserted plant count is exactly {plantLines.Count()}.";
         }
 
-        private static string BuildFluxSinglePlantPrompt(GenerationCandidate candidate)
+        private static string BuildFluxSinglePlantPrompt(GenerationCandidate candidate, string roomDesignContext)
         {
             var placement = string.IsNullOrWhiteSpace(candidate.PlacementPosition)
                 ? "a visually appropriate position in the room"
@@ -612,7 +614,17 @@ Hard constraints: keep all required plants in the same final image and never dup
             return $@"You are given one room image and one plant reference image.
 
 Task:
-Add the referenced plant into the room as a single realistic composition.
+Add the referenced plant into the room as a single realistic composition and freely restyle the room to match the user's requested design direction.
+
+Room design context:
+{roomDesignContext}
+
+Style direction rules:
+- You may redesign the room style, decor, surface finishes, colors, and removable furniture to better match the request.
+- You may add extra decorative objects if they fit the requested style and do not break realism.
+- You must keep the structural layout of the room unchanged.
+- Do not move, resize, remove, or redraw doors or windows.
+- Doors and windows must remain exactly where they are in the input room image, with the same count, shape, and placement.
 
 Plant instructions:
 - Reference image: input_image_2
@@ -631,7 +643,72 @@ Requirements:
 - Respect perspective and depth
 
 Important:
-- This is a SINGLE plant composition task, not a multi-plant composition";
+- This is a SINGLE plant composition task, not a multi-plant composition
+- The room may be restyled, but the architecture and openings must stay fixed";
+        }
+
+        private async Task<string> BuildRoomDesignContextAsync(LayoutDesign layout)
+        {
+            var primaryRoomImageId = ResolvePrimaryRoomImageId(layout);
+            if (!primaryRoomImageId.HasValue)
+            {
+                return "No room design preferences were found. Keep the existing room structure unchanged while allowing decorative restyling.";
+            }
+
+            var preferences = (await _unitOfWork.RoomDesignPreferencesRepository.GetAllAsync())
+                .FirstOrDefault(item => item.RoomImageId == primaryRoomImageId.Value);
+
+            if (preferences == null)
+            {
+                return "No room design preferences were found. Keep the existing room structure unchanged while allowing decorative restyling.";
+            }
+
+            var roomType = MapNullableEnum(preferences.RoomType, typeof(RoomTypeEnum), "unspecified");
+            var roomStyle = MapNullableEnum(preferences.RoomStyle, typeof(RoomStyleEnum), "unspecified");
+            var lightDirection = MapNullableEnum(preferences.LightDirection, typeof(DirectionEnum), "unspecified");
+            var dominantDirection = MapNullableEnum(preferences.DominantDirection, typeof(DirectionEnum), "unspecified");
+            var naturalLight = MapNullableEnum(preferences.NaturalLightLevel, typeof(LightRequirementEnum), "unspecified");
+            var roomArea = preferences.RoomArea.HasValue
+                ? preferences.RoomArea.Value.ToString("0.##")
+                : "unspecified";
+
+            return $@"Requested room type: {roomType}
+Requested room style: {roomStyle}
+Room area: {roomArea} m2
+Light direction: {lightDirection}
+Dominant direction: {dominantDirection}
+Natural light level: {naturalLight}
+
+Allowed changes:
+- Restyle the room freely to match the requested style.
+- Add decorative objects, textiles, accents, and furniture that fit the request.
+- Adjust colors, materials, and surface finishes to improve the design.
+
+Hard constraints:
+- Do not alter the room structure.
+- Keep doors and windows exactly as they are in the input image.
+- Do not move, resize, remove, or redraw any door or window.
+- Preserve wall boundaries, openings, and architectural proportions.";
+        }
+
+        private static int? ResolvePrimaryRoomImageId(LayoutDesign layout)
+        {
+            return layout.LayoutDesignRoomImages
+                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .ThenBy(link => link.OrderIndex ?? int.MaxValue)
+                .ThenBy(link => link.RoomImageId)
+                .Select(link => (int?)link.RoomImageId)
+                .FirstOrDefault();
+        }
+
+        private static string MapNullableEnum(int? value, Type enumType, string fallback)
+        {
+            if (!value.HasValue || !Enum.IsDefined(enumType, value.Value))
+            {
+                return fallback;
+            }
+
+            return Enum.GetName(enumType, value.Value) ?? fallback;
         }
 
         private string BuildFluxUrl()
