@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
@@ -51,5 +52,15 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         /// AI chatbot for plant selection, room understanding and care consultation
         /// </summary>
         Task<AIChatbotResponseDto> ChatbotAsync(AIChatbotRequestDto request, int userId);
+
+        /// <summary>
+        /// Get paginated AI chat sessions of current user
+        /// </summary>
+        Task<PaginatedResult<AIChatSessionListItemResponseDto>> GetAllSessionByUserIdAsync(int userId, Pagination pagination);
+
+        /// <summary>
+        /// Get paginated conversation history by AI session id for current user
+        /// </summary>
+        Task<AIChatConversationHistoryResponseDto> GetConversationHistoryBySessionIdAsync(int userId, int sessionId, Pagination pagination);
     }
 }

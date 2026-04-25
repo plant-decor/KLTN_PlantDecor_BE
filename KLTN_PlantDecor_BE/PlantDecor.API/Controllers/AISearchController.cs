@@ -5,6 +5,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -120,6 +121,44 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Tạo phiên chat thành công",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Get all AI chat sessions of current user (paginated)
+        /// </summary>
+        [HttpGet("chatbot/sessions")]
+        [Authorize]
+        public async Task<IActionResult> GetAllSessionByUserId([FromQuery] Pagination pagination)
+        {
+            var userId = GetCurrentUserId();
+            var result = await _aiSearchService.GetAllSessionByUserIdAsync(userId, pagination);
+
+            return Ok(new ApiResponse<PaginatedResult<AIChatSessionListItemResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get sessions successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Get conversation history by session id (paginated)
+        /// </summary>
+        [HttpGet("chatbot/sessions/{sessionId:int}/history")]
+        [Authorize]
+        public async Task<IActionResult> GetConversationHistoryBySessionId(int sessionId, [FromQuery] Pagination pagination)
+        {
+            var userId = GetCurrentUserId();
+            var result = await _aiSearchService.GetConversationHistoryBySessionIdAsync(userId, sessionId, pagination);
+
+            return Ok(new ApiResponse<AIChatConversationHistoryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get conversation history successfully",
                 Payload = result
             });
         }

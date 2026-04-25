@@ -6,7 +6,9 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Text.Json;
 
@@ -19,6 +21,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string ChatbotIntentPlantCare = "plant_care";
         private const string ChatbotIntentGeneral = "general";
         private const string ChatbotIntentPolicySupport = "policy_support";
+        private const string LanguageEnglish = "en";
+        private const string LanguageVietnamese = "vi";
         private const int MaxPolicyExcerptChars = 220;
         private const int MaxAssistantReplyChars = 2400;
         private const int MaxCareTipsCount = 10;
@@ -49,9 +53,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _policyKnowledgeService = policyKnowledgeService;
             _logger = logger;
             _userPolicyDocumentPath = configuration["SupportAndPolicy:UserPolicyDocumentPath"]
-                ?? "Mục Chính sách người dùng trên website/app PlantDecor";
+                ?? "User policy section on the PlantDecor website/app";
             _returnPolicyDocumentPath = configuration["SupportAndPolicy:ReturnPolicyDocumentPath"]
-                ?? "Mục Chính sách hoàn trả trên website/app PlantDecor";
+                ?? "Return policy section on the PlantDecor website/app";
 
             _chatHistoryMaxTurns = GetPositiveInt(configuration["AIChatbot:HistoryMaxTurns"], 12);
             _chatHistoryTokenBudget = GetPositiveInt(configuration["AIChatbot:HistoryMaxInputTokens"], 1200);
@@ -317,6 +321,63 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
+        public async Task<PaginatedResult<AIChatSessionListItemResponseDto>> GetAllSessionByUserIdAsync(int userId, Pagination pagination)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            var sessions = await _unitOfWork.AIChatSessionRepository
+                .GetUserSessionsAsync(userId, pagination.PageNumber, pagination.PageSize);
+            var totalCount = await _unitOfWork.AIChatSessionRepository
+                .GetUserSessionsCountAsync(userId);
+
+            return new PaginatedResult<AIChatSessionListItemResponseDto>(
+                sessions.ToSessionListItemResponses(),
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize);
+        }
+
+        public async Task<AIChatConversationHistoryResponseDto> GetConversationHistoryBySessionIdAsync(int userId, int sessionId, Pagination pagination)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (sessionId <= 0)
+            {
+                throw new BadRequestException("SessionId must be greater than 0.");
+            }
+
+            var session = await _unitOfWork.AIChatSessionRepository.GetByIdAndUserAsync(sessionId, userId);
+            if (session == null)
+            {
+                throw new NotFoundException("AI chat session not found.");
+            }
+
+            var messages = await _unitOfWork.AIChatMessageRepository
+                .GetSessionMessagesAsync(sessionId, userId, pagination.PageNumber, pagination.PageSize);
+            var totalCount = await _unitOfWork.AIChatMessageRepository
+                .GetSessionMessagesCountAsync(sessionId, userId);
+
+            return new AIChatConversationHistoryResponseDto
+            {
+                SessionId = session.Id,
+                Title = session.Title,
+                Status = session.Status == (int)AIChatSessionStatusEnum.Closed ? "closed" : "active",
+                StartedAt = session.StartedAt,
+                EndedAt = session.EndedAt,
+                TotalCount = totalCount,
+                PageNumber = pagination.PageNumber,
+                PageSize = pagination.PageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize),
+                Messages = messages.ToMessageHistoryItemResponses()
+            };
+        }
+
         public async Task<AIChatbotResponseDto> ChatbotAsync(AIChatbotRequestDto request, int userId)
         {
             if (request == null)
@@ -342,11 +403,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (string.IsNullOrWhiteSpace(userMessage) && string.IsNullOrWhiteSpace(request.RoomDescription))
                 {
+                    var validationFallbackLanguage = ResolveResponseLanguage(userMessage, request.RoomDescription, null);
                     var validationFallback = ClampChatbotResponsePayload(BuildFallbackChatbotResponse(
                         ChatbotIntentGeneral,
                         new List<PlantSuggestionResponseDto>(),
                         null,
-                        "Bạn hãy mô tả nhu cầu chọn cây, môi trường phòng hoặc vấn đề chăm sóc để mình tư vấn chính xác hơn nhé."));
+                        validationFallbackLanguage == LanguageVietnamese
+                            ? "Ban hay mo ta nhu cau chon cay, moi truong phong hoac van de cham soc de minh tu van chinh xac hon nhe."
+                            : "Please describe your plant preferences, room conditions, or care issue so I can give you more accurate advice.",
+                        null,
+                        validationFallbackLanguage));
                     await PersistAssistantMessageAsync(sessionId, userId, validationFallback, ChatbotIntentGeneral, true, false);
                     return validationFallback;
                 }
@@ -363,17 +429,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     userId,
                     boundedHistory.Count);
 
+                var responseLanguage = ResolveResponseLanguage(userMessage, request.RoomDescription, boundedHistory);
+
                 var intentAnalysis = await AnalyzeChatIntentAsync(request, boundedHistory);
                 var intent = NormalizeIntent(intentAnalysis.Intent);
 
                 if (intent == ChatbotIntentPolicySupport)
                 {
-                    var policyResponse = ClampChatbotResponsePayload(await BuildPolicySupportResponseAsync());
+                    var policyResponse = ClampChatbotResponsePayload(await BuildPolicySupportResponseAsync(responseLanguage));
                     _logger.LogInformation(
-                        "AI policy branch routed. SessionId={SessionId}, UserId={UserId}, PolicySources={PolicySources}",
+                        "AI policy branch routed. SessionId={SessionId}, UserId={UserId}, PolicySources={PolicySources}, Language={Language}",
                         sessionId,
                         userId,
-                        policyResponse.PolicySources.Count);
+                        policyResponse.PolicySources.Count,
+                        responseLanguage);
                     await PersistAssistantMessageAsync(sessionId, userId, policyResponse, ChatbotIntentPolicySupport, false, true);
                     return policyResponse;
                 }
@@ -406,6 +475,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     intentAnalysis.RoomType);
 
                 var plantGuideCareTips = await BuildCareTipsFromPlantGuidesAsync(userMessage, intent, suggestions);
+                plantGuideCareTips = LocalizeCareTips(plantGuideCareTips, responseLanguage);
 
                 var answer = await GenerateChatbotAnswerAsync(
                     request,
@@ -418,11 +488,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     effectivePreferredRooms,
                     effectiveMaxBudget,
                     effectivePetSafe,
-                    effectiveChildSafe);
+                    effectiveChildSafe,
+                    responseLanguage);
 
                 if (answer == null)
                 {
-                    var llmFallback = ClampChatbotResponsePayload(BuildFallbackChatbotResponse(intent, suggestions, roomSummary, null, plantGuideCareTips));
+                    var llmFallback = ClampChatbotResponsePayload(BuildFallbackChatbotResponse(intent, suggestions, roomSummary, null, plantGuideCareTips, responseLanguage));
                     await PersistAssistantMessageAsync(sessionId, userId, llmFallback, intent, true, false);
                     return llmFallback;
                 }
@@ -467,7 +538,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ChatbotIntentGeneral,
                     new List<PlantSuggestionResponseDto>(),
                     request.RoomDescription,
-                    "Hiện hệ thống AI đang bận, bạn thử lại sau ít phút hoặc gửi mô tả ngắn gọn hơn."));
+                    ResolveResponseLanguage(userMessage, request.RoomDescription, null) == LanguageVietnamese
+                        ? "Hien he thong AI dang ban, ban thu lai sau it phut hoac gui mo ta ngan gon hon."
+                        : "The AI service is currently busy. Please try again in a few minutes or send a shorter description.",
+                    null,
+                    ResolveResponseLanguage(userMessage, request.RoomDescription, null)));
                 await PersistAssistantMessageAsync(sessionId, userId, fallback, ChatbotIntentGeneral, true, false);
                 return fallback;
             }
@@ -590,13 +665,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var historyContext = BuildHistoryContext(conversationHistory);
 
                 var parsePrompt =
-                    "Bạn là bộ phân tích ý định cho chatbot cây cảnh. " +
-                    "Hãy trả về DUY NHẤT một JSON object hợp lệ với các field: " +
+                    "You are an intent parser for a plant recommendation chatbot. " +
+                    "Return ONLY one valid JSON object with fields: " +
                     "intent (plant_selection|room_environment|plant_care|policy_support|general), " +
                     "searchQuery, roomSummary, roomType, lightingCondition, fengShuiElement, " +
-                    "preferredRooms (array string), petSafe (bool|null), childSafe (bool|null), " +
-                    "maxBudget (number|null), requestedPlantCount (int|null), followUpQuestions (array string). " +
-                    "Nếu không chắc, dùng null hoặc mảng rỗng. Không thêm markdown.";
+                    "preferredRooms (array of string), petSafe (bool|null), childSafe (bool|null), " +
+                    "maxBudget (number|null), requestedPlantCount (int|null), followUpQuestions (array of string). " +
+                    "If uncertain, use null or an empty array. Do not include markdown.";
 
                 var payload = JsonSerializer.Serialize(new
                 {
@@ -658,16 +733,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             List<string>? preferredRooms,
             decimal? maxBudget,
             bool? petSafe,
-            bool? childSafe)
+            bool? childSafe,
+            string responseLanguage)
         {
             try
             {
+                var outputLanguageName = responseLanguage == LanguageVietnamese ? "Vietnamese" : "English";
                 var answerPrompt =
-                    "Bạn là AI chatbot PlantDecor. Nhiệm vụ: tư vấn chọn cây, hiểu môi trường phòng cơ bản và tư vấn chăm sóc cây. " +
-                    "Trả lời bằng tiếng Việt thân thiện, thực tế, không bịa sản phẩm ngoài dữ liệu. " +
-                    "Hãy trả về DUY NHẤT JSON object với các field: reply (string), careTips (array string), " +
+                    "You are the PlantDecor AI chatbot. Tasks: plant selection guidance, basic room-environment understanding, and plant care support. " +
+                    "Be practical, user-friendly, and do not invent products outside provided data. " +
+                    "Reply in " + outputLanguageName + ". " +
+                    "Return ONLY one JSON object with fields: reply (string), careTips (array string), " +
                     "followUpQuestions (array string), disclaimer (string|null). " +
-                    "Nếu không có careTips hoặc followUpQuestions thì trả mảng rỗng.";
+                    "If careTips or followUpQuestions is unavailable, return an empty array.";
 
                 var contextPayload = JsonSerializer.Serialize(new
                 {
@@ -737,18 +815,31 @@ namespace PlantDecor.BusinessLogicLayer.Services
             List<PlantSuggestionResponseDto> suggestions,
             string? roomSummary,
             string? fallbackReply,
-            List<string>? plantGuideCareTips = null)
+            List<string>? plantGuideCareTips = null,
+            string responseLanguage = LanguageEnglish)
         {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
             var suggestionText = suggestions.Any()
-                ? $"Mình có {suggestions.Count} gợi ý phù hợp, bạn có thể xem danh sách cây bên dưới để chọn nhanh."
-                : "Mình chưa tìm thấy cây phù hợp ngay bây giờ, bạn thử thêm thông tin về ánh sáng, ngân sách hoặc nhu cầu chăm sóc nhé.";
+                ? (isVietnamese
+                    ? $"Minh co {suggestions.Count} goi y phu hop, ban co the xem danh sach cay ben duoi de chon nhanh."
+                    : $"I found {suggestions.Count} matching suggestions. You can review the plant list below for a quick choice.")
+                : (isVietnamese
+                    ? "Minh chua tim thay cay phu hop ngay bay gio, ban thu them thong tin ve anh sang, ngan sach hoac nhu cau cham soc nhe."
+                    : "I could not find a strong match yet. Try adding details about lighting, budget, or care preference.");
 
-            var defaultCareTips = new List<string>
-            {
-                "Kiểm tra độ ẩm đất trước khi tưới, tránh tưới theo lịch cố định.",
-                "Đặt cây ở nơi có ánh sáng phù hợp với từng loại cây, tránh nắng gắt trực tiếp cả ngày.",
-                "Quan sát lá vàng hoặc úng để điều chỉnh lượng nước và thông gió."
-            };
+            var defaultCareTips = isVietnamese
+                ? new List<string>
+                {
+                    "Kiem tra do am dat truoc khi tuoi, tranh tuoi theo lich co dinh.",
+                    "Dat cay o noi co anh sang phu hop voi tung loai cay, tranh nang gat truc tiep ca ngay.",
+                    "Quan sat la vang hoac ung de dieu chinh luong nuoc va thong gio."
+                }
+                : new List<string>
+                {
+                    "Check soil moisture before watering and avoid fixed watering schedules.",
+                    "Place each plant in suitable light and avoid harsh direct sun all day.",
+                    "Watch for yellowing leaves or root rot signs to adjust watering and airflow."
+                };
 
             return new AIChatbotResponseDto
             {
@@ -757,31 +848,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 RoomEnvironmentSummary = roomSummary,
                 SuggestedPlants = suggestions,
                 CareTips = MergeCareTips(defaultCareTips, plantGuideCareTips),
-                FollowUpQuestions = new List<string>
-                {
-                    "Phòng của bạn nhận ánh sáng trực tiếp hay ánh sáng tán xạ?",
-                    "Bạn ưu tiên cây dễ chăm hay cây có giá trị thẩm mỹ cao?"
-                },
+                FollowUpQuestions = isVietnamese
+                    ? new List<string>
+                    {
+                        "Phong cua ban nhan anh sang truc tiep hay anh sang tan xa?",
+                        "Ban uu tien cay de cham hay cay co gia tri tham my cao?"
+                    }
+                    : new List<string>
+                    {
+                        "Does your room get direct sunlight or mostly indirect light?",
+                        "Do you prefer low-maintenance plants or stronger decorative impact?"
+                    },
                 PolicySources = new List<PolicyGroundingSourceDto>(),
-                Disclaimer = "Thông tin chỉ mang tính tham khảo. Nếu cây có dấu hiệu bệnh nặng, bạn nên liên hệ chuyên gia chăm sóc cây.",
+                Disclaimer = isVietnamese
+                    ? "Thong tin chi mang tinh tham khao. Neu cay co dau hieu benh nang, ban nen lien he chuyen gia cham soc cay."
+                    : "This information is for reference only. If your plant shows severe disease symptoms, please contact a plant care specialist.",
                 UsedFallback = true
             };
         }
 
-        private async Task<AIChatbotResponseDto> BuildPolicySupportResponseAsync()
+        private async Task<AIChatbotResponseDto> BuildPolicySupportResponseAsync(string responseLanguage)
         {
             try
             {
+                var isVietnamese = responseLanguage == LanguageVietnamese;
                 var userPolicies = await _policyKnowledgeService.GetByCategoryActiveAsync(PolicyContentCategoryEnum.UserPolicy);
                 var returnPolicies = await _policyKnowledgeService.GetByCategoryActiveAsync(PolicyContentCategoryEnum.ReturnPolicy);
                 var policySources = BuildPolicyGroundingSources(userPolicies, returnPolicies);
 
-                var userPolicySection = BuildPolicySection("Chính sách người dùng", userPolicies);
-                var returnPolicySection = BuildPolicySection("Chính sách hoàn trả", returnPolicies);
+                var userPolicySection = BuildPolicySection(
+                    isVietnamese ? "Chinh sach nguoi dung" : "User Policy",
+                    userPolicies,
+                    responseLanguage);
+                var returnPolicySection = BuildPolicySection(
+                    isVietnamese ? "Chinh sach hoan tra" : "Return Policy",
+                    returnPolicies,
+                    responseLanguage);
 
                 if (string.IsNullOrWhiteSpace(userPolicySection) && string.IsNullOrWhiteSpace(returnPolicySection))
                 {
-                    return BuildPolicySupportFallbackResponse();
+                    return BuildPolicySupportFallbackResponse(responseLanguage);
                 }
 
                 var policySections = new List<string>();
@@ -801,56 +907,85 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     Intent = ChatbotIntentPolicySupport,
                     Reply =
-                        "Với câu hỏi về chính sách người dùng hoặc hoàn trả, mình đã lấy thông tin từ nội dung chính sách đang active trong hệ thống:\n" +
+                        (isVietnamese
+                            ? "Voi cau hoi ve chinh sach nguoi dung hoac hoan tra, minh da lay thong tin tu noi dung chinh sach dang active trong he thong:\n"
+                            : "For user-policy or return-policy questions, I retrieved information from active policy content in the system:\n") +
                         groundedSummary + "\n" +
-                        "Để đảm bảo thông tin cuối cùng là chính xác tại thời điểm giao dịch, bạn vui lòng chat với tư vấn viên. " +
-                        $"Bạn cũng có thể xem chính sách tại {_userPolicyDocumentPath} và {_returnPolicyDocumentPath}.",
+                        (isVietnamese
+                            ? "De dam bao thong tin cuoi cung chinh xac tai thoi diem giao dich, ban vui long chat voi tu van vien. "
+                            : "To ensure final accuracy at transaction time, please confirm with a support consultant. ") +
+                        (isVietnamese
+                            ? $"Ban cung co the xem chinh sach tai {_userPolicyDocumentPath} va {_returnPolicyDocumentPath}."
+                            : $"You can also review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                     SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                     CareTips = new List<string>(),
-                    FollowUpQuestions = new List<string>
-                    {
-                        "Bạn cần mình trích ngắn hơn phần chính sách người dùng hay chính sách hoàn trả?",
-                        "Bạn muốn mình nhắc lại là nên chat với tư vấn viên để xác nhận phiên bản chính sách mới nhất không?"
-                    },
+                    FollowUpQuestions = isVietnamese
+                        ? new List<string>
+                        {
+                            "Ban can minh trich ngan hon phan chinh sach nguoi dung hay chinh sach hoan tra?",
+                            "Ban muon minh nhac lai la nen chat voi tu van vien de xac nhan phien ban chinh sach moi nhat khong?"
+                        }
+                        : new List<string>
+                        {
+                            "Do you want a shorter summary of the user policy or the return policy?",
+                            "Would you like me to remind you to confirm the latest policy version with a support consultant?"
+                        },
                     PolicySources = policySources,
-                    Disclaimer = "Nội dung chính sách có thể thay đổi theo thời điểm, vui lòng xác nhận với tư vấn viên trước khi thực hiện giao dịch.",
+                    Disclaimer = isVietnamese
+                        ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
+                        : "Policy content can change over time. Please confirm with a support consultant before any transaction.",
                     UsedFallback = false
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to build DB-grounded policy response. Falling back to safe support response.");
-                return BuildPolicySupportFallbackResponse();
+                return BuildPolicySupportFallbackResponse(responseLanguage);
             }
         }
 
-        private AIChatbotResponseDto BuildPolicySupportFallbackResponse()
+        private AIChatbotResponseDto BuildPolicySupportFallbackResponse(string responseLanguage)
         {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
             return new AIChatbotResponseDto
             {
                 Intent = ChatbotIntentPolicySupport,
                 Reply =
-                    "Với câu hỏi về chính sách người dùng hoặc hoàn trả, mình cần chuyển bạn sang kênh hỗ trợ người thật để đảm bảo thông tin chính xác và cập nhật. " +
-                    $"Bạn vui lòng chat trực tiếp với tư vấn viên trong mục Hỗ trợ, hoặc xem file/chuyên mục chính sách tại {_userPolicyDocumentPath} và {_returnPolicyDocumentPath}.",
+                    (isVietnamese
+                        ? "Voi cau hoi ve chinh sach nguoi dung hoac hoan tra, minh can chuyen ban sang kenh ho tro nguoi that de dam bao thong tin chinh xac va cap nhat. "
+                        : "For user-policy or return-policy questions, I need to route you to human support to ensure accurate and up-to-date information. ") +
+                    (isVietnamese
+                        ? $"Ban vui long chat truc tiep voi tu van vien trong muc Ho tro, hoac xem file/chuyen muc chinh sach tai {_userPolicyDocumentPath} va {_returnPolicyDocumentPath}."
+                        : $"Please chat directly with a support consultant, or review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                 SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                 CareTips = new List<string>(),
-                FollowUpQuestions = new List<string>
-                {
-                    "Bạn muốn mình nhắc lại là hãy vào mục Hỗ trợ để chat với tư vấn viên không?",
-                    "Bạn đang cần chính sách người dùng hay chính sách hoàn trả?"
-                },
+                FollowUpQuestions = isVietnamese
+                    ? new List<string>
+                    {
+                        "Ban muon minh nhac lai la hay vao muc Ho tro de chat voi tu van vien khong?",
+                        "Ban dang can chinh sach nguoi dung hay chinh sach hoan tra?"
+                    }
+                    : new List<string>
+                    {
+                        "Would you like me to remind you to open Support and chat with a consultant?",
+                        "Are you looking for the user policy or the return policy?"
+                    },
                 PolicySources = new List<PolicyGroundingSourceDto>(),
-                Disclaimer = "Nội dung chính sách có thể thay đổi theo thời điểm, vui lòng xác nhận với tư vấn viên trước khi thực hiện giao dịch.",
+                Disclaimer = isVietnamese
+                    ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
+                    : "Policy content can change over time. Please confirm with a support consultant before any transaction.",
                 UsedFallback = false
             };
         }
 
-        private static string BuildPolicySection(string sectionTitle, List<DataAccessLayer.Entities.PolicyContent>? policies)
+        private static string BuildPolicySection(string sectionTitle, List<DataAccessLayer.Entities.PolicyContent>? policies, string responseLanguage)
         {
             if (policies == null || policies.Count == 0)
             {
                 return string.Empty;
             }
+
+            var isVietnamese = responseLanguage == LanguageVietnamese;
 
             var excerpts = policies
                 .Where(p => p.IsActive == true && !string.IsNullOrWhiteSpace(p.Content))
@@ -859,7 +994,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Take(2)
                 .Select(p =>
                 {
-                    var title = FirstNonEmpty(p.Title, sectionTitle, "Chính sách") ?? "Chính sách";
+                    var title = FirstNonEmpty(p.Title, sectionTitle, isVietnamese ? "Chinh sach" : "Policy")
+                        ?? (isVietnamese ? "Chinh sach" : "Policy");
                     var sourceText = FirstNonEmpty(p.Summary, p.Content);
                     var excerpt = BuildPolicyExcerpt(sourceText, MaxPolicyExcerptChars);
                     return string.IsNullOrWhiteSpace(excerpt) ? null : $"- {title}: {excerpt}";
@@ -1294,6 +1430,25 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return NormalizeTextList(tips).Take(8).ToList();
         }
 
+        private static List<string> LocalizeCareTips(List<string> tips, string responseLanguage)
+        {
+            if (tips == null || tips.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            if (responseLanguage == LanguageVietnamese)
+            {
+                return tips
+                    .Select(LocalizeCareTipToVietnamese)
+                    .ToList();
+            }
+
+            return tips
+                .Select(LocalizeCareTipToEnglish)
+                .ToList();
+        }
+
         private async Task<DataAccessLayer.Entities.PlantGuide?> GetPlantGuideForSuggestionAsync(PlantSuggestionResponseDto suggestion)
         {
             int? plantId = null;
@@ -1321,48 +1476,48 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private static List<string> ExtractCareTipsFromGuide(DataAccessLayer.Entities.PlantGuide guide, string? fallbackPlantName)
         {
-            var plantName = FirstNonEmpty(guide.Plant?.Name, fallbackPlantName, "Cây này") ?? "Cây này";
+            var plantName = FirstNonEmpty(guide.Plant?.Name, fallbackPlantName, "This plant") ?? "This plant";
             var tips = new List<string>();
 
             if (guide.LightRequirement.HasValue && Enum.IsDefined(typeof(LightRequirementEnum), guide.LightRequirement.Value))
             {
                 var lightRequirement = (LightRequirementEnum)guide.LightRequirement.Value;
-                tips.Add($"{plantName}: Ánh sáng phù hợp - {MapLightRequirementToVietnamese(lightRequirement)}.");
+                tips.Add($"{plantName}: Suitable light - {MapLightRequirementToText(lightRequirement, LanguageEnglish)}.");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Watering))
             {
-                tips.Add($"{plantName}: Tưới nước - {guide.Watering.Trim()}");
+                tips.Add($"{plantName}: Watering - {guide.Watering.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Fertilizing))
             {
-                tips.Add($"{plantName}: Bón phân - {guide.Fertilizing.Trim()}");
+                tips.Add($"{plantName}: Fertilizing - {guide.Fertilizing.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Pruning))
             {
-                tips.Add($"{plantName}: Cắt tỉa - {guide.Pruning.Trim()}");
+                tips.Add($"{plantName}: Pruning - {guide.Pruning.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Temperature))
             {
-                tips.Add($"{plantName}: Nhiệt độ phù hợp - {guide.Temperature.Trim()}");
+                tips.Add($"{plantName}: Suitable temperature - {guide.Temperature.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Humidity))
             {
-                tips.Add($"{plantName}: Độ ẩm phù hợp - {guide.Humidity.Trim()}");
+                tips.Add($"{plantName}: Suitable humidity - {guide.Humidity.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.Soil))
             {
-                tips.Add($"{plantName}: Đất trồng - {guide.Soil.Trim()}");
+                tips.Add($"{plantName}: Soil - {guide.Soil.Trim()}");
             }
 
             if (!string.IsNullOrWhiteSpace(guide.CareNotes))
             {
-                tips.Add($"{plantName}: Lưu ý chăm sóc - {guide.CareNotes.Trim()}");
+                tips.Add($"{plantName}: Care notes - {guide.CareNotes.Trim()}");
             }
 
             return tips.Take(6).ToList();
@@ -1378,16 +1533,112 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return message.Contains(plantName.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string MapLightRequirementToVietnamese(LightRequirementEnum lightRequirement)
+        private static string MapLightRequirementToText(LightRequirementEnum lightRequirement, string responseLanguage)
         {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
             return lightRequirement switch
             {
-                LightRequirementEnum.LowLight => "ánh sáng yếu, phù hợp góc phòng hoặc nơi ít nắng",
-                LightRequirementEnum.IndirectLight => "ánh sáng gián tiếp, gần cửa sổ nhưng tránh nắng gắt",
-                LightRequirementEnum.PartialSun => "nắng một phần, khoảng 3-6 giờ nắng mỗi ngày",
-                LightRequirementEnum.FullSun => "nắng trực tiếp, từ 6 giờ nắng trở lên mỗi ngày",
-                _ => "ánh sáng trung bình"
+                LightRequirementEnum.LowLight => isVietnamese
+                    ? "anh sang yeu, phu hop goc phong hoac noi it nang"
+                    : "low light, suitable for corners or low-sun spaces",
+                LightRequirementEnum.IndirectLight => isVietnamese
+                    ? "anh sang gian tiep, gan cua so nhung tranh nang gat"
+                    : "indirect light, near windows but away from harsh sun",
+                LightRequirementEnum.PartialSun => isVietnamese
+                    ? "nang mot phan, khoang 3-6 gio nang moi ngay"
+                    : "partial sun, around 3-6 hours of sunlight daily",
+                LightRequirementEnum.FullSun => isVietnamese
+                    ? "nang truc tiep, tu 6 gio nang tro len moi ngay"
+                    : "full sun, at least 6 hours of direct sunlight daily",
+                _ => isVietnamese ? "anh sang trung binh" : "moderate light"
             };
+        }
+
+        private static string LocalizeCareTipToVietnamese(string tip)
+        {
+            return tip
+                .Replace("Suitable light", "Anh sang phu hop", StringComparison.OrdinalIgnoreCase)
+                .Replace("Watering", "Tuoi nuoc", StringComparison.OrdinalIgnoreCase)
+                .Replace("Fertilizing", "Bon phan", StringComparison.OrdinalIgnoreCase)
+                .Replace("Pruning", "Cat tia", StringComparison.OrdinalIgnoreCase)
+                .Replace("Suitable temperature", "Nhiet do phu hop", StringComparison.OrdinalIgnoreCase)
+                .Replace("Suitable humidity", "Do am phu hop", StringComparison.OrdinalIgnoreCase)
+                .Replace("Soil", "Dat trong", StringComparison.OrdinalIgnoreCase)
+                .Replace("Care notes", "Luu y cham soc", StringComparison.OrdinalIgnoreCase)
+                .Replace("This plant", "Cay nay", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string LocalizeCareTipToEnglish(string tip)
+        {
+            return tip
+                .Replace("Anh sang phu hop", "Suitable light", StringComparison.OrdinalIgnoreCase)
+                .Replace("Tuoi nuoc", "Watering", StringComparison.OrdinalIgnoreCase)
+                .Replace("Bon phan", "Fertilizing", StringComparison.OrdinalIgnoreCase)
+                .Replace("Cat tia", "Pruning", StringComparison.OrdinalIgnoreCase)
+                .Replace("Nhiet do phu hop", "Suitable temperature", StringComparison.OrdinalIgnoreCase)
+                .Replace("Do am phu hop", "Suitable humidity", StringComparison.OrdinalIgnoreCase)
+                .Replace("Dat trong", "Soil", StringComparison.OrdinalIgnoreCase)
+                .Replace("Luu y cham soc", "Care notes", StringComparison.OrdinalIgnoreCase)
+                .Replace("Cay nay", "This plant", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ResolveResponseLanguage(
+            string? userMessage,
+            string? roomDescription,
+            List<ChatbotConversationTurnDto>? history)
+        {
+            var primaryText = FirstNonEmpty(userMessage, roomDescription);
+            var detectedPrimary = DetectLanguageCode(primaryText);
+            if (!string.IsNullOrWhiteSpace(detectedPrimary))
+            {
+                return detectedPrimary;
+            }
+
+            if (history != null)
+            {
+                var recentUserText = history
+                    .AsEnumerable()
+                    .Reverse()
+                    .FirstOrDefault(h => string.Equals(h.Role, "user", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(h.Content))
+                    ?.Content;
+
+                var detectedFromHistory = DetectLanguageCode(recentUserText);
+                if (!string.IsNullOrWhiteSpace(detectedFromHistory))
+                {
+                    return detectedFromHistory;
+                }
+            }
+
+            return LanguageEnglish;
+        }
+
+        private static string DetectLanguageCode(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return LanguageEnglish;
+            }
+
+            var normalized = text.Trim();
+            var hasVietnameseChars = normalized.Any(c => "ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ".Contains(char.ToLowerInvariant(c)));
+            if (hasVietnameseChars)
+            {
+                return LanguageVietnamese;
+            }
+
+            var lower = normalized.ToLowerInvariant();
+            var vietnameseHints = new[]
+            {
+                " toi ", " ban ", " cay ", " phong ", " cham soc ", " tu van ", " chinh sach ", " hoan tra ", " anh sang ", " ngan sach "
+            };
+
+            if (vietnameseHints.Any(h => lower.Contains(h.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return LanguageVietnamese;
+            }
+
+            return LanguageEnglish;
         }
 
         private static List<string> MergeCareTips(List<string>? primaryTips, List<string>? guideTips)

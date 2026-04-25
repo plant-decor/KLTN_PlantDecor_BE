@@ -7,6 +7,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<AIChatSession> CreateSessionAsync(int userId, string? title = null);
         Task<AIChatSession?> GetByIdAndUserAsync(int sessionId, int userId);
         Task<List<AIChatSession>> GetUserSessionsAsync(int userId, int pageNumber = 1, int pageSize = 20);
+        Task<int> GetUserSessionsCountAsync(int userId);
         Task<bool> CloseSessionAsync(int sessionId, int userId);
     }
 }

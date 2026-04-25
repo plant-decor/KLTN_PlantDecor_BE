@@ -72,6 +72,14 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+            public async Task<int> GetSessionMessagesCountAsync(int sessionId, int userId)
+            {
+                await EnsureOwnedSessionAsync(sessionId, userId);
+
+                return await _context.AIChatMessages
+                .CountAsync(m => m.AIChatSessionId == sessionId);
+            }
+
         public async Task<AIChatMessage?> GetLatestMessageAsync(int sessionId, int userId)
         {
             await EnsureOwnedSessionAsync(sessionId, userId);
