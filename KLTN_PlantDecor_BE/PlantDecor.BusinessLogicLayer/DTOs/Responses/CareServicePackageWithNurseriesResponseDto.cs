@@ -23,5 +23,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int NurseryCareServiceId { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
+        public string? NurseryPhone { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -96,10 +97,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var initialStatus = ServiceRegistrationStatusEnum.PendingApproval;
             if (selectedService == null)
             {
-                selectedService = await SelectFallbackNurseryServiceAsync(
+                var fallbackCandidateServices = await FilterServicesByQualifiedCaretakersAsync(
                     candidateServices,
+                    selectedPackage);
+
+                selectedService = await SelectFallbackNurseryServiceAsync(
+                    fallbackCandidateServices,
                     request.Latitude,
                     request.Longitude);
+
+                if (selectedService == null)
+                    throw new BadRequestException("No nursery has qualified caretakers for the selected service package at the moment");
 
                 initialStatus = ServiceRegistrationStatusEnum.WaitingForNursery;
             }
@@ -119,6 +127,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Note = request.Note,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
+                CancelReason = BuildCancelReasonWithRouteMeta(
+                    new HashSet<int>(),
+                    request.PreferredNurseryId.HasValue,
+                    null),
                 Status = (int)initialStatus,
                 CreatedAt = DateTime.Now
             };
@@ -137,7 +149,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var created = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registration.Id);
-            return MapToDto(created!);
+            return created!.ToResponse();
         }
 
         private static List<DateOnly> BuildScheduleFromPackageOrThrow(
@@ -183,7 +195,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             bool isOneTime = pkg.ServiceType.Value == (int)CareServiceTypeEnum.OneTime;
-            var minimumLeadHours = isOneTime ? 24 : 48;
+            var minimumLeadHours = isOneTime ? 6 : 24;
             var firstSessionStartAt = request.ServiceDate.ToDateTime(preferredShift.StartTime);
 
             if (firstSessionStartAt < DateTime.Now.AddHours(minimumLeadHours))
@@ -249,7 +261,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var result = await _unitOfWork.ServiceRegistrationRepository.GetByUserIdAsync(userId, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -261,7 +273,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetPendingByNurseryIdAsync(nursery.Id, pagination);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -273,7 +285,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var result = await _unitOfWork.ServiceRegistrationRepository.GetAllByNurseryIdAsync(nursery.Id, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -291,7 +303,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 registration.CurrentCaretakerId != userId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> GetByIdAsManagerAsync(int managerId, int id)
@@ -305,7 +317,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.NurseryCareService?.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> ApproveAsync(int managerId, int id)
@@ -381,7 +393,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> RejectAsync(int managerId, int id, string? rejectReason)
@@ -399,16 +411,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 && registration.Status != (int)ServiceRegistrationStatusEnum.WaitingForNursery)
                 throw new BadRequestException("Only registrations in WaitingForNursery or PendingApproval status can be rejected");
 
+            var (routeMeta, _) = ParseRejectRouteMeta(registration.CancelReason);
             var packageId = registration.NurseryCareService?.CareServicePackageId;
             var currentNurseryId = registration.NurseryCareService?.NurseryId;
-            var rejectedNurseryHistory = ParseRejectedNurseryHistory(registration.CancelReason);
+            var rejectedNurseryHistory = routeMeta.RejectedNurseryIds;
+            var isPreferredNurseryRequested = routeMeta.IsPreferredNurseryRequested;
 
             if (currentNurseryId.HasValue)
             {
                 rejectedNurseryHistory.Add(currentNurseryId.Value);
             }
 
-            if (packageId.HasValue && currentNurseryId.HasValue)
+            var shouldTryRematch = !isPreferredNurseryRequested
+                                   && registration.Status == (int)ServiceRegistrationStatusEnum.PendingApproval;
+
+            if (shouldTryRematch && packageId.HasValue && currentNurseryId.HasValue)
             {
                 var package = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId.Value);
                 if (package != null)
@@ -428,25 +445,51 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         registration.NurseryCareServiceId = nextService.Id;
                         registration.MainCaretakerId = null;
                         registration.CurrentCaretakerId = null;
-                        registration.CancelReason = BuildCancelReasonWithHistory(rejectedNurseryHistory, null);
+                        registration.CancelReason = BuildCancelReasonWithRouteMeta(
+                            rejectedNurseryHistory,
+                            isPreferredNurseryRequested,
+                            null);
                         registration.Status = (int)ServiceRegistrationStatusEnum.PendingApproval;
 
                         _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
                         await _unitOfWork.SaveAsync();
 
                         var rerouted = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-                        return MapToDto(rerouted!);
+                        return rerouted!.ToResponse();
                     }
                 }
             }
 
+            var normalizedRejectReason = string.IsNullOrWhiteSpace(rejectReason)
+                ? null
+                : rejectReason.Trim();
+
+            if (normalizedRejectReason == null)
+            {
+                if (isPreferredNurseryRequested)
+                {
+                    normalizedRejectReason = "Preferred nursery rejected this registration due to caretaker overload";
+                }
+                else if (registration.Status == (int)ServiceRegistrationStatusEnum.WaitingForNursery)
+                {
+                    normalizedRejectReason = "All nurseries are currently overloaded and cannot accept this registration";
+                }
+                else
+                {
+                    normalizedRejectReason = "Registration rejected because no nursery currently has enough caretaker capacity";
+                }
+            }
+
             registration.Status = (int)ServiceRegistrationStatusEnum.Rejected;
-            registration.CancelReason = BuildCancelReasonWithHistory(rejectedNurseryHistory, rejectReason);
+            registration.CancelReason = BuildCancelReasonWithRouteMeta(
+                rejectedNurseryHistory,
+                isPreferredNurseryRequested,
+                normalizedRejectReason);
             _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId)
@@ -508,7 +551,89 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
+        }
+
+        public async Task<ServiceRegistrationResponseDto> RescheduleAsync(int managerId, int id, UpdateServiceRegistrationScheduleRequestDto request)
+        {
+            if (request == null)
+                throw new BadRequestException("Request body is required");
+
+            if (!request.ServiceDate.HasValue && !request.PreferredShiftId.HasValue)
+                throw new BadRequestException("At least ServiceDate or PreferredShiftId must be provided");
+
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var registrationDetail = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id)
+                ?? throw new NotFoundException($"ServiceRegistration {id} not found");
+
+            if (registrationDetail.NurseryCareService?.NurseryId != nursery.Id)
+                throw new ForbiddenException("This registration does not belong to your nursery");
+
+            if (registrationDetail.Status != (int)ServiceRegistrationStatusEnum.WaitingForNursery
+                && registrationDetail.Status != (int)ServiceRegistrationStatusEnum.PendingApproval
+                && registrationDetail.Status != (int)ServiceRegistrationStatusEnum.AwaitPayment)
+            {
+                throw new BadRequestException("Only registrations in WaitingForNursery, PendingApproval or AwaitPayment can be rescheduled");
+            }
+
+            var targetServiceDate = request.ServiceDate ?? registrationDetail.ServiceDate;
+            var targetShiftId = request.PreferredShiftId ?? registrationDetail.PreferredShiftId;
+
+            if (!targetServiceDate.HasValue)
+                throw new BadRequestException("ServiceDate is missing on registration and must be provided");
+
+            if (!targetShiftId.HasValue)
+                throw new BadRequestException("PreferredShiftId is missing on registration and must be provided");
+
+            var targetShift = await _unitOfWork.ShiftRepository.GetByIdAsync(targetShiftId.Value)
+                ?? throw new NotFoundException($"Shift {targetShiftId.Value} not found");
+
+            var packageId = registrationDetail.NurseryCareService?.CareServicePackageId
+                ?? throw new BadRequestException("Registration is missing care service package");
+
+            var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId)
+                ?? throw new NotFoundException($"CareServicePackage {packageId} not found");
+
+            var scheduleDaysOfWeek = string.IsNullOrWhiteSpace(registrationDetail.ScheduleDaysOfWeek)
+                ? new List<int>()
+                : JsonSerializer.Deserialize<List<int>>(registrationDetail.ScheduleDaysOfWeek) ?? new List<int>();
+
+            var validationRequest = new CreateServiceRegistrationRequestDto
+            {
+                CareServicePackageId = packageId,
+                PreferredShiftId = targetShiftId.Value,
+                ServiceDate = targetServiceDate.Value,
+                ScheduleDaysOfWeek = scheduleDaysOfWeek,
+                Address = registrationDetail.Address ?? string.Empty,
+                Phone = registrationDetail.Phone ?? "0900000000",
+                Note = registrationDetail.Note,
+                Latitude = registrationDetail.Latitude,
+                Longitude = registrationDetail.Longitude
+            };
+
+            _ = BuildScheduleFromPackageOrThrow(
+                pkg,
+                validationRequest,
+                targetShift,
+                out var totalSessions,
+                out var scheduleDaysJson);
+
+            var trackedRegistration = await _unitOfWork.ServiceRegistrationRepository.GetByIdAsync(id)
+                ?? throw new NotFoundException($"ServiceRegistration {id} not found");
+
+            trackedRegistration.ServiceDate = targetServiceDate.Value;
+            trackedRegistration.PreferredShiftId = targetShiftId.Value;
+            trackedRegistration.TotalSessions = totalSessions;
+            trackedRegistration.ScheduleDaysOfWeek = scheduleDaysJson;
+
+            _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(trackedRegistration);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id)
+                ?? throw new NotFoundException($"ServiceRegistration {id} not found after reschedule");
+
+            return updated.ToResponse();
         }
 
         public async Task<ServiceRegistrationResponseDto> CancelAsync(int userId, int id, string? cancelReason)
@@ -531,14 +656,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<PaginatedResult<ServiceRegistrationResponseDto>> GetMyTasksAsync(int caretakerId, Pagination pagination, int? status)
         {
             var result = await _unitOfWork.ServiceRegistrationRepository.GetByCaretakerIdAsync(caretakerId, pagination, status);
             return new PaginatedResult<ServiceRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -586,7 +711,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
-            return MapToDto(updated!);
+            return updated!.ToResponse();
         }
 
         public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId)
@@ -622,7 +747,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             int nurseryId,
             CareServicePackage pkg,
             int? preferredShiftId,
-            List<DateOnly> sessionDates)
+            List<DateOnly> sessionDates,
+            bool sortByWorkload = true)
         {
             var allCaretakers = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nurseryId);
 
@@ -644,10 +770,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var conflictingIds = await _unitOfWork.ServiceProgressRepository
                     .GetConflictingCaretakerIdsAsync(preferredShiftId.Value, sessionDates);
 
-                eligible = eligible.Where(u => !conflictingIds.Contains(u.Id));
+                eligible = eligible.Where(u => !conflictingIds.Contains(u.Id)).ToList();
             }
 
-            return eligible.OrderBy(u => u.Username).ToList();
+            if (!eligible.Any())
+                return new List<User>();
+
+            var eligibleList = eligible
+                .OrderBy(u => u.Username ?? string.Empty)
+                .ThenBy(u => u.Id)
+                .ToList();
+
+            if (!sortByWorkload)
+                return eligibleList;
+
+            var workloads = await _unitOfWork.ServiceRegistrationRepository
+                .CountOpenAssignmentsByCaretakerIdsAsync(
+                    eligibleList.Select(u => u.Id).ToList(),
+                    new List<int> { nurseryId });
+
+            return eligibleList
+                .OrderBy(u => workloads.TryGetValue(u.Id, out var count) ? count : 0)
+                .ThenBy(u => u.Username)
+                .ThenBy(u => u.Id)
+                .ToList();
         }
 
         private async Task<List<NurseryCareService>> BuildCandidateServicesForRerouteAsync(ServiceRegistration registration, int packageId)
@@ -689,6 +835,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ISet<int>? excludeNurseryIds = null)
         {
             var scoredCandidates = new List<(NurseryCareService Service, int EligibleCount, int MinWorkload, int TotalWorkload)>();
+            var eligibleByServiceId = new Dictionary<int, List<User>>();
+            var allCaretakerIds = new HashSet<int>();
+            var allNurseryIds = new HashSet<int>();
 
             foreach (var candidateService in candidateServices)
             {
@@ -701,17 +850,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     candidateService.NurseryId,
                     package,
                     preferredShiftId,
-                    sessionDates);
+                    sessionDates,
+                    sortByWorkload: false);
 
                 if (!eligibleCaretakers.Any())
                 {
                     continue;
                 }
 
-                var caretakerIds = eligibleCaretakers.Select(c => c.Id).ToList();
-                var workloads = await _unitOfWork.ServiceRegistrationRepository
-                    .CountOpenAssignmentsByCaretakerIdsAsync(caretakerIds, candidateService.NurseryId);
+                eligibleByServiceId[candidateService.Id] = eligibleCaretakers;
+                allNurseryIds.Add(candidateService.NurseryId);
+                foreach (var caretaker in eligibleCaretakers)
+                {
+                    allCaretakerIds.Add(caretaker.Id);
+                }
+            }
 
+            if (!eligibleByServiceId.Any())
+            {
+                return null;
+            }
+
+            var workloads = await _unitOfWork.ServiceRegistrationRepository
+                .CountOpenAssignmentsByCaretakerIdsAsync(
+                    allCaretakerIds.ToList(),
+                    allNurseryIds.ToList());
+
+            foreach (var candidateService in candidateServices)
+            {
+                if (!eligibleByServiceId.TryGetValue(candidateService.Id, out var eligibleCaretakers))
+                {
+                    continue;
+                }
+
+                var caretakerIds = eligibleCaretakers.Select(c => c.Id).ToList();
                 var loads = caretakerIds
                     .Select(id => workloads.TryGetValue(id, out var count) ? count : 0)
                     .ToList();
@@ -755,6 +927,43 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return Task.FromResult(selected);
         }
 
+        private async Task<List<NurseryCareService>> FilterServicesByQualifiedCaretakersAsync(
+            List<NurseryCareService> candidateServices,
+            CareServicePackage package)
+        {
+            if (candidateServices == null || candidateServices.Count == 0)
+            {
+                return new List<NurseryCareService>();
+            }
+
+            var filtered = new List<NurseryCareService>();
+
+            foreach (var candidateService in candidateServices)
+            {
+                var caretakerPool = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(candidateService.NurseryId);
+
+                IEnumerable<User> qualified = caretakerPool
+                    .Where(u => u.Status == (int)UserStatusEnum.Active && u.IsVerified);
+
+                if (package.CareServiceSpecializations != null && package.CareServiceSpecializations.Count > 0)
+                {
+                    var requiredSpecIds = package.CareServiceSpecializations
+                        .Select(cs => cs.SpecializationId)
+                        .ToHashSet();
+
+                    qualified = qualified.Where(u => requiredSpecIds.All(reqId =>
+                        u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+                }
+
+                if (qualified.Any())
+                {
+                    filtered.Add(candidateService);
+                }
+            }
+
+            return filtered;
+        }
+
         private static double HaversineKm(decimal lat1, decimal lon1, decimal? lat2, decimal? lon2)
         {
             if (!lat2.HasValue || !lon2.HasValue)
@@ -793,39 +1002,86 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new ForbiddenException("You are not a manager/staff of any nursery");
         }
 
-        private static HashSet<int> ParseRejectedNurseryHistory(string? cancelReason)
+        private sealed class RejectRouteMeta
+        {
+            public HashSet<int> RejectedNurseryIds { get; init; } = new();
+            public bool IsPreferredNurseryRequested { get; init; }
+        }
+
+        private sealed class RejectRouteMetaPayload
+        {
+            public List<int>? RejectedNurseryIds { get; set; }
+            public bool? IsPreferredNurseryRequested { get; set; }
+        }
+
+        private static (RejectRouteMeta Meta, string? UserReason) ParseRejectRouteMeta(string? cancelReason)
         {
             if (string.IsNullOrWhiteSpace(cancelReason)
                 || !cancelReason.StartsWith(RejectRouteMetaPrefix, StringComparison.Ordinal))
             {
-                return new HashSet<int>();
+                return (new RejectRouteMeta(), cancelReason);
             }
 
             var payload = cancelReason.Substring(RejectRouteMetaPrefix.Length);
             var separatorIndex = payload.IndexOf('|');
             var jsonPart = separatorIndex >= 0 ? payload.Substring(0, separatorIndex) : payload;
+            var userReason = separatorIndex >= 0 && separatorIndex < payload.Length - 1
+                ? payload.Substring(separatorIndex + 1)
+                : null;
+
+            try
+            {
+                var parsedPayload = JsonSerializer.Deserialize<RejectRouteMetaPayload>(jsonPart);
+                if (parsedPayload != null &&
+                    (parsedPayload.RejectedNurseryIds != null || parsedPayload.IsPreferredNurseryRequested.HasValue))
+                {
+                    return (new RejectRouteMeta
+                    {
+                        RejectedNurseryIds = (parsedPayload.RejectedNurseryIds ?? new List<int>())
+                            .Where(id => id > 0)
+                            .ToHashSet(),
+                        IsPreferredNurseryRequested = parsedPayload.IsPreferredNurseryRequested == true
+                    }, userReason);
+                }
+            }
+            catch
+            {
+                // Fallback to legacy format below.
+            }
 
             try
             {
                 var parsed = JsonSerializer.Deserialize<List<int>>(jsonPart) ?? new List<int>();
-                return parsed.Where(id => id > 0).ToHashSet();
+                return (new RejectRouteMeta
+                {
+                    RejectedNurseryIds = parsed.Where(id => id > 0).ToHashSet(),
+                    IsPreferredNurseryRequested = false
+                }, userReason);
             }
             catch
             {
-                return new HashSet<int>();
+                return (new RejectRouteMeta(), userReason);
             }
         }
 
-        private static string? BuildCancelReasonWithHistory(HashSet<int> rejectedNurseryHistory, string? userReason)
+        private static string? BuildCancelReasonWithRouteMeta(
+            HashSet<int> rejectedNurseryHistory,
+            bool isPreferredNurseryRequested,
+            string? userReason)
         {
             var normalizedReason = string.IsNullOrWhiteSpace(userReason) ? null : userReason.Trim();
 
-            if (rejectedNurseryHistory.Count == 0)
+            if (rejectedNurseryHistory.Count == 0 && !isPreferredNurseryRequested)
             {
                 return normalizedReason;
             }
 
-            var historyJson = JsonSerializer.Serialize(rejectedNurseryHistory.OrderBy(id => id).ToList());
+            var payload = new RejectRouteMetaPayload
+            {
+                RejectedNurseryIds = rejectedNurseryHistory.OrderBy(id => id).ToList(),
+                IsPreferredNurseryRequested = isPreferredNurseryRequested ? true : null
+            };
+            var historyJson = JsonSerializer.Serialize(payload);
             return normalizedReason == null
                 ? $"{RejectRouteMetaPrefix}{historyJson}"
                 : $"{RejectRouteMetaPrefix}{historyJson}|{normalizedReason}";
@@ -918,70 +1174,5 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
 
-        #region Mapping
-
-        public static ServiceRegistrationResponseDto MapToDto(ServiceRegistration r)
-        {
-            return new ServiceRegistrationResponseDto
-            {
-                Id = r.Id,
-                Status = r.Status,
-                StatusName = r.Status.HasValue ? ((ServiceRegistrationStatusEnum)r.Status.Value).ToString() : null,
-                ServiceDate = r.ServiceDate,
-                TotalSessions = r.TotalSessions,
-                Address = r.Address,
-                Phone = r.Phone,
-                Note = r.Note,
-                Latitude = r.Latitude,
-                Longitude = r.Longitude,
-                ScheduleDaysOfWeek = r.ScheduleDaysOfWeek,
-                CancelReason = ResolveDisplayCancelReason(r.Status, r.CancelReason),
-                CreatedAt = r.CreatedAt,
-                ApprovedAt = r.ApprovedAt,
-                OrderId = r.OrderId,
-                NurseryCareService = r.NurseryCareService == null ? null : new NurseryCareServiceSummaryDto
-                {
-                    Id = r.NurseryCareService.Id,
-                    NurseryId = r.NurseryCareService.NurseryId,
-                    NurseryName = r.NurseryCareService.Nursery?.Name,
-                    CareServicePackage = r.NurseryCareService.CareServicePackage == null ? null : new CareServicePackageSummaryDto
-                    {
-                        Id = r.NurseryCareService.CareServicePackage.Id,
-                        Name = r.NurseryCareService.CareServicePackage.Name,
-                        Description = r.NurseryCareService.CareServicePackage.Description,
-                        VisitPerWeek = r.NurseryCareService.CareServicePackage.VisitPerWeek,
-                        DurationDays = r.NurseryCareService.CareServicePackage.DurationDays,
-                        ServiceType = r.NurseryCareService.CareServicePackage.ServiceType,
-                        UnitPrice = r.NurseryCareService.CareServicePackage.UnitPrice,
-                    }
-                },
-                PrefferedShift = r.PrefferedShift == null ? null : new ShiftSummaryDto
-                {
-                    Id = r.PrefferedShift.Id,
-                    ShiftName = r.PrefferedShift.ShiftName,
-                    StartTime = r.PrefferedShift.StartTime,
-                    EndTime = r.PrefferedShift.EndTime
-                },
-                Customer = r.User == null ? null : MapUserSummary(r.User),
-                MainCaretaker = r.MainCaretaker == null ? null : MapUserSummary(r.MainCaretaker),
-                CurrentCaretaker = r.CurrentCaretaker == null ? null : MapUserSummary(r.CurrentCaretaker),
-                Progresses = r.ServiceProgresses
-                    .OrderBy(sp => sp.TaskDate)
-                    .Select(ServiceProgressService.MapToDto)
-                    .ToList(),
-                Rating = r.ServiceRating == null ? null : ServiceRatingService.MapToDto(r.ServiceRating)
-            };
-        }
-
-        public static UserSummaryDto MapUserSummary(User user) => new UserSummaryDto
-        {
-            Id = user.Id,
-            FullName = user.Username,
-            Email = user.Email,
-            Phone = user.PhoneNumber,
-            Avatar = user.AvatarUrl
-        };
-
-        #endregion
     }
 }

@@ -183,7 +183,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var workloads = await _unitOfWork.ServiceRegistrationRepository.CountOpenAssignmentsByCaretakerIdsAsync(
                 eligibleList.Select(u => u.Id).ToList(),
-                nurseryId.Value);
+                new List<int> { nurseryId.Value });
 
             var selected = eligibleList
                 .OrderBy(u => workloads.TryGetValue(u.Id, out var count) ? count : 0)

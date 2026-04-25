@@ -10,6 +10,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<InvoiceResponseDto>> GetPendingInvoicesForMyNurseryAsync(int currentUserId);
         Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination);
         Task<NurseryOrderResponseDto> GetNurseryOrderDetailForManagerAsync(int currentUserId, int nurseryOrderId);
+        Task<List<NurseryOrderShipperResponseDto>> GetNurseryShippersForManagerAsync(int currentUserId);
+        Task<NurseryOrderResponseDto> UpdateNurseryOrderShipperForManagerAsync(int currentUserId, int nurseryOrderId, int shipperId);
         Task<NurseryOrderResponseDto> GetNurseryOrderDetailForShipperAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request);
         Task<NurseryOrderResponseDto> MarkDeliveredAsync(int currentUserId, int nurseryOrderId, MarkDeliveredRequestDto request);

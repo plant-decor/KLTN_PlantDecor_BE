@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using Microsoft.AspNetCore.Http;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
@@ -86,6 +87,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     request.Latitude,
                     request.Longitude);
 
+                if (selectedNursery == null)
+                    throw new BadRequestException("No nursery is available for the selected design template at the moment");
+
                 initialStatus = DesignRegistrationStatus.WaitingForNursery;
             }
 
@@ -115,14 +119,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var created = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(registration.Id)
                 ?? throw new NotFoundException($"DesignRegistration {registration.Id} not found after create");
 
-            return MapToDto(created);
+            return created.ToResponse();
         }
 
         public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetMyRegistrationsAsync(int userId, Pagination pagination, int? status = null)
         {
             var result = await _unitOfWork.DesignRegistrationRepository.GetByUserIdAsync(userId, pagination, status);
             return new PaginatedResult<DesignRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -134,7 +138,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var result = await _unitOfWork.DesignRegistrationRepository.GetPendingByNurseryIdAsync(nursery.Id, pagination);
 
             return new PaginatedResult<DesignRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -148,7 +152,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.UserId != requesterId && registration.AssignedCaretakerId != requesterId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetAllForNurseryAsync(int managerId, Pagination pagination, int? status = null)
@@ -157,7 +161,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var result = await _unitOfWork.DesignRegistrationRepository.GetByNurseryIdAsync(nursery.Id, pagination, status);
 
             return new PaginatedResult<DesignRegistrationResponseDto>(
-                result.Items.Select(MapToDto).ToList(),
+                result.Items.Select(x => x.ToResponse()).ToList(),
                 result.TotalCount,
                 result.PageNumber,
                 result.PageSize);
@@ -173,7 +177,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            return MapToDto(registration);
+            return registration.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> ApproveAsync(int managerId, int id)
@@ -254,7 +258,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after approve");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> RejectAsync(int managerId, int id, string? rejectReason)
@@ -283,7 +287,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after reject");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId)
@@ -343,7 +347,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after assign caretaker");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> UpdateSurveyInfoAsync(int caretakerId, int id, UpdateDesignRegistrationSurveyInfoRequestDto request, IFormFile? currentStateImage = null)
@@ -411,7 +415,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after survey update");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> CancelAsync(int userId, int id, string? cancelReason)
@@ -439,7 +443,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after cancel");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         public async Task<DesignRegistrationResponseDto> ManagerCancelAsync(int managerId, int id, string? cancelReason)
@@ -483,7 +487,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after manager cancel");
 
-            return MapToDto(updated);
+            return updated.ToResponse();
         }
 
         private async Task<Nursery?> SelectBestNurseryAsync(
@@ -602,65 +606,5 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new ForbiddenException("You are not a manager/staff of any nursery");
         }
 
-        public static DesignRegistrationResponseDto MapToDto(DesignRegistration registration)
-        {
-            return new DesignRegistrationResponseDto
-            {
-                Id = registration.Id,
-                UserId = registration.UserId,
-                OrderId = registration.OrderId,
-                NurseryId = registration.NurseryId,
-                DesignTemplateTierId = registration.DesignTemplateTierId,
-                AssignedCaretakerId = registration.AssignedCaretakerId,
-                TotalPrice = registration.TotalPrice,
-                DepositAmount = registration.DepositAmount,
-                Latitude = registration.Latitude,
-                Longitude = registration.Longitude,
-                Width = registration.Width,
-                Length = registration.Length,
-                CurrentStateImageUrl = registration.CurrentStateImageUrl,
-                Address = registration.Address,
-                Phone = registration.Phone,
-                CustomerNote = registration.CustomerNote,
-                CancelReason = registration.CancelReason,
-                Status = registration.Status,
-                StatusName = Enum.IsDefined(typeof(DesignRegistrationStatus), registration.Status)
-                    ? ((DesignRegistrationStatus)registration.Status).ToString()
-                    : $"Unknown({registration.Status})",
-                CreatedAt = registration.CreatedAt,
-                ApprovedAt = registration.ApprovedAt,
-                Customer = registration.User == null ? null : ServiceRegistrationService.MapUserSummary(registration.User),
-                AssignedCaretaker = registration.AssignedCaretaker == null ? null : ServiceRegistrationService.MapUserSummary(registration.AssignedCaretaker),
-                Nursery = registration.Nursery == null ? null : new DesignNurserySummaryDto
-                {
-                    Id = registration.Nursery.Id,
-                    Name = registration.Nursery.Name
-                },
-                DesignTemplateTier = registration.DesignTemplateTier == null ? null : new DesignTemplateTierSummaryDto
-                {
-                    Id = registration.DesignTemplateTier.Id,
-                    TierName = registration.DesignTemplateTier.TierName,
-                    MinArea = registration.DesignTemplateTier.MinArea,
-                    MaxArea = registration.DesignTemplateTier.MaxArea,
-                    PackagePrice = registration.DesignTemplateTier.PackagePrice,
-                    EstimatedDays = registration.DesignTemplateTier.EstimatedDays,
-                    ScopedOfWork = registration.DesignTemplateTier.ScopedOfWork,
-                    DesignTemplate = registration.DesignTemplateTier.DesignTemplate == null ? null : new DesignTemplateSummaryDto
-                    {
-                        Id = registration.DesignTemplateTier.DesignTemplate.Id,
-                        Name = registration.DesignTemplateTier.DesignTemplate.Name,
-                        Description = registration.DesignTemplateTier.DesignTemplate.Description,
-                        ImageUrl = registration.DesignTemplateTier.DesignTemplate.ImageUrl,
-                        Style = registration.DesignTemplateTier.DesignTemplate.Style,
-                        RoomTypes = registration.DesignTemplateTier.DesignTemplate.RoomTypes
-                    }
-                },
-                DesignTasks = registration.DesignTasks
-                    .OrderBy(x => x.ScheduledDate)
-                    .ThenBy(x => x.Id)
-                    .Select(DesignTaskService.MapToDto)
-                    .ToList()
-            };
-        }
     }
 }

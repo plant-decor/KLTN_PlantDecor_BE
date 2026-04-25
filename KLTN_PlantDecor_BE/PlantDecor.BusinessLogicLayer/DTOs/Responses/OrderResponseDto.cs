@@ -38,10 +38,14 @@
         public string? CustomerPhone { get; set; }
         public string? CustomerAddress { get; set; }
         public decimal? SubTotalAmount { get; set; }
+        public decimal? TotalAmount { get; set; }
+        public decimal? DepositAmount { get; set; }
+        public decimal? RemainingAmount { get; set; }
         public int? Status { get; set; }
         public string? StatusName { get; set; }
         public string? ShipperNote { get; set; }
         public string? DeliveryNote { get; set; }
+        public string? DeliveryImageUrl { get; set; }
         public string? Note { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
     }

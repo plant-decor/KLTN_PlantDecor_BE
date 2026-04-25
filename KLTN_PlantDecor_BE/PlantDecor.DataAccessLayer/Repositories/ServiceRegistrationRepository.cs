@@ -104,9 +104,14 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<ServiceRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<Dictionary<int, int>> CountOpenAssignmentsByCaretakerIdsAsync(List<int> caretakerIds, int nurseryId)
+        public async Task<Dictionary<int, int>> CountOpenAssignmentsByCaretakerIdsAsync(List<int> caretakerIds, List<int> nurseryIds)
         {
             if (caretakerIds == null || caretakerIds.Count == 0)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            if (nurseryIds == null || nurseryIds.Count == 0)
             {
                 return new Dictionary<int, int>();
             }
@@ -117,8 +122,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
             };
 
             return await _context.ServiceRegistrations
+                .AsNoTracking()
                 .Where(r => r.NurseryCareService != null
-                            && r.NurseryCareService.NurseryId == nurseryId
+                            && nurseryIds.Contains(r.NurseryCareService.NurseryId)
                             && r.CurrentCaretakerId.HasValue
                             && caretakerIds.Contains(r.CurrentCaretakerId.Value)
                             && r.Status.HasValue

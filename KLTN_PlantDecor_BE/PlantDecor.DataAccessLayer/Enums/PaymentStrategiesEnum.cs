@@ -4,6 +4,5 @@
     {
         FullPayment = 1,
         Deposit = 2
-
     }
 }

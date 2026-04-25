@@ -53,14 +53,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<NurseryOrderResponseDto> GetNurseryOrderDetailForManagerAsync(int currentUserId, int nurseryOrderId)
         {
-            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
-                ?? throw new UnauthorizedException("Unable to identify user from token");
-
-            if (currentUser.RoleId != (int)RoleEnum.Manager)
-                throw new ForbiddenException("Only manager can access this resource");
-
-            if (!currentUser.NurseryId.HasValue)
-                throw new ForbiddenException("Manager is not assigned to any nursery");
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
 
             var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
                 ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
@@ -71,16 +64,73 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(nurseryOrder);
         }
 
+        public async Task<List<NurseryOrderShipperResponseDto>> GetNurseryShippersForManagerAsync(int currentUserId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var shippers = await _unitOfWork.UserRepository.GetShippersByNurseryIdAsync(currentUser.NurseryId!.Value);
+            var now = GetCurrentVietnamTime();
+            var todayStart = now.Date;
+            var tomorrowStart = todayStart.AddDays(1);
+
+            var nurseryOrders = await _unitOfWork.NurseryOrderRepository.GetByNurseryIdAsync(currentUser.NurseryId.Value);
+            var shipperOrderCountInDay = nurseryOrders
+                .Where(no => no.ShipperId.HasValue
+                    && no.AssignedAt.HasValue
+                    && no.AssignedAt.Value >= todayStart
+                    && no.AssignedAt.Value < tomorrowStart)
+                .GroupBy(no => no.ShipperId!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return shippers
+                .Select(s => MapShipperToDto(s, shipperOrderCountInDay.TryGetValue(s.Id, out var count) ? count : 0))
+                .ToList();
+        }
+
+        public async Task<NurseryOrderResponseDto> UpdateNurseryOrderShipperForManagerAsync(int currentUserId, int nurseryOrderId, int shipperId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to update this nursery order");
+
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Assigned
+                && nurseryOrder.Status != (int)OrderStatusEnum.Paid
+                && nurseryOrder.Status != (int)OrderStatusEnum.DepositPaid)
+                throw new BadRequestException("Chỉ có thể cập nhật shipper cho đơn ở trạng thái DepositPaid, Paid hoặc Assigned.");
+
+            var shipper = await _unitOfWork.UserRepository.GetByIdAsync(shipperId)
+                ?? throw new NotFoundException($"Shipper {shipperId} not found");
+
+            if (shipper.RoleId != (int)RoleEnum.Shipper
+                || shipper.NurseryId != currentUser.NurseryId
+                || shipper.Status != (int)UserStatusEnum.Active
+                || !shipper.IsVerified)
+                throw new BadRequestException("Shipper không hợp lệ hoặc không thuộc vườn của bạn.");
+
+            var now = GetCurrentVietnamTime();
+
+            nurseryOrder.ShipperId = shipper.Id;
+            nurseryOrder.AssignedAt = now;
+            if (nurseryOrder.Status == (int)OrderStatusEnum.Paid || nurseryOrder.Status == (int)OrderStatusEnum.DepositPaid)
+                nurseryOrder.Status = (int)OrderStatusEnum.Assigned;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            var updatedNurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            return MapToDto(updatedNurseryOrder);
+        }
+
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
-            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
-                ?? throw new UnauthorizedException("Unable to identify user from token");
-
-            if (currentUser.RoleId != (int)RoleEnum.Manager)
-                throw new ForbiddenException("Only manager can access this resource");
-
-            if (!currentUser.NurseryId.HasValue)
-                throw new ForbiddenException("Manager is not assigned to any nursery");
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
 
             var (items, totalCount) = await _unitOfWork.NurseryOrderRepository.GetByNurseryIdPagedAsync(
                 currentUser.NurseryId.Value,
@@ -164,21 +214,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 deliveryImageUrl = uploadResult.SecureUrl;
             }
 
-            var deliveryNote = request.DeliveryNote;
-            if (!string.IsNullOrWhiteSpace(deliveryImageUrl))
-            {
-                deliveryNote = string.IsNullOrWhiteSpace(deliveryNote)
-                    ? $"Delivery Image: {deliveryImageUrl}"
-                    : $"{deliveryNote} | Delivery Image: {deliveryImageUrl}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(deliveryNote) && deliveryNote.Length > 255)
-                throw new BadRequestException("Delivery note is too long after attaching image URL");
+            if (!string.IsNullOrWhiteSpace(request.DeliveryNote) && request.DeliveryNote.Length > 255)
+                throw new BadRequestException("Delivery note is too long");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Delivered;
             nurseryOrder.DeliveredAt = now;
-            nurseryOrder.DeliveryNote = deliveryNote;
+            nurseryOrder.DeliveryNote = request.DeliveryNote;
+            nurseryOrder.DeliveryImageUrl = deliveryImageUrl;
             nurseryOrder.UpdatedAt = now;
 
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
@@ -256,6 +299,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return currentUser;
         }
 
+        private async Task<User> GetValidatedManagerAsync(int currentUserId)
+        {
+            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId)
+                ?? throw new UnauthorizedException("Unable to identify user from token");
+
+            if (currentUser.RoleId != (int)RoleEnum.Manager)
+                throw new ForbiddenException("Only manager can access this resource");
+
+            if (!currentUser.NurseryId.HasValue)
+                throw new ForbiddenException("Manager is not assigned to any nursery");
+
+            return currentUser;
+        }
+
         private static void ValidateOwnership(User currentUser, NurseryOrder nurseryOrder)
         {
             if (nurseryOrder.ShipperId != currentUser.Id || nurseryOrder.NurseryId != currentUser.NurseryId)
@@ -278,10 +335,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             CustomerPhone = order.Order?.Phone ?? order.Order?.Customer?.PhoneNumber,
             CustomerAddress = order.Order?.Address,
             SubTotalAmount = order.SubTotalAmount,
+            TotalAmount = order.Order?.TotalAmount,
+            DepositAmount = order.DepositAmount ?? order.Order?.DepositAmount,
+            RemainingAmount = order.RemainingAmount ?? order.Order?.RemainingAmount,
             Status = order.Status,
             StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
+            DeliveryImageUrl = order.DeliveryImageUrl,
             Note = order.Note,
             Items = order.NurseryOrderDetails
                 .Select(d => d.ToOrderItemResponse())
@@ -306,6 +367,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Quantity = d.Quantity,
                 Amount = d.Amount
             }).ToList()
+        };
+
+        private static NurseryOrderShipperResponseDto MapShipperToDto(User shipper, int totalOrdersInDay) => new()
+        {
+            Id = shipper.Id,
+            Username = shipper.Username,
+            Email = shipper.Email,
+            PhoneNumber = shipper.PhoneNumber,
+            TotalOrdersInDay = totalOrdersInDay
         };
 
         private static DateTime GetCurrentVietnamTime()

@@ -2,6 +2,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -68,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             Rating = r.Rating,
             Description = r.Description,
             CreatedAt = r.CreatedAt,
-            Customer = r.User == null ? null : ServiceRegistrationService.MapUserSummary(r.User)
+            Customer = r.User == null ? null : r.User.ToUserSummary()
         };
     }
 }

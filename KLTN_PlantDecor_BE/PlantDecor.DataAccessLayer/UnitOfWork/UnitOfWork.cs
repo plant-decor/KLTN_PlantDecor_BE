@@ -63,6 +63,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private ISpecializationRepository? _specializationRepository;
         private IServiceRatingRepository? _serviceRatingRepository;
         private IShiftRepository? _shiftRepository;
+        private IDepositPolicyRepository? _depositPolicyRepository;
         private IReturnTicketRepository? _returnTicketRepository;
         private IReturnTicketAssignmentRepository? _returnTicketAssignmentRepository;
 
@@ -324,6 +325,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IShiftRepository ShiftRepository
         {
             get { return _shiftRepository ??= new ShiftRepository(_context); }
+        }
+
+        public IDepositPolicyRepository DepositPolicyRepository
+        {
+            get { return _depositPolicyRepository ??= new DepositPolicyRepository(_context); }
         }
 
         public IReturnTicketRepository ReturnTicketRepository
