@@ -26,4 +26,5 @@ public partial class Category
     public virtual ICollection<Material> Materials { get; set; } = new List<Material>();
 
     public virtual ICollection<Plant> Plants { get; set; } = new List<Plant>();
+    public virtual ICollection<PackagePlantSuitability> PackagePlantSuitabilities { get; set; } = new List<PackagePlantSuitability>();
 }
