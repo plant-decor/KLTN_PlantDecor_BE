@@ -19,10 +19,12 @@ namespace PlantDecor.API.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly ICareServicePackageService _careServicePackageService;
 
-        public OrderController(IOrderService orderService)
+        public OrderController(IOrderService orderService, ICareServicePackageService careServicePackageService)
         {
             _orderService = orderService;
+            _careServicePackageService = careServicePackageService;
         }
 
         /// <summary>
@@ -78,6 +80,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Admin/Consultant] Lấy danh sách đơn hàng theo email
+        /// </summary>
+        [HttpGet("by-email")]
+        [Authorize(Roles = "Admin,Consultant")]
+        public async Task<IActionResult> GetOrdersByEmail([FromQuery] string email)
+        {
+            var result = await _orderService.GetOrdersByEmailAsync(email);
+            return Ok(new ApiResponse<List<OrderResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get orders by email successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Hủy đơn hàng (chỉ khi Pending hoặc DepositPaid)
         /// </summary>
         [HttpPatch("{id}/cancel")]
@@ -91,6 +110,24 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Order cancelled successfully",
                 Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Consultant] Tư vấn gói dịch vụ chăm sóc dựa trên cây trong đơn hàng
+        /// </summary>
+        [HttpGet("{id}/recommended-packages-by-plant")]
+        [Authorize(Roles = "Consultant")]
+        public async Task<IActionResult> GetRecommendedPackagesByPlant(int id, [FromQuery] int top = 5)
+        {
+            var consultantId = GetUserId();
+            var recommendations = await _careServicePackageService.RecommendByOrderAsync(consultantId, id, top);
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get recommended packages successfully",
+                Payload = new { recommendations }
             });
         }
 

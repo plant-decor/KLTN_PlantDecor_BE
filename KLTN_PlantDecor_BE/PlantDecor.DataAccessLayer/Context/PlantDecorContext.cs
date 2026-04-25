@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.DataAccessLayer.Context;
@@ -79,6 +78,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<NurseryOrderDetail> NurseryOrderDetails { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
+
+    public virtual DbSet<PackagePlantSuitability> PackagePlantSuitabilities { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
 
@@ -999,6 +1000,31 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("Payment_OrderId_fkey");
         });
 
+        modelBuilder.Entity<PackagePlantSuitability>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PackagePlantSuitability_pkey");
+            entity.ToTable("PackagePlantSuitability");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => e.CareServicePackageId);
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.CareDifficultyLevel);
+
+            entity.HasIndex(e => new { e.CareServicePackageId, e.CategoryId, e.CareDifficultyLevel })
+                    .IsUnique()
+                    .HasDatabaseName("UX_PackagePlantSuitability_Rule");
+
+            entity.HasOne(d => d.CareServicePackage).WithMany(p => p.PackagePlantSuitabilities)
+                  .HasForeignKey(d => d.CareServicePackageId)
+                  .HasConstraintName("PackagePlantSuitability_CareServicePackageId_fkey");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.PackagePlantSuitabilities)
+                    .HasForeignKey(d => d.CategoryId)
+                    .HasConstraintName("PackagePlantSuitability_CategoryId_fkey");
+        });
+
         modelBuilder.Entity<PolicyContent>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PolicyContent_pkey");
@@ -1725,7 +1751,7 @@ public partial class PlantDecorContext : DbContext
 
             // Index for better query performance
             entity.HasIndex(e => new { e.UserId, e.IsDeleted });
-       });
+        });
 
         OnModelCreatingPartial(modelBuilder);
     }

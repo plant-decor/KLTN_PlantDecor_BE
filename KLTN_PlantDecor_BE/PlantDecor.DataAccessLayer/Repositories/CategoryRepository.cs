@@ -55,6 +55,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
+        public async Task<List<Category>> GetByCategoryTypeAsync(int categoryType, bool activeOnly = false)
+        {
+            var query = _context.Categories
+                .Include(c => c.ParentCategory)
+                .Where(c => c.CategoryType == categoryType);
+
+            if (activeOnly)
+                query = query.Where(c => c.IsActive == true);
+
+            return await query
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+        }
+
         public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
         {
             if (excludeId.HasValue)

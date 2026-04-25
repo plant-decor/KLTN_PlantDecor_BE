@@ -9,6 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         Task<PaginatedResult<CategoryResponseDto>> GetAllCategoriesAsync(Pagination pagination);
         Task<List<CategoryResponseDto>> GetAllActiveCategoriesAsync();
+        Task<List<CategoryResponseDto>> GetCategoriesByTypeAsync(int categoryType, bool activeOnly = true);
         Task<List<CategoryResponseDto>> GetRootCategoriesAsync();
         Task<List<CategoryResponseDto>> GetRootActiveCategoriesAsync();
         Task<CategoryResponseDto> GetCategoryByIdAsync(int id);

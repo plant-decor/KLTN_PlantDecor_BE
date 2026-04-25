@@ -29,4 +29,5 @@ public partial class CareServicePackage
 
     public virtual ICollection<NurseryCareService> NurseryCareServices { get; set; } = new List<NurseryCareService>();
     public virtual ICollection<CareServiceSpecialization> CareServiceSpecializations { get; set; } = new List<CareServiceSpecialization>();
+    public virtual ICollection<PackagePlantSuitability> PackagePlantSuitabilities { get; set; } = new List<PackagePlantSuitability>();
 }
