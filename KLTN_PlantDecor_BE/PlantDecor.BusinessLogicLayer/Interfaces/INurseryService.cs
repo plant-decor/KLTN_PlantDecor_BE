@@ -11,7 +11,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PaginatedResult<NurseryListResponseDto>> GetAllNurseriesAsync(Pagination pagination);
         Task<PaginatedResult<NurseryListResponseDto>> GetActiveNurseriesAsync(Pagination pagination);
         Task<NurseryResponseDto> GetNurseryByIdAsync(int id);
-        Task<NurseryResponseDto> GetMyNurseryAsync(int managerId);
+        Task<NurseryResponseDto> GetMyNurseryAsync(int userId);
         Task<NurseryResponseDto> CreateNurseryAsync(NurseryRequestDto request);
         Task<NurseryResponseDto> UpdateNurseryAsync(int id, NurseryUpdateDto request);
         Task<bool> ToggleActiveAsync(int id);
