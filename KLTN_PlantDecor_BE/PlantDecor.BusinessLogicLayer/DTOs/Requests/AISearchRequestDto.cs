@@ -1,3 +1,5 @@
+using PlantDecor.DataAccessLayer.Enums;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class SemanticSearchRequestDto
@@ -41,10 +43,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// </summary>
         public string Message { get; set; } = null!;
         public string? RoomDescription { get; set; }
-        public string? FengShuiElement { get; set; }
+        public FengShuiElementTypeEnum? FengShuiElement { get; set; }
         public decimal? MaxBudget { get; set; }
         public int? Limit { get; set; }
-        public List<string>? PreferredRooms { get; set; }
+        public List<RoomTypeEnum>? PreferredRooms { get; set; }
         public bool? PetSafe { get; set; }
         public bool? ChildSafe { get; set; }
         public bool OnlyPurchasable { get; set; } = true;
