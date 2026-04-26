@@ -74,16 +74,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return nursery.ToResponse();
         }
 
-        public async Task<NurseryResponseDto> GetMyNurseryAsync(int managerId)
+        public async Task<NurseryResponseDto> GetMyNurseryAsync(int userId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new UnauthorizedException("Không xác định được người dùng");
+
+            int nurseryId;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                var managedNursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(userId);
+                if (managedNursery == null)
+                    throw new NotFoundException("Bạn chưa có vựa nào");
+
+                nurseryId = managedNursery.Id;
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff)
+            {
+                if (!user.NurseryId.HasValue)
+                    throw new NotFoundException("Bạn chưa được phân công vào vựa nào");
+
+                nurseryId = user.NurseryId.Value;
+            }
+            else
+            {
+                throw new ForbiddenException("Chỉ Manager hoặc Staff mới có quyền xem thông tin vựa của mình");
+            }
 
             // Load full details
-            var fullNursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(nursery.Id);
+            var fullNursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(nurseryId);
             if (fullNursery == null)
-                throw new NotFoundException($"Vựa với ID {nursery.Id} không tồn tại");
+                throw new NotFoundException($"Vựa với ID {nurseryId} không tồn tại");
 
             return fullNursery.ToResponse();
         }

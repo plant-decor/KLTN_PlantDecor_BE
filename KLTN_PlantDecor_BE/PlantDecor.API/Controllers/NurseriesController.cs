@@ -37,11 +37,11 @@ namespace PlantDecor.API.Controllers
         /// Lấy thông tin vựa của Manager đang đăng nhập
         /// </summary>
         [HttpGet("my-nursery")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetMyNursery()
         {
-            var managerId = GetCurrentUserId();
-            var nursery = await _nurseryService.GetMyNurseryAsync(managerId);
+            var userId = GetCurrentUserId();
+            var nursery = await _nurseryService.GetMyNurseryAsync(userId);
 
             return Ok(new ApiResponse<NurseryResponseDto>
             {
