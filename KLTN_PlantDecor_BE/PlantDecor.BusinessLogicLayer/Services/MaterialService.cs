@@ -85,6 +85,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
+                var normalizedMaterialCode = string.IsNullOrWhiteSpace(request.MaterialCode)
+                    ? null
+                    : request.MaterialCode.Trim().ToUpper();
+
+                if (!string.IsNullOrEmpty(normalizedMaterialCode))
+                {
+                    if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(normalizedMaterialCode))
+                        throw new BadRequestException($"Material với mã '{normalizedMaterialCode}' đã tồn tại");
+                }
+
+                var normalizedMaterialName = request.Name?.Trim();
+                if (!string.IsNullOrWhiteSpace(normalizedMaterialName))
+                {
+                    if (await _unitOfWork.MaterialRepository.ExistsByNameAsync(normalizedMaterialName))
+                        throw new BadRequestException($"Material với tên '{normalizedMaterialName}' đã tồn tại");
+                }
+
+                request.MaterialCode = normalizedMaterialCode;
+                request.Name = normalizedMaterialName ?? request.Name;
+
                 var material = request.ToEntity();
 
                 material.Categories ??= new List<Category>();

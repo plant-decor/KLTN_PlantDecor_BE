@@ -77,6 +77,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .AnyAsync(c => c.ComboCode == comboCode);
         }
 
+        public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+        {
+            var normalizedName = name.Trim().ToLower();
+
+            if (excludeId.HasValue)
+            {
+                return await _context.PlantCombos
+                    .AnyAsync(c => c.ComboName != null && c.ComboName.ToLower() == normalizedName && c.Id != excludeId.Value);
+            }
+
+            return await _context.PlantCombos
+                .AnyAsync(c => c.ComboName != null && c.ComboName.ToLower() == normalizedName);
+        }
+
         public async Task<PlantCombo?> GetComboByComboItemIdAsync(int comboItemId)
         {
             return await _context.PlantCombos
