@@ -1,9 +1,9 @@
-using PlantDecor.DataAccessLayer.Enums;
+using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace PlantDecor.DataAccessLayer.Repositories
 {
@@ -34,6 +34,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.CommonPlants
                 .Include(cp => cp.Plant)
                     .ThenInclude(p => p.PlantGuide)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantImages)
                 .Include(cp => cp.Nursery)
                 .FirstOrDefaultAsync(cp => cp.Id == id);
         }
