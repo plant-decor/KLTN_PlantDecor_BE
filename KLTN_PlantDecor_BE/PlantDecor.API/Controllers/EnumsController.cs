@@ -360,7 +360,8 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomViewAngle", typeof(RoomViewAngleEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
                     CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),
-                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus))
+                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum))
                 }
             });
         }
@@ -381,7 +382,9 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("AIChatSessionStatus", typeof(AIChatSessionStatusEnum)),
-                    CreateEnumGroup("AIChatMessageRole", typeof(AIChatMessageRoleEnum))
+                    CreateEnumGroup("AIChatMessageRole", typeof(AIChatMessageRoleEnum)),
+                    CreateEnumGroup("RoomType", typeof(RoomTypeEnum)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum))
                 }
             });
         }
