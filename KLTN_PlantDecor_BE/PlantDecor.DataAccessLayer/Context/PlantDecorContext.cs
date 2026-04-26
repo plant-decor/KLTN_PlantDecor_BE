@@ -318,6 +318,8 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Intent).HasMaxLength(100);
             entity.Property(e => e.IsFallback).HasDefaultValue(false);
             entity.Property(e => e.IsPolicyResponse).HasDefaultValue(false);
+            entity.Property(e => e.SuggestedPlants).HasColumnType("jsonb");
+            entity.Property(e => e.CareTips).HasColumnType("jsonb");
 
             entity.HasOne(d => d.AIChatSession).WithMany(p => p.AIChatMessages)
                 .HasForeignKey(d => d.AIChatSessionId)

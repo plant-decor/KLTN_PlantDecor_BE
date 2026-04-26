@@ -100,6 +100,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int>("AIChatSessionId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CareTips")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Content")
                         .HasColumnType("text");
 
@@ -124,6 +127,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("Role")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SuggestedPlants")
+                        .HasColumnType("jsonb");
 
                     b.HasKey("Id")
                         .HasName("AIChatMessage_pkey");
@@ -1708,6 +1714,49 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex(new[] { "Status" }, "IX_Order_Status");
 
                     b.ToTable("Order", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PackagePlantSuitability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CareDifficultyLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CareServicePackageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.HasKey("Id")
+                        .HasName("PackagePlantSuitability_pkey");
+
+                    b.HasIndex("CareDifficultyLevel");
+
+                    b.HasIndex("CareServicePackageId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CareServicePackageId", "CategoryId", "CareDifficultyLevel")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PackagePlantSuitability_Rule");
+
+                    b.ToTable("PackagePlantSuitability", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Payment", b =>
@@ -3987,6 +4036,25 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PackagePlantSuitability", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.CareServicePackage", "CareServicePackage")
+                        .WithMany("PackagePlantSuitabilities")
+                        .HasForeignKey("CareServicePackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("PackagePlantSuitability_CareServicePackageId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Category", "Category")
+                        .WithMany("PackagePlantSuitabilities")
+                        .HasForeignKey("CategoryId")
+                        .HasConstraintName("PackagePlantSuitability_CategoryId_fkey");
+
+                    b.Navigation("CareServicePackage");
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Payment", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Invoice", "Invoice")
@@ -4545,6 +4613,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("CareServiceSpecializations");
 
                     b.Navigation("NurseryCareServices");
+
+                    b.Navigation("PackagePlantSuitabilities");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Cart", b =>
@@ -4555,6 +4625,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Category", b =>
                 {
                     b.Navigation("InverseParentCategory");
+
+                    b.Navigation("PackagePlantSuitabilities");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ChatSession", b =>

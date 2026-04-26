@@ -11,6 +11,7 @@ using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -1110,13 +1111,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             bool isFallback,
             bool isPolicyResponse)
         {
+            var serializerOptions = new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
             await _unitOfWork.AIChatMessageRepository.AddAssistantMessageAsync(
                 sessionId,
                 userId,
                 response.Reply,
                 intent,
                 isFallback,
-                isPolicyResponse);
+                isPolicyResponse,
+                suggestedPlants: response.SuggestedPlants == null || response.SuggestedPlants.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(response.SuggestedPlants, serializerOptions),
+                careTips: response.CareTips == null || response.CareTips.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(response.CareTips, serializerOptions));
 
             _logger.LogInformation(
                 "Assistant message persisted. SessionId={SessionId}, UserId={UserId}, Intent={Intent}, IsFallback={IsFallback}, IsPolicyResponse={IsPolicyResponse}, ReplyLength={ReplyLength}",

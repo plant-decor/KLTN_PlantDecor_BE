@@ -115,6 +115,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Intent { get; set; }
         public bool IsFallback { get; set; }
         public bool IsPolicyResponse { get; set; }
+        public List<PlantSuggestionResponseDto> SuggestedPlants { get; set; } = new();
+        public List<string> CareTips { get; set; } = new();
         public DateTime? CreatedAt { get; set; }
     }
 
