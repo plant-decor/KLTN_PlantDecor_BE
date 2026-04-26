@@ -16,6 +16,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<AuthenticationResponse?> RegisterAsync(UserRequest request);
         Task<AuthenticationResponse?> CreateManagerAsync(CreateManagerRequest request);
         Task<AuthenticationResponse?> CreateStaffAsync(int managerId, CreateStaffRequest request);
+        Task<AuthenticationResponse?> CreateShipperAsync(int managerId, CreateStaffRequest request);
+        Task<AuthenticationResponse?> CreateConsultantAsync(CreateStaffRequest request);
         Task<StaffWithSpecializationsResponseDto> CreateCaretakerAsync(int managerId, CreateCaretakerWithSpecializationsRequestDto request);
         Task<AuthenticationResponse?> LogoutAsync(LogoutRequest request);
         Task<AuthenticationResponse?> LogoutAllAsync(LogoutRequest request);

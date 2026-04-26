@@ -608,6 +608,199 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<AuthenticationResponse?> CreateShipperAsync(int managerId, CreateStaffRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new BadRequestException("Email, password, username and full name are required");
+            }
+
+            if (!IsValidEmail(request.Email))
+            {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^(0|\+84)(\d{9})$"))
+            {
+                throw new BadRequestException("Invalid phone number format");
+            }
+
+            var phoneExists = await _unitOfWork.UserRepository.GetByPhoneAsync(request.PhoneNumber);
+            if (phoneExists != null)
+            {
+                throw new BadRequestException("Phone number is already in use");
+            }
+
+            ValidatePassword(request.Password);
+
+            if (request.Password != request.ConfirmPassword)
+            {
+                throw new BadRequestException("Password and confirmation password do not match");
+            }
+
+            var existingUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("This email is already registered");
+            }
+
+            var manager = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (manager == null)
+            {
+                throw new NotFoundException("Manager not found");
+            }
+
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            if (nursery == null)
+            {
+                throw new BadRequestException("Manager does not have an assigned nursery");
+            }
+
+            var shipperRoleId = (int)RoleEnum.Shipper;
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(shipperRoleId);
+            if (role == null)
+            {
+                throw new BadRequestException("Shipper role not found");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var userRequest = new UserRequest
+                {
+                    Email = request.Email,
+                    Password = request.Password,
+                    ConfirmPassword = request.ConfirmPassword,
+                    Username = request.Username,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber
+                };
+
+                var newUser = UserMapper.ToEntity(userRequest);
+                newUser.RoleId = shipperRoleId;
+                newUser.NurseryId = nursery.Id;
+                newUser.IsVerified = true;
+                newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                newUser.UpdateSecurityStamp();
+
+                _unitOfWork.UserRepository.PrepareCreate(newUser);
+                await _unitOfWork.SaveAsync();
+
+                var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+                if (createdUser == null)
+                {
+                    throw new Exception("Failed to retrieve created shipper account");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    User = UserMapper.ToResponse(createdUser)
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<AuthenticationResponse?> CreateConsultantAsync(CreateStaffRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.Username) ||
+                string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new BadRequestException("Email, password, username and full name are required");
+            }
+
+            if (!IsValidEmail(request.Email))
+            {
+                throw new BadRequestException("Invalid email format");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^(0|\+84)(\d{9})$"))
+            {
+                throw new BadRequestException("Invalid phone number format");
+            }
+
+            var phoneExists = await _unitOfWork.UserRepository.GetByPhoneAsync(request.PhoneNumber);
+            if (phoneExists != null)
+            {
+                throw new BadRequestException("Phone number is already in use");
+            }
+
+            ValidatePassword(request.Password);
+
+            if (request.Password != request.ConfirmPassword)
+            {
+                throw new BadRequestException("Password and confirmation password do not match");
+            }
+
+            var existingUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("This email is already registered");
+            }
+
+            var consultantRoleId = (int)RoleEnum.Consultant;
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(consultantRoleId);
+            if (role == null)
+            {
+                throw new BadRequestException("Consultant role not found");
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var userRequest = new UserRequest
+                {
+                    Email = request.Email,
+                    Password = request.Password,
+                    ConfirmPassword = request.ConfirmPassword,
+                    Username = request.Username,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber
+                };
+
+                var newUser = UserMapper.ToEntity(userRequest);
+                newUser.RoleId = consultantRoleId;
+                newUser.IsVerified = true;
+                newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                newUser.UpdateSecurityStamp();
+
+                _unitOfWork.UserRepository.PrepareCreate(newUser);
+                await _unitOfWork.SaveAsync();
+
+                var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
+                if (createdUser == null)
+                {
+                    throw new Exception("Failed to retrieve created consultant account");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new AuthenticationResponse
+                {
+                    User = UserMapper.ToResponse(createdUser)
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
         public async Task<StaffWithSpecializationsResponseDto> CreateCaretakerAsync(int managerId, CreateCaretakerWithSpecializationsRequestDto request)
         {
             if (request == null)
