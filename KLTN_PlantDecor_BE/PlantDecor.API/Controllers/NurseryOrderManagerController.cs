@@ -114,6 +114,24 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Lấy tổng doanh thu của vườn hiện tại theo khoảng thời gian
+        /// </summary>
+        [HttpGet("revenue/summary")]
+        public async Task<IActionResult> GetMyNurseryRevenueSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetMyNurseryRevenueSummaryAsync(currentUserId, from, to);
+
+            return Ok(new ApiResponse<RevenueSummaryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Lấy doanh thu của vườn thành công",
+                Payload = result
+            });
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

@@ -16,5 +16,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request);
         Task<NurseryOrderResponseDto> MarkDeliveredAsync(int currentUserId, int nurseryOrderId, MarkDeliveredRequestDto request);
         Task<NurseryOrderResponseDto> MarkDeliveryFailedAsync(int currentUserId, int nurseryOrderId, MarkDeliveryFailedRequestDto request);
+        Task<RevenueSummaryResponseDto> GetMyNurseryRevenueSummaryAsync(int currentUserId, DateTime from, DateTime to);
+        Task<RevenueSummaryResponseDto> GetSystemRevenueSummaryAsync(int currentUserId, DateTime from, DateTime to);
+        Task<List<NurseryRevenueItemResponseDto>> GetSystemRevenueByNurseryAsync(int currentUserId, DateTime from, DateTime to);
     }
 }

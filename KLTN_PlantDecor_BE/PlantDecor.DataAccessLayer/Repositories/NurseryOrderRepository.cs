@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -93,6 +95,59 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var items = await query.Skip(skip).Take(take).ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<decimal> GetCompletedRevenueByNurseryAsync(int nurseryId, DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .Where(no => no.NurseryId == nurseryId)
+                .SumAsync(no => no.SubTotalAmount ?? 0m);
+        }
+
+        public async Task<int> CountCompletedOrdersByNurseryAsync(int nurseryId, DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .Where(no => no.NurseryId == nurseryId)
+                .CountAsync();
+        }
+
+        public async Task<decimal> GetCompletedSystemRevenueAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .SumAsync(no => no.SubTotalAmount ?? 0m);
+        }
+
+        public async Task<int> CountCompletedSystemOrdersAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .CountAsync();
+        }
+
+        public async Task<List<NurseryRevenueAggregate>> GetCompletedRevenueByNurseryListAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .GroupBy(no => new
+                {
+                    no.NurseryId,
+                    NurseryName = no.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = g.Sum(x => x.SubTotalAmount ?? 0m),
+                    TotalOrders = g.Count()
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToListAsync();
+        }
+
+        private IQueryable<NurseryOrder> BuildCompletedRevenueQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.NurseryOrders
+                .Where(no => no.Status == (int)OrderStatusEnum.Completed)
+                .Where(no => (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) >= fromInclusive
+                    && (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) < toExclusive);
         }
     }
 }
