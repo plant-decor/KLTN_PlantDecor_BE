@@ -15,7 +15,6 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
     public class PlantInstancesController : ControllerBase
     {
         private readonly IPlantInstanceService _plantInstanceService;
@@ -32,6 +31,7 @@ namespace PlantDecor.API.Controllers
         /// POST /api/manager/nurseries/{nurseryId}/plant-instances/batch
         /// </summary>
         [HttpPost("nurseries/{nurseryId}/plant-instances/batch")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> BatchCreatePlantInstances(int nurseryId, [FromBody] BatchCreatePlantInstanceRequestDto request)
         {
             var managerId = GetCurrentUserId();
@@ -50,6 +50,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/plant-instances/{instanceId}
         /// </summary>
         [HttpGet("plant-instances/{instanceId}")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetPlantInstanceById(int instanceId)
         {
             var managerId = GetCurrentUserId();
@@ -68,6 +69,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/nurseries/{nurseryId}/plant-instances
         /// </summary>
         [HttpGet("nurseries/{nurseryId}/plant-instances")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetPlantInstancesByNursery(int nurseryId, [FromQuery] Pagination pagination, [FromQuery] int? status = null)
         {
             var managerId = GetCurrentUserId();
@@ -86,6 +88,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/nurseries/{nurseryId}/plants-summary
         /// </summary>
         [HttpGet("nurseries/{nurseryId}/plants-summary")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetPlantsSummary(int nurseryId)
         {
             var managerId = GetCurrentUserId();
@@ -108,6 +111,7 @@ namespace PlantDecor.API.Controllers
         /// PATCH /api/manager/plant-instances/{instanceId}/status
         /// </summary>
         [HttpPatch("plant-instances/{instanceId}/status")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdateInstanceStatus(int instanceId, [FromBody] UpdatePlantInstanceStatusDto request)
         {
             var managerId = GetCurrentUserId();
@@ -126,6 +130,7 @@ namespace PlantDecor.API.Controllers
         /// PATCH /api/manager/plant-instances/batch-status
         /// </summary>
         [HttpPatch("plant-instances/batch-status")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> BatchUpdateStatus([FromBody] BatchUpdatePlantInstanceStatusDto request)
         {
             var managerId = GetCurrentUserId();
@@ -145,6 +150,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("plant-instances/{instanceId}/thumbnail")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UploadPlantInstanceThumbnail(int instanceId, IFormFile file)
         {
             if (file == null)
@@ -169,6 +175,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("plant-instances/{instanceId}/images")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UploadPlantInstanceImages(int instanceId, List<IFormFile> files)
         {
             var managerId = GetCurrentUserId();
@@ -187,6 +194,7 @@ namespace PlantDecor.API.Controllers
         /// PATCH /api/manager/plant-instances/{instanceId}/images/{imageId}/set-primary
         /// </summary>
         [HttpPatch("plant-instances/{instanceId}/images/{imageId}/set-primary")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> SetPrimaryPlantInstanceImage(int instanceId, int imageId)
         {
             var managerId = GetCurrentUserId();
@@ -206,6 +214,7 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPut("plant-instances/{instanceId}/images/{imageId}")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ReplacePlantInstanceImage(int instanceId, int imageId, IFormFile file)
         {
             var managerId = GetCurrentUserId();
@@ -224,6 +233,7 @@ namespace PlantDecor.API.Controllers
         /// DELETE /api/manager/plant-instances/{instanceId}/images/{imageId}
         /// </summary>
         [HttpDelete("plant-instances/{instanceId}/images/{imageId}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DeletePlantInstanceImage(int instanceId, int imageId)
         {
             var managerId = GetCurrentUserId();

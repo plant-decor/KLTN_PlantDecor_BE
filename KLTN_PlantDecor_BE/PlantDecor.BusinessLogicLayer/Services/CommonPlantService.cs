@@ -292,8 +292,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<CommonPlantListResponseDto>> GetByNurseryForManagerAsync(int nurseryId, int managerId, Pagination pagination)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null || nursery.Id != nurseryId)
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (user == null)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var hasAccess = false;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                hasAccess = nursery != null && nursery.Id == nurseryId;
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff)
+            {
+                hasAccess = user.NurseryId.HasValue && user.NurseryId.Value == nurseryId;
+            }
+
+            if (!hasAccess)
                 throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
 
             var cacheKey = $"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId}_manager_p{pagination.PageNumber}_s{pagination.PageSize}";
