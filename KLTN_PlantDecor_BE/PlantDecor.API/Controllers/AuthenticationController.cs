@@ -13,7 +13,7 @@ using System.Security.Claims;
 namespace PlantDecor.API.Controllers
 {
     /// <summary>
-    /// API về xác thực và quản lý tài khoản người dùng
+    /// API about user authentication, registration, and account management
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]

@@ -22,38 +22,38 @@
                 <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg'
                      alt='PlantDecor Logo' width='196' style='margin-bottom:15px;'/>
             </a>
-            <h2 style='color:#28a745;'>Thanh toán thành công!</h2>
+            <h2 style='color:#28a745;'>Payment successful!</h2>
         </div>
 
-        <p>Xin chào <b>{userName}</b>,</p>
-        <p>Cảm ơn bạn đã thanh toán đơn hàng thông qua <b>VNPay</b>. Dưới đây là thông tin đơn hàng của bạn:</p>
+        <p>Hello <b>{userName}</b>,</p>
+        <p>Thank you for completing your payment via <b>VNPay</b>. Here are your order details:</p>
 
         <table style='width:100%; border-collapse:collapse; margin-top:15px;'>
             <tr>
-                <td style='padding:8px 0; color:#555;'>Mã đơn hàng:</td>
+                <td style='padding:8px 0; color:#555;'>Order ID:</td>
                 <td style='text-align:right; font-weight:bold;'>{orderId}</td>
             </tr>
             <tr>
-                <td style='padding:8px 0; color:#555;'>Sản phẩm:</td>
+                <td style='padding:8px 0; color:#555;'>Product:</td>
                 <td style='text-align:right; font-weight:bold;'>{productName}</td>
             </tr>
             <tr>
-                <td style='padding:8px 0; color:#555;'>Ngày thanh toán:</td>
+                <td style='padding:8px 0; color:#555;'>Payment date:</td>
                 <td style='text-align:right; font-weight:bold;'>{orderDate}</td>
             </tr>
             <tr>
-                <td style='padding:8px 0; color:#555;'>Tổng tiền:</td>
+                <td style='padding:8px 0; color:#555;'>Total amount:</td>
                 <td style='text-align:right; font-weight:bold; color:#28a745;'>{amount}</td>
             </tr>
         </table>
 
         <p style='margin-top:25px; color:#555;'>
-            Nếu bạn cần hỗ trợ, vui lòng liên hệ: 
+            If you need support, please contact: 
             <b>{supportEmail}</b>.
         </p>
 
         <p style='color:#777; font-size:13px; margin-top:15px; text-align:center;'>
-            Cảm ơn bạn đã tin tưởng PlantDecor!
+            Thank you for choosing PlantDecor!
         </p>
 
     </div>

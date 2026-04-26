@@ -38,7 +38,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Nhập cây đại trà thành công",
+                Message = "Import Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -55,7 +55,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách cây đại trà thành công",
+                Message = "Get List Common Plants Successfully!",
                 Payload = result
             });
         }
@@ -72,7 +72,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plant chưa có trong vựa thành công",
+                Message = "Get Available Import Plants Successfully!",
                 Payload = result
             });
         }
@@ -89,7 +89,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật cây đại trà thành công",
+                Message = "Update Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -106,7 +106,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = result.IsActive ? "Đã bật cây đại trà" : "Đã tắt cây đại trà",
+                Message = result.IsActive ? "Toggle Common Plant Successfully!" : "Turned Off Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -144,7 +144,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa có cây đại trà thành công",
+                Message = "Get List Nurseries With Common Plant Successfully!",
                 Payload = result
             });
         }

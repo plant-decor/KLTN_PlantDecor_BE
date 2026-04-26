@@ -110,7 +110,7 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Enum '{enumName}' không tồn tại"
+                    Message = $"Enum '{enumName}' not exists"
                 });
             }
 

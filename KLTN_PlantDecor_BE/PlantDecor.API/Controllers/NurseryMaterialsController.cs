@@ -43,7 +43,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vật tư thành công",
+                Message = "Get My Nursery Materials Successfully!",
                 Payload = materials
             });
         }
@@ -61,7 +61,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vật tư active của hệ thống thành công",
+                Message = "Get Active System Materials Successfully!",
                 Payload = materials
             });
         }
@@ -79,7 +79,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Nhập vật tư thành công",
+                Message = "Import Material Successfully!",
                 Payload = material
             });
         }
@@ -96,7 +96,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật vật tư thành công",
+                Message = "Update Nursery Material Successfully!",
                 Payload = material
             });
         }
@@ -113,7 +113,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = material.IsActive ? "Đã bật vật tư" : "Đã tắt vật tư",
+                Message = material.IsActive ? "Toggle Active Material Successfully!" : "Deactivate Material Successfully!",
                 Payload = material
             });
         }
@@ -134,7 +134,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vật tư thành công",
+                Message = "Get All Nursery Materials Successfully!",
                 Payload = materials
             });
         }
@@ -152,7 +152,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy thông tin vật tư thành công",
+                Message = "Get Nursery Materials Successfully!",
                 Payload = material
             });
         }
@@ -169,7 +169,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Lấy danh sách vật tư theo Nursery ID {nurseryId} thành công",
+                Message = $"Get list nursery materials by Nursery ID {nurseryId} Successfully!",
                 Payload = materials
             });
         }
@@ -186,7 +186,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Lấy danh sách vật tư theo Material ID {materialId} thành công",
+                Message = $"Get list nursery materials by Material ID {materialId} Successfully!",
                 Payload = materials
             });
         }
@@ -203,7 +203,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Nhập vật tư thành công",
+                Message = "Import nursery Material Successfully!",
                 Payload = material
             });
         }
@@ -220,7 +220,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo NurseryMaterial thành công",
+                Message = "Create NurseryMaterial Successfully!",
                 Payload = material
             });
         }
@@ -244,7 +244,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm vật tư thành công",
+                Message = "Search Nursery Materials Successfully!",
                 Payload = result
             });
         }
