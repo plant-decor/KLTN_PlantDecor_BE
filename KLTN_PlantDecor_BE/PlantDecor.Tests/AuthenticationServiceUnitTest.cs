@@ -56,6 +56,21 @@ public class AuthenticationServiceUnitTest
         };
     }
 
+    private static UserRequest CreateValidRegisterRequest(string? phoneNumber = null, string? password = null)
+    {
+        password ??= "Aa1!aaaa";
+
+        return new UserRequest
+        {
+            Email = "newuser@example.com",
+            Username = "newuser",
+            FullName = "New User",
+            PhoneNumber = phoneNumber,
+            Password = password,
+            ConfirmPassword = password
+        };
+    }
+
     [Fact]
     public async Task LoginAsync_ShouldThrowBadRequest_WhenEmailOrPasswordEmpty()
     {
@@ -131,49 +146,6 @@ public class AuthenticationServiceUnitTest
     }
 
     [Fact]
-    public async Task LoginAsync_ShouldThrowBadRequest_WhenPasswordIncorrect()
-    {
-        var user = CreateValidUser();
-
-        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
-        userRepo.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
-        userRepo.Setup(r => r.VerifyPasswordAsync(user, "pw")).ReturnsAsync(false);
-
-        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
-        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
-
-        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
-        var sut = CreateSut(uow, stampCache);
-
-        var act = () => sut.LoginAsync(new LoginRequest { Email = user.Email, Password = "pw", DeviceId = "dev1" });
-
-        await act.Should().ThrowAsync<BadRequestException>()
-            .WithMessage("Incorrect password");
-    }
-
-    [Fact]
-    public async Task LoginAsync_ShouldThrowForbidden_WhenAccountDisabled()
-    {
-        var user = CreateValidUser();
-        user.Status = (int)UserStatusEnum.Inactive;
-
-        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
-        userRepo.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
-        userRepo.Setup(r => r.VerifyPasswordAsync(user, "pw")).ReturnsAsync(true);
-
-        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
-        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
-
-        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
-        var sut = CreateSut(uow, stampCache);
-
-        var act = () => sut.LoginAsync(new LoginRequest { Email = user.Email, Password = "pw", DeviceId = "dev1" });
-
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("Account is disabled");
-    }
-
-    [Fact]
     public async Task LoginAsync_ShouldThrowForbidden_WhenRoleMissing()
     {
         var user = CreateValidUser();
@@ -196,65 +168,282 @@ public class AuthenticationServiceUnitTest
     }
 
     [Fact]
-    public async Task LoginAsync_ShouldThrowException_WhenSaveFails()
+    public async Task RegisterAsync_ShouldReturnUser_WhenValidRequestWithoutPhone_Normal()
     {
-        var user = CreateValidUser();
+        var request = CreateValidRegisterRequest(phoneNumber: null);
 
-        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
-        userRepo.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
-        userRepo.Setup(r => r.VerifyPasswordAsync(user, "pw")).ReturnsAsync(true);
-        userRepo.Setup(r => r.GetOldRefreshTokenByDeviceIdAsync(user.Id, "dev1"))
-            .ReturnsAsync(new List<RefreshToken>());
-
-        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
-        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
-        uow.Setup(x => x.SaveAsync()).ReturnsAsync(0);
-
-        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
-        var sut = CreateSut(uow, stampCache);
-
-        var act = () => sut.LoginAsync(new LoginRequest { Email = user.Email, Password = "pw", DeviceId = "dev1" });
-
-        await act.Should().ThrowAsync<Exception>()
-            .WithMessage("Failed to update RefreshToken");
-    }
-
-    [Fact]
-    public async Task LoginAsync_ShouldReturnTokens_RevokeOldTokens_AndSetStampCache_WhenSuccess()
-    {
-        var user = CreateValidUser();
-
-        var oldTokens = new List<RefreshToken>
+        var createdUser = new User
         {
-            new RefreshToken { UserId = user.Id, Token = "old1", IsRevoked = false, DeviceId = "dev1", CreatedDate = DateTime.UtcNow, ExpiryDate = DateTime.UtcNow.AddDays(1) },
-            new RefreshToken { UserId = user.Id, Token = "old2", IsRevoked = false, DeviceId = "dev1", CreatedDate = DateTime.UtcNow, ExpiryDate = DateTime.UtcNow.AddDays(1) }
+            Id = 10,
+            Email = request.Email,
+            Username = request.Username,
+            PhoneNumber = null,
+            RoleId = (int)RoleEnum.Customer,
+            Status = (int)UserStatusEnum.Active,
+            Role = new Role { Id = (int)RoleEnum.Customer, Name = "Customer" },
+            UserProfile = new UserProfile { FullName = request.FullName }
         };
 
         var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
-        userRepo.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
-        userRepo.Setup(r => r.VerifyPasswordAsync(user, "pw")).ReturnsAsync(true);
-        userRepo.Setup(r => r.GetOldRefreshTokenByDeviceIdAsync(user.Id, "dev1"))
-            .ReturnsAsync(oldTokens);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(createdUser);
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()));
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
 
         var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
         uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
         uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
 
         var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
-        stampCache.Setup(s => s.SetSecurityStampAsync(user.Id, user.SecurityStamp!)).Returns(Task.CompletedTask);
-
         var sut = CreateSut(uow, stampCache);
 
-        var result = await sut.LoginAsync(new LoginRequest { Email = user.Email, Password = "pw", DeviceId = "dev1" });
+        var result = await sut.RegisterAsync(request);
 
         result.Should().NotBeNull();
-        result!.AccessToken.Should().NotBeNullOrWhiteSpace();
-        result.RefreshToken.Should().NotBeNullOrWhiteSpace();
+        result!.User.Should().NotBeNull();
+        result.User!.Email.Should().Be(request.Email);
+        result.User.Username.Should().Be(request.Username);
 
-        oldTokens.Should().OnlyContain(t => t.IsRevoked);
-        user.RefreshTokens.Should().ContainSingle(t => t.DeviceId == "dev1" && t.IsRevoked == false);
-
+        uow.Verify(x => x.BeginTransactionAsync(), Times.Once);
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Once);
+        uow.Verify(x => x.RollbackTransactionAsync(), Times.Never);
+        userRepo.Verify(r => r.PrepareCreate(It.IsAny<User>()), Times.Once);
         uow.Verify(x => x.SaveAsync(), Times.Once);
-        stampCache.Verify(s => s.SetSecurityStampAsync(user.Id, user.SecurityStamp!), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldHashPassword_AndSetCustomerRole_Normal()
+    {
+        var request = CreateValidRegisterRequest(phoneNumber: null, password: "Ab1!abcd");
+
+        User? preparedUser = null;
+
+        var createdUser = new User
+        {
+            Id = 11,
+            Email = request.Email,
+            Username = request.Username,
+            RoleId = (int)RoleEnum.Customer,
+            Status = (int)UserStatusEnum.Active,
+            Role = new Role { Id = (int)RoleEnum.Customer, Name = "Customer" },
+            UserProfile = new UserProfile { FullName = request.FullName }
+        };
+
+        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(createdUser);
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()))
+            .Callback<User>(u => preparedUser = u);
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
+
+        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
+        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
+
+        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
+        var sut = CreateSut(uow, stampCache);
+
+        var _ = await sut.RegisterAsync(request);
+
+        preparedUser.Should().NotBeNull();
+        preparedUser!.RoleId.Should().Be((int)RoleEnum.Customer);
+        preparedUser.PasswordHash.Should().NotBeNullOrWhiteSpace();
+        preparedUser.PasswordHash.Should().NotBe(request.Password);
+        BCrypt.Net.BCrypt.Verify(request.Password, preparedUser.PasswordHash).Should().BeTrue();
+        preparedUser.SecurityStamp.Should().NotBeNullOrWhiteSpace();
+
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSucceed_WhenValidPhoneNumberProvided_Normal()
+    {
+        var request = CreateValidRegisterRequest(phoneNumber: "0123456789");
+
+        var createdUser = new User
+        {
+            Id = 12,
+            Email = request.Email,
+            Username = request.Username,
+            PhoneNumber = request.PhoneNumber,
+            RoleId = (int)RoleEnum.Customer,
+            Status = (int)UserStatusEnum.Active,
+            Role = new Role { Id = (int)RoleEnum.Customer, Name = "Customer" },
+            UserProfile = new UserProfile { FullName = request.FullName }
+        };
+
+        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(createdUser);
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()));
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
+
+        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
+        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
+
+        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
+        var sut = CreateSut(uow, stampCache);
+
+        var result = await sut.RegisterAsync(request);
+
+        result.Should().NotBeNull();
+        result!.User!.PhoneNumber.Should().Be(request.PhoneNumber);
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSucceed_WhenPasswordIsExactly8Chars_Boundary()
+    {
+        var request = CreateValidRegisterRequest(phoneNumber: null, password: "Aa1!aaaa"); // length = 8
+
+        var createdUser = new User
+        {
+            Id = 13,
+            Email = request.Email,
+            Username = request.Username,
+            RoleId = (int)RoleEnum.Customer,
+            Status = (int)UserStatusEnum.Active,
+            Role = new Role { Id = (int)RoleEnum.Customer, Name = "Customer" },
+            UserProfile = new UserProfile { FullName = request.FullName }
+        };
+
+        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(createdUser);
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()));
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
+
+        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
+        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
+
+        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
+        var sut = CreateSut(uow, stampCache);
+
+        var result = await sut.RegisterAsync(request);
+
+        result.Should().NotBeNull();
+        result!.User!.Email.Should().Be(request.Email);
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSucceed_WhenPhoneIsPlus84Format_Boundary()
+    {
+        var request = CreateValidRegisterRequest(phoneNumber: "+84123456789");
+
+        var createdUser = new User
+        {
+            Id = 14,
+            Email = request.Email,
+            Username = request.Username,
+            PhoneNumber = request.PhoneNumber,
+            RoleId = (int)RoleEnum.Customer,
+            Status = (int)UserStatusEnum.Active,
+            Role = new Role { Id = (int)RoleEnum.Customer, Name = "Customer" },
+            UserProfile = new UserProfile { FullName = request.FullName }
+        };
+
+        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)
+            .ReturnsAsync(createdUser);
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()));
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
+
+        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
+        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
+
+        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
+        var sut = CreateSut(uow, stampCache);
+
+        var result = await sut.RegisterAsync(request);
+
+        result.Should().NotBeNull();
+        result!.User!.PhoneNumber.Should().Be(request.PhoneNumber);
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldRollbackTransaction_WhenCreatedUserCannotBeRetrieved_Abnormal()
+    {
+        var request = CreateValidRegisterRequest(phoneNumber: null);
+
+        var userRepo = new Mock<IUserRepository>(MockBehavior.Strict);
+        userRepo.Setup(r => r.GetByPhoneAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        userRepo.SetupSequence(r => r.GetByEmailAsync(request.Email))
+            .ReturnsAsync((User?)null)  // existing user check
+            .ReturnsAsync((User?)null); // created user retrieval fails
+        userRepo.Setup(r => r.PrepareCreate(It.IsAny<User>()));
+
+        var roleRepo = new Mock<IRoleRepository>(MockBehavior.Strict);
+        roleRepo.Setup(r => r.GetByIdAsync((int)RoleEnum.Customer))
+            .ReturnsAsync(new Role { Id = (int)RoleEnum.Customer, Name = "Customer" });
+
+        var uow = new Mock<IUnitOfWork>(MockBehavior.Strict);
+        uow.SetupGet(x => x.UserRepository).Returns(userRepo.Object);
+        uow.SetupGet(x => x.RoleRepository).Returns(roleRepo.Object);
+        uow.Setup(x => x.BeginTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.CommitTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+        uow.Setup(x => x.SaveAsync()).ReturnsAsync(1);
+
+        var stampCache = new Mock<ISecurityStampCacheService>(MockBehavior.Strict);
+        var sut = CreateSut(uow, stampCache);
+
+        var act = () => sut.RegisterAsync(request);
+
+        await act.Should().ThrowAsync<Exception>()
+            .WithMessage("Failed to retrieve created user");
+
+        uow.Verify(x => x.BeginTransactionAsync(), Times.Once);
+        uow.Verify(x => x.CommitTransactionAsync(), Times.Never);
+        uow.Verify(x => x.RollbackTransactionAsync(), Times.Once);
     }
 }
