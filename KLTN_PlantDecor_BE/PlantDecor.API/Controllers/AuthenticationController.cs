@@ -285,7 +285,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Token is not valid or out of date"
+                Message = "Confirm Email Successfully!"
             });
         }
 
