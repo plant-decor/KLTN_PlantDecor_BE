@@ -118,10 +118,10 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpGet("{id}/recommended-packages-by-plant")]
         [Authorize(Roles = "Consultant")]
-        public async Task<IActionResult> GetRecommendedPackagesByPlant(int id, [FromQuery] int top = 5)
+        public async Task<IActionResult> GetRecommendedPackagesByPlant(int id)
         {
             var consultantId = GetUserId();
-            var recommendations = await _careServicePackageService.RecommendByOrderAsync(consultantId, id, top);
+            var recommendations = await _careServicePackageService.RecommendByOrderAsync(consultantId, id);
             return Ok(new ApiResponse<object>
             {
                 Success = true,
