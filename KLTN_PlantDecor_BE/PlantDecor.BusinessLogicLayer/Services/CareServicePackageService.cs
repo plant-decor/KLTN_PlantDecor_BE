@@ -83,6 +83,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (request.SuitabilityRules == null || request.SuitabilityRules.Count == 0)
                 throw new BadRequestException("SuitabilityRules is required when creating a care service package");
 
+            
             if (request.ServiceType == (int)CareServiceTypeEnum.OneTime)
             {
                 request.VisitPerWeek = null;
@@ -274,10 +275,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 packageMatchedCareLevels[package.Id] = matchedLvls;
             }
 
-            // Step 2: Rank packages by priority (category > care > fallback generic)
+            // Step 2: Rank packages by priority (category > care)
             var tier1Packages = packageScores.Where(x => x.Value.categoryMatch > 0).ToList(); // Has category match
             var tier2Packages = packageScores.Where(x => x.Value.categoryMatch == 0 && x.Value.careMatch > 0).ToList(); // Only care match
-            var tier3Packages = packageScores.Where(x => x.Value.categoryMatch == 0 && x.Value.careMatch == 0).ToList(); // Generic/fallback
 
             // Sort each tier by match count (descending)
             tier1Packages = tier1Packages
@@ -289,14 +289,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .OrderByDescending(x => x.Value.careMatch)
                 .ToList();
 
-            tier3Packages = tier3Packages
-                .OrderBy(x => x.Value.package.UnitPrice)
-                .ToList();
-
-            // Step 3: Combine and select top N packages
-            var rankedPackages = tier1Packages.Concat(tier2Packages).Concat(tier3Packages)
+            // Step 3: Combine matched packages only (no generic fallback)
+            var rankedPackages = tier1Packages.Concat(tier2Packages)
                 .Take(top)
                 .ToList();
+
+            if (rankedPackages.Count == 0)
+                throw new NotFoundException("No matching care service package found for this order. Please verify package suitability mapping data.");
 
             // Step 4: Build recommendation response with plant grouping
             var recommendations = new List<CareServicePackageRecommendationResponseDto>();
@@ -339,11 +338,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var lvlReason = string.Join(", ", careLevels.OrderByDescending(c => c.Value).Select(c => $"{MapCareLevelName(c.Key)} ({c.Value})"));
                     recDto.MatchReasons.Add($"Matched care levels: {lvlReason}");
-                }
-
-                if (recDto.MatchReasons.Count == 0)
-                {
-                    recDto.MatchReasons.Add("Generic package recommendation");
                 }
 
                 recommendations.Add(recDto);
@@ -495,6 +489,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var hasCareLevel = rule.CareDifficultyLevel.HasValue;
                 if (!hasCategory && !hasCareLevel)
                     throw new BadRequestException("Each suitability rule must have CategoryId or CareDifficultyLevel");
+                if (hasCategory && hasCareLevel)
+                    throw new BadRequestException("Each suitability rule must contain only one condition");
 
                 if (hasCategory)
                 {
