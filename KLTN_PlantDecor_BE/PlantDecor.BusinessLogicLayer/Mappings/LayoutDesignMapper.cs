@@ -13,7 +13,11 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             {
                 Id = layout.Id,
                 UserId = layout.UserId,
-                RoomImageId = layout.RoomImageId,
+                RoomImageId = layout.LayoutDesignRoomImages
+                    .OrderBy(link => link.OrderIndex ?? int.MaxValue)
+                    .ThenBy(link => link.RoomImageId)
+                    .Select(link => link.RoomImageId)
+                    .FirstOrDefault(),
                 PreviewImageUrl = layout.PreviewImageUrl,
                 RawResponse = layout.RawResponse,
                 Status = layout.Status,

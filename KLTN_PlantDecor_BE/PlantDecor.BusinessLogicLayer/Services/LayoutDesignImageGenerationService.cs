@@ -107,6 +107,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var plantInstanceImageUrls = await _unitOfWork.PlantInstanceRepository.GetPrimaryImageUrlsAsync(plantInstanceIds);
 
                 var candidates = BuildCandidates(layoutPlants, commonPlantImageUrls, plantInstanceImageUrls, itemResults);
+                var roomDesignContext = await BuildRoomDesignContextAsync(layout);
 
                 await _unitOfWork.BeginTransactionAsync();
                 transactionStarted = true;
@@ -152,9 +153,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareRemove(existingImage);
                     }
 
-                    foreach (var candidate in candidates)
+                    var orderedCandidates = candidates
+                        .OrderBy(candidate => candidate.LayoutDesignPlantId)
+                        .ToList();
+
+                    try
                     {
-                        await ProcessCandidateAsync(layout, candidate, roomImageBase64, itemResults);
+                        foreach (var candidate in orderedCandidates)
+                        {
+                            await ProcessCandidateAsync(layout, candidate, roomImageBase64, roomDesignContext, itemResults);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to generate images for layout {LayoutDesignId}", layout.Id);
+                        throw;
                     }
 
                     var trackedLayout = await _unitOfWork.LayoutDesignRepository.GetByIdAsync(layoutDesignId);
@@ -231,6 +244,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             LayoutDesign layout,
             GenerationCandidate candidate,
             string roomImageBase64,
+            string roomDesignContext,
             List<LayoutDesignImageGenerationItemResultDto> itemResults)
         {
             var result = new LayoutDesignImageGenerationItemResultDto
@@ -248,7 +262,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     layout.Id,
                     candidate.LayoutDesignPlantId);
 
-                var prompt = BuildFluxPrompt(layout.Id, candidate);
+                var prompt = BuildFluxPrompt(layout.Id, candidate, roomDesignContext);
                 var generatedBytes = await GenerateImageWithFluxAsync(prompt, plantImageBase64, roomImageBase64);
 
                 var fileName = $"layout_{layout.Id}_plant_{candidate.LayoutDesignPlantId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png";
@@ -384,18 +398,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        private async Task<byte[]> GenerateImageWithFluxAsync(string prompt, string plantImageBase64, string roomImageBase64)
+        private async Task<byte[]> GenerateImageWithFluxSingleShotAsync(
+            string prompt,
+            string roomImageBase64,
+            IReadOnlyCollection<string> plantImageBase64List)
         {
-            var requestBody = new
+            if (plantImageBase64List == null || plantImageBase64List.Count == 0)
             {
-                prompt,
-                width = _fluxWidth,
-                height = _fluxHeight,
-                n = _fluxN,
-                model = _fluxModel,
-                input_image = plantImageBase64,
-                input_image_2 = roomImageBase64
+                throw new InvalidOperationException("At least one plant reference image is required");
+            }
+
+            var requestBody = new Dictionary<string, object>
+            {
+                ["prompt"] = prompt,
+                ["width"] = _fluxWidth,
+                ["height"] = _fluxHeight,
+                ["n"] = _fluxN,
+                ["model"] = _fluxModel,
+                ["input_image"] = roomImageBase64
             };
+
+            var inputIndex = 2;
+            foreach (var plantImageBase64 in plantImageBase64List)
+            {
+                requestBody[$"input_image_{inputIndex}"] = plantImageBase64;
+                inputIndex++;
+            }
 
             var request = new HttpRequestMessage(HttpMethod.Post, BuildFluxUrl())
             {
@@ -426,6 +454,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 throw new InvalidOperationException("Flux API returned invalid base64 image", ex);
             }
+        }
+
+        // Backward-compatible wrappers kept for legacy helper usage.
+        private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate, string roomDesignContext)
+        {
+            _ = layoutDesignId;
+            return BuildFluxSinglePlantPrompt(candidate, roomDesignContext);
+        }
+
+        private Task<byte[]> GenerateImageWithFluxAsync(string prompt, string plantImageBase64, string roomImageBase64)
+        {
+            return GenerateImageWithFluxSingleShotAsync(prompt, roomImageBase64, new[] { plantImageBase64 });
         }
 
         private static string? ExtractBase64Image(string responseText)
@@ -542,16 +582,133 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 : trimmed[..maxLength];
         }
 
-        private static string BuildFluxPrompt(int layoutDesignId, GenerationCandidate candidate)
+        private static string BuildFluxMultiPlantPrompt(IReadOnlyCollection<GenerationCandidate> candidates)
+        {
+            var plantLines = candidates
+                .OrderBy(candidate => candidate.LayoutDesignPlantId)
+                .Select((candidate, index) =>
+                {
+                    var inputImageIndex = index + 2;
+                    var placement = string.IsNullOrWhiteSpace(candidate.PlacementPosition)
+                        ? "a visually appropriate position in the room"
+                        : candidate.PlacementPosition;
+
+                    return $@"Insert Plant {(char)('A' + index)} using reference image input_image_{inputImageIndex}, which corresponds to {candidate.SourceType} #{candidate.SourceEntityId}. Keep Plant {(char)('A' + index)} visually consistent with its reference identity, including species silhouette, leaf/flower structure, dominant color appearance, and overall morphology. Place Plant {(char)('A' + index)} at {placement}. Plant {(char)('A' + index)} must appear exactly once and must not be duplicated, cloned, mirrored, or repeated as a similar variant.";
+                });
+
+            return $@"You are given one room image (image 1) and multiple plant reference images. Compose one final image by inserting all required plants into image 1. Do not add any extra plants, decorative flowers, or additional potted vegetation. The final image must contain exactly {plantLines.Count()} inserted plants in total, no more and no less.
+
+Execute these placement instructions exactly:
+
+{string.Join("\n\n", plantLines)}
+
+Hard constraints: keep all required plants in the same final image and never duplicate any plant. Never substitute a reference plant with another species or a visually similar alternative. Never split one reference into multiple plants. Never add background plants on balconies, shelves, corners, or outside the requested set. Preserve realistic lighting, shadows, perspective, and scale for every inserted plant. Do not modify existing furniture, walls, architecture, or room layout. Avoid unnatural overlap between plants and ensure each inserted plant is grounded on a real support surface such as floor, table, or furniture. Respect depth and camera perspective at all times. The output is valid only if every inserted plant matches its reference identity and the total inserted plant count is exactly {plantLines.Count()}.";
+        }
+
+        private static string BuildFluxSinglePlantPrompt(GenerationCandidate candidate, string roomDesignContext)
         {
             var placement = string.IsNullOrWhiteSpace(candidate.PlacementPosition)
                 ? "a visually appropriate position in the room"
                 : candidate.PlacementPosition;
 
-            return $"Add the potted plant from the second reference image into this room. " +
-            $"Place it exactly {placement}. " +
-            $"Maintain the original lighting, shadows, and all existing furniture or wall art. " +
-            $"Most Important: Do not modify any other part of the room.";
+            return $@"You are given one room image and one plant reference image.
+
+Task:
+Add the referenced plant into the room as a single realistic composition and freely restyle the room to match the user's requested design direction.
+
+Room design context:
+{roomDesignContext}
+
+Style direction rules:
+- You may redesign the room style, decor, surface finishes, colors, and removable furniture to better match the request.
+- You may add extra decorative objects if they fit the requested style and do not break realism.
+- You must keep the structural layout of the room unchanged.
+- Do not move, resize, remove, or redraw doors or windows.
+- Doors and windows must remain exactly where they are in the input room image, with the same count, shape, and placement.
+
+Plant instructions:
+- Reference image: input_image_2
+- Description: plant from {candidate.SourceType} #{candidate.SourceEntityId}
+- Placement: {placement}
+
+Requirements:
+- Add exactly one plant in the final image
+- Maintain realistic lighting, shadows, and perspective
+- Match scale correctly for the plant
+- Do NOT modify existing furniture, walls, or layout
+- Ensure the plant does not overlap unnaturally with room objects
+- Blend the plant seamlessly into the environment
+- The plant must sit on a real surface (floor, table, or furniture)
+- The base of the plant must touch a surface
+- Respect perspective and depth
+
+Important:
+- This is a SINGLE plant composition task, not a multi-plant composition
+- The room may be restyled, but the architecture and openings must stay fixed";
+        }
+
+        private async Task<string> BuildRoomDesignContextAsync(LayoutDesign layout)
+        {
+            var primaryRoomImageId = ResolvePrimaryRoomImageId(layout);
+            if (!primaryRoomImageId.HasValue)
+            {
+                return "No room design preferences were found. Keep the existing room structure unchanged while allowing decorative restyling.";
+            }
+
+            var preferences = (await _unitOfWork.RoomDesignPreferencesRepository.GetAllAsync())
+                .FirstOrDefault(item => item.RoomImageId == primaryRoomImageId.Value);
+
+            if (preferences == null)
+            {
+                return "No room design preferences were found. Keep the existing room structure unchanged while allowing decorative restyling.";
+            }
+
+            var roomType = MapNullableEnum(preferences.RoomType, typeof(RoomTypeEnum), "unspecified");
+            var roomStyle = MapNullableEnum(preferences.RoomStyle, typeof(RoomStyleEnum), "unspecified");
+            var lightDirection = MapNullableEnum(preferences.LightDirection, typeof(DirectionEnum), "unspecified");
+            var dominantDirection = MapNullableEnum(preferences.DominantDirection, typeof(DirectionEnum), "unspecified");
+            var naturalLight = MapNullableEnum(preferences.NaturalLightLevel, typeof(LightRequirementEnum), "unspecified");
+            var roomArea = preferences.RoomArea.HasValue
+                ? preferences.RoomArea.Value.ToString("0.##")
+                : "unspecified";
+
+            return $@"Requested room type: {roomType}
+Requested room style: {roomStyle}
+Room area: {roomArea} m2
+Light direction: {lightDirection}
+Dominant direction: {dominantDirection}
+Natural light level: {naturalLight}
+
+Allowed changes:
+- Restyle the room freely to match the requested style.
+- Add decorative objects, textiles, accents, and furniture that fit the request.
+- Adjust colors, materials, and surface finishes to improve the design.
+
+Hard constraints:
+- Do not alter the room structure.
+- Keep doors and windows exactly as they are in the input image.
+- Do not move, resize, remove, or redraw any door or window.
+- Preserve wall boundaries, openings, and architectural proportions.";
+        }
+
+        private static int? ResolvePrimaryRoomImageId(LayoutDesign layout)
+        {
+            return layout.LayoutDesignRoomImages
+                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .ThenBy(link => link.OrderIndex ?? int.MaxValue)
+                .ThenBy(link => link.RoomImageId)
+                .Select(link => (int?)link.RoomImageId)
+                .FirstOrDefault();
+        }
+
+        private static string MapNullableEnum(int? value, Type enumType, string fallback)
+        {
+            if (!value.HasValue || !Enum.IsDefined(enumType, value.Value))
+            {
+                return fallback;
+            }
+
+            return Enum.GetName(enumType, value.Value) ?? fallback;
         }
 
         private string BuildFluxUrl()
@@ -567,9 +724,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private static string? ResolveRoomImageUrl(LayoutDesign layout)
         {
-            if (!string.IsNullOrWhiteSpace(layout.RoomImage?.ImageUrl))
+            var roomImageUrl = layout.LayoutDesignRoomImages
+                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .ThenBy(link => link.OrderIndex ?? int.MaxValue)
+                .ThenBy(link => link.RoomImageId)
+                .Select(link => link.RoomImage.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+
+            if (!string.IsNullOrWhiteSpace(roomImageUrl))
             {
-                return layout.RoomImage.ImageUrl;
+                return roomImageUrl;
             }
 
             if (!string.IsNullOrWhiteSpace(layout.PreviewImageUrl))

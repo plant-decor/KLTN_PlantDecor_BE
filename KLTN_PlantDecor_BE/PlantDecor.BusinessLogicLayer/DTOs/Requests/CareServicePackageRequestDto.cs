@@ -36,6 +36,15 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public decimal UnitPrice { get; set; }
 
         public List<int>? SpecializationIds { get; set; }
+
+        [Required]
+        public List<PackagePlantSuitabilityRuleRequestDto> SuitabilityRules { get; set; } = new();
+    }
+
+    public class PackagePlantSuitabilityRuleRequestDto
+    {
+        public int? CategoryId { get; set; }
+        public int? CareDifficultyLevel { get; set; }
     }
 
     public class UpdateCareServicePackageRequestDto
@@ -62,5 +71,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public decimal? UnitPrice { get; set; }
 
         public bool? IsActive { get; set; }
+    }
+
+    public class SetSuitabilityRulesDto
+    {
+        [Required]
+        public List<PackagePlantSuitabilityRuleRequestDto> SuitabilityRules { get; set; } = new();
     }
 }

@@ -10,7 +10,11 @@ public partial class RoomDesignPreferences
 
     public int? RoomStyle { get; set; }
 
-    public int? RoomArea { get; set; }
+    public decimal? RoomArea { get; set; }
+
+    public int? LightDirection { get; set; }
+
+    public int? DominantDirection { get; set; }
 
     public decimal? MinBudget { get; set; }
 

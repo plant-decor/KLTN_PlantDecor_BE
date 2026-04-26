@@ -75,6 +75,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Lấy danh sách category theo CategoryType
+        /// </summary>
+        [HttpGet("by-type")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetCategoriesByType([FromQuery] int categoryType, [FromQuery] bool activeOnly = true)
+        {
+            var categories = await _categoryService.GetCategoriesByTypeAsync(categoryType, activeOnly);
+            return Ok(new ApiResponse<List<CategoryResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get categories by type successfully!",
+                Payload = categories
+            });
+        }
+
+        /// <summary>
         /// Lấy category theo ID
         /// </summary>
         [HttpGet("/api/category/{id}")]

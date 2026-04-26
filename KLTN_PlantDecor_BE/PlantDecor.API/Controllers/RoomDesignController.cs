@@ -143,7 +143,7 @@ namespace PlantDecor.API.Controllers
         //}
 
         /// <summary>
-        /// Analyze room image and get plant recommendations from multipart form-data upload.
+        /// Analyze room images and get plant recommendations from pre-uploaded room image ids.
         /// </summary>
         /// <remarks>
         /// This endpoint uses AI to:
@@ -156,30 +156,29 @@ namespace PlantDecor.API.Controllers
         /// - Currently purchasable (in stock)
         /// - Matching the specified filters (budget, feng shui, etc.)
         /// </remarks>
-        /// <param name="request">Multipart request containing image and optional filters</param>
+        /// <param name="request">Request containing room image ids and optional filters</param>
         /// <returns>Room analysis and plant recommendations</returns>
         /// <response code="200">Successfully analyzed room and generated recommendations</response>
         /// <response code="400">Invalid request (missing image, etc.)</response>
         /// <response code="401">Unauthorized request (user not logged in)</response>
         /// <response code="500">AI processing error</response>
-        [HttpPost("analyze-upload")]
+        [HttpPost("analyze")]
         [Authorize(Roles = "Customer")]
-        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(RoomDesignResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AnalyzeAndRecommendUpload([FromForm] AnalyzeAndRecommendUploadRequest request)
+        public async Task<IActionResult> AnalyzeAndRecommendUpload([FromBody] AnalyzeAndRecommendByRoomImagesRequest request)
         {
             try
             {
-                if (request.Image == null || request.Image.Length == 0)
+                if (request.RoomImageIds == null || request.RoomImageIds.Count == 0)
                 {
-                    throw new BadRequestException("Room image file is required");
+                    throw new BadRequestException("At least one roomImageId is required");
                 }
 
                 var userId = GetRequiredUserId();
-                var result = await _roomDesignService.AnalyzeAndRecommendUploadAsync(request, userId);
+                var result = await _roomDesignService.AnalyzeAndRecommendByRoomImagesAsync(request, userId);
 
                 return Ok(new
                 {
@@ -194,12 +193,12 @@ namespace PlantDecor.API.Controllers
             }
             catch (BadRequestException ex)
             {
-                _logger.LogWarning(ex, "Invalid room design upload request");
+                _logger.LogWarning(ex, "Invalid room design analyze request");
                 throw new BadRequestException(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in room design analysis (multipart)");
+                _logger.LogError(ex, "Error in room design analysis");
                 throw new Exception("Failed to analyze room. Please try again.");
             }
         }
@@ -326,7 +325,7 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = true,
                     StatusCode = StatusCodes.Status200OK,
-                    Message = $"Generated {result.SuccessCount}/{result.TotalItems} images",
+                    Message = $"Generated images successfully",
                     Payload = result
                 });
             }

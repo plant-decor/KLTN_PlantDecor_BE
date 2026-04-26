@@ -27,6 +27,8 @@ public partial class User
 
     public string? SecurityStamp { get; set; }
 
+    public virtual ICollection<AIChatSession> AIChatSessions { get; set; } = new List<AIChatSession>();
+
     public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 
     public virtual ICollection<ChatParticipant> ChatParticipants { get; set; } = new List<ChatParticipant>();

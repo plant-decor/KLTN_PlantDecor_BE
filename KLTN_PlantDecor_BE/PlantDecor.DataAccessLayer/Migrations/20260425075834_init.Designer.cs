@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260422020256_init")]
+    [Migration("20260425075834_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -90,6 +90,102 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("PlantCategory", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AIChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AIChatSessionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<string>("Intent")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool?>("IsFallback")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool?>("IsPolicyResponse")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("Role")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("AIChatMessage_pkey");
+
+                    b.HasIndex("AIChatSessionId");
+
+                    b.ToTable("AIChatMessage", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AIChatSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int?>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("AIChatSession_pkey");
+
+                    b.HasIndex(new[] { "StartedAt" }, "IX_AIChatSession_StartedAt");
+
+                    b.HasIndex(new[] { "UserId", "Status" }, "IX_AIChatSession_User_Status");
+
+                    b.ToTable("AIChatSession", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AilayoutResponseModeration", b =>
@@ -496,6 +592,46 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("CustomerSurvey", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.DepositPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int>("DepositPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("MaxPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("MinPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("DepositPolicy_pkey");
+
+                    b.ToTable("DepositPolicy", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.DesignRegistration", b =>
@@ -946,9 +1082,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<string>("RawResponse")
                         .HasColumnType("text");
 
-                    b.Property<int?>("RoomImageId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
 
@@ -957,8 +1090,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("LayoutDesign_pkey");
-
-                    b.HasIndex("RoomImageId");
 
                     b.HasIndex("UserId");
 
@@ -1051,6 +1182,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("LayoutDesignPlant", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignRoomImage", b =>
+                {
+                    b.Property<int>("LayoutDesignId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RoomImageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ViewAngle")
+                        .HasColumnType("integer");
+
+                    b.HasKey("LayoutDesignId", "RoomImageId");
+
+                    b.HasIndex(new[] { "RoomImageId" }, "IX_LayoutDesignRoomImage_RoomImageId");
+
+                    b.ToTable("LayoutDesignRoomImage", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Material", b =>
                 {
                     b.Property<int>("Id")
@@ -1073,8 +1225,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("ExpiryMonths")
                         .HasColumnType("integer");
@@ -1323,13 +1474,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<string>("DeliveryNote")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
                     b.Property<string>("DeliveryImageUrl")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("DeliveryNote")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<decimal?>("DepositAmount")
                         .HasPrecision(18, 2)
@@ -2058,6 +2209,60 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("PlantRating", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PolicyContent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int?>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool?>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("PolicyContent_pkey");
+
+                    b.HasIndex(new[] { "IsActive", "Category" }, "IX_PolicyContent_Active_Category");
+
+                    b.HasIndex(new[] { "IsActive", "DisplayOrder" }, "IX_PolicyContent_Active_DisplayOrder");
+
+                    b.HasIndex(new[] { "Category", "Title" }, "IX_PolicyContent_Category_Title");
+
+                    b.ToTable("PolicyContent", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -2323,11 +2528,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("CareLevel")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("DominantDirection")
+                        .HasColumnType("integer");
+
                     b.Property<bool?>("HasAllergy")
                         .HasColumnType("boolean");
 
                     b.Property<bool?>("IsOftenAway")
                         .HasColumnType("boolean");
+
+                    b.Property<int?>("LightDirection")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("MaxBudget")
                         .HasPrecision(18, 2)
@@ -2340,8 +2551,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("NaturalLightLevel")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RoomArea")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("RoomArea")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<int>("RoomImageId")
                         .HasColumnType("integer");
@@ -2378,6 +2590,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -3200,6 +3415,30 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("PlantCategory_PlantId_fkey");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AIChatMessage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.AIChatSession", "AIChatSession")
+                        .WithMany("AIChatMessages")
+                        .HasForeignKey("AIChatSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("AIChatMessage_AIChatSessionId_fkey");
+
+                    b.Navigation("AIChatSession");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AIChatSession", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
+                        .WithMany("AIChatSessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("AIChatSession_UserId_fkey");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AilayoutResponseModeration", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.LayoutDesign", "LayoutDesign")
@@ -3497,17 +3736,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesign", b =>
                 {
-                    b.HasOne("PlantDecor.DataAccessLayer.Entities.RoomImage", "RoomImage")
-                        .WithMany("LayoutDesigns")
-                        .HasForeignKey("RoomImageId")
-                        .HasConstraintName("LayoutDesign_RoomImageId_fkey");
-
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
                         .WithMany("LayoutDesigns")
                         .HasForeignKey("UserId")
                         .HasConstraintName("LayoutDesign_UserId_fkey");
-
-                    b.Navigation("RoomImage");
 
                     b.Navigation("User");
                 });
@@ -3556,6 +3788,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("LayoutDesign");
 
                     b.Navigation("PlantInstance");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignRoomImage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.LayoutDesign", "LayoutDesign")
+                        .WithMany("LayoutDesignRoomImages")
+                        .HasForeignKey("LayoutDesignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("LayoutDesignRoomImage_LayoutDesignId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.RoomImage", "RoomImage")
+                        .WithMany("LayoutDesignRoomImages")
+                        .HasForeignKey("RoomImageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("LayoutDesignRoomImage_RoomImageId_fkey");
+
+                    b.Navigation("LayoutDesign");
+
+                    b.Navigation("RoomImage");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.MaterialImage", b =>
@@ -4285,6 +4538,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasConstraintName("PlantTag_TagId_fkey");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.AIChatSession", b =>
+                {
+                    b.Navigation("AIChatMessages");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CareServicePackage", b =>
                 {
                     b.Navigation("CareServiceSpecializations");
@@ -4358,6 +4616,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("LayoutDesignAiResponseImages");
 
                     b.Navigation("LayoutDesignPlants");
+
+                    b.Navigation("LayoutDesignRoomImages");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesignPlant", b =>
@@ -4518,7 +4778,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.RoomImage", b =>
                 {
-                    b.Navigation("LayoutDesigns");
+                    b.Navigation("LayoutDesignRoomImages");
 
                     b.Navigation("RoomDesignPreferences");
 
@@ -4550,6 +4810,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.User", b =>
                 {
+                    b.Navigation("AIChatSessions");
+
                     b.Navigation("AssignedDesignTasks");
 
                     b.Navigation("Carts");

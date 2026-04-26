@@ -67,4 +67,68 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public bool IsPurchasable { get; set; }
         public double RelevanceScore { get; set; }
     }
+
+    public class AIChatbotResponseDto
+    {
+        public string Intent { get; set; } = "general";
+        public string Reply { get; set; } = string.Empty;
+        public string? RoomEnvironmentSummary { get; set; }
+        public List<PlantSuggestionResponseDto> SuggestedPlants { get; set; } = new();
+        public List<string> CareTips { get; set; } = new();
+        public List<string> FollowUpQuestions { get; set; } = new();
+        public List<PolicyGroundingSourceDto> PolicySources { get; set; } = new();
+        public string? Disclaimer { get; set; }
+        public bool UsedFallback { get; set; }
+    }
+
+    public class PolicyGroundingSourceDto
+    {
+        public int PolicyContentId { get; set; }
+        public int? Category { get; set; }
+        public string? Title { get; set; }
+        public string? Excerpt { get; set; }
+    }
+
+    public class AIChatSessionResponseDto
+    {
+        public int SessionId { get; set; }
+        public string? Title { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public int Status { get; set; }
+    }
+
+    public class AIChatSessionListItemResponseDto
+    {
+        public int SessionId { get; set; }
+        public string? Title { get; set; }
+        public string Status { get; set; } = "active";
+        public DateTime? StartedAt { get; set; }
+        public DateTime? EndedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public class AIChatMessageHistoryItemResponseDto
+    {
+        public int MessageId { get; set; }
+        public string Role { get; set; } = "user";
+        public string? Content { get; set; }
+        public string? Intent { get; set; }
+        public bool IsFallback { get; set; }
+        public bool IsPolicyResponse { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+
+    public class AIChatConversationHistoryResponseDto
+    {
+        public int SessionId { get; set; }
+        public string? Title { get; set; }
+        public string Status { get; set; } = "active";
+        public DateTime? StartedAt { get; set; }
+        public DateTime? EndedAt { get; set; }
+        public int TotalCount { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public List<AIChatMessageHistoryItemResponseDto> Messages { get; set; } = new();
+    }
 }

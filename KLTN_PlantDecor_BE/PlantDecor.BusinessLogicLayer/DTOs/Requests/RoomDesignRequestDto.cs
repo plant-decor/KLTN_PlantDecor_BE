@@ -11,6 +11,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string RoomImageBase64 { get; set; } = null!;
 
         /// <summary>
+        /// One-to-one mapping between room image content and its shooting angle
+        /// </summary>
+        public List<RoomImageAnalysisInputDto> RoomImageAnalyses { get; set; } = new();
+
+        /// <summary>
         /// Optional feng shui element filter
         /// </summary>
         public FengShuiElementTypeEnum? FengShuiElement { get; set; }
@@ -30,7 +35,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// <summary>
         /// Optional room area value aligned with RoomDesignPreferences
         /// </summary>
-        public int? RoomArea { get; set; }
+        public decimal? RoomArea { get; set; }
+
+        /// <summary>
+        /// Direction where main light enters the room
+        /// </summary>
+        public DirectionEnum? LightDirection { get; set; }
+
+        /// <summary>
+        /// Dominant direction of the room
+        /// </summary>
+        public DirectionEnum? DominantDirection { get; set; }
 
         /// <summary>
         /// Optional minimum budget filter
@@ -93,6 +108,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int? RoomImageId { get; set; }
 
         /// <summary>
+        /// Internal metadata for all room image ids tied to this design request
+        /// </summary>
+        public List<int> RoomImageIds { get; set; } = new();
+
+        /// <summary>
         /// Internal persistence metadata for request user
         /// </summary>
         public int? UserId { get; set; }
@@ -101,5 +121,10 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// Internal persistence metadata for uploaded image URL
         /// </summary>
         public string? UploadedImageUrl { get; set; }
+
+        /// <summary>
+        /// Internal persistence metadata for uploaded image URLs
+        /// </summary>
+        public List<string> UploadedImageUrls { get; set; } = new();
     }
 }

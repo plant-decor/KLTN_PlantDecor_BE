@@ -11,5 +11,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<OrderResponseDto>> GetMyOrdersAsync(int userId, OrderStatusEnum? orderStatus = null);
         Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId);
         Task<OrderResponseDto> MarkOrderAsDeliveredAsync(int orderId);
+        Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email);
     }
 }

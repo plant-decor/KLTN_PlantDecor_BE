@@ -17,6 +17,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var query = _context.LayoutDesigns
                 .AsNoTracking()
                 .Where(layout => layout.UserId == userId)
+                .Include(layout => layout.LayoutDesignRoomImages)
+                    .ThenInclude(layoutRoomImage => layoutRoomImage.RoomImage)
                 .Include(layout => layout.LayoutDesignPlants)
                 .Include(layout => layout.LayoutDesignAiResponseImages)
                 .OrderByDescending(layout => layout.CreatedAt)
@@ -35,7 +37,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.LayoutDesigns
                 .AsNoTracking()
-                .Include(layout => layout.RoomImage)
+                .Include(layout => layout.LayoutDesignRoomImages)
+                    .ThenInclude(layoutRoomImage => layoutRoomImage.RoomImage)
                 .Include(layout => layout.LayoutDesignPlants)
                 .FirstOrDefaultAsync(layout => layout.Id == layoutDesignId);
         }

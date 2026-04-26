@@ -187,9 +187,12 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IAISearchService, AISearchService>();
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
+            builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
+            builder.Services.AddScoped<IPolicyKnowledgeService, PolicyKnowledgeService>();
+            builder.Services.AddScoped<IPolicyContentService, PolicyContentService>();
 
             builder.Services.AddCors(options =>
             {
@@ -433,7 +436,7 @@ namespace PlantDecor.API
                 app.UseCors("Development");
             else
                 app.UseCors("Production");
-            app.UseRateLimiter();
+            //app.UseRateLimiter();
             app.UseAuthentication();
             // để sau authentication thay vì ở đầu pipeline để tránh việc phải check security stamp cho các request không cần authentication (như swagger, health check, static files...)
             app.UseMiddleware<SecurityStampValidationMiddleware>();

@@ -12,7 +12,11 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<CareServicePackage>> GetPackagesWithNurseriesAsync();
         /// <summary>Trả về các gói dịch vụ mà vựa chưa đang kinh doanh (active)</summary>
         Task<List<CareServicePackage>> GetNotActivelyOfferedByNurseryAsync(int nurseryId);
+        /// <summary>Trả về các luật suitability đang active theo danh sách package</summary>
+        Task<List<PackagePlantSuitability>> GetActiveSuitabilityRulesByPackageIdsAsync(IEnumerable<int> packageIds);
         Task AddSpecializationsAsync(int packageId, List<int> specializationIds);
         Task ReplaceSpecializationsAsync(int packageId, List<int> specializationIds);
+        Task AddSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules);
+        Task ReplaceSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules);
     }
 }

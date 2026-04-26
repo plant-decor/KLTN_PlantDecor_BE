@@ -34,6 +34,9 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
         private IUserPlantRepository? _userPlantRepository;
+        private IAIChatSessionRepository? _aiChatSessionRepository;
+        private IAIChatMessageRepository? _aiChatMessageRepository;
+        private IPolicyContentRepository? _policyContentRepository;
         private IChatSessionRepository? _chatSessionRepository;
         private IChatMessageRepository? _chatMessageRepository;
         private IChatParticipantRepository? _chatParticipantRepository;
@@ -177,6 +180,21 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IUserPlantRepository UserPlantRepository
         {
             get { return _userPlantRepository ??= new UserPlantRepository(_context); }
+        }
+
+        public IAIChatSessionRepository AIChatSessionRepository
+        {
+            get { return _aiChatSessionRepository ??= new AIChatSessionRepository(_context); }
+        }
+
+        public IAIChatMessageRepository AIChatMessageRepository
+        {
+            get { return _aiChatMessageRepository ??= new AIChatMessageRepository(_context); }
+        }
+
+        public IPolicyContentRepository PolicyContentRepository
+        {
+            get { return _policyContentRepository ??= new PolicyContentRepository(_context); }
         }
 
         public IChatSessionRepository ChatSessionRepository

@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Entities;
 
 namespace PlantDecor.DataAccessLayer.Context;
@@ -13,6 +12,10 @@ public partial class PlantDecorContext : DbContext
     }
 
     public virtual DbSet<AilayoutResponseModeration> AilayoutResponseModerations { get; set; }
+
+    public virtual DbSet<AIChatMessage> AIChatMessages { get; set; }
+
+    public virtual DbSet<AIChatSession> AIChatSessions { get; set; }
 
     public virtual DbSet<CareReminder> CareReminders { get; set; }
 
@@ -66,6 +69,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<LayoutDesignPlant> LayoutDesignPlants { get; set; }
 
+    public virtual DbSet<LayoutDesignRoomImage> LayoutDesignRoomImages { get; set; }
+
     public virtual DbSet<Nursery> Nurseries { get; set; }
 
     public virtual DbSet<NurseryOrder> NurseryOrders { get; set; }
@@ -74,7 +79,11 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Order> Orders { get; set; }
 
+    public virtual DbSet<PackagePlantSuitability> PackagePlantSuitabilities { get; set; }
+
     public virtual DbSet<Payment> Payments { get; set; }
+
+    public virtual DbSet<PolicyContent> PolicyContents { get; set; }
 
     public virtual DbSet<Plant> Plants { get; set; }
 
@@ -296,6 +305,46 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("ChatSession");
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+        });
+
+        modelBuilder.Entity<AIChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("AIChatMessage_pkey");
+
+            entity.ToTable("AIChatMessage");
+
+            entity.Property(e => e.Content).HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.Intent).HasMaxLength(100);
+            entity.Property(e => e.IsFallback).HasDefaultValue(false);
+            entity.Property(e => e.IsPolicyResponse).HasDefaultValue(false);
+
+            entity.HasOne(d => d.AIChatSession).WithMany(p => p.AIChatMessages)
+                .HasForeignKey(d => d.AIChatSessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("AIChatMessage_AIChatSessionId_fkey");
+        });
+
+        modelBuilder.Entity<AIChatSession>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("AIChatSession_pkey");
+
+            entity.ToTable("AIChatSession");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.StartedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue(1);
+            entity.Property(e => e.Summary).HasMaxLength(1000);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.Status }, "IX_AIChatSession_User_Status");
+            entity.HasIndex(e => e.StartedAt, "IX_AIChatSession_StartedAt");
+
+            entity.HasOne(d => d.User).WithMany(p => p.AIChatSessions)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("AIChatSession_UserId_fkey");
         });
 
         modelBuilder.Entity<CustomerSurvey>(entity =>
@@ -707,10 +756,25 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.LayoutDesigns)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("LayoutDesign_UserId_fkey");
+        });
 
-            entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesigns)
+        modelBuilder.Entity<LayoutDesignRoomImage>(entity =>
+        {
+            entity.HasKey(e => new { e.LayoutDesignId, e.RoomImageId });
+
+            entity.ToTable("LayoutDesignRoomImage");
+
+            entity.HasIndex(e => e.RoomImageId, "IX_LayoutDesignRoomImage_RoomImageId");
+
+            entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignRoomImages)
+                .HasForeignKey(d => d.LayoutDesignId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignRoomImage_LayoutDesignId_fkey");
+
+            entity.HasOne(d => d.RoomImage).WithMany(p => p.LayoutDesignRoomImages)
                 .HasForeignKey(d => d.RoomImageId)
-                .HasConstraintName("LayoutDesign_RoomImageId_fkey");
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("LayoutDesignRoomImage_RoomImageId_fkey");
         });
 
         modelBuilder.Entity<LayoutDesignAiResponseImage>(entity =>
@@ -934,6 +998,50 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("Payment_OrderId_fkey");
+        });
+
+        modelBuilder.Entity<PackagePlantSuitability>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PackagePlantSuitability_pkey");
+            entity.ToTable("PackagePlantSuitability");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => e.CareServicePackageId);
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.CareDifficultyLevel);
+
+            entity.HasIndex(e => new { e.CareServicePackageId, e.CategoryId, e.CareDifficultyLevel })
+                    .IsUnique()
+                    .HasDatabaseName("UX_PackagePlantSuitability_Rule");
+
+            entity.HasOne(d => d.CareServicePackage).WithMany(p => p.PackagePlantSuitabilities)
+                  .HasForeignKey(d => d.CareServicePackageId)
+                  .HasConstraintName("PackagePlantSuitability_CareServicePackageId_fkey");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.PackagePlantSuitabilities)
+                    .HasForeignKey(d => d.CategoryId)
+                    .HasConstraintName("PackagePlantSuitability_CategoryId_fkey");
+        });
+
+        modelBuilder.Entity<PolicyContent>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PolicyContent_pkey");
+
+            entity.ToTable("PolicyContent");
+
+            entity.Property(e => e.Content).HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.DisplayOrder).HasDefaultValue(0);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Summary).HasMaxLength(1000);
+            entity.Property(e => e.Title).HasMaxLength(300);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasIndex(e => new { e.IsActive, e.Category }, "IX_PolicyContent_Active_Category");
+            entity.HasIndex(e => new { e.IsActive, e.DisplayOrder }, "IX_PolicyContent_Active_DisplayOrder");
+            entity.HasIndex(e => new { e.Category, e.Title }, "IX_PolicyContent_Category_Title");
         });
 
         modelBuilder.Entity<Plant>(entity =>
@@ -1229,6 +1337,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.HasIndex(e => e.RoomImageId, "IX_RoomDesignPreferences_RoomImageId");
 
+            entity.Property(e => e.RoomArea).HasPrecision(10, 2);
             entity.Property(e => e.MinBudget).HasPrecision(18, 2);
             entity.Property(e => e.MaxBudget).HasPrecision(18, 2);
             entity.Property(e => e.AllergyNote).HasMaxLength(500);
@@ -1642,7 +1751,7 @@ public partial class PlantDecorContext : DbContext
 
             // Index for better query performance
             entity.HasIndex(e => new { e.UserId, e.IsDeleted });
-       });
+        });
 
         OnModelCreatingPartial(modelBuilder);
     }

@@ -15,6 +15,17 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public bool? IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
         public List<SpecializationSummaryDto> Specializations { get; set; } = new();
+        public List<PackagePlantSuitabilityRuleResponseDto> SuitabilityRules { get; set; } = new();
+    }
+
+    public class PackagePlantSuitabilityRuleResponseDto
+    {
+        public int Id { get; set; }
+        public int CareServicePackageId { get; set; }
+        public int? CategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public int? CareDifficultyLevel { get; set; }
+        public string? CareDifficultyLevelName { get; set; }
     }
 
     public class NurseryCareServiceResponseDto

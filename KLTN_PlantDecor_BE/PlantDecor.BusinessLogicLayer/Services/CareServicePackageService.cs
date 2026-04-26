@@ -80,6 +80,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (await _unitOfWork.CareServicePackageRepository.ExistsByNameAsync(request.Name))
                 throw new BadRequestException($"A package named '{request.Name}' already exists");
 
+            if (request.SuitabilityRules == null || request.SuitabilityRules.Count == 0)
+                throw new BadRequestException("SuitabilityRules is required when creating a care service package");
+
+            
             if (request.ServiceType == (int)CareServiceTypeEnum.OneTime)
             {
                 request.VisitPerWeek = null;
@@ -115,6 +119,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (request.SpecializationIds != null && request.SpecializationIds.Count > 0)
                 await _unitOfWork.CareServicePackageRepository.AddSpecializationsAsync(pkg.Id, request.SpecializationIds);
+
+            var normalizedSuitabilityRules = await ValidateAndBuildSuitabilityRulesAsync(request.SuitabilityRules, pkg.Id);
+            await _unitOfWork.CareServicePackageRepository.AddSuitabilityRulesAsync(pkg.Id, normalizedSuitabilityRules);
 
             await InvalidateCacheAsync();
 
@@ -181,6 +188,164 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return packages.Select(MapToDto).ToList();
         }
 
+        public async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderAsync(int consultantId, int orderId, int top = 5)
+        {
+            if (top <= 0)
+                top = 5;
+
+            await EnsureConsultantPermissionAsync(consultantId);
+
+            var offeredPackages = await _unitOfWork.CareServicePackageRepository.GetPackagesWithNurseriesAsync();
+
+            if (offeredPackages.Count == 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
+
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+            if (order == null)
+                throw new NotFoundException($"Order {orderId} not found");
+
+            var profile = BuildOrderPlantProfile(order);
+            if (profile.TotalPlantItems == 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
+
+            var packageIds = offeredPackages.Select(p => p.Id).ToList();
+            var rules = await _unitOfWork.CareServicePackageRepository.GetActiveSuitabilityRulesByPackageIdsAsync(packageIds);
+            var rulesByPackageId = rules
+                .GroupBy(r => r.CareServicePackageId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Step 1: Calculate categoryMatch and careMatch for each package
+            var packageScores = new Dictionary<int, (int categoryMatch, int careMatch, CareServicePackage package)>();
+            var packageMatchedCategories = new Dictionary<int, Dictionary<string, int>>();
+            var packageMatchedCareLevels = new Dictionary<int, Dictionary<int, int>>();
+
+            foreach (var package in offeredPackages)
+            {
+                int categoryMatch = 0;
+                int careMatch = 0;
+                var matchedCats = new Dictionary<string, int>();
+                var matchedLvls = new Dictionary<int, int>();
+
+                if (rulesByPackageId.TryGetValue(package.Id, out var packageRules) && packageRules.Count > 0)
+                {
+                    // Count unique category matches across all plants in order
+                    var categoryMatches = new HashSet<int>();
+                    var careLevelMatches = new HashSet<int>();
+
+                    foreach (var plant in profile.PurchasedPlants)
+                    {
+                        foreach (var rule in packageRules)
+                        {
+                            // Match by category
+                            if (rule.CategoryId.HasValue && plant.CategoryIds.Contains(rule.CategoryId.Value))
+                            {
+                                categoryMatches.Add(rule.CategoryId.Value);
+                            }
+
+                            // Match by care level
+                            if (rule.CareDifficultyLevel.HasValue && plant.CareLevelType == rule.CareDifficultyLevel.Value)
+                            {
+                                careLevelMatches.Add(rule.CareDifficultyLevel.Value);
+                            }
+                        }
+                    }
+
+                    categoryMatch = categoryMatches.Count;
+                    careMatch = careLevelMatches.Count;
+
+                    // Track which categories and care levels matched
+                    foreach (var catId in categoryMatches)
+                    {
+                        var catRule = packageRules.First(r => r.CategoryId == catId);
+                        var categoryName = string.IsNullOrWhiteSpace(catRule.Category?.Name)
+                            ? $"Category {catId}"
+                            : catRule.Category!.Name!;
+                        matchedCats[categoryName] = profile.PurchasedPlants.Where(p => p.CategoryIds.Contains(catId)).Sum(p => p.Quantity);
+                    }
+
+                    foreach (var lvlId in careLevelMatches)
+                    {
+                        var lvlName = MapCareLevelName(lvlId);
+                        matchedLvls[lvlId] = profile.PurchasedPlants.Where(p => p.CareLevelType == lvlId).Sum(p => p.Quantity);
+                    }
+                }
+
+                packageScores[package.Id] = (categoryMatch, careMatch, package);
+                packageMatchedCategories[package.Id] = matchedCats;
+                packageMatchedCareLevels[package.Id] = matchedLvls;
+            }
+
+            // Step 2: Rank packages by priority (category > care)
+            var tier1Packages = packageScores.Where(x => x.Value.categoryMatch > 0).ToList(); // Has category match
+            var tier2Packages = packageScores.Where(x => x.Value.categoryMatch == 0 && x.Value.careMatch > 0).ToList(); // Only care match
+
+            // Sort each tier by match count (descending)
+            tier1Packages = tier1Packages
+                .OrderByDescending(x => x.Value.categoryMatch)
+                .ThenByDescending(x => x.Value.careMatch)
+                .ToList();
+
+            tier2Packages = tier2Packages
+                .OrderByDescending(x => x.Value.careMatch)
+                .ToList();
+
+            // Step 3: Combine matched packages only (no generic fallback)
+            var rankedPackages = tier1Packages.Concat(tier2Packages)
+                .Take(top)
+                .ToList();
+
+            if (rankedPackages.Count == 0)
+                throw new NotFoundException("No matching care service package found for this order. Please verify package suitability mapping data.");
+
+            // Step 4: Build recommendation response with plant grouping
+            var recommendations = new List<CareServicePackageRecommendationResponseDto>();
+
+            foreach (var packageEntry in rankedPackages)
+            {
+                var packageId = packageEntry.Key;
+                var scores = packageEntry.Value.Item1; // categoryMatch
+                var careMatch = packageEntry.Value.Item2; // careMatch
+                var package = packageEntry.Value.Item3; // CareServicePackage
+
+                var recDto = new CareServicePackageRecommendationResponseDto
+                {
+                    PackageId = package.Id,
+                    PackageName = package.Name ?? string.Empty,
+                    UnitPrice = package.UnitPrice,
+                    MatchScore = (scores * 2) + careMatch, // Scoring for display
+                    TotalPurchasedPlantItems = profile.TotalPlantItems,
+                    MatchReasons = new List<string>(),
+                    Plants = profile.PurchasedPlants.Select(p => new RecommendedPlantDto
+                    {
+                        PlantId = p.PlantId,
+                        PlantName = p.PlantName,
+                        Quantity = p.Quantity
+                    }).ToList(),
+                    MatchedCategoryCount = scores,
+                    MatchedCareLevelCount = careMatch
+                };
+
+                // Build match reasons
+                var categories = packageMatchedCategories[packageId];
+                if (categories.Count > 0)
+                {
+                    var catReason = string.Join(", ", categories.OrderByDescending(c => c.Value).Select(c => $"{c.Key} ({c.Value})"));
+                    recDto.MatchReasons.Add($"Matched categories: {catReason}");
+                }
+
+                var careLevels = packageMatchedCareLevels[packageId];
+                if (careLevels.Count > 0)
+                {
+                    var lvlReason = string.Join(", ", careLevels.OrderByDescending(c => c.Value).Select(c => $"{MapCareLevelName(c.Key)} ({c.Value})"));
+                    recDto.MatchReasons.Add($"Matched care levels: {lvlReason}");
+                }
+
+                recommendations.Add(recDto);
+            }
+
+            return recommendations;
+        }
+
         public async Task<CareServicePackageResponseDto> UpdateSpecializationsAsync(int packageId, List<int> specializationIds)
         {
             var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
@@ -196,6 +361,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             await _unitOfWork.CareServicePackageRepository.ReplaceSpecializationsAsync(packageId, specializationIds);
+            await InvalidateCacheAsync();
+
+            var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            return MapToDto(updated!);
+        }
+
+        public async Task<CareServicePackageResponseDto> UpdateSuitabilityRulesAsync(int packageId, List<PackagePlantSuitabilityRuleRequestDto> rules)
+        {
+            var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            if (pkg == null)
+                throw new NotFoundException($"CareServicePackage {packageId} not found");
+
+            var normalizedSuitabilityRules = await ValidateAndBuildSuitabilityRulesAsync(rules, packageId);
+            await _unitOfWork.CareServicePackageRepository.ReplaceSuitabilityRulesAsync(packageId, normalizedSuitabilityRules);
             await InvalidateCacheAsync();
 
             var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
@@ -234,6 +413,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         Id = cs.Specialization.Id,
                         Name = cs.Specialization.Name,
                         Description = cs.Specialization.Description
+                    }).ToList(),
+                SuitabilityRules = pkg.PackagePlantSuitabilities
+                    .Where(pps => pps.IsActive)
+                    .Select(pps => new PackagePlantSuitabilityRuleResponseDto
+                    {
+                        Id = pps.Id,
+                        CareServicePackageId = pps.CareServicePackageId,
+                        CategoryId = pps.CategoryId,
+                        CategoryName = pps.Category?.Name,
+                        CareDifficultyLevel = pps.CareDifficultyLevel,
+                        CareDifficultyLevelName = pps.CareDifficultyLevel.HasValue ? MapCareLevelName(pps.CareDifficultyLevel.Value) : null
                     }).ToList()
             };
         }
@@ -270,6 +460,196 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     })
                     .ToList()
             };
+        }
+
+        private async Task EnsureConsultantPermissionAsync(int consultantId)
+        {
+            var consultant = await _unitOfWork.UserRepository.GetByIdAsync(consultantId);
+            if (consultant == null)
+                throw new UnauthorizedException("Consultant not found");
+
+            if (consultant.RoleId != (int)RoleEnum.Consultant)
+                throw new ForbiddenException("Only consultant can use this recommendation API");
+        }
+
+        private async Task<List<PackagePlantSuitability>> ValidateAndBuildSuitabilityRulesAsync(
+            IEnumerable<PackagePlantSuitabilityRuleRequestDto> requestRules,
+            int packageId)
+        {
+            var rules = requestRules?.ToList() ?? new List<PackagePlantSuitabilityRuleRequestDto>();
+            if (rules.Count == 0)
+                throw new BadRequestException("At least one suitability rule is required");
+
+            var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var validated = new List<PackagePlantSuitability>();
+
+            foreach (var rule in rules)
+            {
+                var hasCategory = rule.CategoryId.HasValue;
+                var hasCareLevel = rule.CareDifficultyLevel.HasValue;
+                if (!hasCategory && !hasCareLevel)
+                    throw new BadRequestException("Each suitability rule must have CategoryId or CareDifficultyLevel");
+                if (hasCategory && hasCareLevel)
+                    throw new BadRequestException("Each suitability rule must contain only one condition");
+
+                if (hasCategory)
+                {
+                    var category = await _unitOfWork.CategoryRepository.GetByIdAsync(rule.CategoryId!.Value);
+                    if (category == null)
+                        throw new NotFoundException($"Category {rule.CategoryId.Value} not found");
+                }
+
+                if (hasCareLevel && !Enum.IsDefined(typeof(CareLevelTypeEnum), rule.CareDifficultyLevel!.Value))
+                    throw new BadRequestException($"CareDifficultyLevel {rule.CareDifficultyLevel.Value} is invalid");
+
+                var key = $"{rule.CategoryId?.ToString() ?? "null"}:{rule.CareDifficultyLevel?.ToString() ?? "null"}";
+                if (!uniqueKeys.Add(key))
+                    throw new BadRequestException("Duplicate suitability rules are not allowed");
+
+                validated.Add(new PackagePlantSuitability
+                {
+                    CareServicePackageId = packageId,
+                    CategoryId = rule.CategoryId,
+                    CareDifficultyLevel = rule.CareDifficultyLevel,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                });
+            }
+
+            return validated;
+        }
+
+        private static CustomerPlantProfile BuildOrderPlantProfile(Order order)
+        {
+            return BuildCustomerPlantProfile(new List<Order> { order });
+        }
+
+        private static CustomerPlantProfile BuildCustomerPlantProfile(List<Order> orders)
+        {
+            var categoryPurchaseCounts = new Dictionary<int, int>();
+            var careLevelPurchaseCounts = new Dictionary<int, int>();
+            var purchasedPlants = new List<PurchasedPlant>();
+            var totalPlantItems = 0;
+
+            foreach (var order in orders)
+            {
+                foreach (var nurseryOrder in order.NurseryOrders)
+                {
+                    foreach (var detail in nurseryOrder.NurseryOrderDetails)
+                    {
+                        var lineQuantity = Math.Max(1, detail.Quantity ?? 1);
+
+                        if (detail.CommonPlant?.Plant != null)
+                            AddPlantToProfile(detail.CommonPlant.Plant, lineQuantity, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+
+                        if (detail.PlantInstance?.Plant != null)
+                            AddPlantToProfile(detail.PlantInstance.Plant, lineQuantity, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+
+                        var comboItems = detail.NurseryPlantCombo?.PlantCombo?.PlantComboItems;
+                        if (comboItems == null)
+                            continue;
+
+                        foreach (var comboItem in comboItems)
+                        {
+                            if (comboItem.Plant == null)
+                                continue;
+
+                            var comboPlantQty = Math.Max(1, comboItem.Quantity ?? 1) * lineQuantity;
+                            AddPlantToProfile(comboItem.Plant, comboPlantQty, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+                        }
+                    }
+                }
+            }
+
+            return new CustomerPlantProfile(categoryPurchaseCounts, careLevelPurchaseCounts, totalPlantItems, purchasedPlants);
+        }
+
+        private static void AddPlantToProfile(
+            Plant plant,
+            int quantity,
+            Dictionary<int, int> categoryPurchaseCounts,
+            Dictionary<int, int> careLevelPurchaseCounts,
+            List<PurchasedPlant> purchasedPlants,
+            ref int totalPlantItems)
+        {
+            if (quantity <= 0)
+                return;
+
+            totalPlantItems += quantity;
+
+            var existingPlant = purchasedPlants.FirstOrDefault(p => p.PlantId == plant.Id);
+            if (existingPlant != null)
+            {
+                existingPlant.Quantity += quantity;
+            }
+            else
+            {
+                purchasedPlants.Add(new PurchasedPlant
+                {
+                    PlantId = plant.Id,
+                    PlantName = plant.Name ?? $"Plant #{plant.Id}",
+                    Quantity = quantity,
+                    CareLevelType = plant.CareLevelType,
+                    CategoryIds = plant.Categories.Select(c => c.Id).ToList()
+                });
+            }
+
+            if (plant.CareLevelType.HasValue)
+            {
+                if (careLevelPurchaseCounts.ContainsKey(plant.CareLevelType.Value))
+                    careLevelPurchaseCounts[plant.CareLevelType.Value] += quantity;
+                else
+                    careLevelPurchaseCounts[plant.CareLevelType.Value] = quantity;
+            }
+
+            foreach (var category in plant.Categories)
+            {
+                if (categoryPurchaseCounts.ContainsKey(category.Id))
+                    categoryPurchaseCounts[category.Id] += quantity;
+                else
+                    categoryPurchaseCounts[category.Id] = quantity;
+            }
+        }
+
+        private static string MapCareLevelName(int level)
+        {
+            return level switch
+            {
+                1 => "Easy",
+                2 => "Medium",
+                3 => "Hard",
+                4 => "Expert",
+                _ => $"Level {level}"
+            };
+        }
+
+        private sealed class CustomerPlantProfile
+        {
+            public CustomerPlantProfile(
+                Dictionary<int, int> categoryPurchaseCounts,
+                Dictionary<int, int> careLevelPurchaseCounts,
+                int totalPlantItems,
+                List<PurchasedPlant> purchasedPlants)
+            {
+                CategoryPurchaseCounts = categoryPurchaseCounts;
+                CareLevelPurchaseCounts = careLevelPurchaseCounts;
+                TotalPlantItems = totalPlantItems;
+                PurchasedPlants = purchasedPlants;
+            }
+
+            public Dictionary<int, int> CategoryPurchaseCounts { get; }
+            public Dictionary<int, int> CareLevelPurchaseCounts { get; }
+            public int TotalPlantItems { get; }
+            public List<PurchasedPlant> PurchasedPlants { get; }
+        }
+
+        private sealed class PurchasedPlant
+        {
+            public int PlantId { get; set; }
+            public string PlantName { get; set; } = string.Empty;
+            public int Quantity { get; set; }
+            public int? CareLevelType { get; set; }
+            public List<int> CategoryIds { get; set; } = new();
         }
     }
 }

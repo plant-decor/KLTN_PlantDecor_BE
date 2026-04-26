@@ -1,4 +1,4 @@
-﻿using Hangfire;
+using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -211,6 +211,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 userId,
                 orderStatus.HasValue ? (int)orderStatus.Value : null);
 
+            return orders.ToResponseList();
+        }
+
+        public async Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new BadRequestException("Email is required");
+
+            var user = await _unitOfWork.UserRepository.GetByEmailAsync(email);
+            if (user == null)
+                throw new NotFoundException($"User with email '{email}' not found");
+
+            var orders = await _unitOfWork.OrderRepository.GetByUserIdWithDetailsAsync(user.Id);
             return orders.ToResponseList();
         }
 
