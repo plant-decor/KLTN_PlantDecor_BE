@@ -15,6 +15,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.LayoutDesignAiResponseImages
                 .Include(image => image.LayoutDesignPlant)
+                .ThenInclude(p => p.CommonPlant)
+                .ThenInclude(cp => cp.Plant)
+                .Include(image => image.LayoutDesignPlant)
+                .ThenInclude(p => p.PlantInstance)
+                .ThenInclude(pi => pi.Plant)
                 .Where(image => image.LayoutDesignId == layoutDesignId)
                 .OrderByDescending(image => image.CreatedAt)
                 .ThenByDescending(image => image.Id)
@@ -25,6 +30,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             return await _context.LayoutDesignAiResponseImages
                 .Include(image => image.LayoutDesignPlant)
+                .ThenInclude(p => p.CommonPlant)
+                .ThenInclude(cp => cp.Plant)
+                .Include(image => image.LayoutDesignPlant)
+                .ThenInclude(p => p.PlantInstance)
+                .ThenInclude(pi => pi.Plant)
                 .Where(image => image.LayoutDesign.UserId == userId)
                 .OrderByDescending(image => image.CreatedAt)
                 .ThenByDescending(image => image.Id)
