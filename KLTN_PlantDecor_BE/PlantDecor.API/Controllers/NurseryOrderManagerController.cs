@@ -55,7 +55,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách đơn hàng của vườn thành công",
+                Message = "Retrieved nursery orders successfully",
                 Payload = result
             });
         }
@@ -73,7 +73,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết đơn hàng của vườn thành công",
+                Message = "Retrieved nursery order details successfully",
                 Payload = result
             });
         }
@@ -91,7 +91,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách shipper của vườn thành công",
+                Message = "Retrieved nursery shippers successfully",
                 Payload = result
             });
         }
@@ -109,7 +109,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật shipper cho đơn hàng thành công",
+                Message = "Updated nursery order shipper successfully",
                 Payload = result
             });
         }
@@ -127,7 +127,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy doanh thu của vườn thành công",
+                Message = "Retrieved nursery revenue summary successfully",
                 Payload = result
             });
         }

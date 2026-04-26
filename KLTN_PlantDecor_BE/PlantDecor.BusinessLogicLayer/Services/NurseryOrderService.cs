@@ -155,7 +155,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nurseryOrder.Status != (int)OrderStatusEnum.Assigned
                 && nurseryOrder.Status != (int)OrderStatusEnum.Paid
                 && nurseryOrder.Status != (int)OrderStatusEnum.DepositPaid)
-                throw new BadRequestException("Chỉ có thể cập nhật shipper cho đơn ở trạng thái DepositPaid, Paid hoặc Assigned.");
+                throw new BadRequestException("Shipper can only be updated for orders in DepositPaid, Paid, or Assigned status.");
 
             var shipper = await _unitOfWork.UserRepository.GetByIdAsync(shipperId)
                 ?? throw new NotFoundException($"Shipper {shipperId} not found");
@@ -164,7 +164,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 || shipper.NurseryId != currentUser.NurseryId
                 || shipper.Status != (int)UserStatusEnum.Active
                 || !shipper.IsVerified)
-                throw new BadRequestException("Shipper không hợp lệ hoặc không thuộc vườn của bạn.");
+                throw new BadRequestException("The shipper is invalid or does not belong to your nursery.");
 
             var now = GetCurrentVietnamTime();
 
@@ -220,7 +220,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)OrderStatusEnum.Assigned)
-                throw new BadRequestException("Đơn không ở trạng thái có thể bắt đầu giao.");
+                throw new BadRequestException("The order is not in a shippable state.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Shipping;
@@ -256,7 +256,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
-                throw new BadRequestException("đơn chưa ở  trạng thái đang giao.");
+                throw new BadRequestException("The order is not in shipping status.");
 
             string? deliveryImageUrl = null;
             if (request.DeliveryImage != null)
@@ -324,7 +324,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateOwnership(currentUser, nurseryOrder);
 
             if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
-                throw new BadRequestException("Đơn chưa ở trạng thái đang giao.");
+                throw new BadRequestException("The order is not in shipping status.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Failed;

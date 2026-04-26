@@ -30,7 +30,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy doanh thu toàn hệ thống thành công",
+                Message = "Retrieved system revenue summary successfully",
                 Payload = result
             });
         }
@@ -45,7 +45,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy doanh thu theo từng vườn thành công",
+                Message = "Retrieved revenue by nursery successfully",
                 Payload = result
             });
         }
