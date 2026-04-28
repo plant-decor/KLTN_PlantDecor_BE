@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using PlantDecor.API.Extensions;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.Constants;
@@ -25,6 +26,7 @@ namespace PlantDecor.API.Controllers
         [HttpPost("backfill/all")]
         public IActionResult BackfillAll([FromQuery] int? batchSize = null)
         {
+            NpgsqlConnection.ClearAllPools();
             var normalizedBatchSize = NormalizeBatchSize(batchSize);
             var jobId = _backgroundJobClient.EnqueueEmbeddingBackfillAll(normalizedBatchSize);
 
@@ -46,6 +48,7 @@ namespace PlantDecor.API.Controllers
         [HttpPost("backfill/{entityType}")]
         public IActionResult BackfillByEntityType(string entityType, [FromQuery] int? batchSize = null)
         {
+            NpgsqlConnection.ClearAllPools();
             if (!TryResolveEntityType(entityType, out var resolvedEntityType))
             {
                 return BadRequest(new ApiResponse<object>

@@ -50,7 +50,7 @@ namespace PlantDecor.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "PlantDecor API - Tôi đã ở đây",
+                    Title = "PlantDecor API",
                     Version = "v1",
                     Description = "API for Plant Decoration System",
                     Contact = new OpenApiContact
