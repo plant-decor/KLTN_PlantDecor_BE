@@ -9,6 +9,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (image == null) return null!;
 
+            var commonPlant = image.LayoutDesignPlant?.CommonPlant;
+            var plantInstance = image.LayoutDesignPlant?.PlantInstance;
+
             return new LayoutDesignGeneratedImageDto
             {
                 Id = image.Id,
@@ -16,6 +19,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 LayoutDesignPlantId = image.LayoutDesignPlantId,
                 CommonPlantId = image.LayoutDesignPlant?.CommonPlantId,
                 PlantInstanceId = image.LayoutDesignPlant?.PlantInstanceId,
+                Name = plantInstance?.Plant?.Name ?? commonPlant?.Plant?.Name,
+                Price = plantInstance?.SpecificPrice ?? commonPlant?.Plant?.BasePrice,
                 ImageUrl = image.ImageUrl,
                 FluxPromptUsed = image.FluxPromptUsed,
                 CreatedAt = image.CreatedAt

@@ -7,18 +7,18 @@
             return $@"
         <html>
         <body style='font-family: Arial;'>
-            <h2>Xin chào {userName},</h2>
-            <p>Cảm ơn bạn đã đăng ký tài khoản tại <b>PlantDecor</b>.</p>
+            <h2>Hello {userName},</h2>
+            <p>Thank you for registering an account at <b>PlantDecor</b>.</p>
             <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
                 <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
             </a>
-            <p>Vui lòng xác nhận email của bạn bằng cách nhấn nút bên dưới:</p>
+            <p>Please confirm your email by clicking the button below:</p>
             <p>
                 <a href='{confirmUrl}' 
                    style='background-color: #007bff; color: white; padding: 10px 20px; 
-                          text-decoration: none; border-radius: 5px;'>Xác nhận Email</a>
+                          text-decoration: none; border-radius: 5px;'>Confirm Email</a>
             </p>
-            <p>Nếu bạn không đăng ký, hãy bỏ qua email này.</p>
+            <p>If you did not sign up, please ignore this email.</p>
         </body>
         </html>";
         }
@@ -42,13 +42,13 @@
 
                 <div style='text-align: center;'>
                     <h2 style='color: #34495e; font-size: 20px; margin-bottom: 10px;'>
-                        Xin chào {userName},
+                        Hello {userName},
                     </h2>
                         <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
                             <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
                         </a>
                     <p style='color: #7f8c8d; font-size: 16px; margin-bottom: 30px;'>
-                        Mã xác thực email của bạn là:
+                        Your email verification code is:
                     </p>
 
                     <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -56,7 +56,7 @@
                                 box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);'>
                         <div style='color: white; font-size: 14px; margin-bottom: 10px;
                                     text-transform: uppercase; letter-spacing: 2px;'>
-                            Mã Xác Thực Email
+                            Email Verification Code
                         </div>
                         <div style='color: white; font-size: 48px; font-weight: bold;
                                     letter-spacing: 12px; font-family: monospace;
@@ -68,12 +68,12 @@
                     <div style='background-color: #fff3cd; border-left: 4px solid #ffc107;
                                 padding: 15px; margin: 20px 0; text-align: left;'>
                         <p style='color: #856404; margin: 0; font-size: 14px;'>
-                            <strong>⏱️ Lưu ý:</strong> Mã này sẽ hết hạn sau <strong>{expiresInMinutes} phút</strong>
+                            <strong>⏱️ Note:</strong> This code will expire in <strong>{expiresInMinutes} minutes</strong>
                         </p>
                     </div>
 
                     <p style='color: #7f8c8d; font-size: 14px; margin-top: 30px;'>
-                        Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
+                        If you did not request this code, please ignore this email.
                     </p>
 
                     <div style='margin-top: 40px; padding-top: 20px;
@@ -107,13 +107,13 @@
 
                 <div style='text-align: center;'>
                     <h2 style='color: #34495e; font-size: 20px; margin-bottom: 10px;'>
-                        Xin chào {userName},
+                        Hello {userName},
                     </h2>
                         <a href='https://www.plantdecor.io.vn/' style='text-decoration:none;'>
                             <img src='https://res.cloudinary.com/dliirxsmo/image/upload/v1776617018/DSfep_s24rkv.jpg' alt='Logo' width='196'/>
                         </a>
                     <p style='color: #7f8c8d; font-size: 16px; margin-bottom: 30px;'>
-                        Mã đặt lại mật khẩu của bạn là:
+                        Your password reset code is:
                     </p>
 
                     <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -121,7 +121,7 @@
                                 box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);'>
                         <div style='color: white; font-size: 14px; margin-bottom: 10px;
                                     text-transform: uppercase; letter-spacing: 2px;'>
-                            Mã Đặt Lại Mật Khẩu
+                            Password Reset Code
                         </div>
                         <div style='color: white; font-size: 48px; font-weight: bold;
                                     letter-spacing: 12px; font-family: monospace;
@@ -133,14 +133,14 @@
                     <div style='background-color: #f8d7da; border-left: 4px solid #dc3545;
                                 padding: 15px; margin: 20px 0; text-align: left;'>
                         <p style='color: #721c24; margin: 0; font-size: 14px;'>
-                            <strong>⏱️ Lưu ý:</strong> Mã này sẽ hết hạn sau <strong>{expiresInMinutes} phút</strong>
+                            <strong>⏱️ Note:</strong> This code will expire in <strong>{expiresInMinutes} minutes</strong>
                         </p>
                     </div>
 
                     <div style='background-color: #fff3cd; border-left: 4px solid #ffc107;
                                 padding: 15px; margin: 20px 0; text-align: left;'>
                         <p style='color: #856404; margin: 0; font-size: 14px;'>
-                            <strong>🔒 Bảo mật:</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và đặt lại mật khẩu ngay lập tức.
+                            <strong>🔒 Security:</strong> If you did not request a password reset, please ignore this email and secure your account immediately.
                         </p>
                     </div>
 

@@ -1,6 +1,7 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using System.Text.Json;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -30,6 +31,32 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             if (message == null) return null!;
 
+            List<PlantSuggestionResponseDto> suggestedPlants = new();
+            if (!string.IsNullOrWhiteSpace(message.SuggestedPlants))
+            {
+                try
+                {
+                    suggestedPlants = JsonSerializer.Deserialize<List<PlantSuggestionResponseDto>>(message.SuggestedPlants) ?? new();
+                }
+                catch
+                {
+                    suggestedPlants = new();
+                }
+            }
+
+            List<string> careTips = new();
+            if (!string.IsNullOrWhiteSpace(message.CareTips))
+            {
+                try
+                {
+                    careTips = JsonSerializer.Deserialize<List<string>>(message.CareTips) ?? new();
+                }
+                catch
+                {
+                    careTips = new();
+                }
+            }
+
             return new AIChatMessageHistoryItemResponseDto
             {
                 MessageId = message.Id,
@@ -38,6 +65,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Intent = message.Intent,
                 IsFallback = message.IsFallback ?? false,
                 IsPolicyResponse = message.IsPolicyResponse ?? false,
+                SuggestedPlants = suggestedPlants,
+                CareTips = careTips,
                 CreatedAt = message.CreatedAt
             };
         }

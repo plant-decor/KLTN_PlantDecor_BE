@@ -98,6 +98,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
                     ? null
                     : request.ComboCode.Trim().ToUpper();
+                var normalizedComboName = request.ComboName?.Trim();
 
                 if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
@@ -105,8 +106,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
                 }
 
+                if (!string.IsNullOrWhiteSpace(normalizedComboName))
+                {
+                    if (await _unitOfWork.PlantComboRepository.ExistsByNameAsync(normalizedComboName))
+                        throw new BadRequestException($"Combo với tên '{normalizedComboName}' đã tồn tại");
+                }
+
                 ValidateEnumBackedFields(request.SuitableSpace, request.SuitableRooms);
 
+                request.ComboName = normalizedComboName ?? request.ComboName;
                 var combo = request.ToEntity();
                 combo.ComboCode = normalizedComboCode ?? PlantComboMapper.GenerateComboCode();
 

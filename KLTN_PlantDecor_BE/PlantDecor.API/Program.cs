@@ -50,7 +50,7 @@ namespace PlantDecor.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "PlantDecor API - Tôi đã ở đây",
+                    Title = "PlantDecor API",
                     Version = "v1",
                     Description = "API for Plant Decoration System",
                     Contact = new OpenApiContact
@@ -201,6 +201,7 @@ namespace PlantDecor.API
                     policy => policy
                         .WithOrigins(
                             "https://localhost:3000",         // React dev
+                            "http://localhost:3000",         // React dev
                             "http://localhost:5173",         // Vite
                             "http://localhost:5500",         // Live Server
                             "http://localhost:7180",         // API dev port

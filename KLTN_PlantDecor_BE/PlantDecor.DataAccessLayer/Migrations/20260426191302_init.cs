@@ -305,6 +305,34 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PackagePlantSuitability",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CareServicePackageId = table.Column<int>(type: "integer", nullable: false),
+                    CategoryId = table.Column<int>(type: "integer", nullable: true),
+                    CareDifficultyLevel = table.Column<int>(type: "integer", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PackagePlantSuitability_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "PackagePlantSuitability_CareServicePackageId_fkey",
+                        column: x => x.CareServicePackageId,
+                        principalTable: "CareServicePackage",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "PackagePlantSuitability_CategoryId_fkey",
+                        column: x => x.CategoryId,
+                        principalTable: "Category",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ChatMessage",
                 columns: table => new
                 {
@@ -650,6 +678,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Intent = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     IsFallback = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
                     IsPolicyResponse = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
+                    SuggestedPlants = table.Column<string>(type: "jsonb", nullable: true),
+                    CareTips = table.Column<string>(type: "jsonb", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -2369,6 +2399,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PackagePlantSuitability_CareDifficultyLevel",
+                table: "PackagePlantSuitability",
+                column: "CareDifficultyLevel");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PackagePlantSuitability_CareServicePackageId",
+                table: "PackagePlantSuitability",
+                column: "CareServicePackageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PackagePlantSuitability_CategoryId",
+                table: "PackagePlantSuitability",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_PackagePlantSuitability_Rule",
+                table: "PackagePlantSuitability",
+                columns: new[] { "CareServicePackageId", "CategoryId", "CareDifficultyLevel" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payment_InvoiceId",
                 table: "Payment",
                 column: "InvoiceId");
@@ -2939,6 +2990,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "NurseryDesignTemplate");
+
+            migrationBuilder.DropTable(
+                name: "PackagePlantSuitability");
 
             migrationBuilder.DropTable(
                 name: "PlantCategory");

@@ -30,6 +30,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? LayoutDesignPlantId { get; set; }
         public int? CommonPlantId { get; set; }
         public int? PlantInstanceId { get; set; }
+        public string? Name { get; set; }
+        public decimal? Price { get; set; }
         public string? ImageUrl { get; set; }
         public string? FluxPromptUsed { get; set; }
         public DateTime? CreatedAt { get; set; }

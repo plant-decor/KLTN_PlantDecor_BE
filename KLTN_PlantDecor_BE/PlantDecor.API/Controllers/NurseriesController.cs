@@ -6,7 +6,6 @@ using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
-using PlantDecor.BusinessLogicLayer.Services;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
@@ -37,17 +36,17 @@ namespace PlantDecor.API.Controllers
         /// Lấy thông tin vựa của Manager đang đăng nhập
         /// </summary>
         [HttpGet("my-nursery")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetMyNursery()
         {
-            var managerId = GetCurrentUserId();
-            var nursery = await _nurseryService.GetMyNurseryAsync(managerId);
+            var userId = GetCurrentUserId();
+            var nursery = await _nurseryService.GetMyNurseryAsync(userId);
 
             return Ok(new ApiResponse<NurseryResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy thông tin vựa thành công",
+                Message = "Get My Nursery Successfully!",
                 Payload = nursery
             });
         }
@@ -64,7 +63,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo vựa thành công",
+                Message = "Create Nursery Successfully!",
                 Payload = nursery
             });
         }
@@ -82,7 +81,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật vựa thành công",
+                Message = "Update My Nursery Successfully!",
                 Payload = nursery
             });
         }
@@ -100,7 +99,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vật tư sắp hết hạn thành công",
+                Message = "Get My Nursery Expiring Materials Successfully!",
                 Payload = result
             });
         }
@@ -118,7 +117,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách sản phẩm sắp hết hàng thành công",
+                Message = "Get My Nursery Low Stock Products Successfully!",
                 Payload = result
             });
         }
@@ -140,7 +139,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy summary kho vựa thành công",
+                Message = "Get My Nursery Material Summary Successfully!",
                 Payload = result
             });
         }
@@ -162,7 +161,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm danh sách vựa thành công",
+                Message = "Search All Nurseries Successfully!",
                 Payload = nurseries
             });
         }
@@ -180,7 +179,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy thông tin vựa thành công",
+                Message = "Get Nursery By Id Successfully!",
                 Payload = nursery
             });
         }
@@ -197,7 +196,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật vựa thành công",
+                Message = "Update Nursery Successfully!",
                 Payload = nursery
             });
         }
@@ -254,7 +253,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                    Message = "Lấy danh sách caretaker thành công",
+                Message = "Get list Caretaker Successfully!",
                 Payload = result
             });
         }
@@ -273,7 +272,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết caretaker thành công",
+                Message = "Get Caretaker Detail Successfully!",
                 Payload = result
             });
         }
@@ -292,7 +291,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách staff và caretaker thành công",
+                Message = "Get list staff and caretaker Successfully!",
                 Payload = result
             });
         }
@@ -311,7 +310,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết staff/caretaker thành công",
+                Message = "Get details staff/caretaker Successfully!",
                 Payload = result
             });
         }
@@ -337,7 +336,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa gần bạn thành công",
+                Message = "Get Nearby Nurseries Successfully!",
                 Payload = result
             });
         }
@@ -355,7 +354,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm danh sách vựa cho shop thành công",
+                Message = "Search list nurseries for shop Successfully!",
                 Payload = nurseries
             });
         }
@@ -373,7 +372,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm danh sách cây tại vựa thành công",
+                Message = "Search List PlantInstances By NurseryId Successfully!",
                 Payload = result
             });
         }
@@ -390,7 +389,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết cây thành công",
+                Message = "Get PlantInstance details Successfully!",
                 Payload = result
             });
         }
@@ -407,7 +406,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết cây đại trà thành công",
+                Message = "Get CommonPlant details Successfully!",
                 Payload = result
             });
         }
@@ -425,7 +424,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm danh sách cây đại trà tại vựa thành công",
+                Message = "Search List CommonPlants By NurseryId Successfully!",
                 Payload = result
             });
         }

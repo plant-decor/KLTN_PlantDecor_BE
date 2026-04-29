@@ -11,6 +11,7 @@ using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -447,9 +448,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return policyResponse;
                 }
 
+                var requestedFengShuiElement = ToEnumName(request.FengShuiElement);
+                var requestedPreferredRooms = ToEnumNames(request.PreferredRooms);
+
                 var effectiveLimit = ClampLimit(request.Limit ?? intentAnalysis.RequestedPlantCount ?? 5, 1, 10);
-                var effectiveFengShuiElement = FirstNonEmpty(request.FengShuiElement, intentAnalysis.FengShuiElement);
-                var effectivePreferredRooms = ResolvePreferredRooms(request.PreferredRooms, intentAnalysis.PreferredRooms);
+                var effectiveFengShuiElement = FirstNonEmpty(requestedFengShuiElement, intentAnalysis.FengShuiElement);
+                var effectivePreferredRooms = ResolvePreferredRooms(requestedPreferredRooms, intentAnalysis.PreferredRooms);
                 var effectiveMaxBudget = request.MaxBudget ?? intentAnalysis.MaxBudget;
                 var effectivePetSafe = request.PetSafe ?? intentAnalysis.PetSafe;
                 var effectiveChildSafe = request.ChildSafe ?? intentAnalysis.ChildSafe;
@@ -647,13 +651,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             AIChatbotRequestDto request,
             List<ChatbotConversationTurnDto> conversationHistory)
         {
+            var requestedFengShuiElement = ToEnumName(request.FengShuiElement);
+            var requestedPreferredRooms = ToEnumNames(request.PreferredRooms);
+
             var fallback = new ChatbotIntentAnalysis
             {
                 Intent = ChatbotIntentGeneral,
                 SearchQuery = request.Message ?? string.Empty,
                 RoomSummary = request.RoomDescription ?? string.Empty,
-                FengShuiElement = request.FengShuiElement,
-                PreferredRooms = request.PreferredRooms,
+                FengShuiElement = requestedFengShuiElement,
+                PreferredRooms = requestedPreferredRooms,
                 PetSafe = request.PetSafe,
                 ChildSafe = request.ChildSafe,
                 MaxBudget = request.MaxBudget,
@@ -677,9 +684,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     message = request.Message,
                     roomDescription = request.RoomDescription,
-                    fengShuiElement = request.FengShuiElement,
+                    fengShuiElement = requestedFengShuiElement,
                     maxBudget = request.MaxBudget,
-                    preferredRooms = request.PreferredRooms,
+                    preferredRooms = requestedPreferredRooms,
                     petSafe = request.PetSafe,
                     childSafe = request.ChildSafe,
                     limit = request.Limit,
@@ -706,8 +713,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 parsed.Intent = NormalizeIntent(parsed.Intent);
                 parsed.SearchQuery = FirstNonEmpty(parsed.SearchQuery, request.Message);
                 parsed.RoomSummary = FirstNonEmpty(parsed.RoomSummary, request.RoomDescription);
-                parsed.FengShuiElement = FirstNonEmpty(parsed.FengShuiElement, request.FengShuiElement);
-                parsed.PreferredRooms = ResolvePreferredRooms(parsed.PreferredRooms, request.PreferredRooms);
+                parsed.FengShuiElement = FirstNonEmpty(parsed.FengShuiElement, requestedFengShuiElement);
+                parsed.PreferredRooms = ResolvePreferredRooms(parsed.PreferredRooms, requestedPreferredRooms);
                 parsed.PetSafe ??= request.PetSafe;
                 parsed.ChildSafe ??= request.ChildSafe;
                 parsed.MaxBudget ??= request.MaxBudget;
@@ -1104,13 +1111,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             bool isFallback,
             bool isPolicyResponse)
         {
+            var serializerOptions = new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
             await _unitOfWork.AIChatMessageRepository.AddAssistantMessageAsync(
                 sessionId,
                 userId,
                 response.Reply,
                 intent,
                 isFallback,
-                isPolicyResponse);
+                isPolicyResponse,
+                suggestedPlants: response.SuggestedPlants == null || response.SuggestedPlants.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(response.SuggestedPlants, serializerOptions),
+                careTips: response.CareTips == null || response.CareTips.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(response.CareTips, serializerOptions));
 
             _logger.LogInformation(
                 "Assistant message persisted. SessionId={SessionId}, UserId={UserId}, Intent={Intent}, IsFallback={IsFallback}, IsPolicyResponse={IsPolicyResponse}, ReplyLength={ReplyLength}",
@@ -1372,6 +1390,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             return null;
+        }
+
+        private static string? ToEnumName(FengShuiElementTypeEnum? value)
+        {
+            return value?.ToString();
+        }
+
+        private static List<string>? ToEnumNames(List<RoomTypeEnum>? values)
+        {
+            if (values == null || values.Count == 0)
+            {
+                return null;
+            }
+
+            var normalized = values
+                .Select(v => v.ToString())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return normalized.Count == 0 ? null : normalized;
         }
 
         private static List<string>? ResolvePreferredRooms(List<string>? primary, List<string>? fallback)

@@ -93,15 +93,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PlantInstanceResponseDto> GetByIdAsync(int instanceId, int managerId)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (user == null)
                 throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
 
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
                 throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
 
-            if (instance.CurrentNurseryId != nursery.Id)
+            var hasAccess = false;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                hasAccess = nursery != null && instance.CurrentNurseryId == nursery.Id;
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff)
+            {
+                hasAccess = user.NurseryId.HasValue && instance.CurrentNurseryId == user.NurseryId.Value;
+            }
+
+            if (!hasAccess)
                 throw new ForbiddenException("PlantInstance này không thuộc vựa của bạn");
 
             return instance.ToResponse();
@@ -109,9 +120,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<PlantInstanceListResponseDto>> GetByNurseryIdAsync(int nurseryId, int managerId, Pagination pagination, int? statusFilter = null)
         {
-            // Validate nursery thuộc về manager
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null || nursery.Id != nurseryId)
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (user == null)
+                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+
+            var hasAccess = false;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                hasAccess = nursery != null && nursery.Id == nurseryId;
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff)
+            {
+                hasAccess = user.NurseryId.HasValue && user.NurseryId.Value == nurseryId;
+            }
+
+            if (!hasAccess)
                 throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
 
             var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_p{pagination.PageNumber}_s{pagination.PageSize}_st{statusFilter}";

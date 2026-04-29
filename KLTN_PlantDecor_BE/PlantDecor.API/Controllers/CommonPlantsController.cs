@@ -16,7 +16,6 @@ namespace PlantDecor.API.Controllers
     /// </summary>
     [Route("api/manager/nurseries/{nurseryId}/common-plants")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
     public class CommonPlantsController : ControllerBase
     {
         private readonly ICommonPlantService _commonPlantService;
@@ -30,6 +29,7 @@ namespace PlantDecor.API.Controllers
         /// Nhập cây đại trà mới cho vựa
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreateCommonPlant(int nurseryId, [FromBody] CommonPlantRequestDto request)
         {
             var managerId = GetCurrentUserId();
@@ -38,7 +38,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Nhập cây đại trà thành công",
+                Message = "Import Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -47,6 +47,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách cây đại trà của vựa (Manager)
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetCommonPlants(int nurseryId, [FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();
@@ -55,7 +56,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách cây đại trà thành công",
+                Message = "Get List Common Plants Successfully!",
                 Payload = result
             });
         }
@@ -64,6 +65,7 @@ namespace PlantDecor.API.Controllers
         /// Lấy danh sách plant đang active mà vựa chưa có để nhập kho
         /// </summary>
         [HttpGet("available-import-plants")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> GetAvailableImportPlants(int nurseryId, [FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();
@@ -72,7 +74,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách plant chưa có trong vựa thành công",
+                Message = "Get Available Import Plants Successfully!",
                 Payload = result
             });
         }
@@ -81,6 +83,7 @@ namespace PlantDecor.API.Controllers
         /// Cập nhật thông tin cây đại trà (số lượng, trạng thái)
         /// </summary>
         [HttpPatch("{commonPlantId}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdateCommonPlant(int nurseryId, int commonPlantId, [FromBody] CommonPlantUpdateDto request)
         {
             var managerId = GetCurrentUserId();
@@ -89,7 +92,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật cây đại trà thành công",
+                Message = "Update Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -98,6 +101,7 @@ namespace PlantDecor.API.Controllers
         /// Bật/tắt trạng thái active của cây đại trà
         /// </summary>
         [HttpPatch("{commonPlantId}/toggle-active")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ToggleActive(int nurseryId, int commonPlantId)
         {
             var managerId = GetCurrentUserId();
@@ -106,7 +110,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = result.IsActive ? "Đã bật cây đại trà" : "Đã tắt cây đại trà",
+                Message = result.IsActive ? "Toggle Common Plant Successfully!" : "Turned Off Common Plant Successfully!",
                 Payload = result
             });
         }
@@ -144,7 +148,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa có cây đại trà thành công",
+                Message = "Get List Nurseries With Common Plant Successfully!",
                 Payload = result
             });
         }

@@ -13,7 +13,7 @@ using System.Security.Claims;
 namespace PlantDecor.API.Controllers
 {
     /// <summary>
-    /// API về xác thực và quản lý tài khoản người dùng
+    /// API about user authentication, registration, and account management
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -202,6 +202,62 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("create-shipper")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> CreateShipperAccount([FromBody] CreateStaffRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var managerIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(managerIdClaim) || !int.TryParse(managerIdClaim, out int managerId))
+            {
+                throw new UnauthorizedException("Unable to identify manager from token");
+            }
+
+            var result = await _authenticationService.CreateShipperAsync(managerId, request);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to create shipper account");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Shipper account created successfully!",
+                Payload = result
+            });
+        }
+
+        [HttpPost("create-consultant")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateConsultantAccount([FromBody] CreateStaffRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new BadRequestException("Invalid request");
+            }
+
+            var result = await _authenticationService.CreateConsultantAsync(request);
+
+            if (result == null)
+            {
+                throw new Exception("Failed to create consultant account");
+            }
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Consultant account created successfully!",
+                Payload = result
+            });
+        }
+
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout(LogoutRequest request)
@@ -285,7 +341,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Token is not valid or out of date"
+                Message = "Confirm Email Successfully!"
             });
         }
 
@@ -437,7 +493,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = result.Message,
+                Message = result.Message ?? "Password reset successfully",
                 Payload = result
             });
         }

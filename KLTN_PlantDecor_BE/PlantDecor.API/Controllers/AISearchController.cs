@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
-using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
@@ -45,7 +45,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Tìm thấy {result.TotalCount} kết quả",
+                Message = $"Found {result.TotalCount} results",
                 Payload = result
             });
         }
@@ -74,7 +74,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Đề xuất {result.TotalCount} sản phẩm phù hợp",
+                Message = $"Recommend {result.TotalCount} suitable products",
                 Payload = result
             });
         }
@@ -101,7 +101,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = $"Gợi ý {result.Count} cây phù hợp",
+                Message = $"Recommend {result.Count} suitable plants",
                 Payload = result
             });
         }
@@ -120,7 +120,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tạo phiên chat thành công",
+                Message = "Create Session successfully",
                 Payload = result
             });
         }
@@ -179,7 +179,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Chatbot tư vấn thành công",
+                Message = "Chatbot replies successfully!",
                 Payload = result
             });
         }
@@ -200,7 +200,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isPurchasable ? "Sản phẩm có thể mua" : "Sản phẩm không khả dụng",
+                Message = isPurchasable ? "Product is purchasable" : "Product is not available",
                 Payload = new { EntityType = entityType, EntityId = entityId, IsPurchasable = isPurchasable }
             });
         }

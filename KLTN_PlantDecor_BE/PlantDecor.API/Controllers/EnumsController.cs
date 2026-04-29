@@ -55,6 +55,9 @@ namespace PlantDecor.API.Controllers
             ["LayoutDesignStatus"] = typeof(LayoutDesignStatusEnum),
             ["RoomUploadModerationStatus"] = typeof(RoomUploadModerationStatusEnum),
             ["AiLayoutResponseModerationStatus"] = typeof(AilayoutResponseModerationStatus),
+            ["AIChatSessionStatus"] = typeof(AIChatSessionStatusEnum),
+            ["AIChatMessageRole"] = typeof(AIChatMessageRoleEnum),
+            ["PolicyContentCategory"] = typeof(PolicyContentCategoryEnum),
             ["Role"] = typeof(RoleEnum),
             ["TagType"] = typeof(TagTypeEnum),
             ["WishlistItemType"] = typeof(WishlistItemType),
@@ -107,7 +110,7 @@ namespace PlantDecor.API.Controllers
                 {
                     Success = false,
                     StatusCode = StatusCodes.Status404NotFound,
-                    Message = $"Enum '{enumName}' không tồn tại"
+                    Message = $"Enum '{enumName}' not exists"
                 });
             }
 
@@ -357,7 +360,51 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomViewAngle", typeof(RoomViewAngleEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
                     CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),
-                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus))
+                    CreateEnumGroup("AiLayoutResponseModerationStatus", typeof(AilayoutResponseModerationStatus)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Room Design
+        /// GET /api/system/enums/AI-chat
+        /// </summary>
+        [HttpGet("AI-chat")]
+        [AllowAnonymous]
+        public IActionResult GetAIChatEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get AI chat enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("AIChatSessionStatus", typeof(AIChatSessionStatusEnum)),
+                    CreateEnumGroup("AIChatMessageRole", typeof(AIChatMessageRoleEnum)),
+                    CreateEnumGroup("RoomType", typeof(RoomTypeEnum)),
+                    CreateEnumGroup("FengShuiElement", typeof(FengShuiElementTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Room Design
+        /// GET /api/system/enums/policy
+        /// </summary>
+        [HttpGet("policy")]
+        [AllowAnonymous]
+        public IActionResult GetPolicyEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get policy enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("PolicyContentCategory", typeof(PolicyContentCategoryEnum))
                 }
             });
         }

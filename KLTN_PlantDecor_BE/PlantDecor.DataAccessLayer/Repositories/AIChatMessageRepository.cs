@@ -34,7 +34,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return message;
         }
 
-        public async Task<AIChatMessage> AddAssistantMessageAsync(int sessionId, int userId, string content, string? intent = null, bool isFallback = false, bool isPolicyResponse = false)
+        public async Task<AIChatMessage> AddAssistantMessageAsync(
+            int sessionId,
+            int userId,
+            string content,
+            string? intent = null,
+            bool isFallback = false,
+            bool isPolicyResponse = false,
+            string? suggestedPlants = null,
+            string? careTips = null)
         {
             if (string.IsNullOrWhiteSpace(content))
             {
@@ -51,6 +59,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 Intent = string.IsNullOrWhiteSpace(intent) ? null : intent.Trim(),
                 IsFallback = isFallback,
                 IsPolicyResponse = isPolicyResponse,
+                SuggestedPlants = string.IsNullOrWhiteSpace(suggestedPlants) ? null : suggestedPlants,
+                CareTips = string.IsNullOrWhiteSpace(careTips) ? null : careTips,
                 CreatedAt = DateTime.UtcNow
             };
 

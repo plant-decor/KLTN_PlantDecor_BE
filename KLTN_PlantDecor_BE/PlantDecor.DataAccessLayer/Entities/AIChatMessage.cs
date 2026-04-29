@@ -18,6 +18,12 @@ public partial class AIChatMessage
 
     public bool? IsPolicyResponse { get; set; }
 
+    // Persist assistant payload for later rendering in history (jsonb)
+    public string? SuggestedPlants { get; set; }
+
+    // Persist assistant payload for later rendering in history (jsonb)
+    public string? CareTips { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public virtual AIChatSession? AIChatSession { get; set; }
