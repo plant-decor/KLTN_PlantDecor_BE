@@ -372,7 +372,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(nurseryId);
-                return entity.ToResponse();
+
+                var updated = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(commonPlantId);
+                QueueEmbeddingAsync(updated!);
+
+                return updated!.ToResponse();
             }
             catch (Exception)
             {
@@ -400,7 +404,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(nurseryId);
-                return entity.ToResponse();
+
+                var updated = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(commonPlantId);
+                QueueEmbeddingAsync(updated!);
+
+                return updated!.ToResponse();
             }
             catch (Exception)
             {

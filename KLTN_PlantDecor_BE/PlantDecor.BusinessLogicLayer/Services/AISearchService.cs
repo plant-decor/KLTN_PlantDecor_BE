@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Pgvector;
@@ -478,6 +479,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     effectiveLimit,
                     intentAnalysis.RoomType);
 
+                var authoritativeFacts = await BuildAuthoritativeFactsForSuggestionsAsync(suggestions, responseLanguage);
+                ApplyAuthoritativeFactsToSuggestions(suggestions, authoritativeFacts);
+                if (request.OnlyPurchasable)
+                {
+                    suggestions = suggestions
+                        .Where(s => authoritativeFacts.Any(f =>
+                            f.EntityType == s.EntityType
+                            && f.EntityId == s.EntityId
+                            && f.IsPurchasable))
+                        .ToList();
+                    authoritativeFacts = authoritativeFacts
+                        .Where(f => suggestions.Any(s => s.EntityType == f.EntityType && s.EntityId == f.EntityId))
+                        .ToList();
+                }
+
                 var plantGuideCareTips = await BuildCareTipsFromPlantGuidesAsync(userMessage, intent, suggestions);
                 plantGuideCareTips = LocalizeCareTips(plantGuideCareTips, responseLanguage);
 
@@ -486,6 +502,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     intent,
                     roomSummary,
                     suggestions,
+                    authoritativeFacts,
+                    plantGuideCareTips,
                     intentAnalysis,
                     boundedHistory,
                     effectiveFengShuiElement,
@@ -734,6 +752,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             string intent,
             string? roomSummary,
             List<PlantSuggestionResponseDto> suggestions,
+            List<AuthoritativeEntityFactDto> authoritativeFacts,
+            List<string> authoritativeCareTips,
             ChatbotIntentAnalysis intentAnalysis,
             List<ChatbotConversationTurnDto> conversationHistory,
             string? fengShuiElement,
@@ -749,6 +769,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var answerPrompt =
                     "You are the PlantDecor AI chatbot. Tasks: plant selection guidance, basic room-environment understanding, and plant care support. " +
                     "Be practical, user-friendly, and do not invent products outside provided data. " +
+                    "The authoritativeFacts and authoritativeCareTips in the payload are the latest database state. " +
+                    "If they conflict with history, suggestedPlants, embedding/search text, or earlier assistant answers, trust authoritativeFacts. " +
+                    "Do not recommend an item as purchasable when authoritativeFacts marks it not purchasable, inactive, sold, expired, or out of stock. " +
                     "Reply in " + outputLanguageName + ". " +
                     "Return ONLY one JSON object with fields: reply (string), careTips (array string), " +
                     "followUpQuestions (array string), disclaimer (string|null). " +
@@ -781,8 +804,43 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         s.Name,
                         s.Description,
                         s.Price,
+                        s.IsPurchasable,
                         s.RelevanceScore
                     }).ToList(),
+                    authoritativeFacts = authoritativeFacts.Select(f => new
+                    {
+                        f.EntityType,
+                        f.EntityId,
+                        f.Name,
+                        f.Description,
+                        f.Price,
+                        f.NurseryId,
+                        f.NurseryName,
+                        f.IsActive,
+                        f.IsPurchasable,
+                        f.AvailabilityStatus,
+                        f.Quantity,
+                        f.StatusName,
+                        f.ExpiredDate,
+                        f.Categories,
+                        f.Tags,
+                        f.RoomTypes,
+                        f.RoomStyles,
+                        f.FengShuiElement,
+                        f.FengShuiMeaning,
+                        f.PetSafe,
+                        f.ChildSafe,
+                        f.AirPurifying,
+                        f.Brand,
+                        f.Unit,
+                        f.Specifications,
+                        f.SuitableSpace,
+                        f.SuitableRooms,
+                        f.Season,
+                        f.LightRequirementName,
+                        f.CareTips
+                    }).ToList(),
+                    authoritativeCareTips,
                     history = BuildHistoryContext(conversationHistory)
                 });
 
@@ -983,6 +1041,301 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     : "Policy content can change over time. Please confirm with a support consultant before any transaction.",
                 UsedFallback = false
             };
+        }
+
+        // dữ liệu nội bộ cho AI để hiểu thực thể nào đang được đề xuất và trạng thái hiện tại của nó, tránh khuyến nghị sai lệch do embedding lỗi thời hoặc không chính xác.
+        private async Task<List<AuthoritativeEntityFactDto>> BuildAuthoritativeFactsForSuggestionsAsync(
+            List<PlantSuggestionResponseDto> suggestions,
+            string responseLanguage)
+        {
+            if (suggestions.Count == 0)
+            {
+                return new List<AuthoritativeEntityFactDto>();
+            }
+
+            var facts = new List<AuthoritativeEntityFactDto>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var suggestion in suggestions)
+            {
+                var key = $"{suggestion.EntityType}:{suggestion.EntityId}";
+                if (!seen.Add(key))
+                {
+                    continue;
+                }
+
+                var fact = suggestion.EntityType switch
+                {
+                    EmbeddingEntityTypes.CommonPlant => await BuildCommonPlantFactAsync(suggestion.EntityId, responseLanguage),
+                    EmbeddingEntityTypes.PlantInstance => await BuildPlantInstanceFactAsync(suggestion.EntityId, responseLanguage),
+                    EmbeddingEntityTypes.NurseryMaterial => await BuildNurseryMaterialFactAsync(suggestion.EntityId),
+                    EmbeddingEntityTypes.NurseryPlantCombo => await BuildNurseryPlantComboFactAsync(suggestion.EntityId),
+                    _ => null
+                };
+
+                if (fact != null)
+                {
+                    facts.Add(fact);
+                }
+            }
+
+            return facts;
+        }
+
+        private async Task<AuthoritativeEntityFactDto?> BuildCommonPlantFactAsync(int entityId, string responseLanguage)
+        {
+            var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(entityId);
+            if (commonPlant == null)
+            {
+                return null;
+            }
+
+            var plant = commonPlant.Plant;
+            var guide = plant?.PlantGuide ?? (plant != null
+                ? await _unitOfWork.PlantGuideRepository.GetByPlantIdWithPlantAsync(plant.Id)
+                : null);
+            var isPurchasable = commonPlant.IsActive && commonPlant.Quantity > 0;
+
+            return new AuthoritativeEntityFactDto
+            {
+                EntityType = EmbeddingEntityTypes.CommonPlant,
+                EntityId = commonPlant.Id,
+                Name = plant?.Name ?? $"CommonPlant #{commonPlant.Id}",
+                Description = plant?.Description,
+                Price = plant?.BasePrice,
+                NurseryId = commonPlant.NurseryId,
+                NurseryName = commonPlant.Nursery?.Name,
+                IsActive = commonPlant.IsActive,
+                IsPurchasable = isPurchasable,
+                AvailabilityStatus = isPurchasable ? "Purchasable" : ResolveStockAvailability(commonPlant.IsActive, commonPlant.Quantity),
+                Quantity = commonPlant.Quantity,
+                Categories = GetCategoryNames(plant?.Categories),
+                Tags = GetTagNames(plant?.Tags),
+                RoomTypes = GetRoomTypeNames(plant?.RoomType),
+                RoomStyles = GetRoomStyleNames(plant?.RoomStyle),
+                FengShuiElement = MapFengShuiElement(plant?.FengShuiElement),
+                FengShuiMeaning = plant?.FengShuiMeaning,
+                PetSafe = plant?.PetSafe,
+                ChildSafe = plant?.ChildSafe,
+                AirPurifying = plant?.AirPurifying,
+                LightRequirementName = GetLightRequirementName(guide?.LightRequirement),
+                CareTips = guide == null
+                    ? new List<string>()
+                    : LocalizeCareTips(ExtractCareTipsFromGuide(guide, plant?.Name), responseLanguage)
+            };
+        }
+
+        private async Task<AuthoritativeEntityFactDto?> BuildPlantInstanceFactAsync(int entityId, string responseLanguage)
+        {
+            var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(entityId);
+            if (instance == null)
+            {
+                return null;
+            }
+
+            var plant = instance.Plant;
+            var guide = plant?.PlantGuide ?? (plant != null
+                ? await _unitOfWork.PlantGuideRepository.GetByPlantIdWithPlantAsync(plant.Id)
+                : null);
+            var statusName = Enum.IsDefined(typeof(PlantInstanceStatusEnum), instance.Status)
+                ? ((PlantInstanceStatusEnum)instance.Status).ToString()
+                : instance.Status.ToString();
+            var isPurchasable = instance.Status == (int)PlantInstanceStatusEnum.Available;
+
+            return new AuthoritativeEntityFactDto
+            {
+                EntityType = EmbeddingEntityTypes.PlantInstance,
+                EntityId = instance.Id,
+                Name = plant?.Name ?? $"PlantInstance #{instance.Id}",
+                Description = FirstNonEmpty(instance.Description, plant?.Description),
+                Price = instance.SpecificPrice ?? plant?.BasePrice,
+                NurseryId = instance.CurrentNurseryId,
+                NurseryName = instance.CurrentNursery?.Name,
+                IsActive = isPurchasable,
+                IsPurchasable = isPurchasable,
+                AvailabilityStatus = isPurchasable ? "Purchasable" : statusName,
+                StatusName = statusName,
+                Categories = GetCategoryNames(plant?.Categories),
+                Tags = GetTagNames(plant?.Tags),
+                RoomTypes = GetRoomTypeNames(plant?.RoomType),
+                RoomStyles = GetRoomStyleNames(plant?.RoomStyle),
+                FengShuiElement = MapFengShuiElement(plant?.FengShuiElement),
+                FengShuiMeaning = plant?.FengShuiMeaning,
+                PetSafe = plant?.PetSafe,
+                ChildSafe = plant?.ChildSafe,
+                AirPurifying = plant?.AirPurifying,
+                LightRequirementName = GetLightRequirementName(guide?.LightRequirement),
+                CareTips = guide == null
+                    ? new List<string>()
+                    : LocalizeCareTips(ExtractCareTipsFromGuide(guide, plant?.Name), responseLanguage)
+            };
+        }
+
+        private async Task<AuthoritativeEntityFactDto?> BuildNurseryMaterialFactAsync(int entityId)
+        {
+            var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entityId);
+            if (nurseryMaterial == null)
+            {
+                return null;
+            }
+
+            var material = nurseryMaterial.Material;
+            var isExpired = nurseryMaterial.ExpiredDate.HasValue
+                && nurseryMaterial.ExpiredDate.Value <= DateOnly.FromDateTime(DateTime.Today);
+            var isPurchasable = nurseryMaterial.IsActive && nurseryMaterial.Quantity > 0 && !isExpired;
+
+            return new AuthoritativeEntityFactDto
+            {
+                EntityType = EmbeddingEntityTypes.NurseryMaterial,
+                EntityId = nurseryMaterial.Id,
+                Name = material?.Name ?? $"NurseryMaterial #{nurseryMaterial.Id}",
+                Description = material?.Description,
+                Price = material?.BasePrice,
+                NurseryId = nurseryMaterial.NurseryId,
+                NurseryName = nurseryMaterial.Nursery?.Name,
+                IsActive = nurseryMaterial.IsActive,
+                IsPurchasable = isPurchasable,
+                AvailabilityStatus = isExpired
+                    ? "Expired"
+                    : (isPurchasable ? "Purchasable" : ResolveStockAvailability(nurseryMaterial.IsActive, nurseryMaterial.Quantity)),
+                Quantity = nurseryMaterial.Quantity,
+                ExpiredDate = nurseryMaterial.ExpiredDate?.ToString("yyyy-MM-dd"),
+                Categories = GetCategoryNames(material?.Categories),
+                Tags = GetTagNames(material?.Tags),
+                Brand = material?.Brand,
+                Unit = material?.Unit,
+                Specifications = material?.Specifications
+            };
+        }
+
+        private async Task<AuthoritativeEntityFactDto?> BuildNurseryPlantComboFactAsync(int entityId)
+        {
+            var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetQuery()
+                .AsNoTracking()
+                .Where(npc => npc.Id == entityId)
+                .Include(npc => npc.Nursery)
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.TagsNavigation)
+                .FirstOrDefaultAsync();
+            if (nurseryPlantCombo == null)
+            {
+                return null;
+            }
+
+            var combo = nurseryPlantCombo.PlantCombo;
+            var comboActive = combo?.IsActive == true;
+            var isPurchasable = nurseryPlantCombo.IsActive
+                && nurseryPlantCombo.Quantity > 0
+                && comboActive;
+
+            return new AuthoritativeEntityFactDto
+            {
+                EntityType = EmbeddingEntityTypes.NurseryPlantCombo,
+                EntityId = nurseryPlantCombo.Id,
+                Name = combo?.ComboName ?? $"NurseryPlantCombo #{nurseryPlantCombo.Id}",
+                Description = combo?.Description,
+                Price = combo?.ComboPrice,
+                NurseryId = nurseryPlantCombo.NurseryId,
+                NurseryName = nurseryPlantCombo.Nursery?.Name,
+                IsActive = nurseryPlantCombo.IsActive && comboActive,
+                IsPurchasable = isPurchasable,
+                AvailabilityStatus = isPurchasable
+                    ? "Purchasable"
+                    : ResolveStockAvailability(nurseryPlantCombo.IsActive && comboActive, nurseryPlantCombo.Quantity),
+                Quantity = nurseryPlantCombo.Quantity,
+                Tags = GetTagNames(combo?.TagsNavigation),
+                FengShuiElement = MapFengShuiElement(combo?.FengShuiElement),
+                PetSafe = combo?.PetSafe,
+                ChildSafe = combo?.ChildSafe,
+                SuitableSpace = GetLightRequirementName(combo?.SuitableSpace),
+                SuitableRooms = GetRoomTypeNames(combo?.SuitableRooms),
+                Season = combo?.Season.HasValue == true && Enum.IsDefined(typeof(SeasonTypeEnum), combo.Season.Value)
+                    ? ((SeasonTypeEnum)combo.Season.Value).ToString()
+                    : null
+            };
+        }
+
+        // dữ liệu để FE hiển thị
+        private static void ApplyAuthoritativeFactsToSuggestions(
+            List<PlantSuggestionResponseDto> suggestions,
+            List<AuthoritativeEntityFactDto> facts)
+        {
+            foreach (var suggestion in suggestions)
+            {
+                var fact = facts.FirstOrDefault(f =>
+                    f.EntityType == suggestion.EntityType
+                    && f.EntityId == suggestion.EntityId);
+                if (fact == null)
+                {
+                    suggestion.IsPurchasable = false;
+                    continue;
+                }
+
+                suggestion.Name = fact.Name;
+                suggestion.Description = fact.Description;
+                suggestion.Price = fact.Price;
+                suggestion.IsPurchasable = fact.IsPurchasable;
+            }
+        }
+
+        private static string ResolveStockAvailability(bool isActive, int quantity)
+        {
+            if (!isActive)
+            {
+                return "Inactive";
+            }
+
+            return quantity > 0 ? "Purchasable" : "OutOfStock";
+        }
+
+        private static List<string> GetCategoryNames(IEnumerable<DataAccessLayer.Entities.Category>? categories)
+        {
+            return categories?
+                .Select(c => c.Name)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> GetTagNames(IEnumerable<DataAccessLayer.Entities.Tag>? tags)
+        {
+            return tags?
+                .Select(t => t.TagName)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> GetRoomTypeNames(List<int>? roomTypes)
+        {
+            return roomTypes?
+                .Distinct()
+                .Select(room => Enum.IsDefined(typeof(RoomTypeEnum), room)
+                    ? ((RoomTypeEnum)room).ToString()
+                    : room.ToString())
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> GetRoomStyleNames(List<int>? roomStyles)
+        {
+            return roomStyles?
+                .Distinct()
+                .Select(style => Enum.IsDefined(typeof(RoomStyleEnum), style)
+                    ? ((RoomStyleEnum)style).ToString()
+                    : style.ToString())
+                .ToList() ?? new List<string>();
+        }
+
+        private static string? GetLightRequirementName(int? lightRequirement)
+        {
+            if (!lightRequirement.HasValue || !Enum.IsDefined(typeof(LightRequirementEnum), lightRequirement.Value))
+            {
+                return null;
+            }
+
+            return ((LightRequirementEnum)lightRequirement.Value).ToString();
         }
 
         private static string BuildPolicySection(string sectionTitle, List<DataAccessLayer.Entities.PolicyContent>? policies, string responseLanguage)
@@ -1876,6 +2229,40 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return Enum.IsDefined(typeof(FengShuiElementTypeEnum), fengShuiElement.Value)
                 ? ((FengShuiElementTypeEnum)fengShuiElement.Value).ToString()
                 : null;
+        }
+
+        private sealed class AuthoritativeEntityFactDto
+        {
+            public string EntityType { get; set; } = string.Empty;
+            public int EntityId { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string? Description { get; set; }
+            public decimal? Price { get; set; }
+            public int? NurseryId { get; set; }
+            public string? NurseryName { get; set; }
+            public bool? IsActive { get; set; }
+            public bool IsPurchasable { get; set; }
+            public string AvailabilityStatus { get; set; } = "Unknown";
+            public int? Quantity { get; set; }
+            public string? StatusName { get; set; }
+            public string? ExpiredDate { get; set; }
+            public List<string> Categories { get; set; } = new();
+            public List<string> Tags { get; set; } = new();
+            public List<string> RoomTypes { get; set; } = new();
+            public List<string> RoomStyles { get; set; } = new();
+            public string? FengShuiElement { get; set; }
+            public string? FengShuiMeaning { get; set; }
+            public bool? PetSafe { get; set; }
+            public bool? ChildSafe { get; set; }
+            public bool? AirPurifying { get; set; }
+            public string? Brand { get; set; }
+            public string? Unit { get; set; }
+            public string? Specifications { get; set; }
+            public string? SuitableSpace { get; set; }
+            public List<string> SuitableRooms { get; set; } = new();
+            public string? Season { get; set; }
+            public string? LightRequirementName { get; set; }
+            public List<string> CareTips { get; set; } = new();
         }
 
         private sealed class ChatbotIntentAnalysis

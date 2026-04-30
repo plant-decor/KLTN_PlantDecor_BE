@@ -232,6 +232,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(id);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(id);
 
                 return combo.ToResponse();
             }
@@ -498,6 +499,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(id);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(id);
 
                 return true;
             }
@@ -521,6 +523,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync(id);
+            await QueueNurseryPlantComboEmbeddingsByComboIdAsync(id);
 
             return combo.IsActive ?? true;
         }
@@ -561,6 +564,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(comboId);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(comboId);
 
                 // Reload with details
                 var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
@@ -594,6 +598,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync(comboId);
+            await QueueNurseryPlantComboEmbeddingsByComboIdAsync(comboId);
 
             // Reload with details
             var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
@@ -633,6 +638,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(combo.Id);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(combo.Id);
 
                 // Reload with details
                 var updated = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(combo.Id);
@@ -678,6 +684,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(request.PlantComboId);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(request.PlantComboId);
 
                 return combo.ToResponse();
             }
@@ -703,6 +710,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync(comboId);
+            await QueueNurseryPlantComboEmbeddingsByComboIdAsync(comboId);
 
             return combo.ToResponse();
         }
@@ -866,6 +874,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     throw new BadRequestException($"Không đủ số lượng combo để phân rã. Hiện có {comboStockBefore}, yêu cầu {request.Quantity}");
 
                 var stockChanges = new List<NurseryComboPlantStockChangeDto>();
+                var affectedCommonPlants = new List<CommonPlant>();
                 foreach (var item in combo.PlantComboItems)
                 {
                     if (!item.PlantId.HasValue)
@@ -903,6 +912,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
                     }
 
+                    affectedCommonPlants.Add(commonPlant);
+
                     stockChanges.Add(new NurseryComboPlantStockChangeDto
                     {
                         PlantId = item.PlantId.Value,
@@ -923,6 +934,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(comboId);
+                await QueueNurseryPlantComboEmbeddingsByComboIdAsync(comboId);
+                foreach (var commonPlantId in affectedCommonPlants.Select(cp => cp.Id).Where(id => id > 0).Distinct())
+                {
+                    await QueueCommonPlantEmbeddingByIdAsync(commonPlantId);
+                }
 
                 return new NurseryComboStockOperationResponseDto
                 {
@@ -1264,6 +1280,50 @@ namespace PlantDecor.BusinessLogicLayer.Services
             catch
             {
                 // Log but don't fail
+            }
+        }
+
+        private async Task QueueNurseryPlantComboEmbeddingsByComboIdAsync(int comboId)
+        {
+            try
+            {
+                var nurseryPlantCombos = await _unitOfWork.NurseryPlantComboRepository.GetByPlantComboIdForEmbeddingAsync(comboId);
+                foreach (var nurseryPlantCombo in nurseryPlantCombos)
+                {
+                    var entityId = ConvertToGuid(nurseryPlantCombo.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessNurseryPlantComboEmbeddingAsync(
+                            nurseryPlantCombo.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.NurseryPlantCombo));
+                }
+            }
+            catch
+            {
+                // Re-embedding is best-effort and should not fail PlantCombo write operations.
+            }
+        }
+
+        private async Task QueueCommonPlantEmbeddingByIdAsync(int commonPlantId)
+        {
+            try
+            {
+                var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(commonPlantId);
+                if (commonPlant == null)
+                {
+                    return;
+                }
+
+                var entityId = ConvertToGuid(commonPlant.Id);
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessCommonPlantEmbeddingAsync(
+                        commonPlant.ToEmbeddingBackfillDto(),
+                        entityId,
+                        EmbeddingEntityTypes.CommonPlant));
+            }
+            catch
+            {
+                // Re-embedding is best-effort and should not fail combo stock operations.
             }
         }
 

@@ -9,5 +9,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<NurseryPlantCombo?> GetByIdWithComboItemsAsync(int id);
         Task<int> CountForEmbeddingBackfillAsync();
         Task<List<NurseryPlantCombo>> GetEmbeddingBackfillBatchAsync(int skip, int take);
+        Task<List<NurseryPlantCombo>> GetByPlantComboIdForEmbeddingAsync(int comboId);
     }
 }

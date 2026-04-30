@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Libraries;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -280,6 +282,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var shouldInvalidateInventoryCaches = false;
             var shouldEnqueueOrderSuccessEmail = false;
             var orderIdForSuccessEmail = 0;
+            var updatedPlantInstanceIds = new List<int>();
             try
             {
                 if (responseCode == "00")
@@ -326,7 +329,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     // Update PlantInstance status for PlantInstance orders
                     if (order.OrderType == (int)OrderTypeEnum.PlantInstance)
                     {
-                        await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
+                        updatedPlantInstanceIds = await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
                     }
 
                     // Generate care service schedule for Service orders
@@ -386,6 +389,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (shouldInvalidateInventoryCaches)
             {
                 await InvalidateInventoryAndShopCachesAsync();
+            }
+
+            foreach (var plantInstanceId in updatedPlantInstanceIds)
+            {
+                await QueuePlantInstanceEmbeddingByIdAsync(plantInstanceId);
             }
 
             if (shouldEnqueueOrderSuccessEmail && orderIdForSuccessEmail > 0)
@@ -674,11 +682,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         /// - Deposit/FullPayment: Available → Reserved (item paid but not yet delivered)
         /// - RemainingBalance: Keep Reserved (will be Sold when delivered)
         /// </summary>
-        private async Task UpdatePlantInstanceStatusForOrderAsync(Order order, PaymentTypeEnum paymentType)
+        private async Task<List<int>> UpdatePlantInstanceStatusForOrderAsync(Order order, PaymentTypeEnum paymentType)
         {
+            var updatedPlantInstanceIds = new List<int>();
+
             // Only update to Reserved when first payment (Deposit or FullPayment), not for RemainingBalance
             if (paymentType == PaymentTypeEnum.RemainingBalance)
-                return;
+                return updatedPlantInstanceIds;
 
             var paymentStrategies = (PaymentStrategiesEnum)order.PaymentStrategy;
 
@@ -693,16 +703,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         {
                             plantInstance.Status = (int)PlantInstanceStatusEnum.Reserved;
                             _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                            updatedPlantInstanceIds.Add(plantInstance.Id);
                         }
                         else if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available && paymentStrategies == PaymentStrategiesEnum.FullPayment)
                         {
                             plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
                             _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                            updatedPlantInstanceIds.Add(plantInstance.Id);
                         }
                     }
                 }
             }
+
+            return updatedPlantInstanceIds;
         }
+
+        private async Task QueuePlantInstanceEmbeddingByIdAsync(int plantInstanceId)
+        {
+            try
+            {
+                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(plantInstanceId);
+                if (plantInstance == null)
+                {
+                    return;
+                }
+
+                var entityId = ConvertToGuid(plantInstance.Id);
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessPlantInstanceEmbeddingAsync(
+                        plantInstance.ToEmbeddingBackfillDto(),
+                        entityId,
+                        EmbeddingEntityTypes.PlantInstance));
+            }
+            catch
+            {
+                // Re-embedding is best-effort and should not fail payment success handling.
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         private async Task AssignShippersForPaidOrderAsync(Order order)
         {

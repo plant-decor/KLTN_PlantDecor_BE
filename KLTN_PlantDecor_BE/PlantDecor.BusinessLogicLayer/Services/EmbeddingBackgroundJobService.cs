@@ -133,13 +133,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             try
             {
-                await _embeddingService.CreateEmbeddingAsync(entity, entityId, entityType);
+                await _embeddingService.UpdateEmbeddingAsync(entity, entityId, entityType);
 
-                _logger.LogInformation($"Hangfire job completed: Created embedding for {entityType}:{entityId}");
+                _logger.LogInformation($"Hangfire job completed: Updated embedding for {entityType}:{entityId}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Hangfire job failed: Error creating embedding for {entityType}:{entityId}");
+                _logger.LogError(ex, $"Hangfire job failed: Error updating embedding for {entityType}:{entityId}");
                 throw; // Re-throw to let Hangfire handle retries
             }
         }

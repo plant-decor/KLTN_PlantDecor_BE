@@ -283,6 +283,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // Reload with details
                 var result = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(targerEntity.Id);
+                QueueEmbeddingAsync(result!);
+
                 return result!.ToResponse();
             }
             catch (Exception)
@@ -311,6 +313,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+
+                var updated = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
+                QueueEmbeddingAsync(updated!);
 
                 return entity.ToResponse();
             }

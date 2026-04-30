@@ -1,6 +1,8 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -19,6 +21,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly ILogger<PlantService> _logger;
 
         private const string ALL_PLANTS_KEY = "plants_all";
@@ -29,11 +32,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
             ILogger<PlantService> logger)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
             _logger = logger;
         }
 
@@ -161,6 +166,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return plant.ToResponse();
             }
@@ -436,6 +442,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return true;
             }
@@ -459,6 +466,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(id);
 
             return plant.IsActive ?? true;
         }
@@ -495,9 +503,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 plant.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.PlantId);
 
                 return plant.ToResponse();
             }
@@ -535,9 +545,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 plant.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.PlantId);
 
                 return plant.ToResponse();
             }
@@ -563,6 +575,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(plantId);
 
             return plant.ToResponse();
         }
@@ -582,6 +595,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(plantId);
 
             return plant.ToResponse();
         }
@@ -732,6 +746,41 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
         #endregion
+
+        private async Task QueueDependentEmbeddingsAsync(int plantId)
+        {
+            try
+            {
+                var commonPlants = await _unitOfWork.CommonPlantRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                foreach (var commonPlant in commonPlants)
+                {
+                    var entityId = ConvertToGuid(commonPlant.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessCommonPlantEmbeddingAsync(
+                            commonPlant.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.CommonPlant));
+                }
+
+                var plantInstances = await _unitOfWork.PlantInstanceRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                foreach (var plantInstance in plantInstances)
+                {
+                    var entityId = ConvertToGuid(plantInstance.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessPlantInstanceEmbeddingAsync(
+                            plantInstance.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.PlantInstance));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to queue dependent embeddings for Plant:{PlantId}", plantId);
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         private static string ExtractCloudinaryPublicId(string? imageUrl)
         {
