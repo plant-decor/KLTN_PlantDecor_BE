@@ -31,18 +31,33 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
         public async Task<List<Embedding>> SearchSimilarAsync(Vector queryVector, int limit = 10, string? entityType = null)
         {
+            var entityTypes = string.IsNullOrEmpty(entityType)
+                ? null
+                : new List<string> { entityType };
+
+            return await SearchSimilarAsync(queryVector, limit, entityTypes);
+        }
+
+        public async Task<List<Embedding>> SearchSimilarAsync(Vector queryVector, int limit, IEnumerable<string>? entityTypes)
+        {
             if (limit <= 0)
             {
                 return new List<Embedding>();
             }
 
+            var normalizedEntityTypes = entityTypes?
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             var query = _context.Embeddings
                 .AsNoTracking()
                 .Where(e => e.EmbeddingVector != null);
 
-            if (!string.IsNullOrEmpty(entityType))
+            if (normalizedEntityTypes is { Count: > 0 })
             {
-                query = query.Where(e => e.EntityType == entityType);
+                query = query.Where(e => normalizedEntityTypes.Contains(e.EntityType));
             }
 
             // Chunked embeddings can produce duplicate entities in top-k.

@@ -90,12 +90,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 // 2. Search similar embeddings (get more for filtering)
                 var searchLimit = onlyPurchasable ? limit * 3 : limit;
-                var entityType = entityTypes?.FirstOrDefault();
-                var embeddings = await _unitOfWork.EmbeddingRepository.SearchSimilarAsync(vector, searchLimit, entityType);
+                var embeddings = await _unitOfWork.EmbeddingRepository.SearchSimilarAsync(vector, searchLimit, entityTypes);
 
                 // 3. Filter by purchasable status and enrich results
                 var results = new List<SearchResultItemDto>();
-                var maxDistance = embeddings.Any() ? embeddings.Max(e => GetDistance(e, vector)) : 1.0;
 
                 foreach (var embedding in embeddings)
                 {
@@ -112,7 +110,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         continue;
 
                     // Enrich result
-                    var item = await EnrichSearchResultAsync(embedding, originalEntityId, isPurchasable, vector, maxDistance);
+                    var item = await EnrichSearchResultAsync(embedding, originalEntityId, isPurchasable);
                     if (item != null)
                     {
                         results.Add(item);
@@ -462,8 +460,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var roomSummary = FirstNonEmpty(request.RoomDescription, intentAnalysis.RoomSummary);
                 var recommendationQuery = FirstNonEmpty(
                     roomSummary,
-                    intentAnalysis.SearchQuery,
                     userMessage,
+                    intentAnalysis.SearchQuery,
                     "Cây cảnh trong nhà dễ chăm sóc")
                     ?? "Cây cảnh trong nhà dễ chăm sóc";
 
@@ -2067,26 +2065,85 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return 0;
         }
 
-        private double GetDistance(DataAccessLayer.Entities.Embedding embedding, Vector queryVector)
+        private static double ExtractCosineSimilarityScore(Dictionary<string, object>? metadata)
         {
-            // Since we don't have direct access to distance in the entity,
-            // we calculate a normalized score based on position in results
-            return 0.5; // Placeholder - actual distance calculated in repository
+            return TryReadMetadataDouble(metadata, "CosineSimilarityScore", out var score)
+                ? score
+                : 0;
+        }
+
+        private static bool TryReadMetadataDouble(Dictionary<string, object>? metadata, string key, out double value)
+        {
+            value = 0;
+            if (metadata == null || !metadata.TryGetValue(key, out var rawValue) || rawValue == null)
+            {
+                return false;
+            }
+
+            switch (rawValue)
+            {
+                case double doubleValue:
+                    value = doubleValue;
+                    return true;
+                case float floatValue:
+                    value = floatValue;
+                    return true;
+                case decimal decimalValue:
+                    value = (double)decimalValue;
+                    return true;
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue:
+                    value = longValue;
+                    return true;
+                case string stringValue:
+                    return double.TryParse(
+                        stringValue,
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out value);
+                case JsonElement jsonElement:
+                    return TryReadJsonElementDouble(jsonElement, out value);
+                default:
+                    try
+                    {
+                        value = Convert.ToDouble(rawValue, System.Globalization.CultureInfo.InvariantCulture);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+            }
+        }
+
+        private static bool TryReadJsonElementDouble(JsonElement jsonElement, out double value)
+        {
+            value = 0;
+            return jsonElement.ValueKind switch
+            {
+                JsonValueKind.Number => jsonElement.TryGetDouble(out value),
+                JsonValueKind.String => double.TryParse(
+                    jsonElement.GetString(),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out value),
+                _ => false
+            };
         }
 
         private async Task<SearchResultItemDto?> EnrichSearchResultAsync(
             DataAccessLayer.Entities.Embedding embedding,
             int originalEntityId,
-            bool isPurchasable,
-            Vector queryVector,
-            double maxDistance)
+            bool isPurchasable)
         {
             var item = new SearchResultItemDto
             {
                 EntityType = embedding.EntityType,
                 EntityId = originalEntityId,
                 IsPurchasable = isPurchasable,
-                SimilarityScore = 0.8 // Default similarity score
+                SimilarityScore = ExtractCosineSimilarityScore(embedding.Metadata)
             };
 
             // Extract metadata
