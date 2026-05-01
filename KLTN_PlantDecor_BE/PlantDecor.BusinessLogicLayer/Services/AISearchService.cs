@@ -518,6 +518,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return llmFallback;
                 }
 
+                var quickReplyPrompts = BuildUserPromptSuggestions(intent, suggestions, authoritativeFacts, responseLanguage);
                 var response = ClampChatbotResponsePayload(new AIChatbotResponseDto
                 {
                     Intent = intent,
@@ -525,7 +526,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     RoomEnvironmentSummary = roomSummary,
                     SuggestedPlants = suggestions,
                     CareTips = MergeCareTips(answer.CareTips, plantGuideCareTips),
-                    FollowUpQuestions = answer.FollowUpQuestions ?? new List<string>(),
+                    FollowUpQuestions = quickReplyPrompts,
                     Disclaimer = answer.Disclaimer,
                     UsedFallback = false
                 });
@@ -771,9 +772,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     "If they conflict with history, suggestedPlants, embedding/search text, or earlier assistant answers, trust authoritativeFacts. " +
                     "Do not recommend an item as purchasable when authoritativeFacts marks it not purchasable, inactive, sold, expired, or out of stock. " +
                     "Reply in " + outputLanguageName + ". " +
-                    "Return ONLY one JSON object with fields: reply (string), careTips (array string), " +
-                    "followUpQuestions (array string), disclaimer (string|null). " +
-                    "If careTips or followUpQuestions is unavailable, return an empty array.";
+                    "Return ONLY one JSON object with fields: reply (string), careTips (array string), disclaimer (string|null). " +
+                    "If careTips is unavailable, return an empty array.";
 
                 var contextPayload = JsonSerializer.Serialize(new
                 {
@@ -860,7 +860,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 payload.CareTips = NormalizeTextList(payload.CareTips);
-                payload.FollowUpQuestions = NormalizeTextList(payload.FollowUpQuestions);
                 payload.Reply = payload.Reply.Trim();
                 payload.Disclaimer = string.IsNullOrWhiteSpace(payload.Disclaimer) ? null : payload.Disclaimer.Trim();
 
@@ -911,17 +910,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 RoomEnvironmentSummary = roomSummary,
                 SuggestedPlants = suggestions,
                 CareTips = MergeCareTips(defaultCareTips, plantGuideCareTips),
-                FollowUpQuestions = isVietnamese
-                    ? new List<string>
-                    {
-                        "Phong cua ban nhan anh sang truc tiep hay anh sang tan xa?",
-                        "Ban uu tien cay de cham hay cay co gia tri tham my cao?"
-                    }
-                    : new List<string>
-                    {
-                        "Does your room get direct sunlight or mostly indirect light?",
-                        "Do you prefer low-maintenance plants or stronger decorative impact?"
-                    },
+                FollowUpQuestions = BuildUserPromptSuggestions(intent, suggestions, new List<AuthoritativeEntityFactDto>(), responseLanguage),
                 PolicySources = new List<PolicyGroundingSourceDto>(),
                 Disclaimer = isVietnamese
                     ? "Thong tin chi mang tinh tham khao. Neu cay co dau hieu benh nang, ban nen lien he chuyen gia cham soc cay."
@@ -982,17 +971,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             : $"You can also review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                     SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                     CareTips = new List<string>(),
-                    FollowUpQuestions = isVietnamese
-                        ? new List<string>
-                        {
-                            "Ban can minh trich ngan hon phan chinh sach nguoi dung hay chinh sach hoan tra?",
-                            "Ban muon minh nhac lai la nen chat voi tu van vien de xac nhan phien ban chinh sach moi nhat khong?"
-                        }
-                        : new List<string>
-                        {
-                            "Do you want a shorter summary of the user policy or the return policy?",
-                            "Would you like me to remind you to confirm the latest policy version with a support consultant?"
-                        },
+                    FollowUpQuestions = BuildPolicyPromptSuggestions(responseLanguage),
                     PolicySources = policySources,
                     Disclaimer = isVietnamese
                         ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
@@ -1022,17 +1001,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         : $"Please chat directly with a support consultant, or review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                 SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                 CareTips = new List<string>(),
-                FollowUpQuestions = isVietnamese
-                    ? new List<string>
-                    {
-                        "Ban muon minh nhac lai la hay vao muc Ho tro de chat voi tu van vien khong?",
-                        "Ban dang can chinh sach nguoi dung hay chinh sach hoan tra?"
-                    }
-                    : new List<string>
-                    {
-                        "Would you like me to remind you to open Support and chat with a consultant?",
-                        "Are you looking for the user policy or the return policy?"
-                    },
+                FollowUpQuestions = BuildPolicyPromptSuggestions(responseLanguage),
                 PolicySources = new List<PolicyGroundingSourceDto>(),
                 Disclaimer = isVietnamese
                     ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
@@ -1556,6 +1525,131 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Take(maxItems)
                 .ToList();
+        }
+
+        private static List<string> BuildUserPromptSuggestions(
+            string intent,
+            List<PlantSuggestionResponseDto>? suggestions,
+            List<AuthoritativeEntityFactDto>? facts,
+            string responseLanguage)
+        {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            var normalizedIntent = NormalizeIntent(intent);
+            var suggestedItems = suggestions ?? new List<PlantSuggestionResponseDto>();
+            var factItems = facts ?? new List<AuthoritativeEntityFactDto>();
+            var primaryFact = factItems.FirstOrDefault(f => f.IsPurchasable) ?? factItems.FirstOrDefault();
+            var primarySuggestion = suggestedItems.FirstOrDefault(s => s.IsPurchasable) ?? suggestedItems.FirstOrDefault();
+            var plantName = FirstNonEmpty(primaryFact?.Name, primarySuggestion?.Name);
+            var hasPurchasableItem = factItems.Any(f => f.IsPurchasable) || suggestedItems.Any(s => s.IsPurchasable);
+            var prompts = new List<string>();
+
+            if (normalizedIntent == ChatbotIntentPolicySupport)
+            {
+                return BuildPolicyPromptSuggestions(responseLanguage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(plantName))
+            {
+                switch (normalizedIntent)
+                {
+                    case ChatbotIntentPlantCare:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cho toi biet them cach cham soc {plantName}"
+                            : $"Tell me more care tips for {plantName}");
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Lich tuoi va anh sang phu hop cho {plantName} la gi?"
+                            : $"What watering and light schedule is best for {plantName}?");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y cho toi cac cay tuong tu de cham soc"
+                            : "Show me similar low-maintenance plants");
+                        break;
+
+                    case ChatbotIntentRoomEnvironment:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"{plantName} co phu hop voi phong cua toi khong?"
+                            : $"Is {plantName} suitable for my room?");
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Toi nen dat {plantName} o vi tri nao trong phong?"
+                            : $"Where should I place {plantName} in my room?");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y them cay phu hop voi phong cua toi"
+                            : "Show me more plants suitable for my room");
+                        break;
+
+                    default:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cho toi biet them ve {plantName}"
+                            : $"Tell me more about {plantName}");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cach cham soc {plantName} nhu the nao?"
+                            : $"How do I care for {plantName}?");
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y cho toi cac cay tuong tu"
+                            : "Show me similar plants");
+                        break;
+                }
+            }
+            else
+            {
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cho toi cay canh de cham soc"
+                    : "Suggest low-maintenance indoor plants");
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cay phu hop voi phong cua toi"
+                    : "Suggest plants suitable for my room");
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cay theo ngan sach cua toi"
+                    : "Suggest plants within my budget");
+                AddPrompt(prompts, isVietnamese
+                    ? "Huong dan toi cach cham soc cay"
+                    : "Guide me on plant care");
+            }
+
+            return ClampTextList(prompts, MaxFollowUpsCount, MaxFollowUpChars);
+        }
+
+        private static List<string> BuildPolicyPromptSuggestions(string responseLanguage)
+        {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            return isVietnamese
+                ? new List<string>
+                {
+                    "Tom tat ngan hon chinh sach nguoi dung",
+                    "Tom tat ngan hon chinh sach hoan tra",
+                    "Huong dan toi cach lien he tu van vien ho tro"
+                }
+                : new List<string>
+                {
+                    "Give me a shorter summary of the user policy",
+                    "Give me a shorter summary of the return policy",
+                    "Guide me on how to contact a support consultant"
+                };
+        }
+
+        private static void AddPrompt(List<string> prompts, string? prompt)
+        {
+            if (!string.IsNullOrWhiteSpace(prompt))
+            {
+                prompts.Add(prompt.Trim());
+            }
         }
 
         private static PlantSuggestionResponseDto MapRoomRecommendationToSuggestion(PlantRecommendationItemDto recommendation)
