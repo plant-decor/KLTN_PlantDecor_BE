@@ -46,7 +46,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var tag = await _unitOfWork.TagRepository.GetByIdAsync(id);
             if (tag == null)
-                throw new NotFoundException($"Tag với ID {id} không tồn tại");
+                throw new NotFoundException($"Tag with ID {id} not found");
 
             return tag.ToResponse();
         }
@@ -58,7 +58,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Check if tag name already exists
                 if (await _unitOfWork.TagRepository.ExistsByNameAsync(request.TagName))
-                    throw new BadRequestException($"Tag với tên '{request.TagName}' đã tồn tại");
+                    throw new BadRequestException($"Tag with name '{request.TagName}' already exists");
 
                 var tag = request.ToEntity();
 
@@ -84,11 +84,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var tag = await _unitOfWork.TagRepository.GetByIdAsync(id);
                 if (tag == null)
-                    throw new NotFoundException($"Tag với ID {id} không tồn tại");
+                    throw new NotFoundException($"Tag with ID {id} not found");
 
                 // Check if tag name already exists (excluding current tag)
                 if (request.TagName != null && await _unitOfWork.TagRepository.ExistsByNameAsync(request.TagName, id))
-                    throw new BadRequestException($"Tag với tên '{request.TagName}' đã tồn tại");
+                    throw new BadRequestException($"Tag with name '{request.TagName}' already exists");
 
                 request.ToUpdate(tag);
 
@@ -114,11 +114,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var tag = await _unitOfWork.TagRepository.GetByIdWithProductsAsync(id);
                 if (tag == null)
-                    throw new NotFoundException($"Tag với ID {id} không tồn tại");
+                    throw new NotFoundException($"Tag with ID {id} not found");
 
                 // Check if tag is assigned to any products
                 if (tag.Plants.Any() || tag.Materials.Any() || tag.PlantCombos.Any())
-                    throw new BadRequestException("Không thể xóa tag đang được gắn với sản phẩm. Vui lòng gỡ liên kết trước.");
+                    throw new BadRequestException("Cannot delete tag that is assigned to products. Please remove the association first.");
 
                 _unitOfWork.TagRepository.PrepareRemove(tag);
                 await _unitOfWork.SaveAsync();

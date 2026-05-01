@@ -84,7 +84,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(id);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {id} không tồn tại");
+                throw new NotFoundException($"Combo with ID {id} not found");
 
             return combo.ToResponse();
         }
@@ -103,13 +103,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
                     if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode))
-                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
+                        throw new BadRequestException($"Combo with code '{normalizedComboCode}' already exists");
                 }
 
                 if (!string.IsNullOrWhiteSpace(normalizedComboName))
                 {
                     if (await _unitOfWork.PlantComboRepository.ExistsByNameAsync(normalizedComboName))
-                        throw new BadRequestException($"Combo với tên '{normalizedComboName}' đã tồn tại");
+                        throw new BadRequestException($"Combo with name '{normalizedComboName}' already exists");
                 }
 
                 ValidateEnumBackedFields(request.SuitableSpace, request.SuitableRooms);
@@ -125,7 +125,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     foreach (var itemDto in request.ComboItems)
                     {
                         var plant = await _unitOfWork.PlantRepository.GetByIdAsync(itemDto.PlantId)
-                            ?? throw new NotFoundException($"Plant với ID {itemDto.PlantId} không tồn tại");
+                            ?? throw new NotFoundException($"Plant with ID {itemDto.PlantId} not found");
                         plantsInCombo.Add(plant);
                     }
                 }
@@ -141,7 +141,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (tags.Count != tagIds.Count)
                     {
                         var invalidIds = tagIds.Except(tags.Select(t => t.Id));
-                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"The following Tags with ID {string.Join(", ", invalidIds)} not found");
                     }
 
                     foreach (var tag in tags)
@@ -186,7 +186,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(id);
                 if (combo == null)
-                    throw new NotFoundException($"Combo với ID {id} không tồn tại");
+                    throw new NotFoundException($"Combo with ID {id} not found");
 
                 var normalizedComboCode = string.IsNullOrWhiteSpace(request.ComboCode)
                     ? null
@@ -195,7 +195,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (!string.IsNullOrEmpty(normalizedComboCode))
                 {
                     if (await _unitOfWork.PlantComboRepository.ExistsByCodeAsync(normalizedComboCode, id))
-                        throw new BadRequestException($"Combo với mã '{normalizedComboCode}' đã tồn tại");
+                        throw new BadRequestException($"Combo with code '{normalizedComboCode}' already exists");
                 }
 
                 ValidateEnumBackedFields(request.SuitableSpace, request.SuitableRooms);
@@ -212,7 +212,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (tags.Count != tagIds.Count)
                     {
                         var invalidIds = tagIds.Except(tags.Select(t => t.Id));
-                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"The following Tags with ID {string.Join(", ", invalidIds)} not found");
                     }
 
                     combo.TagsNavigation.Clear();
@@ -250,7 +250,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             foreach (var file in files)
             {
@@ -320,7 +320,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -381,11 +381,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var targetImage = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
             if (targetImage == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in combo {comboId}");
 
             foreach (var image in combo.PlantComboImages)
                 image.IsPrimary = image.Id == imageId;
@@ -407,11 +407,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var image = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in combo {comboId}");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -444,11 +444,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var image = combo.PlantComboImages.FirstOrDefault(i => i.Id == imageId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc combo {comboId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in combo {comboId}");
 
             var wasPrimary = image.IsPrimary == true;
             var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
@@ -485,11 +485,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var combo = await _unitOfWork.PlantComboRepository.GetByIdWithOrdersAsync(id);
                 if (combo == null)
-                    throw new NotFoundException($"Combo với ID {id} không tồn tại");
+                    throw new NotFoundException($"Combo with ID {id} not found");
 
                 // Check if combo is in use via NurseryPlantCombos
                 if (combo.NurseryPlantCombos.Any())
-                    throw new BadRequestException("Không thể xóa combo đang được liên kết với nursery. Vui lòng vô hiệu hóa thay vì xóa.");
+                    throw new BadRequestException("Cannot delete combo that is linked to a nursery. Please deactivate instead.");
 
                 combo.IsActive = false;
                 combo.UpdatedAt = DateTime.Now;
@@ -514,7 +514,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdAsync(id);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {id} không tồn tại");
+                throw new NotFoundException($"Combo with ID {id} not found");
 
             combo.IsActive = !combo.IsActive;
             combo.UpdatedAt = DateTime.Now;
@@ -540,15 +540,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
                 if (combo == null)
-                    throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                    throw new NotFoundException($"Combo with ID {comboId} not found");
 
                 // Validate plant exists
                 var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId)
-                    ?? throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                    ?? throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
                 // Check if plant already exists in combo
                 if (combo.PlantComboItems.Any(i => i.PlantId == request.PlantId))
-                    throw new BadRequestException($"Plant với ID {request.PlantId} đã có trong combo");
+                    throw new BadRequestException($"Plant with ID {request.PlantId} already exists in the combo");
 
                 var comboItem = request.ToComboItemEntity(comboId);
                 combo.PlantComboItems.Add(comboItem);
@@ -581,11 +581,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var item = combo.PlantComboItems.FirstOrDefault(i => i.Id == comboItemId);
             if (item == null)
-                throw new NotFoundException($"Combo item với ID {comboItemId} không tồn tại trong combo");
+                throw new NotFoundException($"Combo item with ID {comboItemId} not found in combo {comboId}");
 
             combo.PlantComboItems.Remove(item);
             combo.UpdatedAt = DateTime.Now;
@@ -614,13 +614,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Find the combo containing this combo item
                 var combo = await _unitOfWork.PlantComboRepository.GetComboByComboItemIdAsync(comboItemId);
                 if (combo == null)
-                    throw new NotFoundException($"Combo item với ID {comboItemId} không tồn tại");
+                    throw new NotFoundException($"Combo item with ID {comboItemId} not found");
 
                 var comboItem = combo.PlantComboItems.First(i => i.Id == comboItemId);
 
                 // Validate plant exists
                 var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId)
-                    ?? throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                    ?? throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
                 comboItem.PlantId = request.PlantId;
                 comboItem.Quantity = request.Quantity;
@@ -659,14 +659,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(request.PlantComboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {request.PlantComboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {request.PlantComboId} not found");
 
             var tags = await _unitOfWork.TagRepository.GetByIdsAsync(request.TagIds);
 
             if (tags.Count != request.TagIds.Count)
             {
                 var invalidIds = request.TagIds.Except(tags.Select(t => t.Id));
-                throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                throw new NotFoundException($"Tags with IDs {string.Join(", ", invalidIds)} not found");
             }
 
             try
@@ -699,11 +699,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             var tag = combo.TagsNavigation.FirstOrDefault(t => t.Id == tagId);
             if (tag == null)
-                throw new NotFoundException($"Combo không có tag với ID {tagId}");
+                throw new NotFoundException($"Combo with ID {comboId} does not have a tag with ID {tagId}");
 
             combo.TagsNavigation.Remove(tag);
             combo.UpdatedAt = DateTime.Now;
@@ -722,21 +722,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public async Task<NurseryComboStockOperationResponseDto> AssembleComboStockAsync(int managerId, int comboId, AssembleNurseryComboRequestDto request)
         {
             if (request.Quantity <= 0)
-                throw new BadRequestException("Số lượng combo tạo phải lớn hơn 0");
+                throw new BadRequestException("Combo quantity to create must be greater than 0");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+                throw new ForbiddenException("You do not have permission to operate on this nursery");
 
             var nurseryId = nursery.Id;
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} not found");
 
             if (!combo.PlantComboItems.Any())
-                throw new BadRequestException("Combo chưa có thành phần cây để tạo tồn kho kinh doanh");
-
+                throw new BadRequestException("Combo does not have any plant items to create inventory");
             await _unitOfWork.BeginTransactionAsync();
 
             try
@@ -747,16 +746,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 foreach (var item in combo.PlantComboItems)
                 {
                     if (!item.PlantId.HasValue)
-                        throw new BadRequestException($"Combo item ID {item.Id} chưa có PlantId hợp lệ");
+                        throw new BadRequestException($"Combo item ID {item.Id} does not have a valid PlantId");
 
                     if (!item.Quantity.HasValue || item.Quantity.Value <= 0)
-                        throw new BadRequestException($"Combo item ID {item.Id} có số lượng cây không hợp lệ");
+                        throw new BadRequestException($"Combo item ID {item.Id} has an invalid plant quantity");
 
                     var requiredQuantity = item.Quantity.Value * request.Quantity;
                     var commonPlant = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(item.PlantId.Value, nurseryId);
                     if (commonPlant == null || !commonPlant.IsActive)
                     {
-                        shortageMessages.Add($"- PlantId {item.PlantId.Value}: không tồn tại trong kho cây đại trà của vựa hoặc đang bị vô hiệu hóa");
+                        shortageMessages.Add($"- PlantId {item.PlantId.Value}: not found in the nursery's common plant inventory or is disabled");
                         continue;
                     }
 
@@ -764,7 +763,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (availableStock < requiredQuantity)
                     {
                         var plantName = item.Plant?.Name ?? $"PlantId {item.PlantId.Value}";
-                        shortageMessages.Add($"- {plantName}: cần {requiredQuantity}, khả dụng {availableStock}");
+                        shortageMessages.Add($"- {plantName}: need {requiredQuantity}, available {availableStock}");
                         continue;
                     }
 
@@ -785,7 +784,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (shortageMessages.Any())
                 {
-                    throw new BadRequestException("Không đủ tồn kho cây đại trà để tạo combo:\n" + string.Join("\n", shortageMessages));
+                    throw new BadRequestException("Not enough common plant stock to create combo:\n" + string.Join("\n", shortageMessages));
                 }
 
                 var nurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByNurseryAndComboAsync(nurseryId, comboId);
@@ -846,20 +845,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public async Task<NurseryComboStockOperationResponseDto> DecomposeComboStockAsync(int managerId, int comboId, DecomposeNurseryComboRequestDto request)
         {
             if (request.Quantity <= 0)
-                throw new BadRequestException("Số lượng combo phân rã phải lớn hơn 0");
+                throw new BadRequestException("The quantity of combo to decompose must be greater than 0");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không có quyền thao tác với vựa này");
+                throw new ForbiddenException("You do not have permission to operate on this nursery");
 
             var nurseryId = nursery.Id;
 
             var combo = await _unitOfWork.PlantComboRepository.GetByIdWithDetailsAsync(comboId);
             if (combo == null)
-                throw new NotFoundException($"Combo với ID {comboId} không tồn tại");
+                throw new NotFoundException($"Combo with ID {comboId} does not exist");
 
             if (!combo.PlantComboItems.Any())
-                throw new BadRequestException("Combo chưa có thành phần cây để phân rã");
+                throw new BadRequestException("Combo does not have any plant components to decompose");
 
             await _unitOfWork.BeginTransactionAsync();
 
@@ -867,21 +866,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var nurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByNurseryAndComboAsync(nurseryId, comboId);
                 if (nurseryCombo == null || !nurseryCombo.IsActive)
-                    throw new NotFoundException("Vựa chưa có tồn kho combo này để phân rã");
+                    throw new NotFoundException("Nursery does not have this combo in stock to decompose");
 
                 var comboStockBefore = nurseryCombo.Quantity;
                 if (comboStockBefore < request.Quantity)
-                    throw new BadRequestException($"Không đủ số lượng combo để phân rã. Hiện có {comboStockBefore}, yêu cầu {request.Quantity}");
+                    throw new BadRequestException($"Not enough combo stock to decompose. Available: {comboStockBefore}, Requested: {request.Quantity}");
 
                 var stockChanges = new List<NurseryComboPlantStockChangeDto>();
                 var affectedCommonPlants = new List<CommonPlant>();
                 foreach (var item in combo.PlantComboItems)
                 {
                     if (!item.PlantId.HasValue)
-                        throw new BadRequestException($"Combo item ID {item.Id} chưa có PlantId hợp lệ");
+                        throw new BadRequestException($"Combo item ID {item.Id} does not have a valid PlantId");
 
                     if (!item.Quantity.HasValue || item.Quantity.Value <= 0)
-                        throw new BadRequestException($"Combo item ID {item.Id} có số lượng cây không hợp lệ");
+                        throw new BadRequestException($"Combo item ID {item.Id} has an invalid plant quantity");
 
                     var returnQuantity = item.Quantity.Value * request.Quantity;
                     var commonPlant = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(item.PlantId.Value, nurseryId);
@@ -963,7 +962,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không có quyền truy cập tài nguyên này");
+                throw new ForbiddenException("You do not have permission to access this resource");
 
             var query = _unitOfWork.NurseryPlantComboRepository.GetQuery()
                 .Where(npc => npc.NurseryId == nursery.Id)
@@ -1184,7 +1183,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var combo = await _unitOfWork.PlantComboRepository.GetByIdAsync(comboId);
             if (combo == null)
             {
-                throw new NotFoundException($"Plant combo với ID '{comboId}' không tồn tại");
+                throw new NotFoundException($"Plant combo with ID '{comboId}' does not exist");
             }
 
             var nurseryPlantCombos = await _unitOfWork.NurseryPlantComboRepository.GetQuery()
@@ -1214,7 +1213,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+                throw new ForbiddenException("You are not the manager of any nursery");
 
             var combos = await _unitOfWork.PlantComboRepository.GetCompatibleCombosForNurseryAsync(nursery.Id);
             return combos.Select(c => c.ToResponse()).ToList();
@@ -1334,7 +1333,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             if (suitableSpace.HasValue && !Enum.IsDefined(typeof(LightRequirementEnum), suitableSpace.Value))
             {
-                throw new BadRequestException($"SuitableSpace '{suitableSpace.Value}' không hợp lệ theo LightRequirementEnum");
+                throw new BadRequestException($"SuitableSpace '{suitableSpace.Value}' is not valid according to LightRequirementEnum");
             }
 
             if (suitableRooms == null)
@@ -1349,7 +1348,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (invalidRoomTypes.Any())
             {
-                throw new BadRequestException($"SuitableRooms chứa giá trị không hợp lệ theo RoomTypeEnum: {string.Join(", ", invalidRoomTypes)}");
+                throw new BadRequestException($"SuitableRooms contains invalid values according to RoomTypeEnum: {string.Join(", ", invalidRoomTypes)}");
             }
         }
 

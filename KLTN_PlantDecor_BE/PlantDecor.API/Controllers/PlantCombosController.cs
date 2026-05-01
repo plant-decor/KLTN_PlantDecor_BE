@@ -58,7 +58,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách combos thành công",
+                Message = "Retrieved combos successfully",
                 Payload = combos
             });
         }
@@ -72,7 +72,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách combos active thành công",
+                Message = "Retrieved active combos successfully",
                 Payload = combos
             });
         }
@@ -87,7 +87,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy combo thành công",
+                Message = "Retrieved combo successfully",
                 Payload = combo
             });
         }
@@ -101,7 +101,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Tạo combo thành công",
+                Message = "Created combo successfully",
                 Payload = combo
             });
         }
@@ -115,7 +115,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật combo thành công",
+                Message = "Updated combo successfully",
                 Payload = combo
             });
         }
@@ -216,7 +216,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = isActive ? "Combo đã được kích hoạt" : "Combo đã bị vô hiệu hóa",
+                Message = isActive ? "Combo has been activated" : "Combo has been deactivated",
                 Payload = isActive
             });
         }
@@ -239,7 +239,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách combo phù hợp với vựa thành công",
+                Message = "Retrieved compatible combos for nursery successfully",
                 Payload = result
             });
         }
@@ -258,7 +258,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách combo của vựa thành công",
+                Message = "Retrieved nursery combos successfully",
                 Payload = result
             });
         }
@@ -277,7 +277,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tạo tồn kho combo thành công",
+                Message = "Assembled combo stock successfully",
                 Payload = result
             });
         }
@@ -296,7 +296,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Phân rã tồn kho combo thành công",
+                Message = "Decomposed combo stock successfully",
                 Payload = result
             });
         }
@@ -314,7 +314,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Thêm plant vào combo thành công",
+                Message = "Added plant to combo successfully",
                 Payload = combo
             });
         }
@@ -328,7 +328,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật combo item thành công",
+                Message = "Updated combo item successfully",
                 Payload = combo
             });
         }
@@ -342,7 +342,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ plant khỏi combo thành công",
+                Message = "Removed plant from combo successfully",
                 Payload = combo
             });
         }
@@ -360,7 +360,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gắn tags cho combo thành công",
+                Message = "Assigned tags to combo successfully",
                 Payload = combo
             });
         }
@@ -374,7 +374,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Gỡ tag khỏi combo thành công",
+                Message = "Removed tag from combo successfully",
                 Payload = combo
             });
         }
@@ -392,7 +392,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách combos cho shop thành công",
+                Message = "Retrieved combos for shop successfully",
                 Payload = combos
             });
         }
@@ -408,7 +408,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Tìm kiếm combos cho shop thành công",
+                Message = "Searched combos for shop successfully",
                 Payload = combos
             });
         }

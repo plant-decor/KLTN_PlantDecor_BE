@@ -82,7 +82,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(id);
             if (material == null)
-                throw new NotFoundException($"Material với ID {id} không tồn tại");
+                throw new NotFoundException($"Material with ID {id} not found");
 
             return material.ToResponse();
         }
@@ -100,14 +100,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (!string.IsNullOrEmpty(normalizedMaterialCode))
                 {
                     if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(normalizedMaterialCode))
-                        throw new BadRequestException($"Material với mã '{normalizedMaterialCode}' đã tồn tại");
+                        throw new BadRequestException($"Material with code '{normalizedMaterialCode}' already exists");
                 }
 
                 var normalizedMaterialName = request.Name?.Trim();
                 if (!string.IsNullOrWhiteSpace(normalizedMaterialName))
                 {
                     if (await _unitOfWork.MaterialRepository.ExistsByNameAsync(normalizedMaterialName))
-                        throw new BadRequestException($"Material với tên '{normalizedMaterialName}' đã tồn tại");
+                        throw new BadRequestException($"Material with name '{normalizedMaterialName}' already exists");
                 }
 
                 request.MaterialCode = normalizedMaterialCode;
@@ -127,7 +127,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (validCategories.Count != categoryIds.Count)
                     {
                         var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
-                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"Categories with IDs {string.Join(", ", invalidIds)} not found");
                     }
 
                     foreach (var category in validCategories)
@@ -144,7 +144,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (tags.Count != tagIds.Count)
                     {
                         var invalidIds = tagIds.Except(tags.Select(t => t.Id));
-                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"Tags with IDs {string.Join(", ", invalidIds)} not found");
                     }
 
                     foreach (var tag in tags)
@@ -176,7 +176,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(id);
                 if (material == null)
-                    throw new NotFoundException($"Material với ID {id} không tồn tại");
+                    throw new NotFoundException($"Material with ID {id} not found");
 
                 var normalizedMaterialCode = string.IsNullOrWhiteSpace(request.MaterialCode)
                     ? null
@@ -186,7 +186,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 if (!string.IsNullOrEmpty(normalizedMaterialCode))
                 {
                     if (await _unitOfWork.MaterialRepository.ExistsByCodeAsync(normalizedMaterialCode, id))
-                        throw new BadRequestException($"Material với mã '{normalizedMaterialCode}' đã tồn tại");
+                        throw new BadRequestException($"Material with code '{normalizedMaterialCode}' already exists");
                 }
 
                 request.MaterialCode = normalizedMaterialCode;
@@ -202,7 +202,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (validCategories.Count != categoryIds.Count)
                     {
                         var invalidIds = categoryIds.Except(validCategories.Select(c => c.Id));
-                        throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"Categories with IDs {string.Join(", ", invalidIds)} not found");
                     }
 
                     material.Categories.Clear();
@@ -220,7 +220,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (tags.Count != tagIds.Count)
                     {
                         var invalidIds = tagIds.Except(tags.Select(t => t.Id));
-                        throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                        throw new NotFoundException($"Tags with IDs {string.Join(", ", invalidIds)} not found");
                     }
 
                     material.Tags.Clear();
@@ -253,7 +253,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             foreach (var file in files)
             {
@@ -323,7 +323,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -384,11 +384,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var targetImage = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
             if (targetImage == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in material {materialId}");
 
             foreach (var image in material.MaterialImages)
                 image.IsPrimary = image.Id == imageId;
@@ -410,11 +410,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var image = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in material {materialId}");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -447,11 +447,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var image = material.MaterialImages.FirstOrDefault(i => i.Id == imageId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc material {materialId}");
+                throw new NotFoundException($"Image with ID {imageId} not found in material {materialId}");
 
             var wasPrimary = image.IsPrimary == true;
             var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
@@ -488,12 +488,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var material = await _unitOfWork.MaterialRepository.GetByIdWithOrdersAsync(id);
                 if (material == null)
-                    throw new NotFoundException($"Material với ID {id} không tồn tại");
+                    throw new NotFoundException($"Material with ID {id} not found");
 
                 // Check if material has any nursery materials with cart or orders
                 var hasActiveOrders = material.NurseryMaterials.Any(nm => nm.CartItems.Any());
                 if (hasActiveOrders)
-                    throw new BadRequestException("Không thể xóa vật liệu đã có trong đơn hàng. Vui lòng vô hiệu hóa thay vì xóa.");
+                    throw new BadRequestException("Cannot delete material that is already in an order. Please deactivate instead.");
 
                 // Soft delete by deactivating
                 material.IsActive = false;
@@ -519,7 +519,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdAsync(id);
             if (material == null)
-                throw new NotFoundException($"Material với ID {id} không tồn tại");
+                throw new NotFoundException($"Material with ID {id} not found");
 
             material.IsActive = !material.IsActive;
             material.UpdatedAt = DateTime.Now;
@@ -541,7 +541,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(request.MaterialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {request.MaterialId} not found");
 
             // Get valid categories
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
@@ -550,7 +550,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (validCategories.Count != request.CategoryIds.Count)
             {
                 var invalidIds = request.CategoryIds.Except(validCategories.Select(c => c.Id));
-                throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                throw new NotFoundException($"Categories with IDs {string.Join(", ", invalidIds)} not found");
             }
 
             try
@@ -584,7 +584,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(request.MaterialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {request.MaterialId} not found");
 
             // Get valid tags
             var tags = await _unitOfWork.TagRepository.GetByIdsAsync(request.TagIds);
@@ -592,7 +592,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (tags.Count != request.TagIds.Count)
             {
                 var invalidIds = request.TagIds.Except(tags.Select(t => t.Id));
-                throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                throw new NotFoundException($"Tags with IDs {string.Join(", ", invalidIds)} not found");
             }
 
             try
@@ -626,11 +626,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var category = material.Categories.FirstOrDefault(c => c.Id == categoryId);
             if (category == null)
-                throw new NotFoundException($"Material không có category với ID {categoryId}");
+                throw new NotFoundException($"Material with ID {materialId} does not have a category with ID {categoryId}");
 
             material.Categories.Remove(category);
             material.UpdatedAt = DateTime.Now;
@@ -646,11 +646,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var material = await _unitOfWork.MaterialRepository.GetByIdWithDetailsAsync(materialId);
             if (material == null)
-                throw new NotFoundException($"Material với ID {materialId} không tồn tại");
+                throw new NotFoundException($"Material with ID {materialId} not found");
 
             var tag = material.Tags.FirstOrDefault(t => t.Id == tagId);
             if (tag == null)
-                throw new NotFoundException($"Material không có tag với ID {tagId}");
+                throw new NotFoundException($"Material with ID {materialId} does not have a tag with ID {tagId}");
 
             material.Tags.Remove(tag);
             material.UpdatedAt = DateTime.Now;

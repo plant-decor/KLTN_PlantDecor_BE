@@ -330,7 +330,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách vựa có cây thành công",
+                Message = "Retrieved nurseries with the plant successfully",
                 Payload = result
             });
         }

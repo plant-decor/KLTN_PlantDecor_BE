@@ -60,7 +60,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
             if (commonPlant == null)
-                throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
+                throw new NotFoundException($"CommonPlant with ID {id} not found");
 
             return commonPlant.ToResponse();
         }
@@ -69,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             await _unitOfWork.BeginTransactionAsync();
 
@@ -78,11 +78,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Validate plant exists
                 var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId);
                 if (plant == null)
-                    throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                    throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
                 // Check duplicate plant + nursery combination
                 if (await _unitOfWork.CommonPlantRepository.ExistsAsync(request.PlantId, nurseryId))
-                    throw new BadRequestException($"CommonPlant cho Plant ID {request.PlantId} tại Nursery ID {nurseryId} đã tồn tại");
+                    throw new BadRequestException($"CommonPlant for Plant ID {request.PlantId} at Nursery ID {nurseryId} already exists");
 
                 var entity = request.ToEntity();
 
@@ -115,13 +115,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
+                    throw new NotFoundException($"CommonPlant with ID {id} not found");
 
                 // Validate reserved quantity doesn't exceed quantity
                 var newQuantity = request.Quantity ?? entity.Quantity;
                 var newReserved = request.ReservedQuantity ?? entity.ReservedQuantity;
                 if (newReserved > newQuantity)
-                    throw new BadRequestException("Số lượng đặt trước không thể lớn hơn số lượng tồn kho");
+                    throw new BadRequestException("Reserved quantity cannot be greater than available quantity");
 
                 request.ToUpdate(entity);
 
@@ -152,10 +152,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"CommonPlant với ID {id} không tồn tại");
+                    throw new NotFoundException($"CommonPlant with ID {id} not found");
 
                 if (entity.ReservedQuantity > 0)
-                    throw new BadRequestException("Không thể xóa common plant đang có số lượng đặt trước");
+                    throw new BadRequestException("Cannot delete common plant that has reserved quantity");
 
                 _unitOfWork.CommonPlantRepository.PrepareRemove(entity);
                 await _unitOfWork.SaveAsync();
@@ -209,13 +209,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var entity = await _unitOfWork.CommonPlantRepository.GetByPlantAndNurseryAsync(plantId, nurseryId);
             if (entity == null)
-                throw new NotFoundException($"Không tìm thấy tồn kho cho PlantId {plantId} tại NurseryId {nurseryId}");
+                throw new NotFoundException($"CommonPlant with PlantId {plantId} at NurseryId {nurseryId} not found");
 
             if (quantity < 0)
-                throw new BadRequestException("Số lượng không thể âm");
+                throw new BadRequestException("Quantity cannot be negative");
 
             if (quantity < entity.ReservedQuantity)
-                throw new BadRequestException("Số lượng không thể nhỏ hơn số lượng đã đặt trước");
+                throw new BadRequestException("Quantity cannot be less than reserved quantity");
 
             entity.Quantity = quantity;
 
@@ -256,17 +256,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var plant = await _unitOfWork.PlantRepository.GetByIdAsync(request.PlantId);
                 if (plant == null)
-                    throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                    throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
                 if (await _unitOfWork.CommonPlantRepository.ExistsAsync(request.PlantId, nurseryId))
-                    throw new BadRequestException($"Cây đại trà cho Plant ID {request.PlantId} tại vựa này đã tồn tại");
+                    throw new BadRequestException($"Common plant for Plant ID {request.PlantId} at this nursery already exists");
 
                 var entity = request.ToEntity();
                 entity.NurseryId = nurseryId;
@@ -294,7 +294,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
             if (user == null)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var hasAccess = false;
             if (user.RoleId == (int)RoleEnum.Manager)
@@ -308,7 +308,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             if (!hasAccess)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var cacheKey = $"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId}_manager_p{pagination.PageNumber}_s{pagination.PageSize}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<CommonPlantListResponseDto>>(cacheKey);
@@ -330,7 +330,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var cacheKey = $"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId}_missing_plants_p{pagination.PageNumber}_s{pagination.PageSize}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantListResponseDto>>(cacheKey);
@@ -352,16 +352,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(commonPlantId);
             if (entity == null || entity.NurseryId != nurseryId)
-                throw new NotFoundException($"Không tìm thấy cây đại trà với ID {commonPlantId} tại vựa này");
+                throw new NotFoundException($"Common plant with ID {commonPlantId} not found at this nursery");
 
             var newQuantity = request.Quantity ?? entity.Quantity;
             var newReserved = request.ReservedQuantity ?? entity.ReservedQuantity;
             if (newReserved > newQuantity)
-                throw new BadRequestException("Số lượng đặt trước không thể lớn hơn số lượng tồn kho");
+                throw new BadRequestException("Reserved quantity cannot be greater than available quantity");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -389,11 +389,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var entity = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(commonPlantId);
             if (entity == null || entity.NurseryId != nurseryId)
-                throw new NotFoundException($"Không tìm thấy cây đại trà với ID {commonPlantId} tại vựa này");
+                throw new NotFoundException($"Common plant with ID {commonPlantId} not found at this nursery");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -447,7 +447,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var commonPlants = await _unitOfWork.CommonPlantRepository.GetActiveByPlantIdAsync(plantId);
 
