@@ -27,6 +27,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string ACTIVE_COMBOS_KEY = "combos_active";
         private const string SHOP_COMBOS_KEY = "combos_shop";
         private const string NURSERIES_BY_COMBO_KEY = "nurseries_by_combo";
+        private const string ALL_COMMON_PLANTS_KEY = "common_plants_all";
+        private const string NURSERY_COMMON_PLANTS_KEY = "nursery_common_plants";
+        private const string PLANT_NURSERIES_COMMON_KEY = "plant_nurseries_common";
+        private const string PLANT_SHOP_SEARCH_KEY = "plants_shop_search";
 
         public PlantComboService(
             IUnitOfWork unitOfWork,
@@ -815,7 +819,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync(comboId);
+                await InvalidateCacheAsync(comboId, nurseryId);
 
                 // Queue embedding for NurseryPlantCombo
                 var reloadedNurseryCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(nurseryCombo.Id);
@@ -933,7 +937,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                await InvalidateCacheAsync(comboId);
+                await InvalidateCacheAsync(comboId, nurseryId);
                 await QueueNurseryPlantComboEmbeddingsByComboIdAsync(comboId);
                 foreach (var commonPlantId in affectedCommonPlants.Select(cp => cp.Id).Where(id => id > 0).Distinct())
                 {
@@ -1157,13 +1161,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
-        private async Task InvalidateCacheAsync(int? comboId = null)
+        private async Task InvalidateCacheAsync(int? comboId = null, int? nurseryId = null)
         {
             await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
             await _cacheService.RemoveByPrefixAsync("selling_combos_");
+
+            // Assemble/Decompose updates CommonPlant quantities, so clear related inventory/search caches.
+            await _cacheService.RemoveByPrefixAsync(ALL_COMMON_PLANTS_KEY);
+            await _cacheService.RemoveByPrefixAsync(PLANT_NURSERIES_COMMON_KEY);
+            await _cacheService.RemoveByPrefixAsync(PLANT_SHOP_SEARCH_KEY);
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+
             await _cacheService.RemoveByPrefixAsync("shop_unified_search");
+
+            if (nurseryId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}");
+            }
+            else
+            {
+                await _cacheService.RemoveByPrefixAsync(NURSERY_COMMON_PLANTS_KEY);
+            }
+
             if (comboId.HasValue)
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_COMBO_KEY}_{comboId.Value}");
