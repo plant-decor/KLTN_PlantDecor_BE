@@ -55,7 +55,43 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách đơn hàng của vườn thành công",
+                Message = "Retrieved nursery orders successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy số lượng đơn theo trạng thái của vườn theo khoảng thời gian
+        /// </summary>
+        [HttpGet("status-summary")]
+        public async Task<IActionResult> GetMyNurseryOrderStatusSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetMyNurseryOrderStatusSummaryAsync(currentUserId, from, to);
+
+            return Ok(new ApiResponse<OrderStatusSummaryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved nursery order status summary successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy tổng số đơn giao thất bại của vườn theo khoảng thời gian
+        /// </summary>
+        [HttpGet("failed")]
+        public async Task<IActionResult> GetMyNurseryFailedOrdersSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetMyNurseryFailedOrdersSummaryAsync(currentUserId, from, to);
+
+            return Ok(new ApiResponse<FailedOrderSummaryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved nursery failed orders summary successfully",
                 Payload = result
             });
         }
@@ -73,7 +109,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy chi tiết đơn hàng của vườn thành công",
+                Message = "Retrieved nursery order details successfully",
                 Payload = result
             });
         }
@@ -91,7 +127,7 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Lấy danh sách shipper của vườn thành công",
+                Message = "Retrieved nursery shippers successfully",
                 Payload = result
             });
         }
@@ -109,7 +145,25 @@ namespace PlantDecor.API.Controllers
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Cập nhật shipper cho đơn hàng thành công",
+                Message = "Updated nursery order shipper successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy tổng doanh thu của vườn hiện tại theo khoảng thời gian
+        /// </summary>
+        [HttpGet("revenue/summary")]
+        public async Task<IActionResult> GetMyNurseryRevenueSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.GetMyNurseryRevenueSummaryAsync(currentUserId, from, to);
+
+            return Ok(new ApiResponse<RevenueSummaryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved nursery revenue summary successfully",
                 Payload = result
             });
         }

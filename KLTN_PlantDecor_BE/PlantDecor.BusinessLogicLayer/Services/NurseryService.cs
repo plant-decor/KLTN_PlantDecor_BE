@@ -1,4 +1,4 @@
-using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+﻿using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -405,6 +405,73 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _cacheService.SetDataAsync(cacheKey, summary, DateTimeOffset.Now.AddMinutes(10));
             return summary;
+        }
+
+        public async Task<List<SystemLowStockProductAlertDto>> GetSystemLowStockProductsAsync(int threshold = 5)
+        {
+            var cacheKey = $"{ALL_NURSERIES_KEY}_system_low_stock_t{threshold}";
+            var cachedData = await _cacheService.GetDataAsync<List<SystemLowStockProductAlertDto>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var commonPlants = await _unitOfWork.CommonPlantRepository.GetAllAsync();
+            var plantInstances = await _unitOfWork.PlantInstanceRepository.GetAllAsync();
+            var nurseries = await _unitOfWork.NurseryRepository.GetAllAsync();
+
+            var nurseryNames = nurseries
+                .Where(n => !string.IsNullOrEmpty(n.Name))
+                .ToDictionary(n => n.Id, n => n.Name ?? string.Empty);
+
+            var commonPlantLowStock = commonPlants
+                .Where(cp => cp.IsActive)
+                .Select(cp => new SystemLowStockProductAlertDto
+                {
+                    NurseryId = cp.NurseryId,
+                    NurseryName = nurseryNames.TryGetValue(cp.NurseryId, out var name) ? name : string.Empty,
+                    ProductType = "CommonPlant",
+                    ProductId = cp.Id,
+                    ProductName = cp.Plant?.Name,
+                    TotalQuantity = cp.Quantity,
+                    ReservedQuantity = cp.ReservedQuantity,
+                    AvailableQuantity = cp.Quantity,
+                    Threshold = threshold
+                })
+                .Where(x => x.AvailableQuantity >= 0 && x.AvailableQuantity <= threshold)
+                .ToList();
+
+            var identifiedPlantLowStock = plantInstances
+                .Where(pi => pi.PlantId.HasValue && pi.CurrentNurseryId.HasValue)
+                .GroupBy(pi => new
+                {
+                    pi.CurrentNurseryId,
+                    pi.PlantId,
+                    PlantName = pi.Plant != null ? pi.Plant.Name : null
+                })
+                .Select(g => new SystemLowStockProductAlertDto
+                {
+                    NurseryId = g.Key.CurrentNurseryId ?? 0,
+                    NurseryName = g.Key.CurrentNurseryId.HasValue && nurseryNames.TryGetValue(g.Key.CurrentNurseryId.Value, out var name)
+                        ? name
+                        : string.Empty,
+                    ProductType = "PlantInstance",
+                    ProductId = g.Key.PlantId ?? 0,
+                    ProductName = g.Key.PlantName,
+                    TotalQuantity = g.Count(),
+                    ReservedQuantity = g.Count(x => x.Status == (int)PlantInstanceStatusEnum.Reserved),
+                    AvailableQuantity = g.Count(x => x.Status == (int)PlantInstanceStatusEnum.Available),
+                    Threshold = threshold
+                })
+                .Where(x => x.AvailableQuantity <= threshold)
+                .ToList();
+
+            var result = commonPlantLowStock
+                .Concat(identifiedPlantLowStock)
+                .OrderBy(x => x.AvailableQuantity)
+                .ThenBy(x => x.ProductName)
+                .ToList();
+
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(10));
+            return result;
         }
 
         #endregion
