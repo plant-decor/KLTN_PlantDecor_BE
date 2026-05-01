@@ -19,7 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
     public class MarkDeliveryFailedRequestDto
     {
-        [Required(ErrorMessage = "Vui long nhap ly do giao hang that bai")]
+        [Required(ErrorMessage = "Please enter the delivery failure reason")]
         [StringLength(255)]
         public string FailureReason { get; set; } = null!;
     }

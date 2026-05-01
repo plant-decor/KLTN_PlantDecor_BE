@@ -300,10 +300,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     payment.Status = (int)PaymentStatusEnum.Paid;
                     payment.PaidAt = DateTime.Now;
 
-                    // Update Order status based on payment type and current order status
-                    var newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    // Update Order status based on payment type and order type
+                    int newOrderStatus;
+                    if (order.OrderType == (int)OrderTypeEnum.Design && paymentType == PaymentTypeEnum.RemainingBalance)
+                    {
+                        // Design order with remaining balance payment → Completed
+                        newOrderStatus = (int)OrderStatusEnum.Completed;
+                    }
+                    else
+                    {
+                        // Other orders → use default status determination
+                        newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    }
+
                     order.Status = newOrderStatus;
                     order.UpdatedAt = DateTime.Now;
+                    
+                    // Clear remaining amount if payment type is RemainingBalance
+                    if (paymentType == PaymentTypeEnum.RemainingBalance)
+                    {
+                        order.RemainingAmount = 0;
+                    }
+                    
                     _unitOfWork.OrderRepository.PrepareUpdate(order);
 
                     // Update all NurseryOrder status to match parent Order status
@@ -343,13 +361,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         }
                     }
 
-                    // Activate design registration and generate design tasks after successful deposit payment
+                    // Synchronize design registration lifecycle with payment milestones.
                     if (order.OrderType == (int)OrderTypeEnum.Design)
                     {
                         var designRegistration = await _unitOfWork.DesignRegistrationRepository.GetByOrderIdAsync(order.Id);
                         if (designRegistration != null)
                         {
-                            await ActivateDesignRegistrationAndGenerateTasksAsync(designRegistration.Id);
+                            if (paymentType == PaymentTypeEnum.Deposit)
+                            {
+                                await ActivateDesignRegistrationAndGenerateTasksAsync(designRegistration.Id);
+                            }
+                            else if (paymentType == PaymentTypeEnum.RemainingBalance)
+                            {
+                                await CompleteDesignRegistrationAfterRemainingPaymentAsync(designRegistration.Id);
+                            }
                         }
                     }
 
@@ -499,6 +524,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new BadRequestException("Payment is not associated with any invoice");
         }
 
+        private async Task CompleteDesignRegistrationAfterRemainingPaymentAsync(int designRegistrationId)
+        {
+            var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(designRegistrationId);
+            if (registration == null)
+                return;
+
+            if (registration.Status == (int)DesignRegistrationStatus.Completed
+                || registration.Status == (int)DesignRegistrationStatus.Cancelled
+                || registration.Status == (int)DesignRegistrationStatus.Rejected)
+            {
+                return;
+            }
+
+            registration.Status = (int)DesignRegistrationStatus.Completed;
+            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
+        }
+
         private async Task ActivateDesignRegistrationAndGenerateTasksAsync(int designRegistrationId)
         {
             var registrationDetail = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(designRegistrationId);
@@ -510,12 +552,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return;
 
             if (registration.Status != (int)DesignRegistrationStatus.AwaitDeposit
-                && registration.Status != (int)DesignRegistrationStatus.Active)
+                && registration.Status != (int)DesignRegistrationStatus.DepositPaid
+                && registration.Status != (int)DesignRegistrationStatus.InProgress)
             {
                 return;
             }
 
-            registration.Status = (int)DesignRegistrationStatus.Active;
+            registration.Status = (int)DesignRegistrationStatus.DepositPaid;
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
 
             var existingTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(designRegistrationId);
@@ -562,6 +605,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             continue;
 
                         trackedTask.TaskType = ResolveTaskTypeByIndex(index, orderedExistingTasks.Count);
+                        if (task.Status != (int)DesignTaskStatusEnum.Completed
+                            && task.Status != (int)DesignTaskStatusEnum.Cancelled)
+                        {
+                            trackedTask.ScheduledDate = null;
+                        }
                         _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
                     }
                 }
@@ -573,21 +621,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (estimatedDays <= 0)
                 estimatedDays = 1;
 
-            var scheduleDates = BuildConsecutiveWorkingDates(DateOnly.FromDateTime(DateTime.Today), estimatedDays);
             var assignedStaffId = registration.AssignedCaretakerId;
             var taskStatus = assignedStaffId.HasValue
                 ? (int)DesignTaskStatusEnum.Assigned
                 : (int)DesignTaskStatusEnum.Pending;
 
-            for (var index = 0; index < scheduleDates.Count; index++)
+            for (var index = 0; index < estimatedDays; index++)
             {
-                var date = scheduleDates[index];
                 var task = new DesignTask
                 {
                     DesignRegistrationId = designRegistrationId,
                     AssignedStaffId = assignedStaffId,
-                    ScheduledDate = date,
-                    TaskType = ResolveTaskTypeByIndex(index, scheduleDates.Count),
+                    ScheduledDate = null,
+                    TaskType = ResolveTaskTypeByIndex(index, estimatedDays),
                     Status = taskStatus,
                     CreatedAt = DateTime.Now
                 };

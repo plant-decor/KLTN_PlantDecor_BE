@@ -73,7 +73,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var nearbyNurseries = await _unitOfWork.NurseryRepository.GetNearbyWithPackageAsync(
                     request.Latitude.Value,
                     request.Longitude.Value,
-                    30000,
                     request.CareServicePackageId);
 
                 foreach (var nursery in nearbyNurseries)
@@ -805,7 +804,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var nearbyNurseries = await _unitOfWork.NurseryRepository.GetNearbyWithPackageAsync(
                     registration.Latitude.Value,
                     registration.Longitude.Value,
-                    30000,
                     packageId);
 
                 foreach (var nursery in nearbyNurseries)

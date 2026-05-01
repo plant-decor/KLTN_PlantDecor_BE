@@ -15,7 +15,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<DesignRegistrationResponseDto> GetByIdAsOperatorAsync(int managerId, int id);
         Task<DesignRegistrationResponseDto> ApproveAsync(int managerId, int id);
         Task<DesignRegistrationResponseDto> RejectAsync(int managerId, int id, string? rejectReason);
-        Task<DesignRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId);
+        Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId);
+        Task<List<EligibleCaretakerWithAvailabilityDto>> GetEligibleCaretakersForRegistrationWithAvailabilityAsync(int managerId, int registrationId, DateOnly? startDate = null);
+        Task<DesignRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId, DateOnly? startDate = null);
         Task<DesignRegistrationResponseDto> UpdateSurveyInfoAsync(int caretakerId, int id, UpdateDesignRegistrationSurveyInfoRequestDto request, IFormFile? currentStateImage = null);
         Task<DesignRegistrationResponseDto> CancelAsync(int userId, int id, string? cancelReason);
         Task<DesignRegistrationResponseDto> ManagerCancelAsync(int managerId, int id, string? cancelReason);

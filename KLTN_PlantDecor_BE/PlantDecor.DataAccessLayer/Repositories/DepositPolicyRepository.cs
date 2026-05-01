@@ -22,7 +22,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.DepositPolicies
                 .Where(p => p.IsActive
                             && p.MinPrice <= price
-                            && (!p.MaxPrice.HasValue || price <= p.MaxPrice.Value))
+                            && (!p.MaxPrice.HasValue || price < p.MaxPrice.Value))
                 .OrderByDescending(p => p.MinPrice)
                 .FirstOrDefaultAsync();
         }
@@ -40,8 +40,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
             }
 
             return await query.AnyAsync(p =>
-                minPrice <= (p.MaxPrice ?? decimal.MaxValue)
-                && p.MinPrice <= candidateMax);
+                minPrice < (p.MaxPrice ?? decimal.MaxValue)
+                && p.MinPrice < candidateMax);
         }
     }
 }

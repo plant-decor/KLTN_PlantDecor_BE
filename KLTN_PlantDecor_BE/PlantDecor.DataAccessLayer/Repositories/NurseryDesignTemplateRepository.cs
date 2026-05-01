@@ -45,6 +45,17 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<int>> GetActiveDesignTemplateIdsAsync()
+        {
+            return await _context.NurseryDesignTemplates
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.Nursery.IsActive == true)
+                .Select(x => x.DesignTemplateId)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
+        }
+
         public async Task<bool> ExistsByNurseryAndTemplateAsync(int nurseryId, int designTemplateId, int? excludeId = null)
         {
             var query = _context.NurseryDesignTemplates

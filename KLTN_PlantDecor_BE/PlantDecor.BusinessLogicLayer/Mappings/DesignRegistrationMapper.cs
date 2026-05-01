@@ -6,6 +6,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 {
     public static class DesignRegistrationMapper
     {
+        private const string RejectRouteMetaPrefix = "__route_meta__:";
+
         public static DesignRegistrationResponseDto ToResponse(this DesignRegistration registration)
         {
             return new DesignRegistrationResponseDto
@@ -26,7 +28,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Address = registration.Address,
                 Phone = registration.Phone,
                 CustomerNote = registration.CustomerNote,
-                CancelReason = registration.CancelReason,
+                CancelReason = ResolveDisplayCancelReason(registration.Status, registration.CancelReason),
                 Status = registration.Status,
                 StatusName = Enum.IsDefined(typeof(DesignRegistrationStatus), registration.Status)
                     ? ((DesignRegistrationStatus)registration.Status).ToString()
@@ -65,6 +67,40 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     .Select(x => x.ToResponse())
                     .ToList()
             };
+        }
+
+        private static string? ResolveDisplayCancelReason(int status, string? storedCancelReason)
+        {
+            if (status != (int)DesignRegistrationStatus.Rejected &&
+                status != (int)DesignRegistrationStatus.Cancelled)
+            {
+                return null;
+            }
+
+            return ExtractUserReasonFromStoredCancelReason(storedCancelReason);
+        }
+
+        private static string? ExtractUserReasonFromStoredCancelReason(string? storedCancelReason)
+        {
+            if (string.IsNullOrWhiteSpace(storedCancelReason))
+            {
+                return null;
+            }
+
+            if (!storedCancelReason.StartsWith(RejectRouteMetaPrefix, StringComparison.Ordinal))
+            {
+                return storedCancelReason;
+            }
+
+            var payload = storedCancelReason.Substring(RejectRouteMetaPrefix.Length);
+            var separatorIndex = payload.IndexOf('|');
+
+            if (separatorIndex < 0 || separatorIndex >= payload.Length - 1)
+            {
+                return null;
+            }
+
+            return payload.Substring(separatorIndex + 1);
         }
     }
 }

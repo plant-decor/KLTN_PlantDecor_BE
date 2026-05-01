@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.Interfaces;
 
 namespace PlantDecor.DataAccessLayer.Repositories
@@ -93,6 +95,134 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var items = await query.Skip(skip).Take(take).ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<decimal> GetCompletedRevenueByNurseryAsync(int nurseryId, DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .Where(no => no.NurseryId == nurseryId)
+                .SumAsync(no => no.SubTotalAmount ?? 0m);
+        }
+
+        public async Task<int> CountCompletedOrdersByNurseryAsync(int nurseryId, DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .Where(no => no.NurseryId == nurseryId)
+                .CountAsync();
+        }
+
+        public async Task<decimal> GetCompletedSystemRevenueAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .SumAsync(no => no.SubTotalAmount ?? 0m);
+        }
+
+        public async Task<int> CountCompletedSystemOrdersAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .CountAsync();
+        }
+
+        public async Task<List<NurseryRevenueAggregate>> GetCompletedRevenueByNurseryListAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildCompletedRevenueQuery(fromInclusive, toExclusive)
+                .GroupBy(no => new
+                {
+                    no.NurseryId,
+                    NurseryName = no.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = g.Sum(x => x.SubTotalAmount ?? 0m),
+                    TotalOrders = g.Count()
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToListAsync();
+        }
+
+        public async Task<List<OrderStatusAggregate>> GetOrderStatusSummaryAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId = null)
+        {
+            var query = BuildOrderDateRangeQuery(fromInclusive, toExclusive);
+
+            if (nurseryId.HasValue)
+                query = query.Where(no => no.NurseryId == nurseryId.Value);
+
+            return await query
+                .GroupBy(no => no.Status ?? 0)
+                .Select(g => new OrderStatusAggregate
+                {
+                    Status = g.Key,
+                    TotalOrders = g.Count()
+                })
+                .OrderBy(x => x.Status)
+                .ToListAsync();
+        }
+
+        public async Task<int> CountFailedOrdersAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId = null)
+        {
+            var query = BuildOrderDateRangeQuery(fromInclusive, toExclusive)
+                .Where(no => no.Status == (int)OrderStatusEnum.Failed);
+
+            if (nurseryId.HasValue)
+                query = query.Where(no => no.NurseryId == nurseryId.Value);
+
+            return await query.CountAsync();
+        }
+
+        public async Task<List<TopProductAggregate>> GetTopProductsAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId, int limit)
+        {
+            var completedOrders = BuildCompletedRevenueQuery(fromInclusive, toExclusive);
+
+            if (nurseryId.HasValue)
+                completedOrders = completedOrders.Where(no => no.NurseryId == nurseryId.Value);
+
+            return await completedOrders
+                .SelectMany(no => no.NurseryOrderDetails)
+                .GroupBy(d => new
+                {
+                    ProductType = d.CommonPlantId.HasValue
+                        ? "CommonPlant"
+                        : d.PlantInstanceId.HasValue
+                            ? "PlantInstance"
+                            : d.NurseryPlantComboId.HasValue
+                                ? "NurseryPlantCombo"
+                                : "NurseryMaterial",
+                    ProductId = d.CommonPlantId
+                        ?? d.PlantInstanceId
+                        ?? d.NurseryPlantComboId
+                        ?? d.NurseryMaterialId
+                        ?? 0,
+                    ProductName = d.ItemName
+                })
+                .Select(g => new TopProductAggregate
+                {
+                    ProductType = g.Key.ProductType,
+                    ProductId = g.Key.ProductId,
+                    ProductName = g.Key.ProductName ?? string.Empty,
+                    TotalQuantity = g.Sum(x => x.Quantity ?? 0),
+                    TotalRevenue = g.Sum(x => x.Amount ?? 0m)
+                })
+                .OrderByDescending(x => x.TotalRevenue)
+                .ThenByDescending(x => x.TotalQuantity)
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        private IQueryable<NurseryOrder> BuildCompletedRevenueQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.NurseryOrders
+                .Where(no => no.Status == (int)OrderStatusEnum.Completed)
+                .Where(no => (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) >= fromInclusive
+                    && (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) < toExclusive);
+        }
+
+        private IQueryable<NurseryOrder> BuildOrderDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.NurseryOrders
+                .Where(no => (no.CreatedAt ?? no.UpdatedAt ?? no.Order!.CreatedAt) >= fromInclusive
+                    && (no.CreatedAt ?? no.UpdatedAt ?? no.Order!.CreatedAt) < toExclusive);
         }
     }
 }

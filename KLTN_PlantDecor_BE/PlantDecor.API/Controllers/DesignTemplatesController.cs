@@ -23,13 +23,30 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
-        /// [Public] Lấy danh sách mẫu thiết kế
+        /// [Public] Lấy danh sách mẫu thiết kế đang được kinh doanh
         /// </summary>
         [HttpGet("public/design-templates")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var result = await _designTemplateService.GetAllAsync();
+            return Ok(new ApiResponse<List<DesignTemplateResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get design templates successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Admin] Lấy danh sách tất cả mẫu thiết kế
+        /// </summary>
+        [HttpGet("admin/design-templates")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllAdmin()
+        {
+            var result = await _designTemplateService.GetAllAdminAsync();
             return Ok(new ApiResponse<List<DesignTemplateResponseDto>>
             {
                 Success = true,
@@ -61,7 +78,8 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPost("admin/design-templates")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody] CreateDesignTemplateRequestDto request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Create([FromForm] CreateDesignTemplateRequestDto request)
         {
             var result = await _designTemplateService.CreateAsync(request);
             return StatusCode(StatusCodes.Status201Created, new ApiResponse<DesignTemplateResponseDto>
@@ -78,7 +96,8 @@ namespace PlantDecor.API.Controllers
         /// </summary>
         [HttpPut("admin/design-templates/{id:int}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateDesignTemplateRequestDto request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateDesignTemplateRequestDto request)
         {
             var result = await _designTemplateService.UpdateAsync(id, request);
             return Ok(new ApiResponse<DesignTemplateResponseDto>

@@ -10,9 +10,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
     public class UpdateDepositPolicyRequestDto
     {
-        public decimal MinPrice { get; set; }
+        public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }
-        public int DepositPercentage { get; set; }
-        public bool IsActive { get; set; }
+        public int? DepositPercentage { get; set; }
+        public bool? IsActive { get; set; }
     }
 }
