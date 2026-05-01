@@ -13,11 +13,15 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     {
         public string EntityType { get; set; } = null!;
         public int EntityId { get; set; }
+        public int? PlantId { get; set; }
+        public int? PlantComboId { get; set; }
+        public int? MaterialId { get; set; }
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public decimal? Price { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
         public bool IsPurchasable { get; set; }
         public string? ImageUrl { get; set; }
         public double SimilarityScore { get; set; }
@@ -43,6 +47,9 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     {
         public string EntityType { get; set; } = null!;
         public int EntityId { get; set; }
+        public int? PlantId { get; set; }
+        public int? PlantComboId { get; set; }
+        public int? MaterialId { get; set; }
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public decimal? Price { get; set; }
@@ -54,18 +61,25 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? ReasonForRecommendation { get; set; }
         public int NurseryId { get; set; }
         public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
     }
 
     public class PlantSuggestionResponseDto
     {
         public string EntityType { get; set; } = null!;
         public int EntityId { get; set; }
+        public int? PlantId { get; set; }
+        public int? PlantComboId { get; set; }
+        public int? MaterialId { get; set; }
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public decimal? Price { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsPurchasable { get; set; }
         public double RelevanceScore { get; set; }
+        public int? NurseryId { get; set; }
+        public string? NurseryName { get; set; }
+        public string? NurseryAddress { get; set; }
     }
 
     public class AIChatbotResponseDto

@@ -201,6 +201,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         EntityType = item.EntityType,
                         EntityId = item.EntityId,
+                        PlantId = item.PlantId,
+                        PlantComboId = item.PlantComboId,
+                        MaterialId = item.MaterialId,
                         Name = item.Name,
                         Description = item.Description,
                         Price = item.Price,
@@ -209,6 +212,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         MatchScore = item.SimilarityScore,
                         NurseryId = item.NurseryId,
                         NurseryName = item.NurseryName,
+                        NurseryAddress = item.NurseryAddress,
                         ReasonForRecommendation = GenerateRecommendationReason(item, fengShuiElement, preferredRooms)
                     };
 
@@ -286,12 +290,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         EntityType = r.EntityType,
                         EntityId = r.EntityId,
+                        PlantId = r.PlantId,
+                        PlantComboId = r.PlantComboId,
+                        MaterialId = r.MaterialId,
                         Name = r.Name,
                         Description = r.Description,
                         Price = r.Price,
                         ImageUrl = r.ImageUrl,
                         IsPurchasable = r.IsPurchasable,
-                        RelevanceScore = r.SimilarityScore
+                        RelevanceScore = r.SimilarityScore,
+                        NurseryId = r.NurseryId > 0 ? r.NurseryId : null,
+                        NurseryName = r.NurseryName,
+                        NurseryAddress = r.NurseryAddress
                     })
                     .ToList();
 
@@ -799,9 +809,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         s.EntityType,
                         s.EntityId,
+                        s.PlantId,
+                        s.PlantComboId,
+                        s.MaterialId,
                         s.Name,
                         s.Description,
                         s.Price,
+                        s.NurseryId,
+                        s.NurseryName,
+                        s.NurseryAddress,
                         s.IsPurchasable,
                         s.RelevanceScore
                     }).ToList(),
@@ -812,8 +828,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         f.Name,
                         f.Description,
                         f.Price,
+                        f.PlantId,
+                        f.PlantComboId,
+                        f.MaterialId,
                         f.NurseryId,
                         f.NurseryName,
+                        f.NurseryAddress,
                         f.IsActive,
                         f.IsPurchasable,
                         f.AvailabilityStatus,
@@ -1067,11 +1087,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.CommonPlant,
                 EntityId = commonPlant.Id,
+                PlantId = commonPlant.PlantId,
                 Name = plant?.Name ?? $"CommonPlant #{commonPlant.Id}",
                 Description = plant?.Description,
                 Price = plant?.BasePrice,
                 NurseryId = commonPlant.NurseryId,
                 NurseryName = commonPlant.Nursery?.Name,
+                NurseryAddress = commonPlant.Nursery?.Address,
                 IsActive = commonPlant.IsActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable ? "Purchasable" : ResolveStockAvailability(commonPlant.IsActive, commonPlant.Quantity),
@@ -1113,11 +1135,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.PlantInstance,
                 EntityId = instance.Id,
+                PlantId = instance.PlantId,
                 Name = plant?.Name ?? $"PlantInstance #{instance.Id}",
                 Description = FirstNonEmpty(instance.Description, plant?.Description),
                 Price = instance.SpecificPrice ?? plant?.BasePrice,
                 NurseryId = instance.CurrentNurseryId,
                 NurseryName = instance.CurrentNursery?.Name,
+                NurseryAddress = instance.CurrentNursery?.Address,
                 IsActive = isPurchasable,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable ? "Purchasable" : statusName,
@@ -1155,11 +1179,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.NurseryMaterial,
                 EntityId = nurseryMaterial.Id,
+                MaterialId = nurseryMaterial.MaterialId,
                 Name = material?.Name ?? $"NurseryMaterial #{nurseryMaterial.Id}",
                 Description = material?.Description,
                 Price = material?.BasePrice,
                 NurseryId = nurseryMaterial.NurseryId,
                 NurseryName = nurseryMaterial.Nursery?.Name,
+                NurseryAddress = nurseryMaterial.Nursery?.Address,
                 IsActive = nurseryMaterial.IsActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isExpired
@@ -1199,11 +1225,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.NurseryPlantCombo,
                 EntityId = nurseryPlantCombo.Id,
+                PlantComboId = nurseryPlantCombo.PlantComboId,
                 Name = combo?.ComboName ?? $"NurseryPlantCombo #{nurseryPlantCombo.Id}",
                 Description = combo?.Description,
                 Price = combo?.ComboPrice,
                 NurseryId = nurseryPlantCombo.NurseryId,
                 NurseryName = nurseryPlantCombo.Nursery?.Name,
+                NurseryAddress = nurseryPlantCombo.Nursery?.Address,
                 IsActive = nurseryPlantCombo.IsActive && comboActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable
@@ -1241,7 +1269,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 suggestion.Name = fact.Name;
                 suggestion.Description = fact.Description;
                 suggestion.Price = fact.Price;
+                suggestion.PlantId = fact.PlantId;
+                suggestion.PlantComboId = fact.PlantComboId;
+                suggestion.MaterialId = fact.MaterialId;
                 suggestion.IsPurchasable = fact.IsPurchasable;
+                suggestion.NurseryId = fact.NurseryId;
+                suggestion.NurseryName = fact.NurseryName;
+                suggestion.NurseryAddress = fact.NurseryAddress;
             }
         }
 
@@ -1658,12 +1692,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = recommendation.EntityType,
                 EntityId = recommendation.EntityId,
+                PlantId = recommendation.PlantId,
+                PlantComboId = recommendation.PlantComboId,
+                MaterialId = recommendation.MaterialId,
                 Name = recommendation.Name,
                 Description = recommendation.Description,
                 Price = recommendation.Price,
                 ImageUrl = recommendation.ImageUrl,
                 IsPurchasable = true,
-                RelevanceScore = recommendation.MatchScore
+                RelevanceScore = recommendation.MatchScore,
+                NurseryId = recommendation.NurseryId > 0 ? recommendation.NurseryId : null,
+                NurseryName = recommendation.NurseryName,
+                NurseryAddress = recommendation.NurseryAddress
             };
         }
 
@@ -2260,11 +2300,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (commonPlant != null)
                     {
+                        item.PlantId = commonPlant.PlantId;
                         item.Name = commonPlant.Plant?.Name ?? "Unknown";
                         item.Description = commonPlant.Plant?.Description;
                         item.Price = commonPlant.Plant?.BasePrice;
                         item.NurseryId = commonPlant.NurseryId;
                         item.NurseryName = commonPlant.Nursery?.Name;
+                        item.NurseryAddress = commonPlant.Nursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(commonPlant.Plant?.FengShuiElement);
                         item.PetSafe = commonPlant.Plant?.PetSafe;
                         item.ChildSafe = commonPlant.Plant?.ChildSafe;
@@ -2276,11 +2318,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (instance != null)
                     {
+                        item.PlantId = instance.PlantId;
                         item.Name = instance.Plant?.Name ?? "Unknown";
                         item.Description = instance.Description ?? instance.Plant?.Description;
                         item.Price = instance.SpecificPrice ?? instance.Plant?.BasePrice;
                         item.NurseryId = instance.CurrentNurseryId ?? 0;
                         item.NurseryName = instance.CurrentNursery?.Name;
+                        item.NurseryAddress = instance.CurrentNursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(instance.Plant?.FengShuiElement);
                         item.PetSafe = instance.Plant?.PetSafe;
                         item.ChildSafe = instance.Plant?.ChildSafe;
@@ -2292,11 +2336,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var combo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(originalEntityId);
                     if (combo != null)
                     {
+                        item.PlantComboId = combo.PlantComboId;
                         item.Name = combo.PlantCombo?.ComboName ?? "Unknown";
                         item.Description = combo.PlantCombo?.Description;
                         item.Price = combo.PlantCombo?.ComboPrice;
                         item.NurseryId = combo.NurseryId;
                         item.NurseryName = combo.Nursery?.Name;
+                        item.NurseryAddress = combo.Nursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(combo.PlantCombo?.FengShuiElement);
                         item.PetSafe = combo.PlantCombo?.PetSafe;
                         item.ChildSafe = combo.PlantCombo?.ChildSafe;
@@ -2308,11 +2354,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var material = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (material != null)
                     {
+                        item.MaterialId = material.MaterialId;
                         item.Name = material.Material?.Name ?? "Unknown";
                         item.Description = material.Material?.Description;
                         item.Price = material.Material?.BasePrice;
                         item.NurseryId = material.NurseryId;
                         item.NurseryName = material.Nursery?.Name;
+                        item.NurseryAddress = material.Nursery?.Address;
                         item.ImageUrl = material.Material?.MaterialImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -2386,11 +2434,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             public string EntityType { get; set; } = string.Empty;
             public int EntityId { get; set; }
+            public int? PlantId { get; set; }
+            public int? PlantComboId { get; set; }
+            public int? MaterialId { get; set; }
             public string Name { get; set; } = string.Empty;
             public string? Description { get; set; }
             public decimal? Price { get; set; }
             public int? NurseryId { get; set; }
             public string? NurseryName { get; set; }
+            public string? NurseryAddress { get; set; }
             public bool? IsActive { get; set; }
             public bool IsPurchasable { get; set; }
             public string AvailabilityStatus { get; set; } = "Unknown";
