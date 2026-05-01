@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -13,6 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 {
     public class DesignRegistrationService : IDesignRegistrationService
     {
+        private const string RejectRouteMetaPrefix = "__route_meta__:";
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
 
@@ -79,7 +81,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 request.Latitude,
                 request.Longitude);
 
-            var initialStatus = DesignRegistrationStatus.PendingApproval;
             if (selectedNursery == null)
             {
                 selectedNursery = await SelectFallbackNurseryAsync(
@@ -89,8 +90,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (selectedNursery == null)
                     throw new BadRequestException("No nursery is available for the selected design template at the moment");
-
-                initialStatus = DesignRegistrationStatus.WaitingForNursery;
             }
 
             var totalPrice = tier.PackagePrice;
@@ -109,7 +108,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Address = request.Address.Trim(),
                 Phone = request.Phone.Trim(),
                 CustomerNote = string.IsNullOrWhiteSpace(request.CustomerNote) ? null : request.CustomerNote.Trim(),
-                Status = (int)initialStatus,
+                CancelReason = BuildCancelReasonWithRouteMeta(
+                    new HashSet<int>(),
+                    request.NurseryId.HasValue,
+                    null),
+                Status = (int)DesignRegistrationStatus.PendingApproval,
                 CreatedAt = DateTime.Now
             };
 
@@ -190,9 +193,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval
-                && registrationDetail.Status != (int)DesignRegistrationStatus.WaitingForNursery)
-                throw new BadRequestException("Only waiting or pending registrations can be approved");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval)
+                throw new BadRequestException("Only pending registrations can be approved");
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
@@ -271,15 +273,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval
-                && registrationDetail.Status != (int)DesignRegistrationStatus.WaitingForNursery)
-                throw new BadRequestException("Only waiting or pending registrations can be rejected");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.PendingApproval)
+                throw new BadRequestException("Only pending registrations can be rejected");
+
+            var (routeMeta, _) = ParseRejectRouteMeta(registrationDetail.CancelReason);
+            var rejectedNurseryHistory = routeMeta.RejectedNurseryIds;
+            var isPreferredNurseryRequested = routeMeta.IsPreferredNurseryRequested;
+
+            rejectedNurseryHistory.Add(registrationDetail.NurseryId);
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
 
+            var shouldTryRematch = !isPreferredNurseryRequested
+                                   && registrationDetail.Status == (int)DesignRegistrationStatus.PendingApproval;
+
+            if (shouldTryRematch)
+            {
+                var candidateNurseries = await BuildCandidateNurseriesForRerouteAsync(registrationDetail.DesignTemplateTierId);
+                var nextNursery = await SelectBestNurseryAsync(
+                    candidateNurseries.Where(x => !rejectedNurseryHistory.Contains(x.Id)).ToList(),
+                    await GetRequiredSpecializationIdsAsync(registrationDetail.DesignTemplateTierId),
+                    registrationDetail.Latitude,
+                    registrationDetail.Longitude);
+
+                if (nextNursery != null)
+                {
+                    registration.NurseryId = nextNursery.Id;
+                    registration.CancelReason = BuildCancelReasonWithRouteMeta(
+                        rejectedNurseryHistory,
+                        isPreferredNurseryRequested,
+                        null);
+                    registration.Status = (int)DesignRegistrationStatus.PendingApproval;
+
+                    _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
+                    await _unitOfWork.SaveAsync();
+
+                    var rerouted = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
+                        ?? throw new NotFoundException($"DesignRegistration {id} not found after reroute");
+
+                    return rerouted.ToResponse();
+                }
+            }
+
+            var normalizedRejectReason = string.IsNullOrWhiteSpace(rejectReason)
+                ? null
+                : rejectReason.Trim();
+
+            if (normalizedRejectReason == null)
+            {
+                if (isPreferredNurseryRequested)
+                {
+                    normalizedRejectReason = "Preferred nursery rejected this design registration";
+                }
+                else
+                {
+                    normalizedRejectReason = "All available nurseries have rejected or cannot accept this design registration";
+                }
+            }
+
             registration.Status = (int)DesignRegistrationStatus.Rejected;
-            registration.CancelReason = string.IsNullOrWhiteSpace(rejectReason) ? "Rejected by nursery" : rejectReason.Trim();
+            registration.CancelReason = BuildCancelReasonWithRouteMeta(
+                rejectedNurseryHistory,
+                isPreferredNurseryRequested,
+                normalizedRejectReason);
 
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
             await _unitOfWork.SaveAsync();
@@ -290,7 +347,165 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updated.ToResponse();
         }
 
-        public async Task<DesignRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId)
+        public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForRegistrationAsync(int managerId, int registrationId)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(registrationId)
+                ?? throw new NotFoundException($"DesignRegistration {registrationId} not found");
+
+            if (registration.NurseryId != nursery.Id)
+                throw new ForbiddenException("This registration does not belong to your nursery");
+
+            var requiredSpecIds = await GetRequiredSpecializationIdsAsync(registration.DesignTemplateTierId);
+            var allCaretakers = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
+
+            IEnumerable<User> eligible = allCaretakers
+                .Where(x => x.Status == (int)UserStatusEnum.Active && x.IsVerified);
+
+            if (requiredSpecIds.Count > 0)
+            {
+                eligible = eligible.Where(x => requiredSpecIds.All(reqId =>
+                    x.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+            }
+
+            var eligibleList = eligible
+                .OrderBy(x => x.Username ?? string.Empty)
+                .ThenBy(x => x.Id)
+                .ToList();
+
+            if (!eligibleList.Any())
+                return new List<StaffWithSpecializationsResponseDto>();
+
+            var workloads = await _unitOfWork.DesignRegistrationRepository.CountOpenAssignmentsByCaretakerIdsAsync(
+                eligibleList.Select(x => x.Id).ToList(),
+                new List<int> { nursery.Id });
+
+            return eligibleList
+                .Where(x => x.Id == registration.AssignedCaretakerId
+                            || (workloads.TryGetValue(x.Id, out var count) ? count : 0) == 0)
+                .OrderBy(x => workloads.TryGetValue(x.Id, out var count) ? count : 0)
+                .ThenBy(x => x.Username ?? string.Empty)
+                .ThenBy(x => x.Id)
+                .Select(NurseryService.MapToStaffDtoPublic)
+                .ToList();
+        }
+
+        public async Task<List<EligibleCaretakerWithAvailabilityDto>> GetEligibleCaretakersForRegistrationWithAvailabilityAsync(int managerId, int registrationId, DateOnly? startDate = null)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(registrationId)
+                ?? throw new NotFoundException($"DesignRegistration {registrationId} not found");
+
+            if (registration.NurseryId != nursery.Id)
+                throw new ForbiddenException("This registration does not belong to your nursery");
+
+            var requiredSpecIds = await GetRequiredSpecializationIdsAsync(registration.DesignTemplateTierId);
+            var allCaretakers = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
+
+            IEnumerable<User> eligible = allCaretakers
+                .Where(x => x.Status == (int)UserStatusEnum.Active && x.IsVerified);
+
+            if (requiredSpecIds.Count > 0)
+            {
+                eligible = eligible.Where(x => requiredSpecIds.All(reqId =>
+                    x.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+            }
+
+            var eligibleList = eligible
+                .OrderBy(x => x.Username ?? string.Empty)
+                .ThenBy(x => x.Id)
+                .ToList();
+
+            if (!eligibleList.Any())
+                return new List<EligibleCaretakerWithAvailabilityDto>();
+
+            var workloads = await _unitOfWork.DesignRegistrationRepository.CountOpenAssignmentsByCaretakerIdsAsync(
+                eligibleList.Select(x => x.Id).ToList(),
+                new List<int> { nursery.Id });
+
+            // Get start date and estimated days for schedule conflict check
+            var tasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(registrationId);
+            var firstTask = tasks.OrderBy(x => x.ScheduledDate ?? DateOnly.MaxValue).FirstOrDefault();
+            var conflictStartDate = startDate ?? firstTask?.ScheduledDate;
+            var estimatedDays = registration.DesignTemplateTier?.EstimatedDays ?? 1;
+            if (estimatedDays <= 0) estimatedDays = 1;
+
+            var result = new List<EligibleCaretakerWithAvailabilityDto>();
+
+            foreach (var caretaker in eligibleList)
+            {
+                var dto = new EligibleCaretakerWithAvailabilityDto
+                {
+                    Staff = NurseryService.MapToStaffDtoPublic(caretaker)
+                };
+
+                // Check schedule conflicts only if there's a start date
+                if (conflictStartDate.HasValue)
+                {
+                    var (isAvailable, conflicts) = await CheckCaretakerScheduleConflictAsync(
+                        caretaker.Id, conflictStartDate.Value, estimatedDays, registrationId);
+
+                    dto.IsAvailable = isAvailable;
+                    if (conflicts.Any())
+                    {
+                        dto.ConflictDates = conflicts
+                            .Select(x => x.ScheduledDate?.ToString("dd/MM/yyyy") ?? "N/A")
+                            .Distinct()
+                            .ToList();
+                    }
+                }
+                else
+                {
+                    // No scheduled date yet, consider as available
+                    dto.IsAvailable = true;
+                }
+
+                result.Add(dto);
+            }
+
+            // Sort: available first, then by workload, then by name
+            return result
+                .OrderByDescending(x => x.IsAvailable)
+                .ThenBy(x => workloads.TryGetValue(x.Staff.Id, out var count) ? count : 0)
+                .ThenBy(x => x.Staff.Username ?? string.Empty)
+                .ToList();
+        }
+
+        private async Task<(bool IsAvailable, List<DesignTask> Conflicts)> CheckCaretakerScheduleConflictAsync(
+            int caretakerId, DateOnly startDate, int estimatedDays, int registrationId)
+        {
+            var dates = BuildConsecutiveWorkingDates(startDate, estimatedDays);
+            var conflicts = new List<DesignTask>();
+            var pagination = new Pagination { PageNumber = 1, PageSize = 1000 };
+
+            foreach (var date in dates)
+            {
+                var tasksOnDate = await _unitOfWork.DesignTaskRepository
+                    .GetByAssignedStaffIdAsync(caretakerId, pagination, status: null, from: date, to: date);
+
+                foreach (var task in tasksOnDate.Items)
+                {
+                    // Skip cancelled tasks
+                    if (task.Status == (int)DesignTaskStatusEnum.Cancelled)
+                        continue;
+
+                    // Skip tasks from the registration being assigned
+                    if (task.DesignRegistrationId == registrationId)
+                        continue;
+
+                    conflicts.Add(task);
+                }
+
+                if (conflicts.Any())
+                    return (false, conflicts);
+            }
+
+            return (true, conflicts);
+        }
+
+        public async Task<DesignRegistrationResponseDto> AssignCaretakerAsync(int managerId, int id, int caretakerId, DateOnly? startDate = null)
         {
             var nursery = await ResolveOperatorNurseryAsync(managerId);
 
@@ -300,46 +515,115 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.NurseryId != nursery.Id)
                 throw new ForbiddenException("This registration does not belong to your nursery");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.AwaitDeposit
-                && registrationDetail.Status != (int)DesignRegistrationStatus.Active)
-                throw new BadRequestException("Can only assign caretaker when registration is AwaitDeposit or Active");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.DepositPaid
+                && registrationDetail.Status != (int)DesignRegistrationStatus.InProgress)
+                throw new BadRequestException("Can only assign caretaker when registration is DepositPaid, or InProgress");
 
-            var caretaker = await _unitOfWork.UserRepository.GetByIdAsync(caretakerId)
-                ?? throw new NotFoundException($"User {caretakerId} not found");
-
-            if (caretaker.RoleId != (int)RoleEnum.Caretaker)
-                throw new BadRequestException("Selected user is not a caretaker");
+            var caretaker = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(caretakerId, nursery.Id)
+                ?? throw new NotFoundException($"Caretaker {caretakerId} not found in your nursery");
 
             if (caretaker.Status != (int)UserStatusEnum.Active || !caretaker.IsVerified)
                 throw new BadRequestException("Caretaker account is not active or verified");
 
-            if (!caretaker.NurseryId.HasValue || caretaker.NurseryId.Value != nursery.Id)
-                throw new ForbiddenException("Caretaker is not assigned to your nursery");
+            var requiredSpecIds = await GetRequiredSpecializationIdsAsync(registrationDetail.DesignTemplateTierId);
+            if (requiredSpecIds.Count > 0 &&
+                !requiredSpecIds.All(reqId => caretaker.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)))
+            {
+                throw new BadRequestException("Selected caretaker does not have all required specializations for this design registration");
+            }
+
+            if (registrationDetail.AssignedCaretakerId != caretakerId)
+            {
+                var workloads = await _unitOfWork.DesignRegistrationRepository
+                    .CountOpenAssignmentsByCaretakerIdsAsync(new List<int> { caretakerId }, new List<int> { nursery.Id });
+                var currentOpenAssignments = workloads.TryGetValue(caretakerId, out var count) ? count : 0;
+                if (currentOpenAssignments > 0)
+                {
+                    throw new BadRequestException("Selected caretaker is currently handling another open design registration");
+                }
+
+                // Check schedule conflicts
+                var tasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(id);
+                var firstTask = tasks.OrderBy(x => x.ScheduledDate ?? DateOnly.MaxValue).FirstOrDefault();
+                var conflictStartDate = startDate ?? firstTask?.ScheduledDate;
+
+                if (!conflictStartDate.HasValue)
+                    throw new BadRequestException("StartDate is required to schedule tasks for this registration");
+
+                if (conflictStartDate.HasValue)
+                {
+                    var estimatedDays = registrationDetail.DesignTemplateTier?.EstimatedDays ?? 1;
+                    if (estimatedDays <= 0) estimatedDays = 1;
+
+                    var (isAvailable, conflicts) = await CheckCaretakerScheduleConflictAsync(
+                        caretakerId, conflictStartDate.Value, estimatedDays, id);
+
+                    if (!isAvailable && conflicts.Any())
+                    {
+                        var conflictDates = string.Join(", ", conflicts.Select(x => x.ScheduledDate?.ToString("dd/MM/yyyy") ?? "N/A").Distinct());
+                        throw new BadRequestException($"Selected caretaker has conflicting tasks on: {conflictDates}");
+                    }
+                }
+            }
 
             var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
 
             registration.AssignedCaretakerId = caretakerId;
+            if (registration.Status == (int)DesignRegistrationStatus.DepositPaid)
+            {
+                registration.Status = (int)DesignRegistrationStatus.InProgress;
+            }
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
 
-            var tasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(id);
-            foreach (var task in tasks)
+            var registrationTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(id);
+            var activeTasks = registrationTasks
+                .Where(t => t.Status != (int)DesignTaskStatusEnum.Completed && t.Status != (int)DesignTaskStatusEnum.Cancelled)
+                .OrderBy(t => t.ScheduledDate ?? DateOnly.MaxValue)
+                .ThenBy(t => t.Id)
+                .ToList();
+
+            if (startDate.HasValue)
             {
-                if (task.Status == (int)DesignTaskStatusEnum.Completed || task.Status == (int)DesignTaskStatusEnum.Cancelled)
-                    continue;
-
-                var trackedTask = await _unitOfWork.DesignTaskRepository.GetByIdAsync(task.Id);
-                if (trackedTask == null)
-                    continue;
-
-                trackedTask.AssignedStaffId = caretakerId;
-
-                if (trackedTask.Status == (int)DesignTaskStatusEnum.Pending)
+                var scheduleDates = BuildConsecutiveWorkingDates(startDate.Value, activeTasks.Count);
+                for (var i = 0; i < activeTasks.Count; i++)
                 {
-                    trackedTask.Status = (int)DesignTaskStatusEnum.Assigned;
-                }
+                    var task = activeTasks[i];
+                    var trackedTask = await _unitOfWork.DesignTaskRepository.GetByIdAsync(task.Id);
+                    if (trackedTask == null)
+                        continue;
 
-                _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                    trackedTask.ScheduledDate = scheduleDates[i];
+                    trackedTask.AssignedStaffId = caretakerId;
+
+                    if (trackedTask.Status == (int)DesignTaskStatusEnum.Pending)
+                    {
+                        trackedTask.Status = (int)DesignTaskStatusEnum.Assigned;
+                    }
+
+                    _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                }
+            }
+            else
+            {
+                if (activeTasks.Any(t => !t.ScheduledDate.HasValue))
+                    throw new BadRequestException("StartDate is required to schedule tasks for this registration");
+
+                foreach (var task in activeTasks)
+                {
+                    var trackedTask = await _unitOfWork.DesignTaskRepository.GetByIdAsync(task.Id);
+                    if (trackedTask == null)
+                        continue;
+
+                    trackedTask.AssignedStaffId = caretakerId;
+
+                    if (trackedTask.Status == (int)DesignTaskStatusEnum.Pending)
+                    {
+                        trackedTask.Status = (int)DesignTaskStatusEnum.Assigned;
+                    }
+
+                    _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
+                }
             }
 
             await _unitOfWork.SaveAsync();
@@ -365,8 +649,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registrationDetail.AssignedCaretakerId != caretakerId)
                 throw new ForbiddenException("Only assigned caretaker can update survey info");
 
-            if (registrationDetail.Status != (int)DesignRegistrationStatus.Active)
-                throw new BadRequestException("Survey info can only be updated when registration is Active");
+            if (registrationDetail.Status != (int)DesignRegistrationStatus.InProgress)
+                throw new BadRequestException("Survey info can only be updated when registration is InProgress");
 
             if (request.Width.HasValue != request.Length.HasValue)
                 throw new BadRequestException("Width and Length must be provided together");
@@ -426,10 +710,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration.UserId != userId)
                 throw new ForbiddenException("You don't have access to this registration");
 
-            if (registration.Status != (int)DesignRegistrationStatus.WaitingForNursery
-                && registration.Status != (int)DesignRegistrationStatus.PendingApproval
+            if (registration.Status != (int)DesignRegistrationStatus.PendingApproval
                 && registration.Status != (int)DesignRegistrationStatus.AwaitDeposit)
-                throw new BadRequestException("You can only cancel registrations in WaitingForNursery, PendingApproval or AwaitDeposit status");
+                throw new BadRequestException("You can only cancel registrations in PendingApproval or AwaitDeposit status");
 
             var tracked = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found");
@@ -543,6 +826,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .FirstOrDefault();
         }
 
+        private async Task<HashSet<int>> GetRequiredSpecializationIdsAsync(int designTemplateTierId)
+        {
+            var tier = await _unitOfWork.DesignTemplateTierRepository.GetByIdAsync(designTemplateTierId)
+                ?? throw new NotFoundException($"DesignTemplateTier {designTemplateTierId} not found");
+
+            return (await _unitOfWork.DesignTemplateSpecializationRepository
+                    .GetByTemplateIdAsync(tier.DesignTemplateId))
+                .Select(x => x.SpecializationId)
+                .ToHashSet();
+        }
+
+        private async Task<List<Nursery>> BuildCandidateNurseriesForRerouteAsync(int designTemplateTierId)
+        {
+            var tier = await _unitOfWork.DesignTemplateTierRepository.GetByIdAsync(designTemplateTierId)
+                ?? throw new NotFoundException($"DesignTemplateTier {designTemplateTierId} not found");
+
+            var nurseryTemplateMappings = await _unitOfWork.NurseryDesignTemplateRepository
+                .GetByTemplateIdAsync(tier.DesignTemplateId, activeOnly: true);
+
+            return nurseryTemplateMappings
+                .Where(x => x.Nursery != null && x.Nursery.IsActive == true)
+                .Select(x => x.Nursery!)
+                .GroupBy(x => x.Id)
+                .Select(g => g.First())
+                .ToList();
+        }
+
         private async Task<Nursery?> SelectFallbackNurseryAsync(
             List<Nursery> candidateNurseries,
             decimal? latitude,
@@ -604,6 +914,109 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             throw new ForbiddenException("You are not a manager/staff of any nursery");
+        }
+
+        private sealed class RejectRouteMeta
+        {
+            public HashSet<int> RejectedNurseryIds { get; init; } = new();
+            public bool IsPreferredNurseryRequested { get; init; }
+        }
+
+        private sealed class RejectRouteMetaPayload
+        {
+            public List<int>? RejectedNurseryIds { get; set; }
+            public bool? IsPreferredNurseryRequested { get; set; }
+        }
+
+        private static (RejectRouteMeta Meta, string? UserReason) ParseRejectRouteMeta(string? cancelReason)
+        {
+            if (string.IsNullOrWhiteSpace(cancelReason)
+                || !cancelReason.StartsWith(RejectRouteMetaPrefix, StringComparison.Ordinal))
+            {
+                return (new RejectRouteMeta(), cancelReason);
+            }
+
+            var payload = cancelReason.Substring(RejectRouteMetaPrefix.Length);
+            var separatorIndex = payload.IndexOf('|');
+            var jsonPart = separatorIndex >= 0 ? payload.Substring(0, separatorIndex) : payload;
+            var userReason = separatorIndex >= 0 && separatorIndex < payload.Length - 1
+                ? payload.Substring(separatorIndex + 1)
+                : null;
+
+            try
+            {
+                var parsedPayload = JsonSerializer.Deserialize<RejectRouteMetaPayload>(jsonPart);
+                if (parsedPayload != null &&
+                    (parsedPayload.RejectedNurseryIds != null || parsedPayload.IsPreferredNurseryRequested.HasValue))
+                {
+                    return (new RejectRouteMeta
+                    {
+                        RejectedNurseryIds = (parsedPayload.RejectedNurseryIds ?? new List<int>())
+                            .Where(x => x > 0)
+                            .ToHashSet(),
+                        IsPreferredNurseryRequested = parsedPayload.IsPreferredNurseryRequested == true
+                    }, userReason);
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<int>>(jsonPart) ?? new List<int>();
+                return (new RejectRouteMeta
+                {
+                    RejectedNurseryIds = parsed.Where(x => x > 0).ToHashSet(),
+                    IsPreferredNurseryRequested = false
+                }, userReason);
+            }
+            catch
+            {
+                return (new RejectRouteMeta(), userReason);
+            }
+        }
+
+        private static string? BuildCancelReasonWithRouteMeta(
+            HashSet<int> rejectedNurseryHistory,
+            bool isPreferredNurseryRequested,
+            string? userReason)
+        {
+            var normalizedReason = string.IsNullOrWhiteSpace(userReason) ? null : userReason.Trim();
+
+            if (rejectedNurseryHistory.Count == 0 && !isPreferredNurseryRequested)
+            {
+                return normalizedReason;
+            }
+
+            var payload = new RejectRouteMetaPayload
+            {
+                RejectedNurseryIds = rejectedNurseryHistory.OrderBy(x => x).ToList(),
+                IsPreferredNurseryRequested = isPreferredNurseryRequested ? true : null
+            };
+            var historyJson = JsonSerializer.Serialize(payload);
+
+            return normalizedReason == null
+                ? $"{RejectRouteMetaPrefix}{historyJson}"
+                : $"{RejectRouteMetaPrefix}{historyJson}|{normalizedReason}";
+        }
+
+        private static List<DateOnly> BuildConsecutiveWorkingDates(DateOnly startDate, int totalDays)
+        {
+            var dates = new List<DateOnly>();
+            var cursor = startDate;
+
+            while (dates.Count < totalDays)
+            {
+                if (cursor.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    dates.Add(cursor);
+                }
+
+                cursor = cursor.AddDays(1);
+            }
+
+            return dates;
         }
 
     }

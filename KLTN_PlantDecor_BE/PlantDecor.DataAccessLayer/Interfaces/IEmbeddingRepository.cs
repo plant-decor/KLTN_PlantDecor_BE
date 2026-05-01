@@ -8,6 +8,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<Embedding>> GetByEntityTypeAsync(string entityType);
         Task<Embedding?> GetByEntityAsync(string entityType, Guid entityId);
         Task<List<Embedding>> SearchSimilarAsync(Vector queryVector, int limit = 10, string? entityType = null);
+        Task<List<Embedding>> SearchSimilarAsync(Vector queryVector, int limit, IEnumerable<string>? entityTypes);
         Task<bool> DeleteByEntityAsync(string entityType, Guid entityId);
         Task AddRangeAsync(IEnumerable<Embedding> embeddings);
     }

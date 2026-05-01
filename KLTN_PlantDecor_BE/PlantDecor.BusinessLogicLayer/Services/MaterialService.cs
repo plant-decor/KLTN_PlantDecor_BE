@@ -1,5 +1,7 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -17,17 +19,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         private const string ALL_MATERIALS_KEY = "materials_all";
         private const string ACTIVE_MATERIALS_KEY = "materials_active";
         private const string SHOP_MATERIALS_KEY = "materials_shop";
         private const string NURSERIES_BY_MATERIAL_KEY = "nurseries_by_material";
 
-        public MaterialService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
+        public MaterialService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         #region CRUD Operations
@@ -227,6 +235,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return material.ToResponse();
             }
@@ -495,6 +504,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return true;
             }
@@ -518,6 +528,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(id);
 
             return material.IsActive ?? true;
         }
@@ -558,6 +569,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.MaterialId);
 
                 return material.ToResponse();
             }
@@ -599,6 +611,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.MaterialId);
 
                 return material.ToResponse();
             }
@@ -624,6 +637,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(materialId);
 
             return material.ToResponse();
         }
@@ -643,6 +657,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(materialId);
 
             return material.ToResponse();
         }
@@ -735,6 +750,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
         }
 
         #endregion
+
+        private async Task QueueDependentEmbeddingsAsync(int materialId)
+        {
+            try
+            {
+                var nurseryMaterials = await _unitOfWork.NurseryMaterialRepository.GetByMaterialIdForEmbeddingAsync(materialId);
+                foreach (var nurseryMaterial in nurseryMaterials)
+                {
+                    var entityId = ConvertToGuid(nurseryMaterial.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessNurseryMaterialEmbeddingAsync(
+                            nurseryMaterial.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.NurseryMaterial));
+                }
+            }
+            catch
+            {
+                // Re-embedding is best-effort and should not fail Material write operations.
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         private static string ExtractCloudinaryPublicId(string? imageUrl)
         {

@@ -480,7 +480,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryNearbyResponseDto>> GetNearbyNurseriesAsync(decimal lat, decimal lng, decimal radiusKm, int? packageId)
         {
-            var nurseries = await _unitOfWork.NurseryRepository.GetNearbyWithPackageAsync(lat, lng, radiusKm, packageId);
+            var nurseries = await _unitOfWork.NurseryRepository.GetNearbyWithPackageAsync(lat, lng, packageId);
 
             return nurseries.Select(n => new NurseryNearbyResponseDto
             {

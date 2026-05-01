@@ -69,7 +69,7 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<Nursery>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<List<Nursery>> GetNearbyWithPackageAsync(decimal lat, decimal lng, decimal radiusKm, int? packageId)
+        public async Task<List<Nursery>> GetNearbyWithPackageAsync(decimal lat, decimal lng, int? packageId)
         {
             var query = _context.Nurseries
                 .Include(n => n.Manager)
@@ -83,7 +83,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var nurseries = await query.ToListAsync();
 
             return nurseries
-                .Where(n => HaversineKm((double)lat, (double)lng, (double)n.Latitude!.Value, (double)n.Longitude!.Value) <= (double)radiusKm)
                 .OrderBy(n => HaversineKm((double)lat, (double)lng, (double)n.Latitude!.Value, (double)n.Longitude!.Value))
                 .ToList();
         }

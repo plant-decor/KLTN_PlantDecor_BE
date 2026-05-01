@@ -13,5 +13,11 @@
         /// </summary>
         /// <param name="email">User email to send verification link to</param>
         Task SendVerificationEmailAsync(string email);
+
+        /// <summary>
+        /// Send OTP verification email in background after registration
+        /// </summary>
+        /// <param name="email">User email to send OTP verification to</param>
+        Task SendOtpEmailVerificationAsync(string email);
     }
 }

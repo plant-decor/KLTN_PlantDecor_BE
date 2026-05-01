@@ -11,5 +11,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<PaginatedResult<DesignRegistration>> GetByNurseryIdAsync(int nurseryId, Pagination pagination, int? status = null);
         Task<DesignRegistration?> GetByOrderIdAsync(int orderId);
         Task<Dictionary<int, int>> CountOpenByNurseryIdsAsync(List<int> nurseryIds);
+        Task<Dictionary<int, int>> CountOpenAssignmentsByCaretakerIdsAsync(List<int> caretakerIds, List<int> nurseryIds);
     }
 }

@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
@@ -19,6 +21,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly ILogger<PlantService> _logger;
 
         private const string ALL_PLANTS_KEY = "plants_all";
@@ -29,11 +32,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
             ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
             ILogger<PlantService> logger)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
             _logger = logger;
         }
 
@@ -103,7 +108,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(id);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {id} does not exist");
+                throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
             return plant.ToResponse();
         }
@@ -116,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Check if plant name already exists
                 if (await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name))
-                    throw new BadRequestException($"Plant with name '{request.Name}' already exists");
+                    throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
 
                 ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
 
@@ -145,12 +150,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(id);
                 if (plant == null)
-                    throw new NotFoundException($"Plant with ID {id} does not exist");
+                    throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
                 // Check if plant name already exists (excluding current plant)
                 if (!string.IsNullOrWhiteSpace(request.Name)
                     && await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name, id))
-                    throw new BadRequestException($"Plant with name '{request.Name}' already exists");
+                    throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
 
                 ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
 
@@ -161,6 +166,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return plant.ToResponse();
             }
@@ -178,7 +184,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             foreach (var file in files)
             {
@@ -252,7 +258,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -315,11 +321,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (targetImage == null)
-                throw new NotFoundException($"Image with ID {imageId} does not belong to plant {plantId}");
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
 
             foreach (var image in plant.PlantImages.Where(i => i.PlantInstanceId == null))
             {
@@ -343,11 +349,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             var image = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (image == null)
-                throw new NotFoundException($"Image with ID {imageId} does not belong to plant {plantId}");
+                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -421,11 +427,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var plant = await _unitOfWork.PlantRepository.GetByIdWithInstancesAsync(id);
                 if (plant == null)
-                    throw new NotFoundException($"Plant with ID {id} does not exist");
+                    throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
                 // Check if plant has instances
                 if (plant.PlantInstances.Any())
-                    throw new BadRequestException("Cannot delete a plant that has instances. Please remove the instances first.");
+                    throw new BadRequestException("Không thể xóa plant có instance. Vui lòng xóa các instance trước.");
 
                 // Soft delete by deactivating
                 plant.IsActive = false;
@@ -436,6 +442,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(id);
 
                 return true;
             }
@@ -450,7 +457,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdAsync(id);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {id} does not exist");
+                throw new NotFoundException($"Plant với ID {id} không tồn tại");
 
             plant.IsActive = !plant.IsActive;
             plant.UpdatedAt = DateTime.Now;
@@ -459,6 +466,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(id);
 
             return plant.IsActive ?? true;
         }
@@ -471,7 +479,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(request.PlantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {request.PlantId} does not exist");
+                throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
 
             // Get valid categories
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
@@ -480,7 +488,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (validCategories.Count != request.CategoryIds.Count)
             {
                 var invalidIds = request.CategoryIds.Except(validCategories.Select(c => c.Id));
-                throw new NotFoundException($"Category IDs {string.Join(", ", invalidIds)} do not exist");
+                throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
             }
 
             try
@@ -495,9 +503,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 plant.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.PlantId);
 
                 return plant.ToResponse();
             }
@@ -512,7 +522,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(request.PlantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {request.PlantId} does not exist");
+                throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
 
             // Get valid tags
             var tags = await _unitOfWork.TagRepository.GetByIdsAsync(request.TagIds);
@@ -520,7 +530,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (tags.Count != request.TagIds.Count)
             {
                 var invalidIds = request.TagIds.Except(tags.Select(t => t.Id));
-                throw new NotFoundException($"Tag IDs {string.Join(", ", invalidIds)} do not exist");
+                throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
             }
 
             try
@@ -535,9 +545,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 plant.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await QueueDependentEmbeddingsAsync(request.PlantId);
 
                 return plant.ToResponse();
             }
@@ -552,17 +564,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             var category = plant.Categories.FirstOrDefault(c => c.Id == categoryId);
             if (category == null)
-                throw new NotFoundException($"Plant does not contain category ID {categoryId}");
+                throw new NotFoundException($"Plant không có category với ID {categoryId}");
 
             plant.Categories.Remove(category);
             plant.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(plantId);
 
             return plant.ToResponse();
         }
@@ -571,17 +584,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant with ID {plantId} does not exist");
+                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
 
             var tag = plant.Tags.FirstOrDefault(t => t.Id == tagId);
             if (tag == null)
-                throw new NotFoundException($"Plant does not contain tag ID {tagId}");
+                throw new NotFoundException($"Plant không có tag với ID {tagId}");
 
             plant.Tags.Remove(tag);
             plant.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveAsync();
 
             await InvalidateCacheAsync();
+            await QueueDependentEmbeddingsAsync(plantId);
 
             return plant.ToResponse();
         }
@@ -713,7 +727,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (invalidRoomStyles.Count > 0)
                 {
-                    throw new BadRequestException($"Invalid RoomStyle values: {string.Join(", ", invalidRoomStyles)}");
+                    throw new BadRequestException($"RoomStyle không hợp lệ: {string.Join(", ", invalidRoomStyles)}");
                 }
             }
 
@@ -726,12 +740,47 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (invalidRoomTypes.Count > 0)
                 {
-                    throw new BadRequestException($"Invalid RoomType values: {string.Join(", ", invalidRoomTypes)}");
+                    throw new BadRequestException($"RoomType không hợp lệ: {string.Join(", ", invalidRoomTypes)}");
                 }
             }
         }
 
         #endregion
+
+        private async Task QueueDependentEmbeddingsAsync(int plantId)
+        {
+            try
+            {
+                var commonPlants = await _unitOfWork.CommonPlantRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                foreach (var commonPlant in commonPlants)
+                {
+                    var entityId = ConvertToGuid(commonPlant.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessCommonPlantEmbeddingAsync(
+                            commonPlant.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.CommonPlant));
+                }
+
+                var plantInstances = await _unitOfWork.PlantInstanceRepository.GetByPlantIdForEmbeddingAsync(plantId);
+                foreach (var plantInstance in plantInstances)
+                {
+                    var entityId = ConvertToGuid(plantInstance.Id);
+                    _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                        service => service.ProcessPlantInstanceEmbeddingAsync(
+                            plantInstance.ToEmbeddingBackfillDto(),
+                            entityId,
+                            EmbeddingEntityTypes.PlantInstance));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to queue dependent embeddings for Plant:{PlantId}", plantId);
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         private static string ExtractCloudinaryPublicId(string? imageUrl)
         {

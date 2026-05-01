@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Libraries;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -280,6 +282,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var shouldInvalidateInventoryCaches = false;
             var shouldEnqueueOrderSuccessEmail = false;
             var orderIdForSuccessEmail = 0;
+            var updatedPlantInstanceIds = new List<int>();
             try
             {
                 if (responseCode == "00")
@@ -297,10 +300,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     payment.Status = (int)PaymentStatusEnum.Paid;
                     payment.PaidAt = DateTime.Now;
 
-                    // Update Order status based on payment type and current order status
-                    var newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    // Update Order status based on payment type and order type
+                    int newOrderStatus;
+                    if (order.OrderType == (int)OrderTypeEnum.Design && paymentType == PaymentTypeEnum.RemainingBalance)
+                    {
+                        // Design order with remaining balance payment → Completed
+                        newOrderStatus = (int)OrderStatusEnum.Completed;
+                    }
+                    else
+                    {
+                        // Other orders → use default status determination
+                        newOrderStatus = DetermineSuccessOrderStatus(paymentType);
+                    }
+
                     order.Status = newOrderStatus;
                     order.UpdatedAt = DateTime.Now;
+                    
+                    // Clear remaining amount if payment type is RemainingBalance
+                    if (paymentType == PaymentTypeEnum.RemainingBalance)
+                    {
+                        order.RemainingAmount = 0;
+                    }
+                    
                     _unitOfWork.OrderRepository.PrepareUpdate(order);
 
                     // Update all NurseryOrder status to match parent Order status
@@ -326,7 +347,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     // Update PlantInstance status for PlantInstance orders
                     if (order.OrderType == (int)OrderTypeEnum.PlantInstance)
                     {
-                        await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
+                        updatedPlantInstanceIds = await UpdatePlantInstanceStatusForOrderAsync(order, paymentType);
                     }
 
                     // Generate care service schedule for Service orders
@@ -340,13 +361,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         }
                     }
 
-                    // Activate design registration and generate design tasks after successful deposit payment
+                    // Synchronize design registration lifecycle with payment milestones.
                     if (order.OrderType == (int)OrderTypeEnum.Design)
                     {
                         var designRegistration = await _unitOfWork.DesignRegistrationRepository.GetByOrderIdAsync(order.Id);
                         if (designRegistration != null)
                         {
-                            await ActivateDesignRegistrationAndGenerateTasksAsync(designRegistration.Id);
+                            if (paymentType == PaymentTypeEnum.Deposit)
+                            {
+                                await ActivateDesignRegistrationAndGenerateTasksAsync(designRegistration.Id);
+                            }
+                            else if (paymentType == PaymentTypeEnum.RemainingBalance)
+                            {
+                                await CompleteDesignRegistrationAfterRemainingPaymentAsync(designRegistration.Id);
+                            }
                         }
                     }
 
@@ -386,6 +414,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (shouldInvalidateInventoryCaches)
             {
                 await InvalidateInventoryAndShopCachesAsync();
+            }
+
+            foreach (var plantInstanceId in updatedPlantInstanceIds)
+            {
+                await QueuePlantInstanceEmbeddingByIdAsync(plantInstanceId);
             }
 
             if (shouldEnqueueOrderSuccessEmail && orderIdForSuccessEmail > 0)
@@ -491,6 +524,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
             throw new BadRequestException("Payment is not associated with any invoice");
         }
 
+        private async Task CompleteDesignRegistrationAfterRemainingPaymentAsync(int designRegistrationId)
+        {
+            var registration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(designRegistrationId);
+            if (registration == null)
+                return;
+
+            if (registration.Status == (int)DesignRegistrationStatus.Completed
+                || registration.Status == (int)DesignRegistrationStatus.Cancelled
+                || registration.Status == (int)DesignRegistrationStatus.Rejected)
+            {
+                return;
+            }
+
+            registration.Status = (int)DesignRegistrationStatus.Completed;
+            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
+        }
+
         private async Task ActivateDesignRegistrationAndGenerateTasksAsync(int designRegistrationId)
         {
             var registrationDetail = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(designRegistrationId);
@@ -502,12 +552,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return;
 
             if (registration.Status != (int)DesignRegistrationStatus.AwaitDeposit
-                && registration.Status != (int)DesignRegistrationStatus.Active)
+                && registration.Status != (int)DesignRegistrationStatus.DepositPaid
+                && registration.Status != (int)DesignRegistrationStatus.InProgress)
             {
                 return;
             }
 
-            registration.Status = (int)DesignRegistrationStatus.Active;
+            registration.Status = (int)DesignRegistrationStatus.DepositPaid;
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
 
             var existingTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(designRegistrationId);
@@ -554,6 +605,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             continue;
 
                         trackedTask.TaskType = ResolveTaskTypeByIndex(index, orderedExistingTasks.Count);
+                        if (task.Status != (int)DesignTaskStatusEnum.Completed
+                            && task.Status != (int)DesignTaskStatusEnum.Cancelled)
+                        {
+                            trackedTask.ScheduledDate = null;
+                        }
                         _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTask);
                     }
                 }
@@ -565,21 +621,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (estimatedDays <= 0)
                 estimatedDays = 1;
 
-            var scheduleDates = BuildConsecutiveWorkingDates(DateOnly.FromDateTime(DateTime.Today), estimatedDays);
             var assignedStaffId = registration.AssignedCaretakerId;
             var taskStatus = assignedStaffId.HasValue
                 ? (int)DesignTaskStatusEnum.Assigned
                 : (int)DesignTaskStatusEnum.Pending;
 
-            for (var index = 0; index < scheduleDates.Count; index++)
+            for (var index = 0; index < estimatedDays; index++)
             {
-                var date = scheduleDates[index];
                 var task = new DesignTask
                 {
                     DesignRegistrationId = designRegistrationId,
                     AssignedStaffId = assignedStaffId,
-                    ScheduledDate = date,
-                    TaskType = ResolveTaskTypeByIndex(index, scheduleDates.Count),
+                    ScheduledDate = null,
+                    TaskType = ResolveTaskTypeByIndex(index, estimatedDays),
                     Status = taskStatus,
                     CreatedAt = DateTime.Now
                 };
@@ -674,11 +728,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         /// - Deposit/FullPayment: Available → Reserved (item paid but not yet delivered)
         /// - RemainingBalance: Keep Reserved (will be Sold when delivered)
         /// </summary>
-        private async Task UpdatePlantInstanceStatusForOrderAsync(Order order, PaymentTypeEnum paymentType)
+        private async Task<List<int>> UpdatePlantInstanceStatusForOrderAsync(Order order, PaymentTypeEnum paymentType)
         {
+            var updatedPlantInstanceIds = new List<int>();
+
             // Only update to Reserved when first payment (Deposit or FullPayment), not for RemainingBalance
             if (paymentType == PaymentTypeEnum.RemainingBalance)
-                return;
+                return updatedPlantInstanceIds;
 
             var paymentStrategies = (PaymentStrategiesEnum)order.PaymentStrategy;
 
@@ -693,16 +749,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         {
                             plantInstance.Status = (int)PlantInstanceStatusEnum.Reserved;
                             _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                            updatedPlantInstanceIds.Add(plantInstance.Id);
                         }
                         else if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Available && paymentStrategies == PaymentStrategiesEnum.FullPayment)
                         {
                             plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
                             _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                            updatedPlantInstanceIds.Add(plantInstance.Id);
                         }
                     }
                 }
             }
+
+            return updatedPlantInstanceIds;
         }
+
+        private async Task QueuePlantInstanceEmbeddingByIdAsync(int plantInstanceId)
+        {
+            try
+            {
+                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(plantInstanceId);
+                if (plantInstance == null)
+                {
+                    return;
+                }
+
+                var entityId = ConvertToGuid(plantInstance.Id);
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessPlantInstanceEmbeddingAsync(
+                        plantInstance.ToEmbeddingBackfillDto(),
+                        entityId,
+                        EmbeddingEntityTypes.PlantInstance));
+            }
+            catch
+            {
+                // Re-embedding is best-effort and should not fail payment success handling.
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         private async Task AssignShippersForPaidOrderAsync(Order order)
         {

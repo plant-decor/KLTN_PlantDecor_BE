@@ -67,22 +67,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (entity == null)
                 throw new NotFoundException($"DepositPolicy {id} not found");
 
-            ValidateRange(request.MinPrice, request.MaxPrice);
-            ValidatePercentage(request.DepositPercentage);
+            var updatedMinPrice = request.MinPrice ?? entity.MinPrice;
+            var updatedMaxPrice = request.MaxPrice ?? entity.MaxPrice;
+            var updatedDepositPercentage = request.DepositPercentage ?? entity.DepositPercentage;
+            var updatedIsActive = request.IsActive ?? entity.IsActive;
 
-            if (request.IsActive)
+            ValidateRange(updatedMinPrice, updatedMaxPrice);
+            ValidatePercentage(updatedDepositPercentage);
+
+            if (updatedIsActive)
             {
                 var hasOverlap = await _unitOfWork.DepositPolicyRepository
-                    .HasOverlappingActiveRangeAsync(request.MinPrice, request.MaxPrice, id);
+                    .HasOverlappingActiveRangeAsync(updatedMinPrice, updatedMaxPrice, id);
 
                 if (hasOverlap)
                     throw new ConflictException("Deposit policy range overlaps with an existing active policy");
             }
 
-            entity.MinPrice = request.MinPrice;
-            entity.MaxPrice = request.MaxPrice;
-            entity.DepositPercentage = request.DepositPercentage;
-            entity.IsActive = request.IsActive;
+            entity.MinPrice = updatedMinPrice;
+            entity.MaxPrice = updatedMaxPrice;
+            entity.DepositPercentage = updatedDepositPercentage;
+            entity.IsActive = updatedIsActive;
             entity.UpdatedAt = DateTime.Now;
 
             _unitOfWork.DepositPolicyRepository.PrepareUpdate(entity);

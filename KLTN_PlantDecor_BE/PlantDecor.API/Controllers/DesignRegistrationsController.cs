@@ -87,7 +87,7 @@ namespace PlantDecor.API.Controllers
         public async Task<IActionResult> AssignCaretaker(int id, [FromBody] AssignDesignRegistrationCaretakerRequestDto request)
         {
             var managerId = GetUserId();
-            var result = await _designRegistrationService.AssignCaretakerAsync(managerId, id, request.CaretakerId);
+            var result = await _designRegistrationService.AssignCaretakerAsync(managerId, id, request.CaretakerId, request.StartDate);
             return Ok(new ApiResponse<DesignRegistrationResponseDto>
             {
                 Success = true,
@@ -202,6 +202,42 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Design registration rejected successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager/Staff] Lấy danh sách caretaker đủ điều kiện cho đăng ký thiết kế
+        /// </summary>
+        [HttpGet("{id}/eligible-caretakers")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetEligibleCaretakers(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _designRegistrationService.GetEligibleCaretakersForRegistrationAsync(managerId, id);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get eligible caretakers successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager/Staff] Lấy danh sách caretaker phù hợp với kiểm tra khả dụng (xung đột lịch)
+        /// </summary>
+        [HttpGet("{id}/eligible-caretakers-with-availability")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetEligibleCaretakersWithAvailability(int id, [FromQuery] DateOnly? startDate = null)
+        {
+            var managerId = GetUserId();
+            var result = await _designRegistrationService.GetEligibleCaretakersForRegistrationWithAvailabilityAsync(managerId, id, startDate);
+            return Ok(new ApiResponse<List<EligibleCaretakerWithAvailabilityDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get eligible caretakers with availability successfully",
                 Payload = result
             });
         }

@@ -160,6 +160,42 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Manager/Staff] Lấy danh sách caretaker phù hợp cho buổi thiết kế cụ thể (lọc theo yêu cầu chuyên môn, xung đột lịch, khối lượng công việc)
+        /// </summary>
+        [HttpGet("{id}/eligible-caretakers")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetEligibleCaretakers(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _designTaskService.GetEligibleCaretakersForTaskAsync(managerId, id);
+            return Ok(new ApiResponse<List<StaffWithSpecializationsResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get eligible caretakers successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager/Staff] Thay đổi ngày thi công của một task thiết kế
+        /// </summary>
+        [HttpPut("{id}/reschedule")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> RescheduleTask(int id, [FromBody] PlantDecor.BusinessLogicLayer.DTOs.Requests.RescheduleDesignTaskRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _designTaskService.RescheduleTaskAsync(managerId, id, request);
+            return Ok(new ApiResponse<DesignTaskResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Design task rescheduled successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Manager/Staff] Hủy task thiết kế
         /// </summary>
         [HttpPost("{id}/cancel")]

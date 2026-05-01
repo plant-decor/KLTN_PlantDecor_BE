@@ -52,5 +52,17 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Take(take)
                 .ToListAsync();
         }
+
+        public async Task<List<NurseryPlantCombo>> GetByPlantComboIdForEmbeddingAsync(int comboId)
+        {
+            return await _context.NurseryPlantCombos
+                .AsNoTracking()
+                .Where(npc => npc.PlantComboId == comboId)
+                .Include(npc => npc.PlantCombo)
+                    .ThenInclude(pc => pc.TagsNavigation)
+                .Include(npc => npc.Nursery)
+                .OrderBy(npc => npc.Id)
+                .ToListAsync();
+        }
     }
 }

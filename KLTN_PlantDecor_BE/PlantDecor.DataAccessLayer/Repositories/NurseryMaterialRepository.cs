@@ -196,5 +196,19 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Take(take)
                 .ToListAsync();
         }
+
+        public async Task<List<NurseryMaterial>> GetByMaterialIdForEmbeddingAsync(int materialId)
+        {
+            return await _context.NurseryMaterials
+                .AsNoTracking()
+                .Where(nm => nm.MaterialId == materialId)
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Categories)
+                .Include(nm => nm.Material)
+                    .ThenInclude(m => m.Tags)
+                .Include(nm => nm.Nursery)
+                .OrderBy(nm => nm.Id)
+                .ToListAsync();
+        }
     }
 }
