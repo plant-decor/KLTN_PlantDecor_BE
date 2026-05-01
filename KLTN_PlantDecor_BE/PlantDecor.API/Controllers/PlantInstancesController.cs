@@ -107,6 +107,25 @@ namespace PlantDecor.API.Controllers
         #region Manager - Instance Status Management
 
         /// <summary>
+        /// Cập nhật thông tin một PlantInstance
+        /// PATCH /api/manager/plant-instances/{instanceId}
+        /// </summary>
+        [HttpPatch("plant-instances/{instanceId}")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> UpdatePlantInstance(int instanceId, [FromBody] UpdatePlantInstanceRequestDto request)
+        {
+            var managerId = GetCurrentUserId();
+            var result = await _plantInstanceService.UpdateAsync(instanceId, managerId, request);
+            return Ok(new ApiResponse<PlantInstanceResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Plant instance updated successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Cập nhật status một PlantInstance
         /// PATCH /api/manager/plant-instances/{instanceId}/status
         /// </summary>
