@@ -120,6 +120,28 @@ namespace PlantDecor.API.Controllers
 
         }
 
+        [HttpPost("register-mobile")]
+        public async Task<IActionResult> RegisterMobile(UserRequest request)
+        {
+            var result = await _authenticationService.RegisterAsync(request);
+
+            if (result == null)
+            {
+                throw new Exception("Registration failed");
+            }
+
+            // Enqueue OTP verification email as background job (auto-retry on failure)
+            _backgroundJobClient.EnqueueOtpEmailVerification(request.Email);
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthenticationResponse>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Register Successfully! Please verify your email to use full services.",
+                Payload = result
+            });
+        }
+
         [HttpPost("create-manager")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateManagerAccount([FromBody] CreateManagerRequest request)

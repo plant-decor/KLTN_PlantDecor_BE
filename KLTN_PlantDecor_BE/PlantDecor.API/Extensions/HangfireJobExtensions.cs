@@ -37,6 +37,20 @@ namespace PlantDecor.API.Extensions
         }
 
         /// <summary>
+        /// Enqueue OTP verification email with automatic retry on failure
+        /// </summary>
+        /// <param name="backgroundJobClient">Hangfire background job client</param>
+        /// <param name="email">User email to send OTP verification to</param>
+        /// <returns>Job ID</returns>
+        public static string EnqueueOtpEmailVerification(
+            this IBackgroundJobClient backgroundJobClient,
+            string email)
+        {
+            return backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                service => service.SendOtpEmailVerificationAsync(email));
+        }
+
+        /// <summary>
         /// Schedule order success email to be sent after a delay
         /// </summary>
         /// <param name="backgroundJobClient">Hangfire background job client</param>

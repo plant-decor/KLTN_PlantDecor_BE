@@ -32,6 +32,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _authenticationService.VerifyEmailAsync(request, CancellationToken.None);
         }
 
+        public async Task SendOtpEmailVerificationAsync(string email)
+        {
+            var request = new SendOtpEmailVerificationRequest { Email = email };
+            var result = await _authenticationService.SendOtpEmailVerificationAsync(request, CancellationToken.None);
+
+            if (!result.Success)
+            {
+                _logger.LogWarning("Failed to send OTP verification email for {Email}: {Message}", email, result.Message);
+            }
+        }
+
         public async Task SendOrderSuccessEmailAsync(int orderId)
         {
             try
