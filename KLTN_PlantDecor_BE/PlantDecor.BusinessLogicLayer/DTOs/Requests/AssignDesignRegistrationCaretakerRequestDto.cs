@@ -6,5 +6,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
     {
         [Required]
         public int CaretakerId { get; set; }
+
+        public DateOnly? StartDate { get; set; }
     }
 }

@@ -5,6 +5,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IDesignTemplateService
     {
+        Task<List<DesignTemplateResponseDto>> GetAllAdminAsync();
         Task<List<DesignTemplateResponseDto>> GetAllAsync();
         Task<DesignTemplateResponseDto> GetByIdAsync(int id);
         Task<DesignTemplateResponseDto> CreateAsync(CreateDesignTemplateRequestDto request);

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -11,19 +12,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        private const string CACHE_KEY_ALL = "design_tpl_public_all";
+        private const string CACHE_KEY_PUBLIC_ALL = "design_tpl_public_all";
+        private const string CACHE_KEY_ADMIN_ALL = "design_tpl_admin_all";
         private const string CACHE_KEY_PREFIX = "design_tpl";
 
-        public DesignTemplateService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public DesignTemplateService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _cloudinaryService = cloudinaryService;
         }
 
-        public async Task<List<DesignTemplateResponseDto>> GetAllAsync()
+        public async Task<List<DesignTemplateResponseDto>> GetAllAdminAsync()
         {
-            var cached = await _cacheService.GetDataAsync<List<DesignTemplateResponseDto>>(CACHE_KEY_ALL);
+            var cached = await _cacheService.GetDataAsync<List<DesignTemplateResponseDto>>(CACHE_KEY_ADMIN_ALL);
             if (cached != null)
             {
                 return cached;
@@ -41,7 +45,42 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
             }
 
-            await _cacheService.SetDataAsync(CACHE_KEY_ALL, result, DateTimeOffset.Now.AddMinutes(30));
+            await _cacheService.SetDataAsync(CACHE_KEY_ADMIN_ALL, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
+        }
+
+        public async Task<List<DesignTemplateResponseDto>> GetAllAsync()
+        {
+            var cached = await _cacheService.GetDataAsync<List<DesignTemplateResponseDto>>(CACHE_KEY_PUBLIC_ALL);
+            if (cached != null)
+            {
+                return cached;
+            }
+
+            var marketedTemplateIds = await _unitOfWork.NurseryDesignTemplateRepository.GetActiveDesignTemplateIdsAsync();
+            if (!marketedTemplateIds.Any())
+            {
+                var emptyResult = new List<DesignTemplateResponseDto>();
+                await _cacheService.SetDataAsync(CACHE_KEY_PUBLIC_ALL, emptyResult, DateTimeOffset.Now.AddMinutes(30));
+                return emptyResult;
+            }
+
+            var result = new List<DesignTemplateResponseDto>(marketedTemplateIds.Count);
+            foreach (var templateId in marketedTemplateIds)
+            {
+                var detailed = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(templateId);
+                if (detailed != null)
+                {
+                    result.Add(MapToDto(detailed));
+                }
+            }
+
+            result = result
+                .OrderBy(x => x.Name)
+                .ThenBy(x => x.Id)
+                .ToList();
+
+            await _cacheService.SetDataAsync(CACHE_KEY_PUBLIC_ALL, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
 
@@ -67,13 +106,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ValidateTemplateName(request.Name);
             await EnsureTemplateNameUniqueAsync(request.Name);
 
+            string? imageUrl = null;
+            if (request.ImageUrl != null)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(request.ImageUrl);
+                if (!isValid)
+                {
+                    throw new BadRequestException(errorMessage);
+                }
+
+                var uploadResult = await _cloudinaryService.UploadFileAsync(request.ImageUrl, "DesignTemplateImages");
+                imageUrl = uploadResult.SecureUrl;
+            }
+
             var entity = new DesignTemplate
             {
                 Name = request.Name.Trim(),
                 Description = request.Description,
                 Style = request.Style,
                 RoomTypes = request.RoomTypes,
-                ImageUrl = request.ImageUrl,
+                ImageUrl = imageUrl,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -123,8 +175,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 template.Style = request.Style;
             if (request.RoomTypes != null)
                 template.RoomTypes = request.RoomTypes;
+
             if (request.ImageUrl != null)
-                template.ImageUrl = request.ImageUrl;
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(request.ImageUrl);
+                if (!isValid)
+                {
+                    throw new BadRequestException(errorMessage);
+                }
+
+                var uploadResult = await _cloudinaryService.UploadFileAsync(request.ImageUrl, "DesignTemplateImages");
+                template.ImageUrl = uploadResult.SecureUrl;
+            }
 
             template.UpdatedAt = DateTime.Now;
 
@@ -197,6 +259,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private async Task InvalidateCacheAsync()
         {
             await _cacheService.RemoveByPrefixAsync(CACHE_KEY_PREFIX);
+            await _cacheService.RemoveDataAsync(CACHE_KEY_PUBLIC_ALL);
+            await _cacheService.RemoveDataAsync(CACHE_KEY_ADMIN_ALL);
         }
 
         private async Task ReplaceSpecializationsInternalAsync(int templateId, List<int>? specializationIds)

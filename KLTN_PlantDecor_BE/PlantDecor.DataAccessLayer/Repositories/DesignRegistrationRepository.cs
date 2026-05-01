@@ -44,7 +44,6 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             var pendingStatuses = new[]
             {
-                (int)DesignRegistrationStatus.WaitingForNursery,
                 (int)DesignRegistrationStatus.PendingApproval
             };
 
@@ -97,10 +96,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
 
             var openStatuses = new[]
             {
-                (int)DesignRegistrationStatus.WaitingForNursery,
                 (int)DesignRegistrationStatus.PendingApproval,
                 (int)DesignRegistrationStatus.AwaitDeposit,
-                (int)DesignRegistrationStatus.Active
+                (int)DesignRegistrationStatus.DepositPaid,
+                (int)DesignRegistrationStatus.InProgress,
+                (int)DesignRegistrationStatus.AwaitFinalPayment
             };
 
             return await _context.DesignRegistrations
@@ -109,6 +109,36 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .GroupBy(x => x.NurseryId)
                 .Select(g => new { NurseryId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.NurseryId, x => x.Count);
+        }
+
+        public async Task<Dictionary<int, int>> CountOpenAssignmentsByCaretakerIdsAsync(List<int> caretakerIds, List<int> nurseryIds)
+        {
+            if (caretakerIds == null || caretakerIds.Count == 0)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            if (nurseryIds == null || nurseryIds.Count == 0)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            var openStatuses = new[]
+            {
+                (int)DesignRegistrationStatus.DepositPaid,
+                (int)DesignRegistrationStatus.InProgress,
+                (int)DesignRegistrationStatus.AwaitFinalPayment
+            };
+
+            return await _context.DesignRegistrations
+                .AsNoTracking()
+                .Where(x => nurseryIds.Contains(x.NurseryId)
+                            && x.AssignedCaretakerId.HasValue
+                            && caretakerIds.Contains(x.AssignedCaretakerId.Value)
+                            && openStatuses.Contains(x.Status))
+                .GroupBy(x => x.AssignedCaretakerId!.Value)
+                .Select(g => new { CaretakerId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.CaretakerId, x => x.Count);
         }
 
         private IQueryable<DesignRegistration> BuildDetailedQuery()

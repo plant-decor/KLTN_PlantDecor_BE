@@ -149,34 +149,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var trackedRegistration = await _unitOfWork.DesignRegistrationRepository.GetByIdAsync(taskDetail.DesignRegistrationId)
                 ?? throw new NotFoundException($"DesignRegistration {taskDetail.DesignRegistrationId} not found");
 
-            trackedRegistration.AssignedCaretakerId = request.AssignedStaffId;
-            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(trackedRegistration);
-
-            var registrationTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(taskDetail.DesignRegistrationId);
-            foreach (var registrationTask in registrationTasks)
+            if (trackedRegistration.Status == (int)DesignRegistrationStatus.DepositPaid)
             {
-                if (registrationTask.Status == (int)DesignTaskStatusEnum.Completed
-                    || registrationTask.Status == (int)DesignTaskStatusEnum.Cancelled)
-                    continue;
-
-                var trackedTaskInRegistration = await _unitOfWork.DesignTaskRepository.GetByIdAsync(registrationTask.Id);
-                if (trackedTaskInRegistration == null)
-                    continue;
-
-                trackedTaskInRegistration.AssignedStaffId = request.AssignedStaffId;
-
-                if (trackedTaskInRegistration.Status == (int)DesignTaskStatusEnum.Pending)
-                {
-                    trackedTaskInRegistration.Status = (int)DesignTaskStatusEnum.Assigned;
-                }
-
-                if (trackedTaskInRegistration.Id == taskId && request.ScheduledDate.HasValue)
-                {
-                    trackedTaskInRegistration.ScheduledDate = request.ScheduledDate;
-                }
-
-                _unitOfWork.DesignTaskRepository.PrepareUpdate(trackedTaskInRegistration);
+                trackedRegistration.Status = (int)DesignRegistrationStatus.InProgress;
             }
+            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(trackedRegistration);
 
             var task = await _unitOfWork.DesignTaskRepository.GetByIdAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found");
@@ -220,6 +197,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 throw new BadRequestException("Material usage can only be reported when task is Assigned or Completed");
             }
+
+            if (taskDetail.ScheduledDate.HasValue && taskDetail.ScheduledDate.Value != DateOnly.FromDateTime(DateTime.Today))
+                throw new BadRequestException("Material usage can only be reported on the scheduled date");
 
             var usageItems = request.MaterialUsages ?? new List<ReportDesignTaskMaterialUsageItemDto>();
             var duplicateMaterialIds = usageItems
@@ -355,6 +335,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (currentStatus != DesignTaskStatusEnum.Assigned)
                         throw new BadRequestException("Only assigned tasks can be completed");
 
+                    if (taskDetail.ScheduledDate.HasValue && taskDetail.ScheduledDate.Value != DateOnly.FromDateTime(DateTime.Today))
+                        throw new BadRequestException("Task can only be completed on the scheduled date");
+
                     if (reportImage == null)
                         throw new BadRequestException("Report image is required to complete task");
 
@@ -398,6 +381,191 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updated.ToResponse();
         }
 
+        public async Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForTaskAsync(int managerId, int taskId)
+        {
+            var task = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            if (task.DesignRegistration.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            // Get required specializations from the tier
+            var tier = await _unitOfWork.DesignTemplateTierRepository.GetByIdAsync(task.DesignRegistration.DesignTemplateTierId)
+                ?? throw new NotFoundException($"DesignTemplateTier {task.DesignRegistration.DesignTemplateTierId} not found");
+
+            var requiredSpecIds = (await _unitOfWork.DesignTemplateSpecializationRepository
+                    .GetByTemplateIdAsync(tier.DesignTemplateId))
+                .Select(x => x.SpecializationId)
+                .ToHashSet();
+
+            // Get all caretakers in nursery
+            var allCaretakers = await _unitOfWork.UserRepository.GetCaretakersByNurseryIdAsync(nursery.Id);
+
+            // Filter: active, verified, and have required specializations
+            IEnumerable<User> eligible = allCaretakers
+                .Where(x => x.Status == (int)UserStatusEnum.Active && x.IsVerified);
+
+            if (requiredSpecIds.Count > 0)
+            {
+                eligible = eligible.Where(x => requiredSpecIds.All(reqId =>
+                    x.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+            }
+
+            var eligibleList = eligible
+                .OrderBy(x => x.Username ?? string.Empty)
+                .ThenBy(x => x.Id)
+                .ToList();
+
+            if (!eligibleList.Any())
+                return new List<StaffWithSpecializationsResponseDto>();
+
+            // Check for schedule conflicts on the task's scheduled date
+            DateOnly? scheduledDate = task.ScheduledDate;
+            var caretakersWithScheduleConflicts = new HashSet<int>();
+
+            if (scheduledDate.HasValue)
+            {
+                var tasksOnDate = await _unitOfWork.DesignTaskRepository
+                    .GetByRegistrationIdAsync(task.DesignRegistrationId);
+
+                var conflictingTaskIds = tasksOnDate
+                    .Where(t => t.Id != taskId
+                        && t.ScheduledDate == scheduledDate.Value
+                        && t.AssignedStaffId.HasValue
+                        && t.Status != (int)DesignTaskStatusEnum.Cancelled)
+                    .Select(t => t.AssignedStaffId!.Value)
+                    .ToHashSet();
+
+                caretakersWithScheduleConflicts = conflictingTaskIds;
+            }
+
+            // Check workload (open assignments)
+            var workloads = await _unitOfWork.DesignRegistrationRepository.CountOpenAssignmentsByCaretakerIdsAsync(
+                eligibleList.Select(x => x.Id).ToList(),
+                new List<int> { nursery.Id });
+
+            // Exclude caretakers with schedule conflicts, unless they're already assigned to this task
+            return eligibleList
+                .Where(x => !caretakersWithScheduleConflicts.Contains(x.Id)
+                            || (task.AssignedStaffId == x.Id))
+                .OrderBy(x => workloads.TryGetValue(x.Id, out var count) ? count : 0)
+                .ThenBy(x => x.Username ?? string.Empty)
+                .ThenBy(x => x.Id)
+                .Select(NurseryService.MapToStaffDtoPublic)
+                .ToList();
+        }
+
+        public async Task<DesignTaskResponseDto> RescheduleTaskAsync(int managerId, int taskId, RescheduleDesignTaskRequestDto request)
+        {
+            if (request == null)
+                throw new BadRequestException("Request body is required");
+
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var task = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            if (task.DesignRegistration.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            if (task.Status == (int)DesignTaskStatusEnum.Completed || task.Status == (int)DesignTaskStatusEnum.Cancelled)
+                throw new BadRequestException("Cannot reschedule a finalized task");
+
+            var newDate = request.ScheduledDate;
+            if (newDate.DayOfWeek == DayOfWeek.Sunday)
+                throw new BadRequestException("Scheduled date cannot be on Sunday");
+
+            // Fetch all tasks of the registration ordered by ScheduledDate then Id
+            var registrationTasks = await _unitOfWork.DesignTaskRepository.GetByRegistrationIdAsync(task.DesignRegistrationId);
+            var index = registrationTasks.FindIndex(t => t.Id == taskId);
+            if (index < 0)
+                throw new NotFoundException($"DesignTask {taskId} not found in registration tasks");
+
+            var tasksToMove = registrationTasks.Skip(index).ToList();
+            var daysToMove = tasksToMove.Count;
+
+            // Build consecutive working dates for the moved tasks starting from newDate
+            var newDates = BuildConsecutiveWorkingDates(newDate, daysToMove);
+
+            // If assigned staff exists for any of the moved tasks, ensure availability excluding this registration's tasks
+            var pagination = new Pagination { PageNumber = 1, PageSize = 1000 };
+            foreach (var (movedTask, idx) in tasksToMove.Select((t, i) => (t, i)))
+            {
+                if (!movedTask.AssignedStaffId.HasValue)
+                    continue;
+
+                var assignedStaffId = movedTask.AssignedStaffId.Value;
+                var startForThis = newDates[idx];
+                var estimatedDays = 1; // we check day-by-day for each task (each task occupies one work day)
+
+                var (isAvailable, conflicts) = await CheckCaretakerAvailabilityAsync(assignedStaffId, startForThis, estimatedDays, ignoreRegistrationId: task.DesignRegistrationId);
+                if (!isAvailable)
+                    throw new BadRequestException("Assigned staff has another task on one of the requested dates");
+            }
+
+            // Apply updates atomically: update dates for moved tasks
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                for (int i = 0; i < tasksToMove.Count; i++)
+                {
+                    var t = await _unitOfWork.DesignTaskRepository.GetByIdAsync(tasksToMove[i].Id);
+                    if (t == null)
+                        throw new NotFoundException($"DesignTask {tasksToMove[i].Id} not found during update");
+
+                    t.ScheduledDate = newDates[i];
+                    _unitOfWork.DesignTaskRepository.PrepareUpdate(t);
+                }
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found after reschedule");
+
+            return updated.ToResponse();
+        }
+
+        public async Task<(bool IsAvailable, List<DesignTask> Conflicts)> CheckCaretakerAvailabilityAsync(
+            int caretakerId, DateOnly startDate, int estimatedDays, int? ignoreRegistrationId = null)
+        {
+            var dates = BuildConsecutiveWorkingDates(startDate, estimatedDays);
+            var conflicts = new List<DesignTask>();
+            var pagination = new Pagination { PageNumber = 1, PageSize = 1000 };
+
+            foreach (var date in dates)
+            {
+                var tasksOnDate = await _unitOfWork.DesignTaskRepository
+                    .GetByAssignedStaffIdAsync(caretakerId, pagination, status: null, from: date, to: date);
+
+                foreach (var task in tasksOnDate.Items)
+                {
+                    // Skip cancelled tasks
+                    if (task.Status == (int)DesignTaskStatusEnum.Cancelled) 
+                        continue;
+                    
+                    // Skip tasks from the registration being assigned (if any)
+                    if (ignoreRegistrationId.HasValue && task.DesignRegistrationId == ignoreRegistrationId.Value)
+                        continue;
+                    
+                    conflicts.Add(task);
+                }
+
+                if (conflicts.Any())
+                    return (false, conflicts);
+            }
+
+            return (true, conflicts);
+        }
+
         private async Task EnsureCanAccessTaskAsync(int userId, DesignTask task)
         {
             if (task.AssignedStaffId == userId
@@ -432,17 +600,82 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (registration == null)
                 return;
 
-            if (tasks.All(x => x.Status == (int)DesignTaskStatusEnum.Completed))
+            if (!tasks.All(x => x.Status == (int)DesignTaskStatusEnum.Completed))
+                return;
+
+            if (registration.Status == (int)DesignRegistrationStatus.Completed
+                || registration.Status == (int)DesignRegistrationStatus.AwaitFinalPayment)
             {
-                if (registration.Status == (int)DesignRegistrationStatus.Completed)
-                    return;
-
-                await DeductTierPlantsForCompletedRegistrationAsync(registration);
-
-                registration.Status = (int)DesignRegistrationStatus.Completed;
-                _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
-                await _unitOfWork.SaveAsync();
+                return;
             }
+
+            await DeductTierPlantsForCompletedRegistrationAsync(registration);
+
+            var shouldAwaitFinalPayment = false;
+            if (registration.OrderId.HasValue)
+            {
+                shouldAwaitFinalPayment = await MarkOrderAwaitingRemainingPaymentAsync(registration.OrderId.Value);
+            }
+
+            registration.Status = shouldAwaitFinalPayment
+                ? (int)DesignRegistrationStatus.AwaitFinalPayment
+                : (int)DesignRegistrationStatus.Completed;
+
+            _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
+            await _unitOfWork.SaveAsync();
+        }
+
+        private async Task<bool> MarkOrderAwaitingRemainingPaymentAsync(int orderId)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+            if (order == null)
+                return false;
+
+            if (order.PaymentStrategy != (int)PaymentStrategiesEnum.Deposit)
+                return false;
+
+            var remainingAmount = order.RemainingAmount ?? 0;
+            if (remainingAmount <= 0)
+                return false;
+
+            order.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+            order.UpdatedAt = DateTime.Now;
+            _unitOfWork.OrderRepository.PrepareUpdate(order);
+
+            foreach (var nurseryOrder in order.NurseryOrders)
+            {
+                nurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                nurseryOrder.UpdatedAt = DateTime.Now;
+                _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            }
+
+            var existingPendingInvoice = await _unitOfWork.InvoiceRepository
+                .GetPendingByOrderIdAndTypeAsync(orderId, (int)InvoiceTypeEnum.RemainingBalance);
+
+            if (existingPendingInvoice != null)
+                return true;
+
+            var invoice = new Invoice
+            {
+                OrderId = orderId,
+                Type = (int)InvoiceTypeEnum.RemainingBalance,
+                TotalAmount = remainingAmount,
+                Status = (int)InvoiceStatusEnum.Pending,
+                IssuedDate = DateTime.Now,
+                InvoiceDetails = new List<InvoiceDetail>
+                {
+                    new InvoiceDetail
+                    {
+                        ItemName = "Design service remaining payment",
+                        UnitPrice = remainingAmount,
+                        Quantity = 1,
+                        Amount = remainingAmount
+                    }
+                }
+            };
+
+            _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
+            return true;
         }
 
         private async Task DeductTierPlantsForCompletedRegistrationAsync(DesignRegistration registration)
@@ -515,6 +748,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("ActualQuantity is too large");
 
             return (int)quantity;
+        }
+
+        private static List<DateOnly> BuildConsecutiveWorkingDates(DateOnly startDate, int totalDays)
+        {
+            var dates = new List<DateOnly>();
+            var cursor = startDate;
+
+            while (dates.Count < totalDays)
+            {
+                if (cursor.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    dates.Add(cursor);
+                }
+
+                cursor = cursor.AddDays(1);
+            }
+
+            return dates;
         }
 
     }

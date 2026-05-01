@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
@@ -15,8 +16,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public List<int>? RoomTypes { get; set; }
 
-        [MaxLength(512)]
-        public string? ImageUrl { get; set; }
+        public IFormFile? ImageUrl { get; set; }
 
         public List<int>? SpecializationIds { get; set; }
     }
@@ -33,8 +33,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public List<int>? RoomTypes { get; set; }
 
-        [MaxLength(512)]
-        public string? ImageUrl { get; set; }
+        public IFormFile? ImageUrl { get; set; }
     }
 
     public class SetDesignTemplateSpecializationsRequestDto
