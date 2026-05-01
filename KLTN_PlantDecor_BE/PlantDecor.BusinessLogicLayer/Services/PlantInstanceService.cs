@@ -234,6 +234,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<PlantInstanceResponseDto> UpdateAsync(int instanceId, int managerId, UpdatePlantInstanceRequestDto request)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (instance == null)
+                    throw new NotFoundException($"PlantInstance with ID {instanceId} does not exist");
+
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                    throw new ForbiddenException("You do not have permission to manage this instance");
+
+                if (!string.IsNullOrWhiteSpace(request.SKU))
+                    instance.SKU = request.SKU.Trim();
+                if (request.SpecificPrice.HasValue)
+                    instance.SpecificPrice = request.SpecificPrice.Value;
+                if (request.Height.HasValue)
+                    instance.Height = request.Height.Value;
+                if (request.TrunkDiameter.HasValue)
+                    instance.TrunkDiameter = request.TrunkDiameter.Value;
+                if (!string.IsNullOrWhiteSpace(request.HealthStatus))
+                    instance.HealthStatus = request.HealthStatus.Trim();
+                if (request.Age.HasValue)
+                    instance.Age = request.Age.Value;
+                if (request.Description != null)
+                    instance.Description = request.Description;
+
+                instance.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+                var reloaded = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (reloaded != null)
+                {
+                    QueueEmbeddingAsync(reloaded);
+                    return reloaded.ToResponse();
+                }
+
+                return instance.ToResponse();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
         public async Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request)
         {
             await _unitOfWork.BeginTransactionAsync();

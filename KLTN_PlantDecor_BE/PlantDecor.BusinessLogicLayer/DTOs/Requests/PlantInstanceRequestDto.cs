@@ -65,4 +65,29 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Range(1, 5, ErrorMessage = "Status phải nằm trong khoảng 1-5")]
         public int Status { get; set; }
     }
+
+    /// <summary>
+    /// DTO cập nhật thông tin PlantInstance
+    /// PATCH /api/manager/plant-instances/{instanceId}
+    /// </summary>
+    public class UpdatePlantInstanceRequestDto
+    {
+        public string? SKU { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0")]
+        public decimal? SpecificPrice { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Height must be greater than or equal to 0")]
+        public decimal? Height { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Trunk diameter must be greater than or equal to 0")]
+        public decimal? TrunkDiameter { get; set; }
+
+        public string? HealthStatus { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "Age must be greater than or equal to 0")]
+        public int? Age { get; set; }
+
+        public string? Description { get; set; }
+    }
 }
