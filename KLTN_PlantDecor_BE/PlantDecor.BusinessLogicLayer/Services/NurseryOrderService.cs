@@ -119,6 +119,84 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }).ToList();
         }
 
+        public async Task<OrderStatusSummaryResponseDto> GetMyNurseryOrderStatusSummaryAsync(int currentUserId, DateTime from, DateTime to)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+
+            var items = await _unitOfWork.NurseryOrderRepository
+                .GetOrderStatusSummaryAsync(fromInclusive, toExclusive, currentUser.NurseryId!.Value);
+
+            return BuildOrderStatusSummaryResponse(items, fromInclusive, toExclusive);
+        }
+
+        public async Task<OrderStatusSummaryResponseDto> GetSystemOrderStatusSummaryAsync(int currentUserId, DateTime from, DateTime to)
+        {
+            await GetValidatedAdminAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+
+            var items = await _unitOfWork.NurseryOrderRepository
+                .GetOrderStatusSummaryAsync(fromInclusive, toExclusive);
+
+            return BuildOrderStatusSummaryResponse(items, fromInclusive, toExclusive);
+        }
+
+        public async Task<FailedOrderSummaryResponseDto> GetMyNurseryFailedOrdersSummaryAsync(int currentUserId, DateTime from, DateTime to)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+
+            var totalFailedOrders = await _unitOfWork.NurseryOrderRepository
+                .CountFailedOrdersAsync(fromInclusive, toExclusive, currentUser.NurseryId!.Value);
+
+            return new FailedOrderSummaryResponseDto
+            {
+                From = fromInclusive,
+                To = toExclusive.AddTicks(-1),
+                TotalFailedOrders = totalFailedOrders
+            };
+        }
+
+        public async Task<FailedOrderSummaryResponseDto> GetSystemFailedOrdersSummaryAsync(int currentUserId, DateTime from, DateTime to)
+        {
+            await GetValidatedAdminAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+
+            var totalFailedOrders = await _unitOfWork.NurseryOrderRepository
+                .CountFailedOrdersAsync(fromInclusive, toExclusive);
+
+            return new FailedOrderSummaryResponseDto
+            {
+                From = fromInclusive,
+                To = toExclusive.AddTicks(-1),
+                TotalFailedOrders = totalFailedOrders
+            };
+        }
+
+        public async Task<List<TopProductResponseDto>> GetMyNurseryTopProductsAsync(int currentUserId, DateTime from, DateTime to, int limit = 10)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+            var take = Math.Clamp(limit, 1, 50);
+
+            var items = await _unitOfWork.NurseryOrderRepository
+                .GetTopProductsAsync(fromInclusive, toExclusive, currentUser.NurseryId!.Value, take);
+
+            return items.Select(MapTopProduct).ToList();
+        }
+
+        public async Task<List<TopProductResponseDto>> GetSystemTopProductsAsync(int currentUserId, DateTime from, DateTime to, int limit = 10)
+        {
+            await GetValidatedAdminAsync(currentUserId);
+            var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
+            var take = Math.Clamp(limit, 1, 50);
+
+            var items = await _unitOfWork.NurseryOrderRepository
+                .GetTopProductsAsync(fromInclusive, toExclusive, null, take);
+
+            return items.Select(MapTopProduct).ToList();
+        }
+
         public async Task<List<NurseryOrderShipperResponseDto>> GetNurseryShippersForManagerAsync(int currentUserId)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);
@@ -352,6 +430,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new ForbiddenException("Shipper is not assigned to any nursery");
 
             return currentUser;
+        }
+
+        private static OrderStatusSummaryResponseDto BuildOrderStatusSummaryResponse(List<OrderStatusAggregate> items, DateTime fromInclusive, DateTime toExclusive)
+        {
+            return new OrderStatusSummaryResponseDto
+            {
+                From = fromInclusive,
+                To = toExclusive.AddTicks(-1),
+                Items = items.Select(item => new OrderStatusSummaryItemDto
+                {
+                    Status = item.Status,
+                    StatusName = Enum.GetName(typeof(OrderStatusEnum), item.Status) ?? $"Status {item.Status}",
+                    TotalOrders = item.TotalOrders
+                }).ToList()
+            };
+        }
+
+        private static TopProductResponseDto MapTopProduct(TopProductAggregate item)
+        {
+            return new TopProductResponseDto
+            {
+                ProductType = item.ProductType,
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                TotalQuantity = item.TotalQuantity,
+                TotalRevenue = item.TotalRevenue
+            };
         }
 
         private async Task<User> GetValidatedAdminAsync(int currentUserId)

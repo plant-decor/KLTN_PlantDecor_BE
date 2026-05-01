@@ -15,5 +15,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<decimal> GetCompletedSystemRevenueAsync(DateTime fromInclusive, DateTime toExclusive);
         Task<int> CountCompletedSystemOrdersAsync(DateTime fromInclusive, DateTime toExclusive);
         Task<List<NurseryRevenueAggregate>> GetCompletedRevenueByNurseryListAsync(DateTime fromInclusive, DateTime toExclusive);
+        Task<List<OrderStatusAggregate>> GetOrderStatusSummaryAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId = null);
+        Task<int> CountFailedOrdersAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId = null);
+        Task<List<TopProductAggregate>> GetTopProductsAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId, int limit);
     }
 }

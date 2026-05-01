@@ -1,4 +1,4 @@
-using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+﻿using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -22,6 +22,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<NurseryMaterialExpiryAlertDto>> GetMyNurseryExpiringMaterialsAsync(int managerId, int daysAhead = 30);
         Task<List<NurseryLowStockProductAlertDto>> GetMyNurseryLowStockProductsAsync(int managerId, int threshold = 5);
         Task<NurseryMaterialSummaryResponseDto> GetMyNurseryMaterialSummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30);
+        Task<List<SystemLowStockProductAlertDto>> GetSystemLowStockProductsAsync(int threshold = 5);
 
         // Nearby
         Task<List<NurseryNearbyResponseDto>> GetNearbyNurseriesAsync(decimal lat, decimal lng, decimal radiusKm, int? packageId);
