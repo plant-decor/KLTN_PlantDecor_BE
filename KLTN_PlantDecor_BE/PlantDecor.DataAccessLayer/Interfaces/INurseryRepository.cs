@@ -10,6 +10,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<Nursery?> GetByManagerIdAsync(int managerId);
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
         Task<PaginatedResult<Nursery>> GetActiveNurseriesAsync(Pagination pagination);
-        Task<List<Nursery>> GetNearbyWithPackageAsync(decimal lat, decimal lng, decimal radiusKm, int? packageId);
+        Task<List<Nursery>> GetNearbyWithPackageAsync(decimal lat, decimal lng, int? packageId);
     }
 }
