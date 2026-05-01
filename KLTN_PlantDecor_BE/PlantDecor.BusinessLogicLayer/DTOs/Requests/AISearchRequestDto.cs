@@ -62,6 +62,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public string? Title { get; set; }
     }
 
+    public class AIChatSessionRenameRequestDto
+    {
+        public string? Title { get; set; }
+    }
+
     public class ChatbotConversationTurnDto
     {
         /// <summary>

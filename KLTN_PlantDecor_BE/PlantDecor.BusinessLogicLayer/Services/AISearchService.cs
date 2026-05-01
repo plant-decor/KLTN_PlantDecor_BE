@@ -331,6 +331,52 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
+        public async Task CloseChatSessionAsync(int userId, int sessionId)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (sessionId <= 0)
+            {
+                throw new BadRequestException("SessionId must be greater than 0.");
+            }
+
+            var closed = await _unitOfWork.AIChatSessionRepository.CloseSessionAsync(sessionId, userId);
+            if (!closed)
+            {
+                throw new NotFoundException("AI chat session not found.");
+            }
+        }
+
+        public async Task<AIChatSessionResponseDto> RenameChatSessionAsync(int userId, int sessionId, string? title)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (sessionId <= 0)
+            {
+                throw new BadRequestException("SessionId must be greater than 0.");
+            }
+
+            var session = await _unitOfWork.AIChatSessionRepository.UpdateTitleAsync(sessionId, userId, title);
+            if (session == null)
+            {
+                throw new NotFoundException("AI chat session not found.");
+            }
+
+            return new AIChatSessionResponseDto
+            {
+                SessionId = session.Id,
+                Title = session.Title,
+                StartedAt = session.StartedAt,
+                Status = session.Status ?? (int)AIChatSessionStatusEnum.Active
+            };
+        }
+
         public async Task<PaginatedResult<AIChatSessionListItemResponseDto>> GetAllSessionByUserIdAsync(int userId, Pagination pagination)
         {
             if (userId <= 0)

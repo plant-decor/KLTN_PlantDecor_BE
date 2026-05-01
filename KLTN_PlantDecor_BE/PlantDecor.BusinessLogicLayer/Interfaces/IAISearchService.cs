@@ -49,6 +49,16 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<AIChatSessionResponseDto> CreateChatSessionAsync(int userId, string? title = null);
 
         /// <summary>
+        /// Close an AI chat session for authenticated user
+        /// </summary>
+        Task CloseChatSessionAsync(int userId, int sessionId);
+
+        /// <summary>
+        /// Rename an AI chat session for authenticated user
+        /// </summary>
+        Task<AIChatSessionResponseDto> RenameChatSessionAsync(int userId, int sessionId, string? title);
+
+        /// <summary>
         /// AI chatbot for plant selection, room understanding and care consultation
         /// </summary>
         Task<AIChatbotResponseDto> ChatbotAsync(AIChatbotRequestDto request, int userId);

@@ -164,6 +164,45 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Close an AI chat session for current user
+        /// </summary>
+        [HttpDelete("chatbot/sessions/{sessionId:int}")]
+        [Authorize]
+        public async Task<IActionResult> CloseChatSession(int sessionId)
+        {
+            var userId = GetCurrentUserId();
+            await _aiSearchService.CloseChatSessionAsync(userId, sessionId);
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Close session successfully"
+            });
+        }
+
+        /// <summary>
+        /// Rename an AI chat session for current user
+        /// </summary>
+        [HttpPatch("chatbot/sessions/{sessionId:int}/title")]
+        [Authorize]
+        public async Task<IActionResult> RenameChatSession(
+            int sessionId,
+            [FromBody] AIChatSessionRenameRequestDto? request)
+        {
+            var userId = GetCurrentUserId();
+            var result = await _aiSearchService.RenameChatSessionAsync(userId, sessionId, request?.Title);
+
+            return Ok(new ApiResponse<AIChatSessionResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Rename session successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// AI chatbot for plant selection, room understanding and plant care consultation
         /// </summary>
         /// <param name="request">Chatbot request</param>

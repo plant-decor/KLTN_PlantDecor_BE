@@ -69,5 +69,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<AIChatSession?> UpdateTitleAsync(int sessionId, int userId, string? title)
+        {
+            var session = await _context.AIChatSessions
+                .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId);
+
+            if (session == null)
+            {
+                return null;
+            }
+
+            session.Title = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+            session.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return session;
+        }
     }
 }
