@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -15,11 +16,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService)
+        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService, IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
@@ -358,6 +361,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.UpdatedAt = now;
 
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            var shouldEnqueueMyPlantJob = false;
             if (parentOrder != null)
             {
                 if (parentOrder.Status != (int)OrderStatusEnum.Delivered)
@@ -382,6 +386,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
 
                     parentOrder.UpdatedAt = now;
+                    shouldEnqueueMyPlantJob = true;
                 }
 
                 _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
@@ -389,6 +394,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
+
+            if (parentOrder != null && shouldEnqueueMyPlantJob)
+            {
+                _backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
+                    service => service.AddPurchasedPlantsToMyPlantAsync(parentOrder.Id, now));
+            }
 
             return MapToDto(nurseryOrder);
         }

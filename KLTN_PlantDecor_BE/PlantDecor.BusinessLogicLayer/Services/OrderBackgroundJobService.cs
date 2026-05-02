@@ -10,11 +10,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderBackgroundJobService> _logger;
+        private readonly IUserPlantService _userPlantService;
 
-        public OrderBackgroundJobService(IUnitOfWork unitOfWork, ILogger<OrderBackgroundJobService> logger)
+        public OrderBackgroundJobService(
+            IUnitOfWork unitOfWork,
+            ILogger<OrderBackgroundJobService> logger,
+            IUserPlantService userPlantService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _userPlantService = userPlantService;
         }
 
         public async Task ProcessOrderDeliveryAsync(int orderId)
@@ -104,6 +109,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task AddPurchasedPlantsToMyPlantAsync(int orderId, DateTime purchasedAt)
+        {
+            try
+            {
+                _logger.LogInformation("Adding purchased plants to My Plant for Order {OrderId}", orderId);
+
+                var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+                if (order == null)
+                {
+                    _logger.LogWarning("Order {OrderId} not found", orderId);
+                    return;
+                }
+
+                await _userPlantService.AddPurchasedPlantsToMyPlantAsync(order.Id, purchasedAt);
+
+                _logger.LogInformation("Successfully added purchased plants to My Plant for Order {OrderId}", orderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while adding purchased plants to My Plant for Order {OrderId}", orderId);
+                throw;
+            }
+        }
+
         public async Task AutoCompletePendingConfirmationOrdersAsync()
         {
             try
@@ -136,8 +165,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         nurseryOrder.UpdatedAt = now;
                         _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
                     }
-
-                    await AddPurchasedPlantsToMyPlantAsync(order, now);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -153,68 +180,5 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        private async Task AddPurchasedPlantsToMyPlantAsync(Order order, DateTime now)
-        {
-            if (order.UserId <= 0)
-            {
-                return;
-            }
-
-            var purchaseDate = DateOnly.FromDateTime((order.CompletedAt ?? now).Date);
-
-            foreach (var nurseryOrder in order.NurseryOrders)
-            {
-                foreach (var detail in nurseryOrder.NurseryOrderDetails)
-                {
-                    if (detail.PlantInstanceId.HasValue)
-                    {
-                        var plantInstanceId = detail.PlantInstanceId.Value;
-                        var alreadyOwned = await _unitOfWork.UserPlantRepository
-                            .ExistsByUserIdAndPlantInstanceIdAsync(order.UserId, plantInstanceId);
-
-                        if (alreadyOwned)
-                        {
-                            continue;
-                        }
-
-                        var userPlantFromInstance = new UserPlant
-                        {
-                            UserId = order.UserId,
-                            PlantId = detail.PlantInstance?.PlantId,
-                            PlantInstanceId = plantInstanceId,
-                            PurchaseDate = purchaseDate,
-                            CurrentHeight = detail.PlantInstance?.Height,
-                            CurrentTrunkDiameter = detail.PlantInstance?.TrunkDiameter,
-                            HealthStatus = detail.PlantInstance?.HealthStatus,
-                            Age = detail.PlantInstance?.Age,
-                            CreatedAt = now,
-                            UpdatedAt = now
-                        };
-
-                        _unitOfWork.UserPlantRepository.PrepareCreate(userPlantFromInstance);
-                        continue;
-                    }
-
-                    if (detail.CommonPlant?.PlantId is int plantId)
-                    {
-                        var quantity = Math.Max(1, detail.Quantity ?? 1);
-
-                        for (var i = 0; i < quantity; i++)
-                        {
-                            var userPlant = new UserPlant
-                            {
-                                UserId = order.UserId,
-                                PlantId = plantId,
-                                PurchaseDate = purchaseDate,
-                                CreatedAt = now,
-                                UpdatedAt = now
-                            };
-
-                            _unitOfWork.UserPlantRepository.PrepareCreate(userPlant);
-                        }
-                    }
-                }
-            }
-        }
     }
 }
