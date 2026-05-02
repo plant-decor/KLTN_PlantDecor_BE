@@ -9,6 +9,18 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public bool? IsActive { get; set; }
     }
 
+    public class UserSearchRequestDto
+    {
+        public Pagination Pagination { get; set; } = new Pagination();
+        public string? Keyword { get; set; }
+        public RoleEnum? Role { get; set; }
+        public UserStatusEnum? Status { get; set; }
+        public bool? IsVerified { get; set; }
+        public int? NurseryId { get; set; }
+        public DateTime? CreatedFrom { get; set; }
+        public DateTime? CreatedTo { get; set; }
+    }
+
     public class PlantSearchRequestDto
     {
         public Pagination Pagination { get; set; } = new Pagination();

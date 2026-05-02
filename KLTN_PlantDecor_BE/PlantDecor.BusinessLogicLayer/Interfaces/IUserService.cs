@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.DataAccessLayer.Helpers;
@@ -8,6 +9,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IUserService
     {
         //Task<IEnumerable<UserResponse>> GetAllAsync();
+        Task<PaginatedResult<UserResponse>> SearchUsersAsync(UserSearchRequestDto request);
         Task<PaginatedResult<UserResponse>> GetAllAsyncWithPagination(Pagination pagination);
         Task<UserResponse> GetByIdAsync(int id);
         Task<bool> GetUserByPhoneAsync(string phone);

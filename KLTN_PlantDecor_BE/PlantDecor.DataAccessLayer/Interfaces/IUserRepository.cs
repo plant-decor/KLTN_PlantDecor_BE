@@ -1,9 +1,12 @@
 ﻿using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.DataAccessLayer.Interfaces
 {
     public interface IUserRepository : IGenericRepository<User>
     {
+        Task<PaginatedResult<User>> GetAllAsyncWithPagination(Pagination pagination);
+        Task<PaginatedResult<User>> SearchAsync(UserSearchFilter filter, Pagination pagination);
         Task SetActive(User user);
         Task DeActive(User user);
         Task<User?> GetByEmailAsync(string email);
