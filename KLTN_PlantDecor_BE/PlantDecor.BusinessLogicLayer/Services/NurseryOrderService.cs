@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -15,11 +16,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService)
+        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService, IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
@@ -261,6 +264,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updatedNurseryOrder);
         }
 
+        public async Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to update this nursery order");
+
+            if (nurseryOrder.Status != (int)OrderStatusEnum.PendingConfirmation)
+                throw new BadRequestException("Nursery order is not in pending confirmation status.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)OrderStatusEnum.Completed;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            _backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
+                service => service.CompleteOrderIfAllNurseryOrdersCompletedAsync(nurseryOrder.OrderId, now));
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);
@@ -358,6 +387,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.UpdatedAt = now;
 
             var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            var shouldEnqueueMyPlantJob = false;
             if (parentOrder != null)
             {
                 if (parentOrder.Status != (int)OrderStatusEnum.Delivered)
@@ -375,13 +405,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         await EnsureRemainingBalanceInvoiceForDepositAsync(parentOrder, now);
                         parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                        nurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                        nurseryOrder.UpdatedAt = now;
                     }
                     else
                     {
                         parentOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                        nurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+
+                        foreach (var relatedNurseryOrder in parentOrder.NurseryOrders)
+                        {
+                            relatedNurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                            relatedNurseryOrder.UpdatedAt = now;
+                            _unitOfWork.NurseryOrderRepository.PrepareUpdate(relatedNurseryOrder);
+                        }
                     }
 
                     parentOrder.UpdatedAt = now;
+                    shouldEnqueueMyPlantJob = true;
                 }
 
                 _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
@@ -389,6 +430,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
+
+            if (parentOrder != null && shouldEnqueueMyPlantJob)
+            {
+                _backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
+                    service => service.AddPurchasedPlantsToMyPlantAsync(parentOrder.Id, now));
+            }
 
             return MapToDto(nurseryOrder);
         }

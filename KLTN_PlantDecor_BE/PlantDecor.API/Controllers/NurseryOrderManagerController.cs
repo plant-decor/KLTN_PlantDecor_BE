@@ -61,6 +61,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Xác nhận nursery order hoàn tất
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/mark-completed")]
+        public async Task<IActionResult> MarkNurseryOrderCompleted([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.MarkNurseryOrderCompletedForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Marked nursery order as completed successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Lấy số lượng đơn theo trạng thái của vườn theo khoảng thời gian
         /// </summary>
         [HttpGet("status-summary")]

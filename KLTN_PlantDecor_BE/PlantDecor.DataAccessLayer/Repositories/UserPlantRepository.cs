@@ -33,5 +33,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .AsNoTracking()
                 .AnyAsync(userPlant => userPlant.UserId == userId && userPlant.PlantInstanceId == plantInstanceId);
         }
+
+        public async Task<bool> ExistsByUserIdAndPlantIdAsync(int userId, int plantId)
+        {
+            return await _context.UserPlants
+                .AsNoTracking()
+                .AnyAsync(userPlant => userPlant.UserId == userId && userPlant.PlantId == plantId);
+        }
     }
 }

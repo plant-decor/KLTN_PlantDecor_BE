@@ -9,8 +9,20 @@
         Task ProcessOrderDeliveryAsync(int orderId);
 
         /// <summary>
+        /// Add purchased plants to My Plant for a delivered order
+        /// </summary>
+        /// <param name="orderId">Order ID to process</param>
+        /// <param name="purchasedAt">Date and time when delivery was confirmed</param>
+        Task AddPurchasedPlantsToMyPlantAsync(int orderId, DateTime purchasedAt);
+
+        /// <summary>
         /// Auto-complete orders that stay in PendingConfirmation for 3 days
         /// </summary>
         Task AutoCompletePendingConfirmationOrdersAsync();
+
+        /// <summary>
+        /// Mark parent order as Completed when all nursery orders are completed
+        /// </summary>
+        Task CompleteOrderIfAllNurseryOrdersCompletedAsync(int orderId, DateTime completedAt);
     }
 }

@@ -1,9 +1,10 @@
-using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+﻿using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IUserPlantService
     {
         Task<List<UserPlantResponseDto>> GetMyPlantsAsync(int userId);
+        Task AddPurchasedPlantsToMyPlantAsync(int orderId, DateTime purchasedAt);
     }
 }
