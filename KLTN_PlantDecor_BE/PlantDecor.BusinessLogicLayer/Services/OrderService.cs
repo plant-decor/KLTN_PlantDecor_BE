@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -225,6 +226,51 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var orders = await _unitOfWork.OrderRepository.GetByUserIdWithDetailsAsync(user.Id);
             return orders.ToResponseList();
+        }
+
+        public async Task<PaginatedResult<OrderResponseDto>> GetOrdersForConsultantAsync(
+            ConsultantOrderSearchRequestDto request,
+            Pagination pagination)
+        {
+            var filter = request ?? new ConsultantOrderSearchRequestDto();
+            var appliedPagination = pagination ?? new Pagination();
+
+            if (filter.CreatedFrom.HasValue && filter.CreatedTo.HasValue
+                && filter.CreatedFrom.Value > filter.CreatedTo.Value)
+                throw new BadRequestException("CreatedFrom must be less than or equal to CreatedTo");
+
+            if (filter.MinTotalAmount.HasValue && filter.MaxTotalAmount.HasValue
+                && filter.MinTotalAmount.Value > filter.MaxTotalAmount.Value)
+                throw new BadRequestException("MinTotalAmount must be less than or equal to MaxTotalAmount");
+
+            var result = await _unitOfWork.OrderRepository.SearchForConsultantAsync(
+                appliedPagination,
+                filter.Status,
+                filter.OrderType,
+                filter.PaymentStrategy,
+                filter.CreatedFrom,
+                filter.CreatedTo,
+                filter.MinTotalAmount,
+                filter.MaxTotalAmount,
+                filter.CustomerEmail,
+                filter.SortBy,
+                filter.SortDirection);
+
+            return new PaginatedResult<OrderResponseDto>(
+                result.Items.ToResponseList(),
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
+        }
+
+        public async Task<OrderResponseDto> GetOrderByIdForConsultantAsync(int orderId)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+
+            if (order == null)
+                throw new NotFoundException($"Order {orderId} not found");
+
+            return order.ToResponse();
         }
 
         public async Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId)

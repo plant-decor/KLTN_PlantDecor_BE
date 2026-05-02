@@ -13,6 +13,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             Address = order.Address,
             Phone = order.Phone,
             CustomerName = order.CustomerName,
+            CustomerEmail = order.Customer?.Email,
             TotalAmount = order.TotalAmount,
             DepositAmount = order.DepositAmount,
             RemainingAmount = order.RemainingAmount,
