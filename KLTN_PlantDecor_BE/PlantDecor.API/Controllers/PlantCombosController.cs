@@ -226,6 +226,24 @@ namespace PlantDecor.API.Controllers
         #region Manager - Nursery Combo Stock
 
         /// <summary>
+        /// [Manager] Lấy danh sách PlantCombo đang active của hệ thống
+        /// GET /api/manager/plant-combos/active
+        /// </summary>
+        [HttpGet("/api/manager/plant-combos/active")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> GetManagerActiveCombos([FromQuery] Pagination pagination)
+        {
+            var combos = await _plantComboService.GetActiveCombosAsync(pagination);
+            return Ok(new ApiResponse<PaginatedResult<PlantComboListResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Retrieved active combos successfully",
+                Payload = combos
+            });
+        }
+
+        /// <summary>
         /// [Manager] Lấy danh sách PlantCombo phù hợp với vựa dựa trên cây đang có
         /// GET /api/manager/plant-combos/compatible
         /// </summary>

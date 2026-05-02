@@ -1152,14 +1152,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region Cache Management
 
-        private async Task InvalidateCacheAsync()
-        {
-            await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
-            await _cacheService.RemoveByPrefixAsync(ACTIVE_COMBOS_KEY);
-            await _cacheService.RemoveByPrefixAsync(SHOP_COMBOS_KEY);
-            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
-        }
-
         private async Task InvalidateCacheAsync(int? comboId = null, int? nurseryId = null)
         {
             await _cacheService.RemoveByPrefixAsync(ALL_COMBOS_KEY);
@@ -1177,7 +1169,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (nurseryId.HasValue)
             {
+                // Remove all nursery-scoped common plant caches including manager/shop variants
                 await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}");
+                await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}_manager");
+                await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}_missing_plants");
+                await _cacheService.RemoveByPrefixAsync($"{NURSERY_COMMON_PLANTS_KEY}_{nurseryId.Value}_active");
             }
             else
             {

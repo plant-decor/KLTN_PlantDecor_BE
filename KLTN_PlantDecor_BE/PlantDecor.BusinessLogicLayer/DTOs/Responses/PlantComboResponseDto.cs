@@ -66,6 +66,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PrimaryImageUrl { get; set; }
         public int TotalItems { get; set; }
         public List<string> TagNames { get; set; } = new List<string>();
+        // List of plants included in the combo (lightweight info)
+        public List<PlantComboItemResponseDto> ComboItems { get; set; } = new List<PlantComboItemResponseDto>();
     }
 
     public class NurseryComboStockOperationResponseDto
