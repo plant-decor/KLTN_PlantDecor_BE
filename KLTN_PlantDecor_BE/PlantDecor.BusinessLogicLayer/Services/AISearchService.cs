@@ -201,6 +201,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         EntityType = item.EntityType,
                         EntityId = item.EntityId,
+                        PlantId = item.PlantId,
+                        PlantComboId = item.PlantComboId,
+                        MaterialId = item.MaterialId,
                         Name = item.Name,
                         Description = item.Description,
                         Price = item.Price,
@@ -209,6 +212,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         MatchScore = item.SimilarityScore,
                         NurseryId = item.NurseryId,
                         NurseryName = item.NurseryName,
+                        NurseryAddress = item.NurseryAddress,
                         ReasonForRecommendation = GenerateRecommendationReason(item, fengShuiElement, preferredRooms)
                     };
 
@@ -286,12 +290,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         EntityType = r.EntityType,
                         EntityId = r.EntityId,
+                        PlantId = r.PlantId,
+                        PlantComboId = r.PlantComboId,
+                        MaterialId = r.MaterialId,
                         Name = r.Name,
                         Description = r.Description,
                         Price = r.Price,
                         ImageUrl = r.ImageUrl,
                         IsPurchasable = r.IsPurchasable,
-                        RelevanceScore = r.SimilarityScore
+                        RelevanceScore = r.SimilarityScore,
+                        NurseryId = r.NurseryId > 0 ? r.NurseryId : null,
+                        NurseryName = r.NurseryName,
+                        NurseryAddress = r.NurseryAddress
                     })
                     .ToList();
 
@@ -312,6 +322,52 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var session = await _unitOfWork.AIChatSessionRepository.CreateSessionAsync(userId, title);
+            return new AIChatSessionResponseDto
+            {
+                SessionId = session.Id,
+                Title = session.Title,
+                StartedAt = session.StartedAt,
+                Status = session.Status ?? (int)AIChatSessionStatusEnum.Active
+            };
+        }
+
+        public async Task CloseChatSessionAsync(int userId, int sessionId)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (sessionId <= 0)
+            {
+                throw new BadRequestException("SessionId must be greater than 0.");
+            }
+
+            var closed = await _unitOfWork.AIChatSessionRepository.CloseSessionAsync(sessionId, userId);
+            if (!closed)
+            {
+                throw new NotFoundException("AI chat session not found.");
+            }
+        }
+
+        public async Task<AIChatSessionResponseDto> RenameChatSessionAsync(int userId, int sessionId, string? title)
+        {
+            if (userId <= 0)
+            {
+                throw new UnauthorizedException("Unable to identify user from token");
+            }
+
+            if (sessionId <= 0)
+            {
+                throw new BadRequestException("SessionId must be greater than 0.");
+            }
+
+            var session = await _unitOfWork.AIChatSessionRepository.UpdateTitleAsync(sessionId, userId, title);
+            if (session == null)
+            {
+                throw new NotFoundException("AI chat session not found.");
+            }
+
             return new AIChatSessionResponseDto
             {
                 SessionId = session.Id,
@@ -518,6 +574,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return llmFallback;
                 }
 
+                var quickReplyPrompts = BuildUserPromptSuggestions(intent, suggestions, authoritativeFacts, responseLanguage);
                 var response = ClampChatbotResponsePayload(new AIChatbotResponseDto
                 {
                     Intent = intent,
@@ -525,7 +582,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     RoomEnvironmentSummary = roomSummary,
                     SuggestedPlants = suggestions,
                     CareTips = MergeCareTips(answer.CareTips, plantGuideCareTips),
-                    FollowUpQuestions = answer.FollowUpQuestions ?? new List<string>(),
+                    FollowUpQuestions = quickReplyPrompts,
                     Disclaimer = answer.Disclaimer,
                     UsedFallback = false
                 });
@@ -771,9 +828,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     "If they conflict with history, suggestedPlants, embedding/search text, or earlier assistant answers, trust authoritativeFacts. " +
                     "Do not recommend an item as purchasable when authoritativeFacts marks it not purchasable, inactive, sold, expired, or out of stock. " +
                     "Reply in " + outputLanguageName + ". " +
-                    "Return ONLY one JSON object with fields: reply (string), careTips (array string), " +
-                    "followUpQuestions (array string), disclaimer (string|null). " +
-                    "If careTips or followUpQuestions is unavailable, return an empty array.";
+                    "Return ONLY one JSON object with fields: reply (string), careTips (array string), disclaimer (string|null). " +
+                    "If careTips is unavailable, return an empty array.";
 
                 var contextPayload = JsonSerializer.Serialize(new
                 {
@@ -799,9 +855,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         s.EntityType,
                         s.EntityId,
+                        s.PlantId,
+                        s.PlantComboId,
+                        s.MaterialId,
                         s.Name,
                         s.Description,
                         s.Price,
+                        s.NurseryId,
+                        s.NurseryName,
+                        s.NurseryAddress,
                         s.IsPurchasable,
                         s.RelevanceScore
                     }).ToList(),
@@ -812,8 +874,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         f.Name,
                         f.Description,
                         f.Price,
+                        f.PlantId,
+                        f.PlantComboId,
+                        f.MaterialId,
                         f.NurseryId,
                         f.NurseryName,
+                        f.NurseryAddress,
                         f.IsActive,
                         f.IsPurchasable,
                         f.AvailabilityStatus,
@@ -860,7 +926,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 payload.CareTips = NormalizeTextList(payload.CareTips);
-                payload.FollowUpQuestions = NormalizeTextList(payload.FollowUpQuestions);
                 payload.Reply = payload.Reply.Trim();
                 payload.Disclaimer = string.IsNullOrWhiteSpace(payload.Disclaimer) ? null : payload.Disclaimer.Trim();
 
@@ -911,17 +976,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 RoomEnvironmentSummary = roomSummary,
                 SuggestedPlants = suggestions,
                 CareTips = MergeCareTips(defaultCareTips, plantGuideCareTips),
-                FollowUpQuestions = isVietnamese
-                    ? new List<string>
-                    {
-                        "Phong cua ban nhan anh sang truc tiep hay anh sang tan xa?",
-                        "Ban uu tien cay de cham hay cay co gia tri tham my cao?"
-                    }
-                    : new List<string>
-                    {
-                        "Does your room get direct sunlight or mostly indirect light?",
-                        "Do you prefer low-maintenance plants or stronger decorative impact?"
-                    },
+                FollowUpQuestions = BuildUserPromptSuggestions(intent, suggestions, new List<AuthoritativeEntityFactDto>(), responseLanguage),
                 PolicySources = new List<PolicyGroundingSourceDto>(),
                 Disclaimer = isVietnamese
                     ? "Thong tin chi mang tinh tham khao. Neu cay co dau hieu benh nang, ban nen lien he chuyen gia cham soc cay."
@@ -982,17 +1037,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             : $"You can also review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                     SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                     CareTips = new List<string>(),
-                    FollowUpQuestions = isVietnamese
-                        ? new List<string>
-                        {
-                            "Ban can minh trich ngan hon phan chinh sach nguoi dung hay chinh sach hoan tra?",
-                            "Ban muon minh nhac lai la nen chat voi tu van vien de xac nhan phien ban chinh sach moi nhat khong?"
-                        }
-                        : new List<string>
-                        {
-                            "Do you want a shorter summary of the user policy or the return policy?",
-                            "Would you like me to remind you to confirm the latest policy version with a support consultant?"
-                        },
+                    FollowUpQuestions = BuildPolicyPromptSuggestions(responseLanguage),
                     PolicySources = policySources,
                     Disclaimer = isVietnamese
                         ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
@@ -1022,17 +1067,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         : $"Please chat directly with a support consultant, or review policy documents at {_userPolicyDocumentPath} and {_returnPolicyDocumentPath}."),
                 SuggestedPlants = new List<PlantSuggestionResponseDto>(),
                 CareTips = new List<string>(),
-                FollowUpQuestions = isVietnamese
-                    ? new List<string>
-                    {
-                        "Ban muon minh nhac lai la hay vao muc Ho tro de chat voi tu van vien khong?",
-                        "Ban dang can chinh sach nguoi dung hay chinh sach hoan tra?"
-                    }
-                    : new List<string>
-                    {
-                        "Would you like me to remind you to open Support and chat with a consultant?",
-                        "Are you looking for the user policy or the return policy?"
-                    },
+                FollowUpQuestions = BuildPolicyPromptSuggestions(responseLanguage),
                 PolicySources = new List<PolicyGroundingSourceDto>(),
                 Disclaimer = isVietnamese
                     ? "Noi dung chinh sach co the thay doi theo thoi diem, vui long xac nhan voi tu van vien truoc khi thuc hien giao dich."
@@ -1098,11 +1133,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.CommonPlant,
                 EntityId = commonPlant.Id,
+                PlantId = commonPlant.PlantId,
                 Name = plant?.Name ?? $"CommonPlant #{commonPlant.Id}",
                 Description = plant?.Description,
                 Price = plant?.BasePrice,
                 NurseryId = commonPlant.NurseryId,
                 NurseryName = commonPlant.Nursery?.Name,
+                NurseryAddress = commonPlant.Nursery?.Address,
                 IsActive = commonPlant.IsActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable ? "Purchasable" : ResolveStockAvailability(commonPlant.IsActive, commonPlant.Quantity),
@@ -1144,11 +1181,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.PlantInstance,
                 EntityId = instance.Id,
+                PlantId = instance.PlantId,
                 Name = plant?.Name ?? $"PlantInstance #{instance.Id}",
                 Description = FirstNonEmpty(instance.Description, plant?.Description),
                 Price = instance.SpecificPrice ?? plant?.BasePrice,
                 NurseryId = instance.CurrentNurseryId,
                 NurseryName = instance.CurrentNursery?.Name,
+                NurseryAddress = instance.CurrentNursery?.Address,
                 IsActive = isPurchasable,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable ? "Purchasable" : statusName,
@@ -1186,11 +1225,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.NurseryMaterial,
                 EntityId = nurseryMaterial.Id,
+                MaterialId = nurseryMaterial.MaterialId,
                 Name = material?.Name ?? $"NurseryMaterial #{nurseryMaterial.Id}",
                 Description = material?.Description,
                 Price = material?.BasePrice,
                 NurseryId = nurseryMaterial.NurseryId,
                 NurseryName = nurseryMaterial.Nursery?.Name,
+                NurseryAddress = nurseryMaterial.Nursery?.Address,
                 IsActive = nurseryMaterial.IsActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isExpired
@@ -1230,11 +1271,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 EntityType = EmbeddingEntityTypes.NurseryPlantCombo,
                 EntityId = nurseryPlantCombo.Id,
+                PlantComboId = nurseryPlantCombo.PlantComboId,
                 Name = combo?.ComboName ?? $"NurseryPlantCombo #{nurseryPlantCombo.Id}",
                 Description = combo?.Description,
                 Price = combo?.ComboPrice,
                 NurseryId = nurseryPlantCombo.NurseryId,
                 NurseryName = nurseryPlantCombo.Nursery?.Name,
+                NurseryAddress = nurseryPlantCombo.Nursery?.Address,
                 IsActive = nurseryPlantCombo.IsActive && comboActive,
                 IsPurchasable = isPurchasable,
                 AvailabilityStatus = isPurchasable
@@ -1272,7 +1315,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 suggestion.Name = fact.Name;
                 suggestion.Description = fact.Description;
                 suggestion.Price = fact.Price;
+                suggestion.PlantId = fact.PlantId;
+                suggestion.PlantComboId = fact.PlantComboId;
+                suggestion.MaterialId = fact.MaterialId;
                 suggestion.IsPurchasable = fact.IsPurchasable;
+                suggestion.NurseryId = fact.NurseryId;
+                suggestion.NurseryName = fact.NurseryName;
+                suggestion.NurseryAddress = fact.NurseryAddress;
             }
         }
 
@@ -1558,18 +1607,149 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .ToList();
         }
 
+        private static List<string> BuildUserPromptSuggestions(
+            string intent,
+            List<PlantSuggestionResponseDto>? suggestions,
+            List<AuthoritativeEntityFactDto>? facts,
+            string responseLanguage)
+        {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            var normalizedIntent = NormalizeIntent(intent);
+            var suggestedItems = suggestions ?? new List<PlantSuggestionResponseDto>();
+            var factItems = facts ?? new List<AuthoritativeEntityFactDto>();
+            var primaryFact = factItems.FirstOrDefault(f => f.IsPurchasable) ?? factItems.FirstOrDefault();
+            var primarySuggestion = suggestedItems.FirstOrDefault(s => s.IsPurchasable) ?? suggestedItems.FirstOrDefault();
+            var plantName = FirstNonEmpty(primaryFact?.Name, primarySuggestion?.Name);
+            var hasPurchasableItem = factItems.Any(f => f.IsPurchasable) || suggestedItems.Any(s => s.IsPurchasable);
+            var prompts = new List<string>();
+
+            if (normalizedIntent == ChatbotIntentPolicySupport)
+            {
+                return BuildPolicyPromptSuggestions(responseLanguage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(plantName))
+            {
+                switch (normalizedIntent)
+                {
+                    case ChatbotIntentPlantCare:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cho toi biet them cach cham soc {plantName}"
+                            : $"Tell me more care tips for {plantName}");
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Lich tuoi va anh sang phu hop cho {plantName} la gi?"
+                            : $"What watering and light schedule is best for {plantName}?");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y cho toi cac cay tuong tu de cham soc"
+                            : "Show me similar low-maintenance plants");
+                        break;
+
+                    case ChatbotIntentRoomEnvironment:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"{plantName} co phu hop voi phong cua toi khong?"
+                            : $"Is {plantName} suitable for my room?");
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Toi nen dat {plantName} o vi tri nao trong phong?"
+                            : $"Where should I place {plantName} in my room?");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y them cay phu hop voi phong cua toi"
+                            : "Show me more plants suitable for my room");
+                        break;
+
+                    default:
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cho toi biet them ve {plantName}"
+                            : $"Tell me more about {plantName}");
+                        if (hasPurchasableItem)
+                        {
+                            AddPrompt(prompts, isVietnamese
+                                ? $"Toi co the mua {plantName} o dau?"
+                                : $"Where can I buy {plantName}?");
+                        }
+                        AddPrompt(prompts, isVietnamese
+                            ? $"Cach cham soc {plantName} nhu the nao?"
+                            : $"How do I care for {plantName}?");
+                        AddPrompt(prompts, isVietnamese
+                            ? "Goi y cho toi cac cay tuong tu"
+                            : "Show me similar plants");
+                        break;
+                }
+            }
+            else
+            {
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cho toi cay canh de cham soc"
+                    : "Suggest low-maintenance indoor plants");
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cay phu hop voi phong cua toi"
+                    : "Suggest plants suitable for my room");
+                AddPrompt(prompts, isVietnamese
+                    ? "Goi y cay theo ngan sach cua toi"
+                    : "Suggest plants within my budget");
+                AddPrompt(prompts, isVietnamese
+                    ? "Huong dan toi cach cham soc cay"
+                    : "Guide me on plant care");
+            }
+
+            return ClampTextList(prompts, MaxFollowUpsCount, MaxFollowUpChars);
+        }
+
+        private static List<string> BuildPolicyPromptSuggestions(string responseLanguage)
+        {
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            return isVietnamese
+                ? new List<string>
+                {
+                    "Tom tat ngan hon chinh sach nguoi dung",
+                    "Tom tat ngan hon chinh sach hoan tra",
+                    "Huong dan toi cach lien he tu van vien ho tro"
+                }
+                : new List<string>
+                {
+                    "Give me a shorter summary of the user policy",
+                    "Give me a shorter summary of the return policy",
+                    "Guide me on how to contact a support consultant"
+                };
+        }
+
+        private static void AddPrompt(List<string> prompts, string? prompt)
+        {
+            if (!string.IsNullOrWhiteSpace(prompt))
+            {
+                prompts.Add(prompt.Trim());
+            }
+        }
+
         private static PlantSuggestionResponseDto MapRoomRecommendationToSuggestion(PlantRecommendationItemDto recommendation)
         {
             return new PlantSuggestionResponseDto
             {
                 EntityType = recommendation.EntityType,
                 EntityId = recommendation.EntityId,
+                PlantId = recommendation.PlantId,
+                PlantComboId = recommendation.PlantComboId,
+                MaterialId = recommendation.MaterialId,
                 Name = recommendation.Name,
                 Description = recommendation.Description,
                 Price = recommendation.Price,
                 ImageUrl = recommendation.ImageUrl,
                 IsPurchasable = true,
-                RelevanceScore = recommendation.MatchScore
+                RelevanceScore = recommendation.MatchScore,
+                NurseryId = recommendation.NurseryId > 0 ? recommendation.NurseryId : null,
+                NurseryName = recommendation.NurseryName,
+                NurseryAddress = recommendation.NurseryAddress
             };
         }
 
@@ -2166,11 +2346,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (commonPlant != null)
                     {
+                        item.PlantId = commonPlant.PlantId;
                         item.Name = commonPlant.Plant?.Name ?? "Unknown";
                         item.Description = commonPlant.Plant?.Description;
                         item.Price = commonPlant.Plant?.BasePrice;
                         item.NurseryId = commonPlant.NurseryId;
                         item.NurseryName = commonPlant.Nursery?.Name;
+                        item.NurseryAddress = commonPlant.Nursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(commonPlant.Plant?.FengShuiElement);
                         item.PetSafe = commonPlant.Plant?.PetSafe;
                         item.ChildSafe = commonPlant.Plant?.ChildSafe;
@@ -2182,11 +2364,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (instance != null)
                     {
+                        item.PlantId = instance.PlantId;
                         item.Name = instance.Plant?.Name ?? "Unknown";
                         item.Description = instance.Description ?? instance.Plant?.Description;
                         item.Price = instance.SpecificPrice ?? instance.Plant?.BasePrice;
                         item.NurseryId = instance.CurrentNurseryId ?? 0;
                         item.NurseryName = instance.CurrentNursery?.Name;
+                        item.NurseryAddress = instance.CurrentNursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(instance.Plant?.FengShuiElement);
                         item.PetSafe = instance.Plant?.PetSafe;
                         item.ChildSafe = instance.Plant?.ChildSafe;
@@ -2198,11 +2382,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var combo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(originalEntityId);
                     if (combo != null)
                     {
+                        item.PlantComboId = combo.PlantComboId;
                         item.Name = combo.PlantCombo?.ComboName ?? "Unknown";
                         item.Description = combo.PlantCombo?.Description;
                         item.Price = combo.PlantCombo?.ComboPrice;
                         item.NurseryId = combo.NurseryId;
                         item.NurseryName = combo.Nursery?.Name;
+                        item.NurseryAddress = combo.Nursery?.Address;
                         item.FengShuiElement = MapFengShuiElement(combo.PlantCombo?.FengShuiElement);
                         item.PetSafe = combo.PlantCombo?.PetSafe;
                         item.ChildSafe = combo.PlantCombo?.ChildSafe;
@@ -2214,11 +2400,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var material = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(originalEntityId);
                     if (material != null)
                     {
+                        item.MaterialId = material.MaterialId;
                         item.Name = material.Material?.Name ?? "Unknown";
                         item.Description = material.Material?.Description;
                         item.Price = material.Material?.BasePrice;
                         item.NurseryId = material.NurseryId;
                         item.NurseryName = material.Nursery?.Name;
+                        item.NurseryAddress = material.Nursery?.Address;
                         item.ImageUrl = material.Material?.MaterialImages?.FirstOrDefault()?.ImageUrl;
                     }
                     break;
@@ -2292,11 +2480,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             public string EntityType { get; set; } = string.Empty;
             public int EntityId { get; set; }
+            public int? PlantId { get; set; }
+            public int? PlantComboId { get; set; }
+            public int? MaterialId { get; set; }
             public string Name { get; set; } = string.Empty;
             public string? Description { get; set; }
             public decimal? Price { get; set; }
             public int? NurseryId { get; set; }
             public string? NurseryName { get; set; }
+            public string? NurseryAddress { get; set; }
             public bool? IsActive { get; set; }
             public bool IsPurchasable { get; set; }
             public string AvailabilityStatus { get; set; } = "Unknown";

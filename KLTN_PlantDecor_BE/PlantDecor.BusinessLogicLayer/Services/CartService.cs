@@ -117,7 +117,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Kiểm tra tồn kho trước khi cập nhật
             var availableQty = GetAvailableQty(item);
             if (request.Quantity > availableQty)
-                throw new BadRequestException($"Số lượng tồn kho không đủ. Còn lại: {availableQty}");
+                throw new BadRequestException($"Available quantity is not enough. Remaining: {availableQty}");
 
             item.Quantity = request.Quantity;
             item.Cart!.UpdatedAt = DateTime.Now;

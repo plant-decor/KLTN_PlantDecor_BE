@@ -47,7 +47,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Validate nursery thuộc về manager
                 var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
                 if (nursery == null || nursery.Id != nurseryId)
-                    throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                    throw new ForbiddenException("You do not have permission to manage this nursery");
 
                 // Validate tất cả PlantId tồn tại
                 var plantIds = request.Instances.Select(i => i.PlantId).Distinct().ToList();
@@ -55,7 +55,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
                     if (plant == null)
-                        throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                        throw new NotFoundException($"Plant with ID {plantId} not found");
                 }
 
                 // Tạo các entity
@@ -95,11 +95,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
             if (user == null)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var hasAccess = false;
             if (user.RoleId == (int)RoleEnum.Manager)
@@ -113,7 +113,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             if (!hasAccess)
-                throw new ForbiddenException("PlantInstance này không thuộc vựa của bạn");
+                throw new ForbiddenException("PlantInstance is not owned by your nursery");
 
             return instance.ToResponse();
         }
@@ -122,7 +122,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
             if (user == null)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var hasAccess = false;
             if (user.RoleId == (int)RoleEnum.Manager)
@@ -136,7 +136,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             if (!hasAccess)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_p{pagination.PageNumber}_s{pagination.PageSize}_st{statusFilter}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<PlantInstanceListResponseDto>>(cacheKey);
@@ -159,7 +159,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Validate nursery thuộc về manager
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != nurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý vựa này");
+                throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_summary";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryPlantSummaryDto>>(cacheKey);
@@ -204,12 +204,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
                 if (instance == null)
-                    throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                    throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
                 // Validate nursery thuộc về manager
                 var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
                 if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                    throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                    throw new ForbiddenException("You do not have permission to manage this instance");
 
                 instance.Status = request.Status;
                 instance.UpdatedAt = DateTime.Now;
@@ -234,6 +234,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task<PlantInstanceResponseDto> UpdateAsync(int instanceId, int managerId, UpdatePlantInstanceRequestDto request)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (instance == null)
+                    throw new NotFoundException($"PlantInstance with ID {instanceId} does not exist");
+
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                if (nursery == null || nursery.Id != instance.CurrentNurseryId)
+                    throw new ForbiddenException("You do not have permission to manage this instance");
+
+                if (!string.IsNullOrWhiteSpace(request.SKU))
+                    instance.SKU = request.SKU.Trim();
+                if (request.SpecificPrice.HasValue)
+                    instance.SpecificPrice = request.SpecificPrice.Value;
+                if (request.Height.HasValue)
+                    instance.Height = request.Height.Value;
+                if (request.TrunkDiameter.HasValue)
+                    instance.TrunkDiameter = request.TrunkDiameter.Value;
+                if (!string.IsNullOrWhiteSpace(request.HealthStatus))
+                    instance.HealthStatus = request.HealthStatus.Trim();
+                if (request.Age.HasValue)
+                    instance.Age = request.Age.Value;
+                if (request.Description != null)
+                    instance.Description = request.Description;
+
+                instance.UpdatedAt = DateTime.Now;
+                _unitOfWork.PlantInstanceRepository.PrepareUpdate(instance);
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                await InvalidateCacheAsync(instance.CurrentNurseryId);
+
+                var reloaded = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
+                if (reloaded != null)
+                {
+                    QueueEmbeddingAsync(reloaded);
+                    return reloaded.ToResponse();
+                }
+
+                return instance.ToResponse();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
         public async Task<BatchUpdateStatusResponseDto> BatchUpdateStatusAsync(int managerId, BatchUpdatePlantInstanceStatusDto request)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -242,7 +292,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Validate nursery thuộc về manager
                 var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
                 if (nursery == null)
-                    throw new ForbiddenException("Bạn không có vựa nào");
+                    throw new ForbiddenException("You do not have any nursery");
 
                 var instances = await _unitOfWork.PlantInstanceRepository.GetByIdsAsync(request.InstanceIds);
 
@@ -250,13 +300,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 {
                     var foundIds = instances.Select(i => i.Id).ToHashSet();
                     var missingIds = request.InstanceIds.Where(id => !foundIds.Contains(id)).ToList();
-                    throw new NotFoundException($"Không tìm thấy PlantInstance với IDs: {string.Join(", ", missingIds)}");
+                    throw new NotFoundException($"PlantInstance with IDs not found: {string.Join(", ", missingIds)}");
                 }
 
                 // Validate tất cả instance thuộc nursery của manager
                 var invalidInstances = instances.Where(i => i.CurrentNurseryId != nursery.Id).ToList();
                 if (invalidInstances.Any())
-                    throw new ForbiddenException($"Bạn không có quyền quản lý instance IDs: {string.Join(", ", invalidInstances.Select(i => i.Id))}");
+                    throw new ForbiddenException($"You do not have permission to manage instance IDs: {string.Join(", ", invalidInstances.Select(i => i.Id))}");
 
                 foreach (var instance in instances)
                 {
@@ -300,14 +350,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                throw new ForbiddenException("You do not have permission to manage this instance");
 
             if (!instance.PlantId.HasValue)
-                throw new BadRequestException("PlantInstance chưa có PlantId hợp lệ");
+                throw new BadRequestException("PlantInstance with ID {instanceId} not found");
 
             foreach (var file in files)
             {
@@ -378,14 +428,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                throw new ForbiddenException("You do not have permission to manage this instance");
 
             if (!instance.PlantId.HasValue)
-                throw new BadRequestException("PlantInstance chưa có PlantId hợp lệ");
+                throw new BadRequestException($"PlantInstance with ID {instanceId} not valid");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -447,15 +497,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                throw new ForbiddenException("You do not have permission to manage this instance");
 
             var targetImage = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
             if (targetImage == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to instance {instanceId}");
 
             foreach (var image in instance.PlantImages.Where(i => i.PlantInstanceId == instanceId))
                 image.IsPrimary = image.Id == imageId;
@@ -477,15 +527,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                throw new ForbiddenException("You do not have permission to manage this instance");
 
             var image = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to instance {instanceId}");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -518,15 +568,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null || nursery.Id != instance.CurrentNurseryId)
-                throw new ForbiddenException("Bạn không có quyền quản lý instance này");
+                throw new ForbiddenException("You do not have permission to manage this instance");
 
             var image = instance.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == instanceId);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc instance {instanceId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to instance {instanceId}");
 
             var wasPrimary = image.IsPrimary == true;
             var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
@@ -568,7 +618,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             // Validate plant tồn tại
             var plant = await _unitOfWork.PlantRepository.GetByIdAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var instances = await _unitOfWork.PlantInstanceRepository.GetAvailableByPlantIdAsync(plantId);
 
@@ -621,10 +671,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var instance = await _unitOfWork.PlantInstanceRepository.GetByIdWithDetailsAsync(instanceId);
             if (instance == null)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không tồn tại");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} not found");
 
             if (instance.Status != (int)PlantInstanceStatusEnum.Available)
-                throw new NotFoundException($"PlantInstance với ID {instanceId} không khả dụng");
+                throw new NotFoundException($"PlantInstance with ID {instanceId} is not available");
 
             return instance.ToResponse();
         }

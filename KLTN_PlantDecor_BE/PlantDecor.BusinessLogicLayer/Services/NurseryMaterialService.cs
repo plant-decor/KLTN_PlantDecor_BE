@@ -58,7 +58,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
             if (nurseryMaterial == null)
-                throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
+                throw new NotFoundException($"NurseryMaterial with ID {id} not found");
 
             return nurseryMaterial.ToResponse();
         }
@@ -72,16 +72,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Validate material exists
                 var material = await _unitOfWork.MaterialRepository.GetByIdAsync(request.MaterialId);
                 if (material == null)
-                    throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
+                    throw new NotFoundException($"Material with ID {request.MaterialId} not found");
 
                 // Validate nursery exists
                 var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(request.NurseryId);
                 if (nursery == null)
-                    throw new NotFoundException($"Nursery với ID {request.NurseryId} không tồn tại");
+                    throw new NotFoundException($"Nursery with ID {request.NurseryId} not found");
 
                 // Check duplicate material + nursery combination
                 if (await _unitOfWork.NurseryMaterialRepository.ExistsAsync(request.MaterialId, request.NurseryId))
-                    throw new BadRequestException($"Material đã tồn tại trong vựa này");
+                    throw new BadRequestException($"Material already exists in this nursery");
 
                 var entity = request.ToEntity();
 
@@ -90,6 +90,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Reload with details
                 var created = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
@@ -110,7 +111,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
+                    throw new NotFoundException($"NurseryMaterial with ID {id} not found");
 
                 // Validate reserved quantity doesn't exceed quantity
                 var newQuantity = request.Quantity ?? entity.Quantity;
@@ -122,6 +123,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Update embedding
                 var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
@@ -144,16 +146,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
+                    throw new NotFoundException($"NurseryMaterial with ID {id} not found");
 
                 if (entity.ReservedQuantity > 0)
-                    throw new BadRequestException("Không thể xóa vật tư đang có số lượng đặt trước");
+                    throw new BadRequestException("Cannot delete material that has reserved quantity");
 
                 _unitOfWork.NurseryMaterialRepository.PrepareRemove(entity);
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Delete embedding
                 await DeleteEmbeddingAsync(id);
@@ -175,10 +178,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"NurseryMaterial với ID {id} không tồn tại");
+                    throw new NotFoundException($"NurseryMaterial with ID {id} not found");
 
                 if (entity.IsActive && entity.ReservedQuantity > 0)
-                    throw new BadRequestException("Không thể tắt vật tư đang có số lượng đặt trước");
+                    throw new BadRequestException("Cannot deactivate material that has reserved quantity");
 
                 entity.IsActive = !entity.IsActive;
 
@@ -187,6 +190,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Update embedding
                 var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
@@ -240,12 +244,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Validate nursery exists
                 var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(nurseryId);
                 if (nursery == null)
-                    throw new NotFoundException($"Nursery với ID {nurseryId} không tồn tại");
+                    throw new NotFoundException($"Nursery with ID {nurseryId} not found");
 
                 // Validate material exists
                 var material = await _unitOfWork.MaterialRepository.GetByIdAsync(request.MaterialId);
                 if (material == null)
-                    throw new NotFoundException($"Material với ID {request.MaterialId} không tồn tại");
+                    throw new NotFoundException($"Material with ID {request.MaterialId} not found");
 
                 // Get or create NurseryMaterial
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByMaterialAndNurseryAsync(request.MaterialId, nurseryId);
@@ -280,6 +284,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await InvalidateNurserySummaryAsync(nurseryId);
 
                 // Reload with details
                 var result = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(targerEntity.Id);
@@ -302,10 +307,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.NurseryMaterialRepository.GetByMaterialAndNurseryAsync(materialId, nurseryId);
                 if (entity == null)
-                    throw new NotFoundException($"Material {materialId} không tồn tại trong Nursery {nurseryId}");
+                    throw new NotFoundException($"Material {materialId} not found in Nursery {nurseryId}");
 
                 if (quantity < entity.ReservedQuantity)
-                    throw new BadRequestException($"Số lượng không thể nhỏ hơn số lượng đã đặt trước ({entity.ReservedQuantity})");
+                    throw new BadRequestException($"Quantity cannot be less than the reserved quantity ({entity.ReservedQuantity})");
 
                 entity.Quantity = quantity;
                 _unitOfWork.NurseryMaterialRepository.PrepareUpdate(entity);
@@ -313,6 +318,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await InvalidateNurserySummaryAsync(nurseryId);
 
                 var updated = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
                 QueueEmbeddingAsync(updated!);
@@ -341,9 +347,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+                throw new NotFoundException("You do not have any nursery");
 
             var imported = await ImportMaterialAsync(nursery.Id, request);
+
+            // Invalidate nursery inventory summary cache after import
+            await InvalidateNurserySummaryAsync(nursery.Id);
 
             // Trigger embedding from manager import flow.
             await QueueEmbeddingByIdAsync(imported.Id);
@@ -365,7 +374,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return staffNursery;
             }
 
-            throw new NotFoundException("Bạn chưa có vựa nào");
+            throw new NotFoundException("You do not have any nursery");
         }
 
         #endregion
@@ -413,6 +422,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
             }
+        }
+
+        /// <summary>
+        /// Invalidate nursery-specific inventory summary cache
+        /// Cache key: nurseries_all_{nurseryId}_inventory_summary_t{threshold}_d{days}
+        /// </summary>
+        private async Task InvalidateNurserySummaryAsync(int nurseryId)
+        {
+            await _cacheService.RemoveByPrefixAsync($"nurseries_all_{nurseryId}_inventory_summary");
         }
 
         #endregion

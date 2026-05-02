@@ -448,10 +448,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(request.NurseryId.Value);
                 if (nursery == null)
-                    throw new NotFoundException($"Nursery với ID {request.NurseryId.Value} không tồn tại");
+                    throw new NotFoundException($"Nursery with ID {request.NurseryId.Value} not found");
 
                 if (nursery.ManagerId.HasValue)
-                    throw new BadRequestException("Nursery này đã được gán cho một Manager khác");
+                    throw new BadRequestException("Nursery this has already been assigned to another Manager");
             }
 
             try

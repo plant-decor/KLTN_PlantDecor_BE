@@ -85,7 +85,16 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 PurchaseCount = combo.PurchaseCount,
                 PrimaryImageUrl = combo.PlantComboImages.FirstOrDefault(i => i.IsPrimary == true)?.ImageUrl,
                 TotalItems = combo.PlantComboItems.Count,
-                TagNames = combo.TagsNavigation.Select(t => t.TagName).ToList()
+                TagNames = combo.TagsNavigation.Select(t => t.TagName).ToList(),
+                ComboItems = combo.PlantComboItems.Select(i => new PlantComboItemResponseDto
+                {
+                    Id = i.Id,
+                    PlantComboId = i.PlantComboId,
+                    PlantId = i.PlantId,
+                    PlantName = i.Plant?.Name,
+                    Quantity = i.Quantity,
+                    Notes = i.Notes
+                }).ToList()
             };
         }
 

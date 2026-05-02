@@ -65,7 +65,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var tree = BuildCategoryTree(allCategories, activeOnly: false);
             var category = FindCategoryInTree(tree, id);
             if (category == null)
-                throw new NotFoundException($"Category với ID {id} không tồn tại");
+                throw new NotFoundException($"Category with ID {id} not found");
 
             return category;
         }
@@ -76,15 +76,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             try
             {
-                if(request.ParentCategoryId.HasValue)
+                if (request.ParentCategoryId.HasValue)
                 {
                     var parent = await _unitOfWork.CategoryRepository.GetByIdAsync(request.ParentCategoryId.Value);
                     if (parent == null)
-                        throw new NotFoundException($"Category cha với ID {request.ParentCategoryId} không tồn tại");
+                        throw new NotFoundException($"Parent category with ID {request.ParentCategoryId} not found");
                 }
 
-                if(await _unitOfWork.CategoryRepository.ExistsByNameAsync(request.Name))
-                    throw new BadRequestException($"Category với tên '{request.Name}' đã tồn tại");
+                if (await _unitOfWork.CategoryRepository.ExistsByNameAsync(request.Name))
+                    throw new BadRequestException($"Category with name '{request.Name}' already exists");
 
                 var category = request.ToEntity();
                 _unitOfWork.CategoryRepository.PrepareCreate(category);
@@ -95,7 +95,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return category.ToResponse();
             }
-            catch(Exception) {
+            catch (Exception)
+            {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
@@ -108,22 +109,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var category = await _unitOfWork.CategoryRepository.GetByIdWithDetailsAsync(id);
                 if (category == null)
-                    throw new NotFoundException($"Category với ID {id} không tồn tại");
+                    throw new NotFoundException($"Category with ID {id} not found");
 
                 // Validate parent category if provided
                 if (request.ParentCategoryId.HasValue)
                 {
                     if (request.ParentCategoryId.Value == id)
-                        throw new BadRequestException("Category không thể là cha của chính nó");
+                        throw new BadRequestException("Category cannot be the parent of itself");
 
                     var parent = await _unitOfWork.CategoryRepository.GetByIdAsync(request.ParentCategoryId.Value);
                     if (parent == null)
-                        throw new NotFoundException($"Category cha với ID {request.ParentCategoryId} không tồn tại");
+                        throw new NotFoundException($"Parent category with ID {request.ParentCategoryId} not found");
                 }
 
                 // Check if category name already exists (excluding current category)
                 if (request.Name != null && await _unitOfWork.CategoryRepository.ExistsByNameAsync(request.Name, id))
-                    throw new BadRequestException($"Category với tên '{request.Name}' đã tồn tại");
+                    throw new BadRequestException($"Category with name '{request.Name}' already exists");
 
                 request.ToUpdate(category);
 
@@ -135,7 +136,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return category.ToResponse();
             }
-            catch(Exception) {
+            catch (Exception)
+            {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
@@ -148,15 +150,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var category = await _unitOfWork.CategoryRepository.GetByIdAsync(id);
                 if (category == null)
-                    throw new NotFoundException($"Category với ID {id} không tồn tại");
+                    throw new NotFoundException($"Category with ID {id} not found");
 
                 // Check if category has children
                 if (await _unitOfWork.CategoryRepository.HasChildrenAsync(id))
-                    throw new BadRequestException("Không thể xóa category có category con. Vui lòng xóa category con trước.");
+                    throw new BadRequestException("Cannot delete category that has child categories. Please delete child categories first.");
 
                 // Check if category is assigned to plants or inventories
                 if (await _unitOfWork.CategoryRepository.HasProductsAsync(id))
-                    throw new BadRequestException("Không thể xóa category đang được gắn với sản phẩm. Vui lòng gỡ liên kết trước.");
+                    throw new BadRequestException("Cannot delete category that is assigned to products. Please remove the assignment first.");
 
                 category.IsActive = false; // Soft delete by deactivating
                 category.UpdatedAt = DateTime.Now;
@@ -169,7 +171,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 return true;
             }
-            catch(Exception) {
+            catch (Exception)
+            {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
@@ -179,7 +182,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var category = await _unitOfWork.CategoryRepository.GetByIdAsync(id);
             if (category == null)
-                throw new NotFoundException($"Category với ID {id} không tồn tại");
+                throw new NotFoundException($"Category with ID {id} not found");
 
             category.IsActive = !category.IsActive;
             category.UpdatedAt = DateTime.Now;

@@ -69,7 +69,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(id);
             if (nursery == null)
-                throw new NotFoundException($"Vựa với ID {id} không tồn tại");
+                throw new NotFoundException($"Nursery with ID {id} not found");
 
             return nursery.ToResponse();
         }
@@ -78,33 +78,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
-                throw new UnauthorizedException("Không xác định được người dùng");
+                throw new UnauthorizedException("User not found");
 
             int nurseryId;
             if (user.RoleId == (int)RoleEnum.Manager)
             {
                 var managedNursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(userId);
                 if (managedNursery == null)
-                    throw new NotFoundException("Bạn chưa có vựa nào");
+                    throw new NotFoundException("Nursery not found for your account");
 
                 nurseryId = managedNursery.Id;
             }
             else if (user.RoleId == (int)RoleEnum.Staff)
             {
                 if (!user.NurseryId.HasValue)
-                    throw new NotFoundException("Bạn chưa được phân công vào vựa nào");
+                    throw new NotFoundException("You have not been assigned to any nursery");
 
                 nurseryId = user.NurseryId.Value;
             }
             else
             {
-                throw new ForbiddenException("Chỉ Manager hoặc Staff mới có quyền xem thông tin vựa của mình");
+                throw new ForbiddenException("Only Manager or Staff can view their nursery information");
             }
 
             // Load full details
             var fullNursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(nurseryId);
             if (fullNursery == null)
-                throw new NotFoundException($"Vựa với ID {nurseryId} không tồn tại");
+                throw new NotFoundException($"Nursery with ID {nurseryId} not found");
 
             return fullNursery.ToResponse();
         }
@@ -117,7 +117,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Check duplicate name
                 if (await _unitOfWork.NurseryRepository.ExistsByNameAsync(request.Name))
-                    throw new BadRequestException($"Vựa với tên '{request.Name}' đã tồn tại");
+                    throw new BadRequestException($"Nursery with name '{request.Name}' already exists");
 
                 var entity = request.ToEntity();
 
@@ -146,12 +146,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var entity = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(id);
                 if (entity == null)
-                    throw new NotFoundException($"Vựa với ID {id} không tồn tại");
+                    throw new NotFoundException($"Nursery with ID {id} not found");
 
                 // Check duplicate name if updating
-                if (!string.IsNullOrEmpty(request.Name) && 
+                if (!string.IsNullOrEmpty(request.Name) &&
                     await _unitOfWork.NurseryRepository.ExistsByNameAsync(request.Name, id))
-                    throw new BadRequestException($"Vựa với tên '{request.Name}' đã tồn tại");
+                    throw new BadRequestException($"Nursery with name '{request.Name}' already exists");
 
                 if (request.ManagerId.HasValue)
                 {
@@ -183,7 +183,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(id);
             if (nursery == null)
-                throw new NotFoundException($"Nursery với ID {id} không tồn tại");
+                throw new NotFoundException($"Nursery with ID {id} not found");
 
             nursery.IsActive = !nursery.IsActive;
 
@@ -198,26 +198,26 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByIdWithDetailsAsync(nurseryId);
             if (nursery == null)
-                throw new NotFoundException($"Nursery với ID {nurseryId} không tồn tại");
+                throw new NotFoundException($"Nursery with ID {nurseryId} not found");
 
             var manager = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
             if (manager == null)
-                throw new NotFoundException($"User {managerId} không tồn tại");
+                throw new NotFoundException($"User with ID {managerId} not found");
 
             if (manager.RoleId != (int)RoleEnum.Manager)
-                throw new BadRequestException("User được chọn không phải Manager");
+                throw new BadRequestException("Chosen user is not a Manager");
 
             if (manager.Status != (int)UserStatusEnum.Active || !manager.IsVerified)
-                throw new BadRequestException("Tài khoản Manager không active hoặc chưa được xác minh");
+                throw new BadRequestException("Manager Account is not active or not verified");
 
             // Manager đang quản lý vựa khác
             var existingNursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (existingNursery != null && existingNursery.Id != nurseryId)
-                throw new BadRequestException($"Manager này đang quản lý vựa '{existingNursery.Name}' (ID: {existingNursery.Id})");
+                throw new BadRequestException($"This Manager is managing nursery '{existingNursery.Name}' (ID: {existingNursery.Id})");
 
             // Vựa đã có manager khác
             if (nursery.ManagerId.HasValue && nursery.ManagerId.Value != managerId)
-                throw new BadRequestException($"Vựa này đã được gán cho Manager khác (ID: {nursery.ManagerId.Value}). Hãy gỡ manager cũ trước.");
+                throw new BadRequestException($"Nursery with ID {nursery.Id} is already assigned to a different Manager (ID: {nursery.ManagerId.Value}). Please remove the existing manager first.");
 
             nursery.ManagerId = managerId;
             _unitOfWork.NurseryRepository.PrepareUpdate(nursery);
@@ -239,7 +239,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+                throw new NotFoundException("You do not have a nursery to update");
 
             // Manager không được tự thay đổi ManagerId — chỉ Admin mới được qua AssignManagerAsync
             request.ManagerId = null;
@@ -251,7 +251,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+                throw new NotFoundException("You do not have a nursery to update");
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_expiring_materials_d{daysAhead}";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryMaterialExpiryAlertDto>>(cacheKey);
@@ -291,7 +291,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+                throw new NotFoundException("You do not have a nursery to update");
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_low_stock_t{threshold}";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryLowStockProductAlertDto>>(cacheKey);
@@ -346,7 +346,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new NotFoundException("Bạn chưa có vựa nào");
+                throw new NotFoundException("You do not have a nursery to update");
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_inventory_summary_t{lowStockThreshold}_d{expiringInDays}";
             var cachedData = await _cacheService.GetDataAsync<NurseryMaterialSummaryResponseDto>(cacheKey);
@@ -526,7 +526,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var staff = await _unitOfWork.UserRepository.GetCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
             if (staff == null)
-                throw new NotFoundException($"Nhân viên với ID {staffId} không thuộc vựa của bạn");
+                throw new NotFoundException($"Staff ID {staffId} is not associated with your nursery");
 
             return MapToStaffDtoPublic(staff);
         }
@@ -535,7 +535,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+                throw new ForbiddenException("You are not the manager of any nursery");
 
             var staff = await _unitOfWork.UserRepository.GetStaffAndCaretakersByNurseryIdAsync(nursery.Id);
             return staff.Select(MapToStaffDtoPublic).ToList();
@@ -545,11 +545,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
             if (nursery == null)
-                throw new ForbiddenException("Bạn không phải manager của vựa nào");
+                throw new ForbiddenException("You are not the manager of any nursery");
 
             var staff = await _unitOfWork.UserRepository.GetStaffOrCaretakerByIdWithSpecializationsAsync(staffId, nursery.Id);
             if (staff == null)
-                throw new NotFoundException($"Nhân viên với ID {staffId} không thuộc vựa của bạn");
+                throw new NotFoundException($"Staff ID {staffId} is not associated with your nursery");
 
             return MapToStaffDtoPublic(staff);
         }
@@ -613,7 +613,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     return staffNursery;
             }
 
-            throw new ForbiddenException("Bạn không thuộc vựa nào để xem danh sách nhân viên");
+            throw new ForbiddenException("You are not associated with any nursery to view staff list");
         }
 
         #endregion

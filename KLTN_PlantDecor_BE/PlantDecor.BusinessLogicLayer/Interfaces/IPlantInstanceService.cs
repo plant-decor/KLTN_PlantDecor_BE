@@ -40,6 +40,12 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<PlantInstanceResponseDto> UpdateStatusAsync(int instanceId, int managerId, UpdatePlantInstanceStatusDto request);
 
         /// <summary>
+        /// Cập nhật thông tin PlantInstance
+        /// PATCH /api/manager/plant-instances/{instanceId}
+        /// </summary>
+        Task<PlantInstanceResponseDto> UpdateAsync(int instanceId, int managerId, UpdatePlantInstanceRequestDto request);
+
+        /// <summary>
         /// Batch cập nhật status nhiều PlantInstance
         /// PATCH /api/manager/plant-instances/batch-status
         /// </summary>

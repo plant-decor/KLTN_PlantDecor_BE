@@ -108,7 +108,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(id);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {id} không tồn tại");
+                throw new NotFoundException($"Plant with ID {id} not found");
 
             return plant.ToResponse();
         }
@@ -121,7 +121,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 // Check if plant name already exists
                 if (await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name))
-                    throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
+                    throw new BadRequestException($"Plant with name '{request.Name}' already exists");
 
                 ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
 
@@ -150,12 +150,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(id);
                 if (plant == null)
-                    throw new NotFoundException($"Plant với ID {id} không tồn tại");
+                    throw new NotFoundException($"Plant with ID {id} not found");
 
                 // Check if plant name already exists (excluding current plant)
                 if (!string.IsNullOrWhiteSpace(request.Name)
                     && await _unitOfWork.PlantRepository.ExistsByNameAsync(request.Name, id))
-                    throw new BadRequestException($"Plant với tên '{request.Name}' đã tồn tại");
+                    throw new BadRequestException($"Plant with name '{request.Name}' already exists");
 
                 ValidateEnumBackedFields(request.RoomStyle, request.RoomType);
 
@@ -184,7 +184,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             foreach (var file in files)
             {
@@ -258,7 +258,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -321,11 +321,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var targetImage = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (targetImage == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to plant {plantId}");
 
             foreach (var image in plant.PlantImages.Where(i => i.PlantInstanceId == null))
             {
@@ -349,11 +349,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var image = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to plant {plantId}");
 
             var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(file);
             if (!isValid)
@@ -386,11 +386,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var image = plant.PlantImages.FirstOrDefault(i => i.Id == imageId && i.PlantInstanceId == null);
             if (image == null)
-                throw new NotFoundException($"Ảnh với ID {imageId} không thuộc plant {plantId}");
+                throw new NotFoundException($"Image with ID {imageId} does not belong to plant {plantId}");
 
             var wasPrimary = image.IsPrimary == true;
             var publicId = ExtractCloudinaryPublicId(image.ImageUrl);
@@ -427,11 +427,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 var plant = await _unitOfWork.PlantRepository.GetByIdWithInstancesAsync(id);
                 if (plant == null)
-                    throw new NotFoundException($"Plant với ID {id} không tồn tại");
+                    throw new NotFoundException($"Plant with ID {id} not found");
 
                 // Check if plant has instances
                 if (plant.PlantInstances.Any())
-                    throw new BadRequestException("Không thể xóa plant có instance. Vui lòng xóa các instance trước.");
+                    throw new BadRequestException("Cannot delete plant with instances. Please delete the instances first.");
 
                 // Soft delete by deactivating
                 plant.IsActive = false;
@@ -457,7 +457,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdAsync(id);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {id} không tồn tại");
+                throw new NotFoundException($"Plant with ID {id} not found");
 
             plant.IsActive = !plant.IsActive;
             plant.UpdatedAt = DateTime.Now;
@@ -479,7 +479,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(request.PlantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
             // Get valid categories
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
@@ -488,7 +488,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (validCategories.Count != request.CategoryIds.Count)
             {
                 var invalidIds = request.CategoryIds.Except(validCategories.Select(c => c.Id));
-                throw new NotFoundException($"Các Category với ID {string.Join(", ", invalidIds)} không tồn tại");
+                throw new NotFoundException($"Categories with IDs {string.Join(", ", invalidIds)} not found");
             }
 
             try
@@ -522,7 +522,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(request.PlantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {request.PlantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
             // Get valid tags
             var tags = await _unitOfWork.TagRepository.GetByIdsAsync(request.TagIds);
@@ -530,7 +530,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (tags.Count != request.TagIds.Count)
             {
                 var invalidIds = request.TagIds.Except(tags.Select(t => t.Id));
-                throw new NotFoundException($"Các Tag với ID {string.Join(", ", invalidIds)} không tồn tại");
+                throw new NotFoundException($"Tags with IDs {string.Join(", ", invalidIds)} not found");
             }
 
             try
@@ -564,11 +564,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var category = plant.Categories.FirstOrDefault(c => c.Id == categoryId);
             if (category == null)
-                throw new NotFoundException($"Plant không có category với ID {categoryId}");
+                throw new NotFoundException($"Plant does not have a category with ID {categoryId}");
 
             plant.Categories.Remove(category);
             plant.UpdatedAt = DateTime.Now;
@@ -584,11 +584,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(plantId);
             if (plant == null)
-                throw new NotFoundException($"Plant với ID {plantId} không tồn tại");
+                throw new NotFoundException($"Plant with ID {plantId} not found");
 
             var tag = plant.Tags.FirstOrDefault(t => t.Id == tagId);
             if (tag == null)
-                throw new NotFoundException($"Plant không có tag với ID {tagId}");
+                throw new NotFoundException($"Plant does not have a tag with ID {tagId}");
 
             plant.Tags.Remove(tag);
             plant.UpdatedAt = DateTime.Now;
@@ -727,7 +727,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (invalidRoomStyles.Count > 0)
                 {
-                    throw new BadRequestException($"RoomStyle không hợp lệ: {string.Join(", ", invalidRoomStyles)}");
+                    throw new BadRequestException($"RoomStyle invalid: {string.Join(", ", invalidRoomStyles)}");
                 }
             }
 
@@ -740,7 +740,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (invalidRoomTypes.Count > 0)
                 {
-                    throw new BadRequestException($"RoomType không hợp lệ: {string.Join(", ", invalidRoomTypes)}");
+                    throw new BadRequestException($"RoomType invalid: {string.Join(", ", invalidRoomTypes)}");
                 }
             }
         }
