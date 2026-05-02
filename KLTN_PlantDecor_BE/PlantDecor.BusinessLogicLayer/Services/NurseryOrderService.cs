@@ -379,10 +379,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         await EnsureRemainingBalanceInvoiceForDepositAsync(parentOrder, now);
                         parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                        nurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
+                        nurseryOrder.UpdatedAt = now;
                     }
                     else
                     {
                         parentOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                        nurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+
+                        foreach (var relatedNurseryOrder in parentOrder.NurseryOrders)
+                        {
+                            relatedNurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                            relatedNurseryOrder.UpdatedAt = now;
+                            _unitOfWork.NurseryOrderRepository.PrepareUpdate(relatedNurseryOrder);
+                        }
                     }
 
                     parentOrder.UpdatedAt = now;
