@@ -71,6 +71,8 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 SpecificPrice = entity.SpecificPrice,
                 Height = entity.Height,
                 HealthStatus = entity.HealthStatus,
+                Age = entity.Age,
+                TrunkDiameter = entity.TrunkDiameter,
                 Description = entity.Description,
                 Status = entity.Status,
                 StatusName = GetStatusName(entity.Status),

@@ -90,6 +90,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Reload with details
                 var created = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
@@ -122,6 +123,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Update embedding
                 var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
@@ -154,6 +156,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Delete embedding
                 await DeleteEmbeddingAsync(id);
@@ -187,6 +190,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync(entity.MaterialId);
+                await InvalidateNurserySummaryAsync(entity.NurseryId);
 
                 // Update embedding
                 var reloaded = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(id);
@@ -280,6 +284,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await InvalidateNurserySummaryAsync(nurseryId);
 
                 // Reload with details
                 var result = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(targerEntity.Id);
@@ -313,6 +318,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await _unitOfWork.CommitTransactionAsync();
 
                 await InvalidateCacheAsync();
+                await InvalidateNurserySummaryAsync(nurseryId);
 
                 var updated = await _unitOfWork.NurseryMaterialRepository.GetByIdWithDetailsAsync(entity.Id);
                 QueueEmbeddingAsync(updated!);
@@ -344,6 +350,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException("You do not have any nursery");
 
             var imported = await ImportMaterialAsync(nursery.Id, request);
+
+            // Invalidate nursery inventory summary cache after import
+            await InvalidateNurserySummaryAsync(nursery.Id);
 
             // Trigger embedding from manager import flow.
             await QueueEmbeddingByIdAsync(imported.Id);
@@ -413,6 +422,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 await _cacheService.RemoveByPrefixAsync($"{NURSERIES_BY_MATERIAL_KEY}_{materialId.Value}");
             }
+        }
+
+        /// <summary>
+        /// Invalidate nursery-specific inventory summary cache
+        /// Cache key: nurseries_all_{nurseryId}_inventory_summary_t{threshold}_d{days}
+        /// </summary>
+        private async Task InvalidateNurserySummaryAsync(int nurseryId)
+        {
+            await _cacheService.RemoveByPrefixAsync($"nurseries_all_{nurseryId}_inventory_summary");
         }
 
         #endregion
