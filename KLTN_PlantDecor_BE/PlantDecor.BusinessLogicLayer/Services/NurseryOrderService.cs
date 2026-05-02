@@ -264,6 +264,32 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updatedNurseryOrder);
         }
 
+        public async Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to update this nursery order");
+
+            if (nurseryOrder.Status != (int)OrderStatusEnum.PendingConfirmation)
+                throw new BadRequestException("Nursery order is not in pending confirmation status.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)OrderStatusEnum.Completed;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            _backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
+                service => service.CompleteOrderIfAllNurseryOrdersCompletedAsync(nurseryOrder.OrderId, now));
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);

@@ -19,5 +19,10 @@
         /// Auto-complete orders that stay in PendingConfirmation for 3 days
         /// </summary>
         Task AutoCompletePendingConfirmationOrdersAsync();
+
+        /// <summary>
+        /// Mark parent order as Completed when all nursery orders are completed
+        /// </summary>
+        Task CompleteOrderIfAllNurseryOrdersCompletedAsync(int orderId, DateTime completedAt);
     }
 }

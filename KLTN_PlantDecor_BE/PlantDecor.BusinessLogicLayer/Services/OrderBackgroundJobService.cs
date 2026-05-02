@@ -180,5 +180,57 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        public async Task CompleteOrderIfAllNurseryOrdersCompletedAsync(int orderId, DateTime completedAt)
+        {
+            try
+            {
+                _logger.LogInformation("Checking nursery order completion for Order {OrderId}", orderId);
+
+                var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+                if (order == null)
+                {
+                    _logger.LogWarning("Order {OrderId} not found", orderId);
+                    return;
+                }
+
+                if (order.Status == (int)OrderStatusEnum.Completed)
+                {
+                    return;
+                }
+
+                if (order.Status != (int)OrderStatusEnum.PendingConfirmation)
+                {
+                    _logger.LogInformation(
+                        "Order {OrderId} is not in PendingConfirmation status, current status: {Status}",
+                        orderId,
+                        order.Status);
+                    return;
+                }
+
+                var allNurseryOrdersCompleted = order.NurseryOrders
+                    .All(no => no.Status == (int)OrderStatusEnum.Completed);
+
+                if (!allNurseryOrdersCompleted)
+                {
+                    _logger.LogInformation("Order {OrderId} has incomplete nursery orders", orderId);
+                    return;
+                }
+
+                order.Status = (int)OrderStatusEnum.Completed;
+                order.CompletedAt = completedAt;
+                order.UpdatedAt = completedAt;
+                _unitOfWork.OrderRepository.PrepareUpdate(order);
+
+                await _unitOfWork.SaveAsync();
+
+                _logger.LogInformation("Order {OrderId} marked as Completed", orderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while checking nursery order completion for Order {OrderId}", orderId);
+                throw;
+            }
+        }
+
     }
 }
