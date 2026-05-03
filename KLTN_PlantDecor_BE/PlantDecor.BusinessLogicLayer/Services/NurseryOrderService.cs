@@ -453,9 +453,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (nurseryOrder.Status != (int)OrderStatusEnum.Shipping)
                 throw new BadRequestException("The order is not in shipping status.");
 
+            string? deliveryImageUrl = null;
+            if (request.DeliveryImage != null)
+            {
+                var (isValid, errorMessage) = _cloudinaryService.ValidateDocumentFile(request.DeliveryImage);
+                if (!isValid)
+                    throw new BadRequestException(errorMessage);
+
+                var uploadResult = await _cloudinaryService.UploadFileAsync(request.DeliveryImage, "NurseryOrderDelivery");
+                deliveryImageUrl = uploadResult.SecureUrl;
+            }
+
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Failed;
             nurseryOrder.DeliveryNote = request.FailureReason;
+            nurseryOrder.DeliveryImageUrl = deliveryImageUrl;
             nurseryOrder.UpdatedAt = now;
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);

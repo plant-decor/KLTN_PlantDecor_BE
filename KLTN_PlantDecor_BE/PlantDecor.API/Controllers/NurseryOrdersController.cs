@@ -101,7 +101,8 @@ namespace PlantDecor.API.Controllers
         /// Xác nhận giao hàng thất bại -> DeliveryFailed
         /// </summary>
         [HttpPut("{id}/mark-delivery-failed")]
-        public async Task<IActionResult> MarkDeliveryFailed(int id, [FromBody] MarkDeliveryFailedRequestDto request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> MarkDeliveryFailed(int id, [FromForm] MarkDeliveryFailedRequestDto request)
         {
             var currentUserId = GetCurrentUserId();
             var result = await _nurseryOrderService.MarkDeliveryFailedAsync(currentUserId, id, request);
