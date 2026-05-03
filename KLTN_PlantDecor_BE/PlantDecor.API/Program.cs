@@ -225,6 +225,7 @@ namespace PlantDecor.API
                         .WithOrigins(
                     "https://www.plantdecor.io.vn",
                     "https://plantdecor.io.vn",
+                     "http://localhost:3000",
                     "https://api.plantdecor.io.vn"
                         )
                         .AllowAnyMethod()
