@@ -1,6 +1,7 @@
 ﻿using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 
 namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
@@ -12,5 +13,9 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId);
         Task<OrderResponseDto> MarkOrderAsDeliveredAsync(int orderId);
         Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email);
+        Task<PaginatedResult<OrderResponseDto>> GetOrdersForConsultantAsync(
+            ConsultantOrderSearchRequestDto request,
+            Pagination pagination);
+        Task<OrderResponseDto> GetOrderByIdForConsultantAsync(int orderId);
     }
 }

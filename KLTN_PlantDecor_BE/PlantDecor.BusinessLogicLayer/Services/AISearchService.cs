@@ -992,6 +992,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var isVietnamese = responseLanguage == LanguageVietnamese;
                 var userPolicies = await _policyKnowledgeService.GetByCategoryActiveAsync(PolicyContentCategoryEnum.UserPolicy);
                 var returnPolicies = await _policyKnowledgeService.GetByCategoryActiveAsync(PolicyContentCategoryEnum.ReturnPolicy);
+                var depositPolicies = (await _unitOfWork.DepositPolicyRepository.GetAllOrderedAsync())
+                    .Where(p => p.IsActive)
+                    .ToList();
                 var policySources = BuildPolicyGroundingSources(userPolicies, returnPolicies);
 
                 var userPolicySection = BuildPolicySection(
@@ -1002,8 +1005,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     isVietnamese ? "Chinh sach hoan tra" : "Return Policy",
                     returnPolicies,
                     responseLanguage);
+                var depositPolicySection = BuildDepositPolicySection(depositPolicies, responseLanguage);
 
-                if (string.IsNullOrWhiteSpace(userPolicySection) && string.IsNullOrWhiteSpace(returnPolicySection))
+                if (string.IsNullOrWhiteSpace(userPolicySection)
+                    && string.IsNullOrWhiteSpace(returnPolicySection)
+                    && string.IsNullOrWhiteSpace(depositPolicySection))
                 {
                     return BuildPolicySupportFallbackResponse(responseLanguage);
                 }
@@ -1019,6 +1025,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     policySections.Add(returnPolicySection);
                 }
 
+                if (!string.IsNullOrWhiteSpace(depositPolicySection))
+                {
+                    policySections.Add(depositPolicySection);
+                }
+
                 var groundedSummary = string.Join("\n", policySections);
 
                 return new AIChatbotResponseDto
@@ -1026,8 +1037,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Intent = ChatbotIntentPolicySupport,
                     Reply =
                         (isVietnamese
-                            ? "Voi cau hoi ve chinh sach nguoi dung hoac hoan tra, minh da lay thong tin tu noi dung chinh sach dang active trong he thong:\n"
-                            : "For user-policy or return-policy questions, I retrieved information from active policy content in the system:\n") +
+                            ? "Voi cau hoi ve chinh sach nguoi dung, hoan tra hoac dat coc, minh da lay thong tin dang active trong he thong:\n"
+                            : "For user-policy, return-policy, or deposit-policy questions, I retrieved active policy information from the system:\n") +
                         groundedSummary + "\n" +
                         (isVietnamese
                             ? "De dam bao thong tin cuoi cung chinh xac tai thoi diem giao dich, ban vui long chat voi tu van vien. "
@@ -1416,6 +1427,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             return sectionTitle + ":\n" + string.Join("\n", excerpts!);
+        }
+
+        private static string BuildDepositPolicySection(
+            List<DataAccessLayer.Entities.DepositPolicy>? policies,
+            string responseLanguage)
+        {
+            if (policies == null || policies.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            var sectionTitle = isVietnamese ? "Chinh sach dat coc" : "Deposit Policy";
+            var lines = policies
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.MinPrice)
+                .ThenBy(p => p.MaxPrice ?? decimal.MaxValue)
+                .Select(p =>
+                {
+                    var priceRange = FormatDepositPriceRange(p.MinPrice, p.MaxPrice, isVietnamese);
+                    return isVietnamese
+                        ? $"- {priceRange}: dat coc {p.DepositPercentage}%"
+                        : $"- {priceRange}: deposit {p.DepositPercentage}%";
+                })
+                .ToList();
+
+            return lines.Count == 0
+                ? string.Empty
+                : sectionTitle + ":\n" + string.Join("\n", lines);
+        }
+
+        private static string FormatDepositPriceRange(decimal minPrice, decimal? maxPrice, bool isVietnamese)
+        {
+            var min = FormatPolicyMoney(minPrice);
+            if (!maxPrice.HasValue)
+            {
+                return isVietnamese
+                    ? $"tu {min} tro len"
+                    : $"from {min} and above";
+            }
+
+            var max = FormatPolicyMoney(maxPrice.Value);
+            return isVietnamese
+                ? $"tu {min} den duoi {max}"
+                : $"from {min} to under {max}";
+        }
+
+        private static string FormatPolicyMoney(decimal value)
+        {
+            return value.ToString("#,0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static string BuildPolicyExcerpt(string? text, int maxChars)

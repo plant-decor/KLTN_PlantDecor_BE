@@ -7,6 +7,7 @@
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
         public decimal? TotalAmount { get; set; }
         public decimal? DepositAmount { get; set; }
         public decimal? RemainingAmount { get; set; }

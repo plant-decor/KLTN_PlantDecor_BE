@@ -289,9 +289,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryLowStockProductAlertDto>> GetMyNurseryLowStockProductsAsync(int managerId, int threshold = 5)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new NotFoundException("You do not have a nursery to update");
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_low_stock_t{threshold}";
             var cachedData = await _cacheService.GetDataAsync<List<NurseryLowStockProductAlertDto>>(cacheKey);
@@ -344,9 +342,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<NurseryMaterialSummaryResponseDto> GetMyNurseryMaterialSummaryAsync(int managerId, int lowStockThreshold = 5, int expiringInDays = 30)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null)
-                throw new NotFoundException("You do not have a nursery to update");
+            var nursery = await ResolveOperatorNurseryForReadAsync(managerId);
 
             var cacheKey = $"{ALL_NURSERIES_KEY}_{nursery.Id}_inventory_summary_t{lowStockThreshold}_d{expiringInDays}";
             var cachedData = await _cacheService.GetDataAsync<NurseryMaterialSummaryResponseDto>(cacheKey);

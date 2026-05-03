@@ -88,7 +88,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/nurseries/{nurseryId}/plants-summary
         /// </summary>
         [HttpGet("nurseries/{nurseryId}/plants-summary")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager,Staff")]
         public async Task<IActionResult> GetPlantsSummary(int nurseryId)
         {
             var managerId = GetCurrentUserId();

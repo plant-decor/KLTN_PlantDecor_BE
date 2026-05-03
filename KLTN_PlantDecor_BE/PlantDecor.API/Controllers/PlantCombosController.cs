@@ -267,7 +267,7 @@ namespace PlantDecor.API.Controllers
         /// GET /api/manager/plant-combos
         /// </summary>
         [HttpGet("/api/manager/plant-combos")]
-        [Authorize(Roles = "Manager")]
+        [Authorize(Roles = "Manager, Staff")]
         public async Task<IActionResult> GetNurseryComboStock([FromQuery] Pagination pagination)
         {
             var managerId = GetCurrentUserId();

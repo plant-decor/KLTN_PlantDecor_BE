@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Updates;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Extensions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -25,20 +27,88 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _securityStampCacheService = securityStampCacheService;
             _logger = logger;
         }
-        public Task<bool> Deactive(int userId)
+        public async Task<bool> Deactive(int userId)
         {
-            throw new NotImplementedException();
+            if (userId <= 0)
+                throw new BadRequestException("Invalid user ID");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new NotFoundException($"User with ID {userId} not found");
+                }
+
+                if (user.Status == (int)UserStatusEnum.Inactive)
+                {
+                    await _unitOfWork.CommitTransactionAsync();
+                    return true;
+                }
+
+                await user.InvalidateAllTokensAsync(_securityStampCacheService);
+                user.Status = (int)UserStatusEnum.Inactive;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                var updateResult = await _unitOfWork.UserRepository.UpdateAsync(user);
+                if (updateResult == 0)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new Exception("Failed to deactivate user");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        public Task<PaginatedResult<UserResponse>> GetAllAsyncWithPagination(Pagination pagination)
+        public async Task<PaginatedResult<UserResponse>> GetAllAsyncWithPagination(Pagination pagination)
         {
-            throw new NotImplementedException();
+            var appliedPagination = pagination ?? new Pagination();
+            var result = await _unitOfWork.UserRepository.GetAllAsyncWithPagination(appliedPagination);
+
+            var mappedItems = result.Items.Select(user => user.ToResponse()).ToList();
+
+            return new PaginatedResult<UserResponse>(
+                mappedItems,
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
+        }
+
+        public async Task<PaginatedResult<UserResponse>> SearchUsersAsync(UserSearchRequestDto request)
+        {
+            var pagination = request?.Pagination ?? new Pagination();
+            var filter = BuildUserSearchFilter(request);
+
+            if (filter.CreatedFrom.HasValue && filter.CreatedTo.HasValue
+                && filter.CreatedFrom.Value > filter.CreatedTo.Value)
+            {
+                throw new BadRequestException("CreatedFrom must be earlier than CreatedTo");
+            }
+
+            var result = await _unitOfWork.UserRepository.SearchAsync(filter, pagination);
+            var mappedItems = result.Items.Select(user => user.ToResponse()).ToList();
+
+            return new PaginatedResult<UserResponse>(
+                mappedItems,
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
         }
 
         public async Task<UserResponse> GetByIdAsync(int id)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(id);
-            return user?.ToResponse();
+            return user == null ? null! : user.ToResponse();
         }
 
         public Task<bool> GetUserByPhoneAsync(string phone)
@@ -60,9 +130,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return existingUser != null && existingUser.Id != currentUserId;
         }
 
-        public Task<bool> SetActive(int userId)
+        public async Task<bool> SetActive(int userId)
         {
-            throw new NotImplementedException();
+            if (userId <= 0)
+                throw new BadRequestException("Invalid user ID");
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new NotFoundException($"User with ID {userId} not found");
+                }
+
+                if (user.Status == (int)UserStatusEnum.Active)
+                {
+                    await _unitOfWork.CommitTransactionAsync();
+                    return true;
+                }
+
+                user.Status = (int)UserStatusEnum.Active;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                var updateResult = await _unitOfWork.UserRepository.UpdateAsync(user);
+                if (updateResult == 0)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new Exception("Failed to activate user");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<UserResponse> UpdateUserInfoAsync(int id, UserUpdateDto userUpdate)
@@ -306,6 +413,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
+        private static UserSearchFilter BuildUserSearchFilter(UserSearchRequestDto? request)
+        {
+            return new UserSearchFilter
+            {
+                Keyword = request?.Keyword,
+                Role = request?.Role,
+                Status = request?.Status,
+                IsVerified = request?.IsVerified,
+                NurseryId = request?.NurseryId,
+                CreatedFrom = request?.CreatedFrom,
+                CreatedTo = request?.CreatedTo
+            };
+        }
+
         private void ValidatePassword(string password)
         {
             var errors = new List<string>();
@@ -398,7 +519,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return true;
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;

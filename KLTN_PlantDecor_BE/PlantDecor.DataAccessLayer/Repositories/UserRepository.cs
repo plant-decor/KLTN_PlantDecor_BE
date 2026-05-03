@@ -67,6 +67,57 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<User>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
+        public async Task<PaginatedResult<User>> SearchAsync(UserSearchFilter filter, Pagination pagination)
+        {
+            var query = _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserProfile)
+                .Include(u => u.RefreshTokens)
+                .Include(u => u.WorkingNursery)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                var term = filter.Keyword.Trim().ToLower();
+                query = query.Where(u =>
+                    (u.Email != null && u.Email.ToLower().Contains(term))
+                    || (u.Username != null && u.Username.ToLower().Contains(term))
+                    || (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(term))
+                    || (u.UserProfile != null && u.UserProfile.FullName != null
+                        && u.UserProfile.FullName.ToLower().Contains(term)));
+            }
+
+            if (filter.Role.HasValue)
+                query = query.Where(u => u.RoleId == (int)filter.Role.Value);
+
+            if (filter.Status.HasValue)
+                query = query.Where(u => u.Status == (int)filter.Status.Value);
+
+            if (filter.IsVerified.HasValue)
+                query = query.Where(u => u.IsVerified == filter.IsVerified.Value);
+
+            if (filter.NurseryId.HasValue)
+                query = query.Where(u => u.NurseryId == filter.NurseryId.Value);
+
+            if (filter.CreatedFrom.HasValue)
+                query = query.Where(u => u.CreatedAt.HasValue && u.CreatedAt.Value >= filter.CreatedFrom.Value);
+
+            if (filter.CreatedTo.HasValue)
+                query = query.Where(u => u.CreatedAt.HasValue && u.CreatedAt.Value <= filter.CreatedTo.Value);
+
+            query = query
+                .OrderByDescending(u => u.CreatedAt)
+                .ThenByDescending(u => u.Id);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<User>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         public async Task<User?> GetByEmailAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))

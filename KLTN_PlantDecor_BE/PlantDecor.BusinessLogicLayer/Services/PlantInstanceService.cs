@@ -156,9 +156,22 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<List<NurseryPlantSummaryDto>> GetPlantsSummaryByNurseryAsync(int nurseryId, int managerId)
         {
-            // Validate nursery thuộc về manager
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
-            if (nursery == null || nursery.Id != nurseryId)
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (user == null)
+                throw new ForbiddenException("You do not have permission to manage this nursery");
+
+            var hasAccess = false;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+                hasAccess = nursery != null && nursery.Id == nurseryId;
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff)
+            {
+                hasAccess = user.NurseryId.HasValue && user.NurseryId.Value == nurseryId;
+            }
+
+            if (!hasAccess)
                 throw new ForbiddenException("You do not have permission to manage this nursery");
 
             var cacheKey = $"{NURSERY_INSTANCES_KEY}_{nurseryId}_summary";
