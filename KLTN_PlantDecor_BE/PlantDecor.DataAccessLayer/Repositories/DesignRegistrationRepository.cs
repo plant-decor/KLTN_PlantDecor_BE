@@ -87,6 +87,48 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(x => x.OrderId == orderId);
         }
 
+        public async Task<PaginatedResult<DesignRegistration>> GetByAssignedCaretakerIdAsync(int caretakerId, Pagination pagination, int? status = null)
+        {
+            var query = BuildDetailedQuery()
+                .Where(x => x.AssignedCaretakerId.HasValue && x.AssignedCaretakerId.Value == caretakerId);
+
+            if (status.HasValue)
+            {
+                query = query.Where(x => x.Status == status.Value);
+            }
+
+            query = query.OrderByDescending(x => x.Id);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<DesignRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        public async Task<PaginatedResult<DesignRegistration>> GetByAssignedCaretakerIdWithStatusesAsync(int caretakerId, List<int> statuses, Pagination pagination)
+        {
+            if (statuses == null || statuses.Count == 0)
+            {
+                return await GetByAssignedCaretakerIdAsync(caretakerId, pagination, status: null);
+            }
+
+            var query = BuildDetailedQuery()
+                .Where(x => x.AssignedCaretakerId.HasValue && x.AssignedCaretakerId.Value == caretakerId && statuses.Contains(x.Status));
+
+            query = query.OrderByDescending(x => x.Id);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<DesignRegistration>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         public async Task<Dictionary<int, int>> CountOpenByNurseryIdsAsync(List<int> nurseryIds)
         {
             if (nurseryIds == null || nurseryIds.Count == 0)
