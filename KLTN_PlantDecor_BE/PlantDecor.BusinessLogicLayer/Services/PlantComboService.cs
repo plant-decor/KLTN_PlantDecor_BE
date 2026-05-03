@@ -964,7 +964,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PaginatedResult<NurseryComboStockResponseDto>> GetNurseryComboStockAsync(int managerId, Pagination pagination)
         {
-            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(managerId);
+            if (user == null)
+                throw new ForbiddenException("You do not have permission to access this resource");
+
+            Nursery? nursery = null;
+            if (user.RoleId == (int)RoleEnum.Manager)
+            {
+                nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(managerId);
+            }
+            else if (user.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                nursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+            }
+
             if (nursery == null)
                 throw new ForbiddenException("You do not have permission to access this resource");
 
