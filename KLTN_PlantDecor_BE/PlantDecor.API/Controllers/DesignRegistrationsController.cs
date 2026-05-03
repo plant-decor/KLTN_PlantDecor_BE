@@ -80,6 +80,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Caretaker] Lấy danh sách DesignRegistration được giao cho caretaker
+        /// </summary>
+        [HttpGet("caretaker/my")]
+        [Authorize(Roles = "Caretaker")]
+        public async Task<IActionResult> GetMyAssignedRegistrations([FromQuery] Pagination pagination)
+        {
+            var caretakerId = GetUserId();
+            var result = await _designRegistrationService.GetByAssignedCaretakerAsync(caretakerId, pagination);
+            return Ok(new ApiResponse<PaginatedResult<DesignRegistrationResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get assigned design registrations successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Manager/Staff] Giao caretaker cho đăng ký thiết kế và cập nhật toàn bộ task chưa hoàn tất
         /// </summary>
         [HttpPut("{id}/assign-caretaker")]

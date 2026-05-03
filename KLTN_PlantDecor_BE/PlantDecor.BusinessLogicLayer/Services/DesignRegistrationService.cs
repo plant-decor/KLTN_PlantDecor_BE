@@ -135,6 +135,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 result.PageSize);
         }
 
+        public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetByAssignedCaretakerAsync(int caretakerId, Pagination pagination)
+        {
+            // Only return registrations with status InProgress or AwaitFinalPayment for caretakers
+            var statuses = new List<int> { (int)DesignRegistrationStatus.InProgress, (int)DesignRegistrationStatus.AwaitFinalPayment };
+            var result = await _unitOfWork.DesignRegistrationRepository.GetByAssignedCaretakerIdWithStatusesAsync(caretakerId, statuses, pagination);
+            return new PaginatedResult<DesignRegistrationResponseDto>(
+                result.Items.Select(x => x.ToResponse()).ToList(),
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
+        }
+
         public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetPendingForNurseryAsync(int managerId, Pagination pagination)
         {
             var nursery = await ResolveOperatorNurseryAsync(managerId);
