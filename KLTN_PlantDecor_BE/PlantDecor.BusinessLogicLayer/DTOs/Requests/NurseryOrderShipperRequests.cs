@@ -22,6 +22,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         [Required(ErrorMessage = "Please enter the delivery failure reason")]
         [StringLength(255)]
         public string FailureReason { get; set; } = null!;
+
+        public IFormFile? DeliveryImage { get; set; }
     }
 
     public class UpdateNurseryOrderShipperRequestDto
