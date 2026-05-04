@@ -264,6 +264,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updatedNurseryOrder);
         }
 
+        public async Task<NurseryOrderResponseDto> MarkNurseryOrderAssignedForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to update this nursery order");
+
+            if (nurseryOrder.Status == (int)OrderStatusEnum.Assigned)
+                return MapToDto(nurseryOrder);
+
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Paid
+                && nurseryOrder.Status != (int)OrderStatusEnum.DepositPaid)
+                throw new BadRequestException("Nursery order must be in Paid or DepositPaid status to assign.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)OrderStatusEnum.Assigned;
+            nurseryOrder.AssignedAt = now;
+            nurseryOrder.UpdatedAt = now;
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);
