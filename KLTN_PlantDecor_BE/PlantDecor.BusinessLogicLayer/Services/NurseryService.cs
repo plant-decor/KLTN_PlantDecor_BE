@@ -413,10 +413,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var commonPlants = await _unitOfWork.CommonPlantRepository.GetAllAsync();
             var plantInstances = await _unitOfWork.PlantInstanceRepository.GetAllAsync();
             var nurseries = await _unitOfWork.NurseryRepository.GetAllAsync();
+            var plants = await _unitOfWork.PlantRepository.GetAllAsync();
 
             var nurseryNames = nurseries
                 .Where(n => !string.IsNullOrEmpty(n.Name))
                 .ToDictionary(n => n.Id, n => n.Name ?? string.Empty);
+
+            var plantNames = plants
+                .Where(p => !string.IsNullOrEmpty(p.Name))
+                .ToDictionary(p => p.Id, p => p.Name ?? string.Empty);
 
             var commonPlantLowStock = commonPlants
                 .Where(cp => cp.IsActive)
@@ -426,7 +431,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     NurseryName = nurseryNames.TryGetValue(cp.NurseryId, out var name) ? name : string.Empty,
                     ProductType = "CommonPlant",
                     ProductId = cp.Id,
-                    ProductName = cp.Plant?.Name,
+                    ProductName = plantNames.TryGetValue(cp.PlantId, out var plantName) ? plantName : cp.Plant?.Name,
                     TotalQuantity = cp.Quantity,
                     ReservedQuantity = cp.ReservedQuantity,
                     AvailableQuantity = cp.Quantity,
@@ -440,8 +445,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .GroupBy(pi => new
                 {
                     pi.CurrentNurseryId,
-                    pi.PlantId,
-                    PlantName = pi.Plant != null ? pi.Plant.Name : null
+                    pi.PlantId
                 })
                 .Select(g => new SystemLowStockProductAlertDto
                 {
@@ -451,7 +455,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         : string.Empty,
                     ProductType = "PlantInstance",
                     ProductId = g.Key.PlantId ?? 0,
-                    ProductName = g.Key.PlantName,
+                    ProductName = g.Key.PlantId.HasValue && plantNames.TryGetValue(g.Key.PlantId.Value, out var plantName)
+                        ? plantName
+                        : null,
                     TotalQuantity = g.Count(),
                     ReservedQuantity = g.Count(x => x.Status == (int)PlantInstanceStatusEnum.Reserved),
                     AvailableQuantity = g.Count(x => x.Status == (int)PlantInstanceStatusEnum.Available),
