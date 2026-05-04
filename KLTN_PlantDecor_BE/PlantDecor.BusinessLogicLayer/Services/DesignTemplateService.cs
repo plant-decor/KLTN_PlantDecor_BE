@@ -14,9 +14,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ICacheService _cacheService;
         private readonly ICloudinaryService _cloudinaryService;
 
-        private const string CACHE_KEY_PUBLIC_ALL = "design_tpl_public_all";
-        private const string CACHE_KEY_ADMIN_ALL = "design_tpl_admin_all";
-        private const string CACHE_KEY_PREFIX = "design_tpl";
+        private const string CACHE_KEY_PUBLIC_ALL = "design_tpl_public_all_v2";
+        private const string CACHE_KEY_ADMIN_ALL = "design_tpl_admin_all_v2";
+        private const string CACHE_KEY_PREFIX = "design_tpl_v2";
 
         public DesignTemplateService(IUnitOfWork unitOfWork, ICacheService cacheService, ICloudinaryService cloudinaryService)
         {

@@ -22,6 +22,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int? MaterialId { get; set; }
         public int? PlantId { get; set; }
         public int ItemType { get; set; }
+        public string ItemTypeName { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public DateTime? CreatedAt { get; set; }
     }
