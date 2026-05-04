@@ -9,8 +9,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IMaterialService
     {
         // CRUD Operations
-        Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination);
-        Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination);
+        Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination, string? keyword = null);
+        Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination, string? keyword = null);
         Task<MaterialResponseDto> GetMaterialByIdAsync(int id);
         Task<MaterialResponseDto> CreateMaterialAsync(MaterialRequestDto request);
         Task<MaterialResponseDto> UpdateMaterialAsync(int id, MaterialUpdateDto request);
