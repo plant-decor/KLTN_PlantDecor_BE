@@ -169,6 +169,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Cập nhật trạng thái nursery order thành Assigned
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/mark-assigned")]
+        public async Task<IActionResult> MarkNurseryOrderAssigned([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.MarkNurseryOrderAssignedForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Marked nursery order as assigned successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Lấy tổng doanh thu của vườn hiện tại theo khoảng thời gian
         /// </summary>
         [HttpGet("revenue/summary")]
