@@ -278,8 +278,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return MapToDto(nurseryOrder);
 
             if (nurseryOrder.Status != (int)OrderStatusEnum.Paid
-                && nurseryOrder.Status != (int)OrderStatusEnum.DepositPaid)
-                throw new BadRequestException("Nursery order must be in Paid or DepositPaid status to assign.");
+                && nurseryOrder.Status != (int)OrderStatusEnum.DepositPaid && nurseryOrder.Status != (int)OrderStatusEnum.Failed)
+                throw new BadRequestException("Nursery order must be in Paid, DepositPaid, or Failed status to assign.");
 
             var now = GetCurrentVietnamTime();
             nurseryOrder.Status = (int)OrderStatusEnum.Assigned;

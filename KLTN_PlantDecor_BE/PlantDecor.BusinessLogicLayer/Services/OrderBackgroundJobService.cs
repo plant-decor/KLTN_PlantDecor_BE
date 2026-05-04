@@ -161,6 +161,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                     foreach (var nurseryOrder in order.NurseryOrders)
                     {
+                        await UpdateInventoryForCompletedNurseryOrderAsync(nurseryOrder);
                         nurseryOrder.Status = (int)OrderStatusEnum.Completed;
                         nurseryOrder.UpdatedAt = now;
                         _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
@@ -229,6 +230,47 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 _logger.LogError(ex, "Error while checking nursery order completion for Order {OrderId}", orderId);
                 throw;
+            }
+        }
+
+        private async Task UpdateInventoryForCompletedNurseryOrderAsync(NurseryOrder nurseryOrder)
+        {
+            foreach (var detail in nurseryOrder.NurseryOrderDetails)
+            {
+                var quantity = detail.Quantity ?? 0;
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+
+                if (detail.CommonPlantId.HasValue)
+                {
+                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(detail.CommonPlantId.Value);
+                    if (commonPlant != null)
+                    {
+                        commonPlant.ReservedQuantity = Math.Max(0, commonPlant.ReservedQuantity - quantity);
+                        _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                    }
+                }
+                else if (detail.NurseryMaterialId.HasValue)
+                {
+                    var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(detail.NurseryMaterialId.Value);
+                    if (nurseryMaterial != null)
+                    {
+                        nurseryMaterial.ReservedQuantity = Math.Max(0, nurseryMaterial.ReservedQuantity - quantity);
+                        _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                    }
+                }
+
+                if (detail.PlantInstanceId.HasValue)
+                {
+                    var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
+                    if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved)
+                    {
+                        plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
+                        _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                    }
+                }
             }
         }
 
