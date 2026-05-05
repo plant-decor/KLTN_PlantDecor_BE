@@ -166,6 +166,26 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Enum cho Care Reminder
+        /// GET /api/system/enums/care-reminders
+        /// </summary>
+        [HttpGet("care-reminders")]
+        [AllowAnonymous]
+        public IActionResult GetCareReminderEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care reminder enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("CareReminderType", typeof(CareReminderTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
         /// Enum cho ServiceRegistration
         /// GET /api/system/enums/service-registrations
         /// </summary>
