@@ -239,6 +239,47 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return sb.ToString().Trim();
         }
 
+        public string SerializeCareServicePackage(CareServicePackageEmbeddingDto dto)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine("Service type: Plant care service package");
+            sb.AppendLine($"Package name: {dto.Name}");
+
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+                sb.AppendLine($"Description: {dto.Description}");
+
+            if (!string.IsNullOrWhiteSpace(dto.Features))
+                sb.AppendLine($"Features: {dto.Features}");
+
+            if (dto.ServiceType.HasValue)
+                sb.AppendLine($"Service mode: {dto.ServiceType.Value}");
+
+            if (dto.VisitPerWeek.HasValue)
+                sb.AppendLine($"Visits per week: {dto.VisitPerWeek.Value}");
+
+            if (dto.DurationDays.HasValue)
+                sb.AppendLine($"Duration (days): {dto.DurationDays.Value}");
+
+            if (dto.AreaLimit.HasValue)
+                sb.AppendLine($"Area limit (m2): {dto.AreaLimit.Value}");
+
+            if (dto.UnitPrice.HasValue)
+                sb.AppendLine($"Unit price: {dto.UnitPrice.Value:N0} VND");
+
+            if (dto.SuitabilityCategoryNames.Any())
+                sb.AppendLine($"Suitable categories: {string.Join(", ", dto.SuitabilityCategoryNames)}");
+
+            if (dto.SuitabilityCareLevelNames.Any())
+                sb.AppendLine($"Suitable care levels: {string.Join(", ", dto.SuitabilityCareLevelNames)}");
+            else if (dto.SuitabilityCareLevels.Any())
+                sb.AppendLine($"Suitable care levels: {string.Join(", ", dto.SuitabilityCareLevels)}");
+
+            sb.AppendLine($"Status: {(dto.IsActive ? "Active" : "Inactive")}");
+
+            return sb.ToString().Trim();
+        }
+
         public Dictionary<string, object> ExtractMetadata(int nurseryId, decimal? price, string status, int originalEntityId)
         {
             return new Dictionary<string, object>
