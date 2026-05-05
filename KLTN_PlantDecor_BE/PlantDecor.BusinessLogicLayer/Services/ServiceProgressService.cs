@@ -343,6 +343,44 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return progresses.Select(MapToDto).ToList();
         }
 
+        public async Task<StaffScheduleResponseDto> GetStaffScheduleAsync(int managerId, int staffId, DateOnly from, DateOnly to)
+        {
+            if (to < from)
+                throw new BadRequestException("'to' date must be >= 'from' date");
+
+            if ((to.ToDateTime(TimeOnly.MinValue) - from.ToDateTime(TimeOnly.MinValue)).TotalDays > 90)
+                throw new BadRequestException("Date range cannot exceed 90 days");
+
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+            var staff = await _unitOfWork.UserRepository.GetByIdAsync(staffId)
+                ?? throw new NotFoundException($"User {staffId} not found");
+
+            if (!staff.NurseryId.HasValue || staff.NurseryId.Value != nursery.Id)
+                throw new ForbiddenException("This staff does not belong to your nursery");
+
+            var serviceProgresses = await _unitOfWork.ServiceProgressRepository
+                .GetByCaretakerAndDateRangeAsync(nursery.Id, staffId, from, to);
+
+            var designTasks = await _unitOfWork.DesignTaskRepository
+                .GetByAssignedStaffIdAndDateRangeAsync(staffId, from, to);
+
+            var filteredDesignTasks = designTasks
+                .Where(x => x.DesignRegistration?.NurseryId == nursery.Id)
+                .ToList();
+
+            var items = serviceProgresses
+                .Select(MapToStaffScheduleItem)
+                .Concat(filteredDesignTasks.Select(MapToStaffScheduleItem))
+                .OrderBy(x => x.Date ?? DateOnly.MaxValue)
+                .ThenBy(x => x.Shift?.StartTime ?? TimeOnly.MaxValue)
+                .ToList();
+
+            return new StaffScheduleResponseDto
+            {
+                Items = items
+            };
+        }
+
         private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)
         {
             var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
@@ -440,6 +478,58 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
+
+        private static StaffScheduleItemResponseDto MapToStaffScheduleItem(ServiceProgress sp)
+        {
+            var shiftDto = sp.Shift == null ? null : new ShiftInfoDto
+            {
+                StartTime = sp.Shift.StartTime,
+                EndTime = sp.Shift.EndTime
+            };
+
+            var packageDto = sp.ServiceRegistration?.NurseryCareService?.CareServicePackage == null ? null : new ServicePackageBriefDto
+            {
+                Id = sp.ServiceRegistration.NurseryCareService.CareServicePackage.Id,
+                Name = sp.ServiceRegistration.NurseryCareService.CareServicePackage.Name
+            };
+
+            var customerDto = sp.ServiceRegistration?.User == null ? null : sp.ServiceRegistration.User.ToUserSummary();
+
+            return new StaffScheduleItemResponseDto
+            {
+                Id = sp.Id,
+                TaskType = "CareService",
+                Date = sp.TaskDate,
+                Shift = shiftDto,
+                Customer = customerDto,
+                ServicePackage = packageDto,
+                Status = sp.Status.HasValue ? ((ServiceProgressStatusEnum)sp.Status.Value).ToString() : null
+            };
+        }
+
+        private static StaffScheduleItemResponseDto MapToStaffScheduleItem(DesignTask task)
+        {
+            var customerDto = task.DesignRegistration?.User == null ? null : task.DesignRegistration.User.ToUserSummary();
+
+            var packageDto = task.DesignRegistration?.DesignTemplateTier?.DesignTemplate == null ? null : new ServicePackageBriefDto
+            {
+                Id = task.DesignRegistration.DesignTemplateTier.DesignTemplate.Id,
+                Name = task.DesignRegistration.DesignTemplateTier.DesignTemplate.Name
+            };
+
+            return new StaffScheduleItemResponseDto
+            {
+                Id = task.Id,
+                TaskType = "DesignService",
+                Date = task.ScheduledDate,
+                Shift = null,
+                Customer = customerDto,
+                ServicePackage = packageDto,
+                Status = Enum.IsDefined(typeof(DesignTaskStatusEnum), task.Status)
+                    ? ((DesignTaskStatusEnum)task.Status).ToString()
+                    : $"Unknown({task.Status})"
+            };
+        }
         private static string? ResolveCareServiceTypeName(int? serviceType)
         {
             if (!serviceType.HasValue)
