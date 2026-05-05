@@ -34,6 +34,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IInvoiceRepository? _invoiceRepository;
         private IUserBehaviorLogRepository? _userBehaviorLogRepository;
         private IUserPlantRepository? _userPlantRepository;
+        private ICareReminderRepository? _careReminderRepository;
         private IAIChatSessionRepository? _aiChatSessionRepository;
         private IAIChatMessageRepository? _aiChatMessageRepository;
         private IPolicyContentRepository? _policyContentRepository;
@@ -180,6 +181,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IUserPlantRepository UserPlantRepository
         {
             get { return _userPlantRepository ??= new UserPlantRepository(_context); }
+        }
+
+        public ICareReminderRepository CareReminderRepository
+        {
+            get { return _careReminderRepository ??= new CareReminderRepository(_context); }
         }
 
         public IAIChatSessionRepository AIChatSessionRepository

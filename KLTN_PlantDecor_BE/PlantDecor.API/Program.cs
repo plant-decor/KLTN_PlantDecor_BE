@@ -143,6 +143,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IUserBehaviorLogService, UserBehaviorLogService>();
             builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
             builder.Services.AddScoped<IUserPlantService, UserPlantService>();
+            builder.Services.AddScoped<ICareReminderService, CareReminderService>();
             builder.Services.AddScoped<IChatService, ChatService>();
 
             // Cart & Wishlist

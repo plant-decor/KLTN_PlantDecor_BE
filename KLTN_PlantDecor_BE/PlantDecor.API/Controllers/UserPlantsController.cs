@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -14,10 +15,12 @@ namespace PlantDecor.API.Controllers
     public class UserPlantsController : ControllerBase
     {
         private readonly IUserPlantService _userPlantService;
+        private readonly ICareReminderService _careReminderService;
 
-        public UserPlantsController(IUserPlantService userPlantService)
+        public UserPlantsController(IUserPlantService userPlantService, ICareReminderService careReminderService)
         {
             _userPlantService = userPlantService;
+            _careReminderService = careReminderService;
         }
 
         /// <summary>
@@ -45,6 +48,85 @@ namespace PlantDecor.API.Controllers
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get my plants successfully",
                 Payload = userPlants
+            });
+        }
+
+        /// <summary>
+        /// [Customer] Lay danh sach thong bao nhac cham soc cay
+        /// </summary>
+        [HttpGet("my-care-reminders")]
+        public async Task<IActionResult> GetMyCareReminders()
+        {
+            var userId = GetUserId();
+            var reminders = await _userPlantService.GetMyCareRemindersAsync(userId);
+            if (reminders == null || reminders.Count == 0)
+            {
+                return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "You don't have any care reminders yet",
+                    Payload = new List<CareReminderNotificationResponseDto>()
+                });
+            }
+
+            return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care reminders successfully",
+                Payload = reminders
+            });
+        }
+
+        /// <summary>
+        /// [Customer] Tạo care reminder cho cây của tôi
+        /// </summary>
+        [HttpPost("my-care-reminders")]
+        public async Task<IActionResult> CreateMyCareReminder([FromBody] CreateCareReminderRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _careReminderService.CreateForUserAsync(userId, request);
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<CareReminderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Create care reminder successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Customer] Cập nhật care reminder của tôi
+        /// </summary>
+        [HttpPut("my-care-reminders/{id:int}")]
+        public async Task<IActionResult> UpdateMyCareReminder(int id, [FromBody] UpdateCareReminderRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _careReminderService.UpdateForUserAsync(userId, id, request);
+            return Ok(new ApiResponse<CareReminderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Update care reminder successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Customer] Xóa care reminder của tôi
+        /// </summary>
+        [HttpDelete("my-care-reminders/{id:int}")]
+        public async Task<IActionResult> DeleteMyCareReminder(int id)
+        {
+            var userId = GetUserId();
+            await _careReminderService.DeleteForUserAsync(userId, id);
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Delete care reminder successfully",
+                Payload = null
             });
         }
 
