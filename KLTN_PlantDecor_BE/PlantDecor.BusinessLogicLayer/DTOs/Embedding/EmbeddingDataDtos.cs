@@ -160,4 +160,27 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Embedding
         public int OriginalEntityId { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    /// <summary>
+    /// DTO for embedding CareServicePackage entity with suitability rules
+    /// </summary>
+    public class CareServicePackageEmbeddingDto
+    {
+        public int CareServicePackageId { get; set; }
+        public bool IsActive { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Features { get; set; }
+
+        public int? ServiceType { get; set; }
+        public int? VisitPerWeek { get; set; }
+        public int? DurationDays { get; set; }
+        public int? AreaLimit { get; set; }
+        public decimal? UnitPrice { get; set; }
+
+        public List<string> SuitabilityCategoryNames { get; set; } = new();
+        public List<int> SuitabilityCareLevels { get; set; } = new();
+        public List<string> SuitabilityCareLevelNames { get; set; } = new();
+    }
 }

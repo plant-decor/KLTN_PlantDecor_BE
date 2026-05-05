@@ -158,6 +158,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 EmbeddingEntityTypes.NurseryMaterial when entity is NurseryMaterialEmbeddingDto nmDto
                     => _textSerializer.SerializeNurseryMaterial(nmDto),
 
+                EmbeddingEntityTypes.CareServicePackage when entity is CareServicePackageEmbeddingDto cspDto
+                    => _textSerializer.SerializeCareServicePackage(cspDto),
+
                 // Fallback to JSON serialization for unknown types
                 _ => JsonSerializer.Serialize(entity, new JsonSerializerOptions
                 {
@@ -212,6 +215,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         nmDto.Price ?? nmDto.BasePrice,
                         nmDto.IsActive ? "Active" : "Inactive",
                         nmDto.NurseryMaterialId),
+
+                EmbeddingEntityTypes.CareServicePackage when entity is CareServicePackageEmbeddingDto cspDto
+                    => _textSerializer.ExtractMetadata(
+                        nurseryId: 0,
+                        price: cspDto.UnitPrice,
+                        status: cspDto.IsActive ? "Active" : "Inactive",
+                        originalEntityId: cspDto.CareServicePackageId),
 
                 // Fallback for unknown types
                 _ => new Dictionary<string, object> { ["EntityTypeName"] = typeof(T).Name }

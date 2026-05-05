@@ -6,13 +6,15 @@ namespace PlantDecor.BusinessLogicLayer.Constants
         public const string PlantInstance = "PlantInstance";
         public const string NurseryPlantCombo = "NurseryPlantCombo";
         public const string NurseryMaterial = "NurseryMaterial";
+        public const string CareServicePackage = "CareServicePackage";
 
         public static readonly string[] AllTypes = new[]
         {
             CommonPlant,
             PlantInstance,
             NurseryPlantCombo,
-            NurseryMaterial
+            NurseryMaterial,
+            CareServicePackage
         };
 
         public static bool IsValidType(string entityType)
