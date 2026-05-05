@@ -39,6 +39,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int SessionId { get; set; }
 
         /// <summary>
+        /// Optional. If provided (Customer only), chatbot can recommend care service packages based on plants in this order.
+        /// </summary>
+        public int? OrderId { get; set; }
+
+        /// <summary>
         /// Required user message for server-side intent analysis.
         /// </summary>
         public string Message { get; set; } = null!;
