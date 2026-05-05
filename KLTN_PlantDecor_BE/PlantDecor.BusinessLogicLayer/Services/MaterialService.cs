@@ -40,14 +40,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         #region CRUD Operations
 
-        public async Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination)
+        public async Task<PaginatedResult<MaterialListResponseDto>> GetAllMaterialsAsync(Pagination pagination, string? keyword = null)
         {
             var cacheKey = $"{ALL_MATERIALS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<MaterialListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var paginatedEntities = await _unitOfWork.MaterialRepository.GetAllWithDetailsAsync(pagination);
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetAllWithDetailsAsync(pagination, keyword);
             var result = new PaginatedResult<MaterialListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,
@@ -59,14 +59,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return result;
         }
 
-        public async Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination)
+        public async Task<PaginatedResult<MaterialListResponseDto>> GetActiveMaterialsAsync(Pagination pagination, string? keyword = null)
         {
             var cacheKey = $"{ACTIVE_MATERIALS_KEY}_p{pagination.PageNumber}_s{pagination.PageSize}";
             var cachedData = await _cacheService.GetDataAsync<PaginatedResult<MaterialListResponseDto>>(cacheKey);
             if (cachedData != null)
                 return cachedData;
 
-            var paginatedEntities = await _unitOfWork.MaterialRepository.GetActiveWithDetailsAsync(pagination);
+            var paginatedEntities = await _unitOfWork.MaterialRepository.GetActiveWithDetailsAsync(pagination, keyword);
             var result = new PaginatedResult<MaterialListResponseDto>(
                 paginatedEntities.Items.ToListResponseList(),
                 paginatedEntities.TotalCount,

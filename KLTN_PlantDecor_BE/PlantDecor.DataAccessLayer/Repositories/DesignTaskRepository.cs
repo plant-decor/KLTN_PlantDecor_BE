@@ -27,6 +27,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<DesignTask>> GetByAssignedStaffIdAndDateRangeAsync(int assignedStaffId, DateOnly from, DateOnly to)
+        {
+            return await BuildDetailedQuery()
+                .Where(x => x.AssignedStaffId == assignedStaffId
+                    && x.ScheduledDate.HasValue
+                    && x.ScheduledDate.Value >= from
+                    && x.ScheduledDate.Value <= to)
+                .OrderBy(x => x.ScheduledDate)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+        }
+
         public async Task<PaginatedResult<DesignTask>> GetByAssignedStaffIdAsync(
             int assignedStaffId,
             Pagination pagination,

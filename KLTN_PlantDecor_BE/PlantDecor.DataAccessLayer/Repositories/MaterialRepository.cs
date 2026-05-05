@@ -12,13 +12,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
         }
 
-        public async Task<PaginatedResult<Material>> GetAllWithDetailsAsync(Pagination pagination)
+        public async Task<PaginatedResult<Material>> GetAllWithDetailsAsync(Pagination pagination, string? keyword = null)
         {
-            var query = _context.Materials
+            IQueryable<Material> query = _context.Materials
                 .Include(m => m.Categories)
                 .Include(m => m.Tags)
-                .Include(m => m.MaterialImages)
-                .OrderByDescending(m => m.CreatedAt);
+                .Include(m => m.MaterialImages);
+
+            query = ApplyKeywordFilter(query, keyword);
+            query = query.OrderByDescending(m => m.CreatedAt);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -29,14 +31,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return new PaginatedResult<Material>(items, totalCount, pagination.PageNumber, pagination.PageSize);
         }
 
-        public async Task<PaginatedResult<Material>> GetActiveWithDetailsAsync(Pagination pagination)
+        public async Task<PaginatedResult<Material>> GetActiveWithDetailsAsync(Pagination pagination, string? keyword = null)
         {
-            var query = _context.Materials
+            IQueryable<Material> query = _context.Materials
                 .Where(m => m.IsActive == true)
                 .Include(m => m.Categories)
                 .Include(m => m.Tags)
-                .Include(m => m.MaterialImages)
-                .OrderByDescending(m => m.CreatedAt);
+                .Include(m => m.MaterialImages);
+
+            query = ApplyKeywordFilter(query, keyword);
+            query = query.OrderByDescending(m => m.CreatedAt);
 
             var totalCount = await query.CountAsync();
             var items = await query
@@ -107,6 +111,18 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
 
             return new PaginatedResult<Material>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
+        private static IQueryable<Material> ApplyKeywordFilter(IQueryable<Material> query, string? keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return query;
+            }
+
+            var normalizedKeyword = keyword.Trim().ToLower();
+            return query.Where(m =>
+                m.Name != null && m.Name.ToLower().Contains(normalizedKeyword));
         }
     }
 }
