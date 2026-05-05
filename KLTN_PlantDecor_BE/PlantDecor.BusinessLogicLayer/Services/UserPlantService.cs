@@ -27,6 +27,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return reminders.Select(reminder => reminder.ToNotificationResponse()).ToList();
         }
 
+        public async Task<List<CareReminderNotificationResponseDto>> GetMyCareRemindersTodayAsync(int userId)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var reminders = await _unitOfWork.CareReminderRepository.GetByUserIdAndReminderDateAsync(userId, today);
+            return reminders.Select(reminder => reminder.ToNotificationResponse()).ToList();
+        }
+
         public async Task AddPurchasedPlantsToMyPlantAsync(int orderId, DateTime purchasedAt)
         {
             var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);

@@ -80,6 +80,34 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Customer] Lay danh sach thong bao nhac cham soc cay hom nay
+        /// </summary>
+        [HttpGet("my-care-reminders/today")]
+        public async Task<IActionResult> GetMyCareRemindersToday()
+        {
+            var userId = GetUserId();
+            var reminders = await _userPlantService.GetMyCareRemindersTodayAsync(userId);
+            if (reminders == null || reminders.Count == 0)
+            {
+                return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+                {
+                    Success = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "You don't have any care reminders today",
+                    Payload = new List<CareReminderNotificationResponseDto>()
+                });
+            }
+
+            return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get today's care reminders successfully",
+                Payload = reminders
+            });
+        }
+
+        /// <summary>
         /// [Customer] Tạo care reminder cho cây của tôi
         /// </summary>
         [HttpPost("my-care-reminders")]

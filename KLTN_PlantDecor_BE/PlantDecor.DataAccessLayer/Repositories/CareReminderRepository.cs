@@ -51,5 +51,22 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ThenByDescending(reminder => reminder.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<List<CareReminder>> GetByUserIdAndReminderDateAsync(int userId, DateOnly reminderDate)
+        {
+            return await _context.CareReminders
+                .AsNoTracking()
+                .Include(reminder => reminder.UserPlant)
+                    .ThenInclude(userPlant => userPlant!.Plant)
+                .Include(reminder => reminder.UserPlant)
+                    .ThenInclude(userPlant => userPlant!.PlantInstance)
+                        .ThenInclude(plantInstance => plantInstance!.Plant)
+                .Where(reminder => reminder.UserPlant != null
+                    && reminder.UserPlant.UserId == userId
+                    && reminder.ReminderDate == reminderDate)
+                .OrderByDescending(reminder => reminder.CreatedAt)
+                .ThenByDescending(reminder => reminder.Id)
+                .ToListAsync();
+        }
     }
 }

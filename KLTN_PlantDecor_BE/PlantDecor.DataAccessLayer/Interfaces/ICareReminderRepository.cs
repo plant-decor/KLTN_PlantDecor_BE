@@ -7,5 +7,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<List<CareReminder>> GetAllWithDetailsAsync();
         Task<CareReminder?> GetByIdWithDetailsAsync(int id);
         Task<List<CareReminder>> GetByUserIdWithDetailsAsync(int userId);
+        Task<List<CareReminder>> GetByUserIdAndReminderDateAsync(int userId, DateOnly reminderDate);
     }
 }

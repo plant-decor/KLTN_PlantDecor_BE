@@ -65,6 +65,7 @@ namespace PlantDecor.API.Controllers
             ["UserActionType"] = typeof(UserActionTypeEnum),
             ["UserStatus"] = typeof(UserStatusEnum),
             ["CareServiceType"] = typeof(CareServiceTypeEnum),
+            ["CareReminderType"] = typeof(CareReminderTypeEnum),
             ["ServiceRegistrationStatus"] = typeof(ServiceRegistrationStatusEnum),
             ["ServiceProgressStatus"] = typeof(ServiceProgressStatusEnum),
             ["ReturnTicketStatus"] = typeof(ReturnTicketStatusEnum),

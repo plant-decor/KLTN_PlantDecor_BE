@@ -1,6 +1,7 @@
 ﻿using System;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -73,6 +74,11 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
         private static string ResolveCareTypeName(int? careType)
         {
+            if (careType.HasValue && Enum.IsDefined(typeof(CareReminderTypeEnum), careType.Value))
+            {
+                return ((CareReminderTypeEnum)careType.Value).ToString();
+            }
+
             return careType switch
             {
                 1 => "Watering",
