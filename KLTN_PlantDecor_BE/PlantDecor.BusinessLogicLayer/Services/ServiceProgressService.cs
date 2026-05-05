@@ -27,19 +27,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (progress == null)
                 throw new NotFoundException($"ServiceProgress {progressId} not found");
 
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId)
+                ?? throw new NotFoundException($"User {userId} not found");
+
             var registration = progress.ServiceRegistration;
 
-            var isCaretaker = progress.CaretakerId == userId;
-            var isCustomer = registration?.UserId == userId;
-            var isMainCaretaker = registration?.MainCaretakerId == userId;
-            var isCurrentCaretaker = registration?.CurrentCaretakerId == userId;
-
-            if (!isCaretaker && !isCustomer && !isMainCaretaker && !isCurrentCaretaker)
+            if (user.RoleId == (int)RoleEnum.Customer)
+            {
+                if (registration?.UserId != userId)
+                    throw new ForbiddenException("You can only view your own service progress");
+            }
+            else if (user.RoleId == (int)RoleEnum.Caretaker)
+            {
+                if (progress.CaretakerId != userId && registration?.MainCaretakerId != userId && registration?.CurrentCaretakerId != userId)
+                    throw new ForbiddenException("This task is not assigned to you");
+            }
+            else if (user.RoleId == (int)RoleEnum.Manager || user.RoleId == (int)RoleEnum.Staff)
             {
                 var nursery = await ResolveOperatorNurseryAsync(userId);
-                var canViewAsOperator = registration?.NurseryCareService?.NurseryId == nursery.Id;
-                if (!canViewAsOperator)
-                    throw new ForbiddenException("You don't have access to this progress");
+                if (registration?.NurseryCareService?.NurseryId != nursery.Id)
+                    throw new ForbiddenException("This task does not belong to your nursery");
+            }
+            else
+            {
+                throw new ForbiddenException("You don't have access to this progress");
             }
 
             return MapToDto(progress);
