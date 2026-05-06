@@ -61,6 +61,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Hủy nursery order
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/cancel")]
+        public async Task<IActionResult> CancelNurseryOrder([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.CancelNurseryOrderForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Cancelled nursery order successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Xác nhận nursery order hoàn tất
         /// </summary>
         [HttpPut("{nurseryOrderId:int}/mark-completed")]

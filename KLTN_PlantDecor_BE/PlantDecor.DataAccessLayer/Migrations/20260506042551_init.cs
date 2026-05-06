@@ -734,6 +734,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     Content = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     ReminderDate = table.Column<DateOnly>(type: "date", nullable: true),
                     ScheduledDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>

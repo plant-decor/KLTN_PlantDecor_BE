@@ -93,7 +93,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var totalPrice = tier.PackagePrice;
-            var depositAmount = Math.Round(totalPrice * 0.3m, 2, MidpointRounding.AwayFromZero);
+
+            var matchedPolicy = await _unitOfWork.DepositPolicyRepository
+                .GetMatchingActivePolicyByPriceAsync(totalPrice);
+
+            decimal depositRatio = matchedPolicy != null ? matchedPolicy.DepositPercentage / 100m : 0.3m;
+            var depositAmount = Math.Round(totalPrice * depositRatio, 2, MidpointRounding.AwayFromZero);
 
             var registration = new DesignRegistration
             {

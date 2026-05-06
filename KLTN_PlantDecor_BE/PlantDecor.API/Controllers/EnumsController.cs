@@ -65,6 +65,7 @@ namespace PlantDecor.API.Controllers
             ["UserActionType"] = typeof(UserActionTypeEnum),
             ["UserStatus"] = typeof(UserStatusEnum),
             ["CareServiceType"] = typeof(CareServiceTypeEnum),
+            ["CareReminderType"] = typeof(CareReminderTypeEnum),
             ["ServiceRegistrationStatus"] = typeof(ServiceRegistrationStatusEnum),
             ["ServiceProgressStatus"] = typeof(ServiceProgressStatusEnum),
             ["ReturnTicketStatus"] = typeof(ReturnTicketStatusEnum),
@@ -160,6 +161,26 @@ namespace PlantDecor.API.Controllers
                 Payload = new List<EnumGroupResponseDto>
                 {
                     CreateEnumGroup("CareServiceType", typeof(CareServiceTypeEnum))
+                }
+            });
+        }
+
+        /// <summary>
+        /// Enum cho Care Reminder
+        /// GET /api/system/enums/care-reminders
+        /// </summary>
+        [HttpGet("care-reminders")]
+        [AllowAnonymous]
+        public IActionResult GetCareReminderEnums()
+        {
+            return Ok(new ApiResponse<List<EnumGroupResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get care reminder enums successfully",
+                Payload = new List<EnumGroupResponseDto>
+                {
+                    CreateEnumGroup("CareReminderType", typeof(CareReminderTypeEnum))
                 }
             });
         }
