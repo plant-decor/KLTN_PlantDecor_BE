@@ -1388,12 +1388,14 @@ Return only the JSON array with no additional text.
 
         private static string? BuildDirectionalPlacementHint(RoomAnalysisDto roomAnalysis, RoomDesignRequestDto request)
         {
+            var isBalcony = roomAnalysis.RoomType?.Equals("Balcony", StringComparison.OrdinalIgnoreCase) == true;
+            var roomTypeLabel = string.IsNullOrWhiteSpace(roomAnalysis.RoomType) ? "room" : roomAnalysis.RoomType;
             var targets = new List<string>();
 
             if (request.LightDirection.HasValue)
             {
                 var lightDirectionLabel = MapDirectionToLabel(request.LightDirection.Value);
-                var opening = IsBalconyRoom(roomAnalysis) ? "balcony opening" : "window";
+                var opening = isBalcony ? "balcony opening" : "window";
                 targets.Add($"{lightDirectionLabel}-facing {opening}");
             }
 
@@ -1403,10 +1405,7 @@ Return only the JSON array with no additional text.
                 targets.Add($"{dominantDirectionLabel} side of the room");
             }
 
-            if (IsBalconyRoom(roomAnalysis))
-            {
-                targets.Add("left or right side of the balcony (as shown in the photo)");
-            }
+            targets.Add($"left or right side of the {roomTypeLabel} (as shown in the photo)");
 
             if (targets.Count == 0)
             {
@@ -1415,11 +1414,6 @@ Return only the JSON array with no additional text.
 
             var targetText = string.Join(", ", targets.Distinct(StringComparer.OrdinalIgnoreCase));
             return $"on a small table or stand near the {targetText}";
-        }
-
-        private static bool IsBalconyRoom(RoomAnalysisDto roomAnalysis)
-        {
-            return roomAnalysis.RoomType?.Equals("Balcony", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private static string MapPlacementTokenToPhrase(string token)
