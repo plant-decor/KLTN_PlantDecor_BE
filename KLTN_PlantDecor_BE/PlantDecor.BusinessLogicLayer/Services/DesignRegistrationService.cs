@@ -93,7 +93,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             var totalPrice = tier.PackagePrice;
-            var depositAmount = Math.Round(totalPrice * 0.3m, 2, MidpointRounding.AwayFromZero);
+
+            var matchedPolicy = await _unitOfWork.DepositPolicyRepository
+                .GetMatchingActivePolicyByPriceAsync(totalPrice);
+
+            decimal depositRatio = matchedPolicy != null ? matchedPolicy.DepositPercentage / 100m : 0.3m;
+            var depositAmount = Math.Round(totalPrice * depositRatio, 2, MidpointRounding.AwayFromZero);
 
             var registration = new DesignRegistration
             {
@@ -138,7 +143,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public async Task<PaginatedResult<DesignRegistrationResponseDto>> GetByAssignedCaretakerAsync(int caretakerId, Pagination pagination)
         {
             // Only return registrations with status InProgress or AwaitFinalPayment for caretakers
-            var statuses = new List<int> { (int)DesignRegistrationStatus.InProgress, (int)DesignRegistrationStatus.AwaitFinalPayment };
+            var statuses = new List<int> { (int)DesignRegistrationStatus.InProgress, 
+                                           (int)DesignRegistrationStatus.AwaitFinalPayment, 
+                                           (int)DesignRegistrationStatus.Completed, 
+                                           (int)DesignRegistrationStatus.Cancelled };
             var result = await _unitOfWork.DesignRegistrationRepository.GetByAssignedCaretakerIdWithStatusesAsync(caretakerId, statuses, pagination);
             return new PaginatedResult<DesignRegistrationResponseDto>(
                 result.Items.Select(x => x.ToResponse()).ToList(),

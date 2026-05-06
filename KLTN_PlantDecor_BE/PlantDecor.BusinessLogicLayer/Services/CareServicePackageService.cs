@@ -192,14 +192,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             await EnsureConsultantPermissionAsync(consultantId);
 
-            var offeredPackages = await _unitOfWork.CareServicePackageRepository.GetPackagesWithNurseriesAsync();
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
+            if (order == null)
+                throw new NotFoundException($"Order {orderId} not found");
 
-            if (offeredPackages.Count == 0)
-                return new List<CareServicePackageRecommendationResponseDto>();
+            return await RecommendByOrderInternalAsync(order);
+        }
+
+        public async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderForCustomerAsync(int userId, int orderId)
+        {
+            if (userId <= 0)
+                throw new UnauthorizedException("Unable to identify user from token");
 
             var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(orderId);
             if (order == null)
                 throw new NotFoundException($"Order {orderId} not found");
+
+            if (order.UserId != userId)
+                throw new ForbiddenException("You do not have permission to access this order");
+
+            return await RecommendByOrderInternalAsync(order);
+        }
+
+        private async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderInternalAsync(Order order)
+        {
+            var offeredPackages = await _unitOfWork.CareServicePackageRepository.GetPackagesWithNurseriesAsync();
+            if (offeredPackages.Count == 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
 
             var profile = BuildOrderPlantProfile(order);
             if (profile.TotalPlantItems == 0)
@@ -211,6 +230,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 .GroupBy(r => r.CareServicePackageId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            return BuildRecommendations(profile, offeredPackages, rulesByPackageId);
+        }
+
+        private static List<CareServicePackageRecommendationResponseDto> BuildRecommendations(
+            CustomerPlantProfile profile,
+            List<CareServicePackage> offeredPackages,
+            Dictionary<int, List<PackagePlantSuitability>> rulesByPackageId)
+        {
             // Step 1: Assign each purchased plant to the best matching package.
             var recommendationsByPackageId = new Dictionary<int, CareServicePackageRecommendationResponseDto>();
             var packageMatchedCategories = new Dictionary<int, Dictionary<string, int>>();

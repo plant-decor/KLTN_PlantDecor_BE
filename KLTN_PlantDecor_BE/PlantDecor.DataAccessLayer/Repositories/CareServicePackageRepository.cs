@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using PlantDecor.DataAccessLayer.Context;
 using PlantDecor.DataAccessLayer.Entities;
@@ -164,6 +165,25 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 _context.PackagePlantSuitabilities.RemoveRange(existingRules);
 
             await AddSuitabilityRulesAsync(packageId, rules);
+        }
+
+        public async Task<int> CountForEmbeddingBackfillAsync()
+        {
+            return await _context.CareServicePackages.CountAsync();
+        }
+
+        public async Task<List<CareServicePackage>> GetEmbeddingBackfillBatchAsync(int skip, int take)
+        {
+            var normalizedSkip = Math.Max(0, skip);
+            var normalizedTake = Math.Clamp(take, 1, 500);
+
+            return await _context.CareServicePackages
+                .Include(p => p.PackagePlantSuitabilities.Where(r => r.IsActive))
+                    .ThenInclude(r => r.Category)
+                .OrderBy(p => p.Id)
+                .Skip(normalizedSkip)
+                .Take(normalizedTake)
+                .ToListAsync();
         }
     }
 }

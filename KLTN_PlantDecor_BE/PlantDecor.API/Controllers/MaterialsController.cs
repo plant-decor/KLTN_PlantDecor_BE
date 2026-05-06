@@ -36,8 +36,8 @@ namespace PlantDecor.API.Controllers
         {
             var pagination = request?.Pagination ?? new Pagination();
             var materials = request?.IsActive == true
-                ? await _materialService.GetActiveMaterialsAsync(pagination)
-                : await _materialService.GetAllMaterialsAsync(pagination);
+                ? await _materialService.GetActiveMaterialsAsync(pagination, request?.Keyword)
+                : await _materialService.GetAllMaterialsAsync(pagination, request?.Keyword);
             return Ok(new ApiResponse<PaginatedResult<MaterialListResponseDto>>
             {
                 Success = true,

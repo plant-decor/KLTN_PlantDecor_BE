@@ -36,6 +36,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAzureOpenAIService _azureOpenAIService;
         private readonly IPolicyKnowledgeService _policyKnowledgeService;
+        private readonly ICareServicePackageService _careServicePackageService;
         private readonly ILogger<AISearchService> _logger;
         private readonly string _userPolicyDocumentPath;
         private readonly string _returnPolicyDocumentPath;
@@ -47,12 +48,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             IAzureOpenAIService azureOpenAIService,
             IPolicyKnowledgeService policyKnowledgeService,
+            ICareServicePackageService careServicePackageService,
             IConfiguration configuration,
             ILogger<AISearchService> logger)
         {
             _unitOfWork = unitOfWork;
             _azureOpenAIService = azureOpenAIService;
             _policyKnowledgeService = policyKnowledgeService;
+            _careServicePackageService = careServicePackageService;
             _logger = logger;
             _userPolicyDocumentPath = configuration["SupportAndPolicy:UserPolicyDocumentPath"]
                 ?? "User policy section on the PlantDecor website/app";
@@ -521,6 +524,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     "Cây cảnh trong nhà dễ chăm sóc")
                     ?? "Cây cảnh trong nhà dễ chăm sóc";
 
+                var recommendedCareServicePackages = await BuildRecommendedCareServicePackagesAsync(userId, request.OrderId);
+                var suggestedCareServicePackages = MapCareServicePackageSuggestions(recommendedCareServicePackages, 3);
+                var careServicePackageHeaderText = BuildCareServicePackageHeaderText(suggestedCareServicePackages, responseLanguage);
+
                 var suggestions = await GetChatbotSuggestionsAsync(
                     intent,
                     recommendationQuery,
@@ -565,6 +572,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     effectiveMaxBudget,
                     effectivePetSafe,
                     effectiveChildSafe,
+                    recommendedCareServicePackages,
+                    careServicePackageHeaderText,
                     responseLanguage);
 
                 if (answer == null)
@@ -578,9 +587,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var response = ClampChatbotResponsePayload(new AIChatbotResponseDto
                 {
                     Intent = intent,
-                    Reply = answer.Reply,
+                    Reply = PrependCareServicePackageHeaderIfNeeded(
+                        careServicePackageHeaderText,
+                        RemoveLeadingCareServicePackageEcho(answer.Reply, suggestedCareServicePackages, responseLanguage)),
                     RoomEnvironmentSummary = roomSummary,
                     SuggestedPlants = suggestions,
+                    SuggestedCareServicePackages = suggestedCareServicePackages,
                     CareTips = MergeCareTips(answer.CareTips, plantGuideCareTips),
                     FollowUpQuestions = quickReplyPrompts,
                     Disclaimer = answer.Disclaimer,
@@ -623,6 +635,140 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 await PersistAssistantMessageAsync(sessionId, userId, fallback, ChatbotIntentGeneral, true, false);
                 return fallback;
             }
+        }
+
+        private static List<CareServicePackageSuggestionDto> MapCareServicePackageSuggestions(
+            List<CareServicePackageRecommendationResponseDto> recommendations,
+            int limit)
+        {
+            var normalizedLimit = Math.Clamp(limit, 1, 10);
+            var items = recommendations ?? new List<CareServicePackageRecommendationResponseDto>();
+
+            return items
+                .OrderByDescending(r => r.MatchScore)
+                .ThenBy(r => r.UnitPrice ?? decimal.MaxValue)
+                .Take(normalizedLimit)
+                .Select(r => new CareServicePackageSuggestionDto
+                {
+                    PackageId = r.PackageId,
+                    PackageName = r.PackageName,
+                    UnitPrice = r.UnitPrice,
+                    MatchScore = r.MatchScore,
+                    MatchReasons = r.MatchReasons?.ToList() ?? new List<string>()
+                })
+                .ToList();
+        }
+
+        private static string? BuildCareServicePackageHeaderText(
+            List<CareServicePackageSuggestionDto> suggestions,
+            string responseLanguage)
+        {
+            if (suggestions == null || suggestions.Count == 0)
+                return null;
+
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            var lines = new List<string>
+            {
+                isVietnamese
+                    ? "Dua tren cay trong don hang, minh goi y cac goi cham soc phu hop nhat:"
+                    : "Based on plants in your order, here are the best matching care service packages:"
+            };
+
+            for (var i = 0; i < suggestions.Count; i++)
+            {
+                var s = suggestions[i];
+                lines.Add(s.PackageName);
+            }
+
+            return string.Join("\n", lines).Trim();
+        }
+
+        private static string PrependCareServicePackageHeaderIfNeeded(string? headerText, string reply)
+        {
+            if (string.IsNullOrWhiteSpace(headerText))
+                return reply;
+
+            var trimmedReply = reply?.Trim() ?? string.Empty;
+            if (trimmedReply.StartsWith(headerText, StringComparison.OrdinalIgnoreCase))
+                return trimmedReply;
+
+            return string.IsNullOrWhiteSpace(trimmedReply)
+                ? headerText.Trim()
+                : $"{headerText.Trim()}\n\n{trimmedReply}";
+        }
+
+        private static string RemoveLeadingCareServicePackageEcho(
+            string reply,
+            List<CareServicePackageSuggestionDto> suggestions,
+            string responseLanguage)
+        {
+            var text = reply?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(text) || suggestions == null || suggestions.Count == 0)
+                return text;
+
+            var isVietnamese = responseLanguage == LanguageVietnamese;
+            var patterns = isVietnamese
+                ? new[]
+                {
+                    "Dua tren cay trong don hang",
+                    "Dua tren don hang",
+                    "Minh goi y cac goi cham soc",
+                }
+                : new[]
+                {
+                    "Based on plants in your order",
+                    "Based on your order",
+                    "Here are the best matching care service packages",
+                };
+
+            foreach (var p in patterns)
+            {
+                if (!text.StartsWith(p, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var idx = text.IndexOf('\n');
+                text = idx >= 0 ? text[(idx + 1)..].Trim() : string.Empty;
+                break;
+            }
+
+            var firstName = suggestions[0].PackageName?.Trim();
+            if (!string.IsNullOrWhiteSpace(firstName)
+                && text.StartsWith(firstName, StringComparison.OrdinalIgnoreCase))
+            {
+                var idx = text.IndexOf('\n');
+                text = idx >= 0 ? text[(idx + 1)..].Trim() : string.Empty;
+            }
+
+            // If the LLM repeats the package in the first sentence (single-line output),
+            // strip that first sentence to reduce perceived duplication.
+            if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(text))
+            {
+                var leading = text.Length > 240 ? text[..240] : text;
+                var startsWithEcho = isVietnamese
+                    ? leading.StartsWith("Voi don hang", StringComparison.OrdinalIgnoreCase)
+                      || leading.StartsWith("Trong don hang", StringComparison.OrdinalIgnoreCase)
+                      || leading.StartsWith("Goi phu hop nhat", StringComparison.OrdinalIgnoreCase)
+                    : leading.StartsWith("For your order", StringComparison.OrdinalIgnoreCase)
+                      || leading.StartsWith("In your order", StringComparison.OrdinalIgnoreCase)
+                      || leading.StartsWith("The best", StringComparison.OrdinalIgnoreCase);
+
+                if (startsWithEcho && leading.Contains(firstName, StringComparison.OrdinalIgnoreCase))
+                {
+                    var endIdx = text.IndexOfAny(new[] { '.', '!', '?' });
+                    if (endIdx >= 0 && endIdx + 1 < text.Length)
+                    {
+                        text = text[(endIdx + 1)..].Trim();
+                    }
+                    else
+                    {
+                        // Fallback: drop the whole line if no sentence terminator.
+                        var nlIdx = text.IndexOf('\n');
+                        text = nlIdx >= 0 ? text[(nlIdx + 1)..].Trim() : string.Empty;
+                    }
+                }
+            }
+
+            return text;
         }
 
         public async Task<bool> CheckPurchasableAsync(string entityType, int entityId)
@@ -816,6 +962,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             decimal? maxBudget,
             bool? petSafe,
             bool? childSafe,
+            List<CareServicePackageRecommendationResponseDto> recommendedCareServicePackages,
+            string? careServicePackageHeaderText,
             string responseLanguage)
         {
             try
@@ -824,6 +972,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var answerPrompt =
                     "You are the PlantDecor AI chatbot. Tasks: plant selection guidance, basic room-environment understanding, and plant care support. " +
                     "Be practical, user-friendly, and do not invent products outside provided data. " +
+                    "If careServicePackageHeaderText is provided, it is the authoritative package shortlist. Do NOT say there are no suitable packages and do NOT contradict it. " +
+                    "Do NOT repeat careServicePackageHeaderText verbatim in your reply. Start with practical advice and how to choose among the listed packages. " +
+                    "If recommendedCareServicePackages is provided, prioritize advising packages from that list for care service consultation and do not invent other packages. " +
                     "The authoritativeFacts and authoritativeCareTips in the payload are the latest database state. " +
                     "If they conflict with history, suggestedPlants, embedding/search text, or earlier assistant answers, trust authoritativeFacts. " +
                     "Do not recommend an item as purchasable when authoritativeFacts marks it not purchasable, inactive, sold, expired, or out of stock. " +
@@ -905,6 +1056,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         f.CareTips
                     }).ToList(),
                     authoritativeCareTips,
+                    careServicePackageHeaderText = string.IsNullOrWhiteSpace(careServicePackageHeaderText) ? null : careServicePackageHeaderText,
+                    recommendedCareServicePackages = (recommendedCareServicePackages ?? new List<CareServicePackageRecommendationResponseDto>())
+                        .OrderByDescending(p => p.MatchScore)
+                        .ThenBy(p => p.UnitPrice ?? decimal.MaxValue)
+                        .Take(5)
+                        .Select(p => new
+                        {
+                            p.PackageId,
+                            p.PackageName,
+                            p.UnitPrice,
+                            p.MatchScore,
+                            p.MatchedCategoryCount,
+                            p.MatchedCareLevelCount,
+                            p.TotalPurchasedPlantItems,
+                            p.MatchReasons,
+                            Plants = p.Plants.Select(pl => new { pl.PlantId, pl.PlantName, pl.Quantity }).ToList()
+                        })
+                        .ToList(),
                     history = BuildHistoryContext(conversationHistory)
                 });
 
@@ -935,6 +1104,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 _logger.LogWarning(ex, "Failed to generate chatbot final answer from LLM");
                 return null;
+            }
+        }
+
+        private async Task<List<CareServicePackageRecommendationResponseDto>> BuildRecommendedCareServicePackagesAsync(int userId, int? orderId)
+        {
+            if (!orderId.HasValue || orderId.Value <= 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
+
+            try
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null || user.RoleId != (int)RoleEnum.Customer)
+                {
+                    return new List<CareServicePackageRecommendationResponseDto>();
+                }
+
+                return await _careServicePackageService.RecommendByOrderForCustomerAsync(userId, orderId.Value);
+            }
+            catch (NotFoundException ex)
+            {
+                // Avoid breaking chatbot when suitability mapping is incomplete.
+                _logger.LogWarning(ex, "Unable to build care service package recommendations for OrderId={OrderId}", orderId.Value);
+                return new List<CareServicePackageRecommendationResponseDto>();
             }
         }
 
