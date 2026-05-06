@@ -525,7 +525,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ?? "Cây cảnh trong nhà dễ chăm sóc";
 
                 var recommendedCareServicePackages = await BuildRecommendedCareServicePackagesAsync(userId, request.OrderId);
-                var suggestedCareServicePackages = MapCareServicePackageSuggestions(recommendedCareServicePackages, 3);
+                var suggestedCareServicePackages = MapCareServicePackageSuggestions(recommendedCareServicePackages, 8);
                 var careServicePackageHeaderText = BuildCareServicePackageHeaderText(suggestedCareServicePackages, responseLanguage);
 
                 var suggestions = await GetChatbotSuggestionsAsync(

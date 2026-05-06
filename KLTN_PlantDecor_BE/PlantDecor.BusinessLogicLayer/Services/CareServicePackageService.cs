@@ -275,18 +275,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             List<CareServicePackage> offeredPackages,
             Dictionary<int, List<PackagePlantSuitability>> rulesByPackageId)
         {
-            // Step 1: Assign each purchased plant to the best matching package.
             var recommendationsByPackageId = new Dictionary<int, CareServicePackageRecommendationResponseDto>();
             var packageMatchedCategories = new Dictionary<int, Dictionary<string, int>>();
             var packageMatchedCareLevels = new Dictionary<int, Dictionary<int, int>>();
 
             foreach (var plant in profile.PurchasedPlants)
             {
-                CareServicePackage? bestPackage = null;
-                int bestCategoryMatch = -1;
-                int bestCareMatch = -1;
-                var bestMatchedCategoryNames = new List<string>();
-                var bestMatchedCareLevels = new List<int>();
+                var matchedAnyPackage = false;
 
                 foreach (var package in offeredPackages)
                 {
@@ -311,73 +306,56 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (categoryMatch == 0 && careMatch == 0)
                         continue;
 
-                    var isBetterCandidate =
-                        bestPackage == null
-                        || (categoryMatch > 0 && bestCategoryMatch == 0)
-                        || (categoryMatch > bestCategoryMatch)
-                        || (categoryMatch == bestCategoryMatch && careMatch > bestCareMatch)
-                        || (categoryMatch == bestCategoryMatch
-                            && careMatch == bestCareMatch
-                            && (package.UnitPrice ?? decimal.MaxValue) < (bestPackage.UnitPrice ?? decimal.MaxValue));
+                    matchedAnyPackage = true;
 
-                    if (!isBetterCandidate)
-                        continue;
-
-                    bestPackage = package;
-                    bestCategoryMatch = categoryMatch;
-                    bestCareMatch = careMatch;
-                    bestMatchedCategoryNames = currentMatchedCategoryNames;
-                    bestMatchedCareLevels = currentMatchedCareLevels;
-                }
-
-                if (bestPackage == null)
-                    throw new NotFoundException($"No suitable package found for plant '{plant.PlantName}' (PlantId: {plant.PlantId}). Please verify package suitability mapping data.");
-
-                if (!recommendationsByPackageId.TryGetValue(bestPackage.Id, out var recDto))
-                {
-                    recDto = new CareServicePackageRecommendationResponseDto
+                    if (!recommendationsByPackageId.TryGetValue(package.Id, out var recDto))
                     {
-                        PackageId = bestPackage.Id,
-                        PackageName = bestPackage.Name ?? string.Empty,
-                        UnitPrice = bestPackage.UnitPrice,
-                        MatchScore = 0,
-                        TotalPurchasedPlantItems = profile.TotalPlantItems,
-                        MatchReasons = new List<string>(),
-                        Plants = new List<RecommendedPlantDto>()
-                    };
+                        recDto = new CareServicePackageRecommendationResponseDto
+                        {
+                            PackageId = package.Id,
+                            PackageName = package.Name ?? string.Empty,
+                            UnitPrice = package.UnitPrice,
+                            MatchScore = 0,
+                            TotalPurchasedPlantItems = profile.TotalPlantItems,
+                            MatchReasons = new List<string>(),
+                            Plants = new List<RecommendedPlantDto>()
+                        };
 
-                    recommendationsByPackageId[bestPackage.Id] = recDto;
-                    packageMatchedCategories[bestPackage.Id] = new Dictionary<string, int>();
-                    packageMatchedCareLevels[bestPackage.Id] = new Dictionary<int, int>();
+                        recommendationsByPackageId[package.Id] = recDto;
+                        packageMatchedCategories[package.Id] = new Dictionary<string, int>();
+                        packageMatchedCareLevels[package.Id] = new Dictionary<int, int>();
+                    }
+
+                    recDto.Plants.Add(new RecommendedPlantDto
+                    {
+                        PlantId = plant.PlantId,
+                        PlantName = plant.PlantName,
+                        Quantity = plant.Quantity
+                    });
+
+                    recDto.MatchScore += ((categoryMatch * 2) + careMatch) * plant.Quantity;
+
+                    foreach (var categoryName in currentMatchedCategoryNames)
+                    {
+                        if (packageMatchedCategories[package.Id].ContainsKey(categoryName))
+                            packageMatchedCategories[package.Id][categoryName] += plant.Quantity;
+                        else
+                            packageMatchedCategories[package.Id][categoryName] = plant.Quantity;
+                    }
+
+                    foreach (var careLevel in currentMatchedCareLevels)
+                    {
+                        if (packageMatchedCareLevels[package.Id].ContainsKey(careLevel))
+                            packageMatchedCareLevels[package.Id][careLevel] += plant.Quantity;
+                        else
+                            packageMatchedCareLevels[package.Id][careLevel] = plant.Quantity;
+                    }
                 }
 
-                recDto.Plants.Add(new RecommendedPlantDto
-                {
-                    PlantId = plant.PlantId,
-                    PlantName = plant.PlantName,
-                    Quantity = plant.Quantity
-                });
-
-                recDto.MatchScore += ((bestCategoryMatch * 2) + bestCareMatch) * plant.Quantity;
-
-                foreach (var categoryName in bestMatchedCategoryNames)
-                {
-                    if (packageMatchedCategories[bestPackage.Id].ContainsKey(categoryName))
-                        packageMatchedCategories[bestPackage.Id][categoryName] += plant.Quantity;
-                    else
-                        packageMatchedCategories[bestPackage.Id][categoryName] = plant.Quantity;
-                }
-
-                foreach (var careLevel in bestMatchedCareLevels)
-                {
-                    if (packageMatchedCareLevels[bestPackage.Id].ContainsKey(careLevel))
-                        packageMatchedCareLevels[bestPackage.Id][careLevel] += plant.Quantity;
-                    else
-                        packageMatchedCareLevels[bestPackage.Id][careLevel] = plant.Quantity;
-                }
+                if (!matchedAnyPackage)
+                    throw new NotFoundException($"No suitable package found for plant '{plant.PlantName}' (PlantId: {plant.PlantId}). Please verify package suitability mapping data.");
             }
 
-            // Step 2: Build reasons and final ranking for only packages that actually received plants.
             var recommendations = recommendationsByPackageId.Values
                 .OrderByDescending(r => r.MatchScore)
                 .ThenBy(r => r.UnitPrice ?? decimal.MaxValue)
