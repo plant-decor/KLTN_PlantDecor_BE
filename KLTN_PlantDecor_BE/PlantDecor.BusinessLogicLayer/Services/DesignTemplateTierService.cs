@@ -284,15 +284,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 if (item.MaterialId.HasValue)
                 {
-                    var material = await _unitOfWork.MaterialRepository.GetByIdAsync(item.MaterialId.Value);
-                    if (material == null)
+                    var exists = await _unitOfWork.MaterialRepository.ExistsByIdAsync(item.MaterialId.Value);
+                    if (!exists)
                         throw new NotFoundException($"Material {item.MaterialId.Value} not found");
                 }
 
                 if (item.PlantId.HasValue)
                 {
-                    var plant = await _unitOfWork.PlantRepository.GetByIdAsync(item.PlantId.Value);
-                    if (plant == null)
+                    var exists = await _unitOfWork.PlantRepository.ExistsByIdAsync(item.PlantId.Value);
+                    if (!exists)
                         throw new NotFoundException($"Plant {item.PlantId.Value} not found");
                 }
             }

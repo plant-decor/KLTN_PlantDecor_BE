@@ -86,6 +86,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task<bool> ExistsByIdAsync(int id)
+        {
+            return await _context.Plants.AnyAsync(p => p.Id == id);
+        }
+
         public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
         {
             if (excludeId.HasValue)
