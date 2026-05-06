@@ -303,7 +303,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var categoryMatch = currentMatchedCategoryNames.Count;
                     var careMatch = currentMatchedCareLevels.Count;
 
-                    if (categoryMatch == 0 && careMatch == 0)
+                    if (categoryMatch == 0)
                         continue;
 
                     matchedAnyPackage = true;
