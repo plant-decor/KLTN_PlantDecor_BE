@@ -10,6 +10,10 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<OrderResponseDto> CreateOrderAsync(int userId, CreateOrderRequestDto request);
         Task<OrderResponseDto> GetOrderByIdAsync(int orderId, int userId);
         Task<List<OrderResponseDto>> GetMyOrdersAsync(int userId, OrderStatusEnum? orderStatus = null);
+        Task<PaginatedResult<OrderResponseDto>> GetDesignOrdersForOperatorAsync(
+            int operatorId,
+            Pagination pagination,
+            OrderStatusEnum? status = null);
         Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId);
         Task<OrderResponseDto> MarkOrderAsDeliveredAsync(int orderId);
         Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email);

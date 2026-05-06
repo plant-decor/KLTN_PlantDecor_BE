@@ -74,6 +74,23 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Admin] Lấy chi tiết mẫu thiết kế (kể cả tier bị deactivate)
+        /// </summary>
+        [HttpGet("admin/design-templates/{id:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetByIdAdmin(int id)
+        {
+            var result = await _designTemplateService.GetByIdAdminAsync(id);
+            return Ok(new ApiResponse<DesignTemplateResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get design template successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Admin] Tạo mẫu thiết kế mới
         /// </summary>
         [HttpPost("admin/design-templates")]
