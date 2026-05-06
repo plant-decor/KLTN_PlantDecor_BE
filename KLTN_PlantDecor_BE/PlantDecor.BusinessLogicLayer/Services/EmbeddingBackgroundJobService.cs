@@ -55,6 +55,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await ProcessEmbeddingInternalAsync(dto, entityId, entityType);
         }
 
+        public async Task ProcessCareServicePackageEmbeddingAsync(CareServicePackageEmbeddingDto dto, Guid entityId, string entityType)
+        {
+            await ProcessEmbeddingInternalAsync(dto, entityId, entityType);
+        }
+
         public async Task QueueBackfillAllAsync(int batchSize)
         {
             var normalizedBatchSize = NormalizeBatchSize(batchSize);
