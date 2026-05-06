@@ -3,7 +3,7 @@ name: Build and Deploy PlantDecor API
 on:
   push:
     branches:
-      - dev
+      - main
 
 jobs:
   deploy:
