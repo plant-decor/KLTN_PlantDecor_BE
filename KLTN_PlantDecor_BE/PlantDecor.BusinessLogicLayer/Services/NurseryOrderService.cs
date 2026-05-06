@@ -292,6 +292,76 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(nurseryOrder);
         }
 
+        public async Task<NurseryOrderResponseDto> CancelNurseryOrderForManagerAsync(int currentUserId, int nurseryOrderId)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to cancel this nursery order");
+
+            var cancellableStatuses = new[]
+            {
+                (int)OrderStatusEnum.Pending,
+                (int)OrderStatusEnum.DepositPaid,
+                (int)OrderStatusEnum.Paid,
+                (int)OrderStatusEnum.Assigned,
+                (int)OrderStatusEnum.Failed
+            };
+
+            if (!cancellableStatuses.Contains(nurseryOrder.Status ?? -1))
+                throw new BadRequestException("Nursery order cannot be cancelled in its current status.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)OrderStatusEnum.Cancelled;
+            nurseryOrder.UpdatedAt = now;
+
+            foreach (var detail in nurseryOrder.NurseryOrderDetails
+                         .Where(d => d.Status != (int)OrderStatusEnum.Delivered))
+            {
+                detail.Status = (int)OrderStatusEnum.Cancelled;
+            }
+
+            await RestoreInventoryForCancelledNurseryOrderAsync(nurseryOrder);
+
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId);
+            if (parentOrder != null)
+            {
+                var matchingNurseryOrder = parentOrder.NurseryOrders.FirstOrDefault(no => no.Id == nurseryOrder.Id);
+                if (matchingNurseryOrder != null)
+                {
+                    matchingNurseryOrder.Status = (int)OrderStatusEnum.Cancelled;
+                    matchingNurseryOrder.UpdatedAt = now;
+                    _unitOfWork.NurseryOrderRepository.PrepareUpdate(matchingNurseryOrder);
+                }
+
+                var areAllNurseryOrdersCancelled = parentOrder.NurseryOrders
+                    .All(no => no.Status == (int)OrderStatusEnum.Cancelled);
+
+                if (areAllNurseryOrdersCancelled)
+                {
+                    parentOrder.Status = (int)OrderStatusEnum.Cancelled;
+                    parentOrder.UpdatedAt = now;
+
+                    foreach (var invoice in parentOrder.Invoices
+                                 .Where(i => i.Status == (int)InvoiceStatusEnum.Pending))
+                    {
+                        invoice.Status = (int)InvoiceStatusEnum.Cancelled;
+                    }
+
+                    _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+                }
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);
@@ -697,6 +767,60 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved)
                     {
                         plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
+                        _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                    }
+                }
+            }
+
+        }
+
+        private async Task RestoreInventoryForCancelledNurseryOrderAsync(NurseryOrder nurseryOrder)
+        {
+            foreach (var detail in nurseryOrder.NurseryOrderDetails)
+            {
+                var quantity = detail.Quantity ?? 0;
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+
+                if (detail.CommonPlantId.HasValue)
+                {
+                    var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(detail.CommonPlantId.Value);
+                    if (commonPlant != null)
+                    {
+                        commonPlant.ReservedQuantity = Math.Max(0, commonPlant.ReservedQuantity - quantity);
+                        commonPlant.Quantity += quantity;
+                        _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                    }
+                }
+                else if (detail.NurseryMaterialId.HasValue)
+                {
+                    var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(detail.NurseryMaterialId.Value);
+                    if (nurseryMaterial != null)
+                    {
+                        nurseryMaterial.ReservedQuantity = Math.Max(0, nurseryMaterial.ReservedQuantity - quantity);
+                        nurseryMaterial.Quantity += quantity;
+                        _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                    }
+                }
+                else if (detail.NurseryPlantComboId.HasValue)
+                {
+                    var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(detail.NurseryPlantComboId.Value);
+                    if (nurseryPlantCombo != null)
+                    {
+                        nurseryPlantCombo.Quantity += quantity;
+                        _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryPlantCombo);
+                    }
+                }
+
+                if (detail.PlantInstanceId.HasValue)
+                {
+                    var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
+                    if (plantInstance != null && (plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved
+                                                  || plantInstance.Status == (int)PlantInstanceStatusEnum.Sold))
+                    {
+                        plantInstance.Status = (int)PlantInstanceStatusEnum.Available;
                         _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
                     }
                 }

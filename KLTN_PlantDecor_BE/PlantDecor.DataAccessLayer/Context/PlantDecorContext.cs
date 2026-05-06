@@ -194,6 +194,7 @@ public partial class PlantDecorContext : DbContext
 
             entity.Property(e => e.Content).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.IsCompleted).HasDefaultValue(false);
 
             entity.HasOne(d => d.UserPlant).WithMany(p => p.CareReminders)
                 .HasForeignKey(d => d.UserPlantId)
