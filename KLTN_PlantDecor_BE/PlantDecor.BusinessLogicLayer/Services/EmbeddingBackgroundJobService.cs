@@ -118,6 +118,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var t when t == EmbeddingEntityTypes.PlantInstance => await ProcessPlantInstanceBackfillBatchAsync(skip, normalizedPageSize),
                 var t when t == EmbeddingEntityTypes.NurseryPlantCombo => await ProcessNurseryPlantComboBackfillBatchAsync(skip, normalizedPageSize),
                 var t when t == EmbeddingEntityTypes.NurseryMaterial => await ProcessNurseryMaterialBackfillBatchAsync(skip, normalizedPageSize),
+                var t when t == EmbeddingEntityTypes.CareServicePackage => await ProcessCareServicePackageBackfillBatchAsync(skip, normalizedPageSize),
                 _ => 0
             };
 
@@ -152,6 +153,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var t when t == EmbeddingEntityTypes.PlantInstance => await _unitOfWork.PlantInstanceRepository.CountForEmbeddingBackfillAsync(),
                 var t when t == EmbeddingEntityTypes.NurseryPlantCombo => await _unitOfWork.NurseryPlantComboRepository.CountForEmbeddingBackfillAsync(),
                 var t when t == EmbeddingEntityTypes.NurseryMaterial => await _unitOfWork.NurseryMaterialRepository.CountForEmbeddingBackfillAsync(),
+                var t when t == EmbeddingEntityTypes.CareServicePackage => await _unitOfWork.CareServicePackageRepository.CountForEmbeddingBackfillAsync(),
                 _ => 0
             };
         }
@@ -246,6 +248,30 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Backfill failed for NurseryMaterial:{EntityId}", entity.Id);
+                }
+            }
+
+            return processed;
+        }
+
+        private async Task<int> ProcessCareServicePackageBackfillBatchAsync(int skip, int take)
+        {
+            var items = await _unitOfWork.CareServicePackageRepository.GetEmbeddingBackfillBatchAsync(skip, take);
+
+            var processed = 0;
+            foreach (var entity in items)
+            {
+                try
+                {
+                    await _embeddingService.UpdateEmbeddingAsync(
+                        entity.ToEmbeddingBackfillDto(),
+                        ConvertToGuid(entity.Id),
+                        EmbeddingEntityTypes.CareServicePackage);
+                    processed++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Backfill failed for CareServicePackage:{EntityId}", entity.Id);
                 }
             }
 
