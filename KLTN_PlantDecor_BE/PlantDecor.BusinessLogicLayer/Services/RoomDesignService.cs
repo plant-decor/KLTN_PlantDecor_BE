@@ -53,6 +53,9 @@ Notes:
 - The lightingCondition field should follow user-provided lighting information.
 - NumberOfPlantsSuggest is an estimate based on user-provided area, available space, and style; it is NOT the number of plants currently visible in the photos. This value must be greater than 0 and less than 6.
 - Identify usable empty spaces where plants can be placed.
+- If light direction or dominant direction is provided, use it to refine lighting inference and placement suggestions.
+- Left/right placement references are relative to the photo viewpoint (viewer perspective).
+- If the floor is empty, you may suggest adding a small table or stand to place plants.
 - placementSuggestions must be specific and clearly reference spatial features suitable for aesthetics and feng shui.
 - roomType, interiorStyle, and lightingCondition MUST use exactly the enum values listed above.
 - The system uses enums LayoutDesignStatus(Processing|Completed|Failed) and RoomUploadModerationStatus(Pending|Approved|Rejected); do not return these two fields.
@@ -64,13 +67,15 @@ Based on room analysis:
 - Room type: {0}
 - Room size: {1}
 - Lighting: {2}
-- Interior style: {3}
-- Suggested placement zones: {4}
+- Light entry direction: {3}
+- Dominant room direction: {4}
+- Interior style: {5}
+- Suggested placement zones: {6}
 
 And the list of available plants in the system:
-{5}
+{7}
 
-Select the {6} best-matching plants and return a JSON array in this format:
+Select the {8} best-matching plants and return a JSON array in this format:
 [
     {{
         ""entityType"": ""CommonPlant|PlantInstance"",
@@ -86,12 +91,15 @@ Evaluation criteria:
 2. Plant size fits the available space
 3. Style matches the interior
 4. Appropriate care difficulty for indoor use
-5. {7}
+5. {9}
 6. Prioritize species diversity and avoid repeating the same plant name if other suitable options are available
 
 Important notes:
 - suggestedPlacement MUST be a full English sentence with a specific location for each plant
 - Use placement hints from image analysis, but adapt them to each plant's characteristics
+- Left/right placement references should follow the photo viewpoint (viewer perspective)
+- If the floor is empty, you may suggest adding a small table or stand to place plants
+- If a direction is listed as ""not specified"", avoid inventing a cardinal direction
 
 Return only the JSON array with no additional text.
 ";
@@ -236,11 +244,13 @@ Return only the JSON array with no additional text.
                     request.PetSafe,
                     request.ChildSafe);
 
+                var directionContext = BuildDirectionContext(request.LightDirection, request.DominantDirection);
+
                 // Step 1: Analyze room image using Vision API
                 _logger.LogInformation("Starting room analysis...");
                 var roomAnalysis = request.RoomImageAnalyses.Count > 0
-                    ? await AnalyzeRoomFromMultipleImagesAsync(request.RoomImageAnalyses)
-                    : await AnalyzeRoomAsync(request.RoomImageBase64);
+                    ? await AnalyzeRoomFromMultipleImagesAsync(request.RoomImageAnalyses, directionContext)
+                    : await AnalyzeRoomWithContextAsync(request.RoomImageBase64, null, directionContext);
 
                 if (inferNaturalLightFromAi && !request.NaturalLightLevel.HasValue)
                 {
@@ -322,14 +332,14 @@ Return only the JSON array with no additional text.
 
         public async Task<RoomAnalysisDto> AnalyzeRoomAsync(string imageBase64)
         {
-            return await AnalyzeRoomWithContextAsync(imageBase64, null);
+            return await AnalyzeRoomWithContextAsync(imageBase64, null, null);
         }
 
-        private async Task<RoomAnalysisDto> AnalyzeRoomWithContextAsync(string imageBase64, RoomViewAngleEnum? viewAngle)
+        private async Task<RoomAnalysisDto> AnalyzeRoomWithContextAsync(string imageBase64, RoomViewAngleEnum? viewAngle, string? directionContext = null)
         {
             try
             {
-                var response = await _azureOpenAIService.AnalyzeImageAsync(imageBase64, BuildRoomAnalysisPrompt(viewAngle));
+                var response = await _azureOpenAIService.AnalyzeImageAsync(imageBase64, BuildRoomAnalysisPrompt(viewAngle, directionContext));
 
                 if (string.IsNullOrEmpty(response))
                 {
@@ -374,23 +384,39 @@ Return only the JSON array with no additional text.
             }
         }
 
-        private static string BuildRoomAnalysisPrompt(RoomViewAngleEnum? viewAngle)
+        private static string BuildRoomAnalysisPrompt(RoomViewAngleEnum? viewAngle, string? directionContext = null)
         {
-            if (!viewAngle.HasValue)
+            if (!viewAngle.HasValue && string.IsNullOrWhiteSpace(directionContext))
             {
                 return ROOM_ANALYSIS_PROMPT;
             }
 
-            var viewAngleLabel = MapRoomViewAngleToLabel(viewAngle);
+            var promptLines = new List<string>();
+            if (viewAngle.HasValue)
+            {
+                var viewAngleLabel = MapRoomViewAngleToLabel(viewAngle);
+                promptLines.Add($"- This image is taken from the {viewAngleLabel} angle of the room.");
+                promptLines.Add("- Reason correctly from this viewpoint and keep it consistent when aggregating multiple angles.");
+            }
 
-            return $"{ROOM_ANALYSIS_PROMPT}\n\nAdditional context:\n- This image is taken from the {viewAngleLabel} angle of the room.\n- Reason correctly from this viewpoint and keep it consistent when aggregating multiple angles.";
+            if (!string.IsNullOrWhiteSpace(directionContext))
+            {
+                promptLines.Add(directionContext);
+            }
+
+            return $"{ROOM_ANALYSIS_PROMPT}\n\nAdditional context:\n{string.Join("\n", promptLines)}";
         }
 
-        private static string BuildRoomAnalysisPrompt(IReadOnlyCollection<RoomImageAnalysisInputDto> roomImageAnalyses)
+        private static string BuildRoomAnalysisPrompt(IReadOnlyCollection<RoomImageAnalysisInputDto> roomImageAnalyses, string? directionContext = null)
         {
             if (roomImageAnalyses == null || roomImageAnalyses.Count == 0)
             {
-                return ROOM_ANALYSIS_PROMPT;
+                if (string.IsNullOrWhiteSpace(directionContext))
+                {
+                    return ROOM_ANALYSIS_PROMPT;
+                }
+
+                return $"{ROOM_ANALYSIS_PROMPT}\n\nAdditional context:\n{directionContext}";
             }
 
             var angleLines = roomImageAnalyses
@@ -399,10 +425,26 @@ Return only the JSON array with no additional text.
 
             if (angleLines.Count == 0)
             {
-                return ROOM_ANALYSIS_PROMPT;
+                if (string.IsNullOrWhiteSpace(directionContext))
+                {
+                    return ROOM_ANALYSIS_PROMPT;
+                }
+
+                return $"{ROOM_ANALYSIS_PROMPT}\n\nAdditional context:\n{directionContext}";
             }
 
-            return $"{ROOM_ANALYSIS_PROMPT}\n\nView-angle context by image order:\n{string.Join("\n", angleLines)}\n- Analyze all images together and return ONE consolidated result for the whole room.";
+            var prompt = new StringBuilder(ROOM_ANALYSIS_PROMPT)
+                .Append("\n\nView-angle context by image order:\n")
+                .Append(string.Join("\n", angleLines))
+                .Append("\n- Analyze all images together and return ONE consolidated result for the whole room.");
+
+            if (!string.IsNullOrWhiteSpace(directionContext))
+            {
+                prompt.Append("\n\nAdditional context:\n");
+                prompt.Append(directionContext);
+            }
+
+            return prompt.ToString();
         }
 
         private static string MapRoomViewAngleToLabel(RoomViewAngleEnum? viewAngle)
@@ -420,6 +462,46 @@ Return only the JSON array with no additional text.
                 RoomViewAngleEnum.Back => "back",
                 _ => viewAngle.Value.ToString()
             };
+        }
+
+        private static string MapDirectionToLabel(DirectionEnum direction)
+        {
+            return direction switch
+            {
+                DirectionEnum.North => "north",
+                DirectionEnum.NorthEast => "north-east",
+                DirectionEnum.East => "east",
+                DirectionEnum.SouthEast => "south-east",
+                DirectionEnum.South => "south",
+                DirectionEnum.SouthWest => "south-west",
+                DirectionEnum.West => "west",
+                DirectionEnum.NorthWest => "north-west",
+                _ => direction.ToString()
+            };
+        }
+
+        private static string FormatDirectionForPrompt(DirectionEnum? direction)
+        {
+            return direction.HasValue ? MapDirectionToLabel(direction.Value) : "not specified";
+        }
+
+        private static string BuildDirectionContext(DirectionEnum? lightDirection, DirectionEnum? dominantDirection)
+        {
+            var lines = new List<string>();
+
+            if (lightDirection.HasValue)
+            {
+                lines.Add($"- Main light enters from the {MapDirectionToLabel(lightDirection.Value)} direction.");
+            }
+
+            if (dominantDirection.HasValue)
+            {
+                lines.Add($"- Room dominant direction: {MapDirectionToLabel(dominantDirection.Value)}.");
+            }
+
+            return lines.Count == 0
+                ? string.Empty
+                : string.Join("\n", lines);
         }
 
         private async Task<string> DownloadRoomImageAsBase64Async(string imageUrl)
@@ -457,7 +539,7 @@ Return only the JSON array with no additional text.
             }
         }
 
-        private async Task<RoomAnalysisDto> AnalyzeRoomFromMultipleImagesAsync(IReadOnlyCollection<RoomImageAnalysisInputDto> roomImageAnalyses)
+        private async Task<RoomAnalysisDto> AnalyzeRoomFromMultipleImagesAsync(IReadOnlyCollection<RoomImageAnalysisInputDto> roomImageAnalyses, string? directionContext = null)
         {
             if (roomImageAnalyses == null || roomImageAnalyses.Count == 0)
             {
@@ -476,14 +558,14 @@ Return only the JSON array with no additional text.
             if (normalizedImages.Count == 1)
             {
                 var singleImage = normalizedImages[0];
-                return await AnalyzeRoomWithContextAsync(singleImage.ImageBase64, singleImage.ViewAngle);
+                return await AnalyzeRoomWithContextAsync(singleImage.ImageBase64, singleImage.ViewAngle, directionContext);
             }
 
             try
             {
                 var response = await _azureOpenAIService.AnalyzeImagesAsync(
                     normalizedImages.Select(roomImage => roomImage.ImageBase64).ToList(),
-                    BuildRoomAnalysisPrompt(normalizedImages));
+                    BuildRoomAnalysisPrompt(normalizedImages, directionContext));
 
                 if (string.IsNullOrEmpty(response))
                 {
@@ -716,6 +798,18 @@ Return only the JSON array with no additional text.
                 _ => "plants suitable for indirect light"
             };
             queryParts.Add(lightingQuery);
+
+            if (request.LightDirection.HasValue)
+            {
+                var lightDirectionLabel = MapDirectionToLabel(request.LightDirection.Value);
+                queryParts.Add($"light enters from {lightDirectionLabel}-facing windows");
+            }
+
+            if (request.DominantDirection.HasValue)
+            {
+                var dominantDirectionLabel = MapDirectionToLabel(request.DominantDirection.Value);
+                queryParts.Add($"dominant room direction {dominantDirectionLabel}");
+            }
 
             // Size
             var sizeQuery = analysis.RoomSize switch
@@ -1078,6 +1172,8 @@ Return only the JSON array with no additional text.
                     roomAnalysis.RoomType,
                     roomAnalysis.RoomSize,
                     roomAnalysis.LightingCondition,
+                    FormatDirectionForPrompt(request.LightDirection),
+                    FormatDirectionForPrompt(request.DominantDirection),
                     roomAnalysis.InteriorStyle,
                     roomAnalysis.AvailableSpace,
                     candidatesJson,
@@ -1121,7 +1217,8 @@ Return only the JSON array with no additional text.
                                     ?? GenerateBasicReason(candidate, roomAnalysis);
                                 candidate.SuggestedPlacement = BuildSuggestedPlacementText(
                                     ranking.SuggestedPlacement,
-                                    roomAnalysis);
+                                    roomAnalysis,
+                                    request);
                                 candidate.MatchScore = ranking.MatchScore > 0 ? ranking.MatchScore : 0.8;
                                 result.Add(candidate);
                             }
@@ -1141,7 +1238,7 @@ Return only the JSON array with no additional text.
             }
 
             // Fallback: return top candidates with basic reasoning
-            var fallbackPlacement = BuildFallbackPlacementText(roomAnalysis);
+            var fallbackPlacement = BuildFallbackPlacementText(roomAnalysis, request);
             var fallbackPrioritized = hintPrioritizedCandidates.Select(c =>
             {
                 c.ReasonForRecommendation = GenerateBasicReason(c, roomAnalysis);
@@ -1197,15 +1294,26 @@ Return only the JSON array with no additional text.
             return Math.Clamp(fallbackCapacity, MIN_RECOMMENDATION_LIMIT, MAX_RECOMMENDATION_LIMIT);
         }
 
-        private static string BuildFallbackPlacementText(RoomAnalysisDto roomAnalysis)
+        private static string BuildFallbackPlacementText(RoomAnalysisDto roomAnalysis, RoomDesignRequestDto request)
         {
             var availableSpaceSuggestions = MapAvailableSpaceToPlacementPhrases(roomAnalysis.AvailableSpace);
+            var directionHint = BuildDirectionalPlacementHint(roomAnalysis, request);
             if (availableSpaceSuggestions.Count == 0)
             {
+                if (!string.IsNullOrWhiteSpace(directionHint))
+                {
+                    return $"Suggested placement: {directionHint}.";
+                }
+
                 return "Place the plant in a location with suitable light and enough space for its growth characteristics.";
             }
 
             var merged = string.Join(" or ", availableSpaceSuggestions);
+            if (!string.IsNullOrWhiteSpace(directionHint))
+            {
+                return $"Suggested placement: {merged}, {directionHint}.";
+            }
+
             return $"Suggested placement: {merged}.";
         }
 
@@ -1234,9 +1342,9 @@ Return only the JSON array with no additional text.
                 .ToList();
         }
 
-        private static string BuildSuggestedPlacementText(string? aiSuggestedPlacement, RoomAnalysisDto roomAnalysis)
+        private static string BuildSuggestedPlacementText(string? aiSuggestedPlacement, RoomAnalysisDto roomAnalysis, RoomDesignRequestDto request)
         {
-            var fallback = BuildFallbackPlacementText(roomAnalysis);
+            var fallback = BuildFallbackPlacementText(roomAnalysis, request);
             if (string.IsNullOrWhiteSpace(aiSuggestedPlacement))
             {
                 return fallback;
@@ -1260,7 +1368,14 @@ Return only the JSON array with no additional text.
                 }
 
                 var mapped = tokens.Select(MapPlacementTokenToPhrase).ToList();
-                return $"Place the plant {string.Join(" or ", mapped)} to balance the space and keep maintenance convenient.";
+                var directionHint = BuildDirectionalPlacementHint(roomAnalysis, request);
+                var placement = $"Place the plant {string.Join(" or ", mapped)}";
+                if (!string.IsNullOrWhiteSpace(directionHint))
+                {
+                    placement += $", or {directionHint}";
+                }
+
+                return $"{placement} to balance the space and keep maintenance convenient.";
             }
 
             if (!raw.EndsWith('.') && !raw.EndsWith('!') && !raw.EndsWith('?'))
@@ -1269,6 +1384,42 @@ Return only the JSON array with no additional text.
             }
 
             return raw;
+        }
+
+        private static string? BuildDirectionalPlacementHint(RoomAnalysisDto roomAnalysis, RoomDesignRequestDto request)
+        {
+            var targets = new List<string>();
+
+            if (request.LightDirection.HasValue)
+            {
+                var lightDirectionLabel = MapDirectionToLabel(request.LightDirection.Value);
+                var opening = IsBalconyRoom(roomAnalysis) ? "balcony opening" : "window";
+                targets.Add($"{lightDirectionLabel}-facing {opening}");
+            }
+
+            if (request.DominantDirection.HasValue)
+            {
+                var dominantDirectionLabel = MapDirectionToLabel(request.DominantDirection.Value);
+                targets.Add($"{dominantDirectionLabel} side of the room");
+            }
+
+            if (IsBalconyRoom(roomAnalysis))
+            {
+                targets.Add("left or right side of the balcony (as shown in the photo)");
+            }
+
+            if (targets.Count == 0)
+            {
+                return null;
+            }
+
+            var targetText = string.Join(", ", targets.Distinct(StringComparer.OrdinalIgnoreCase));
+            return $"on a small table or stand near the {targetText}";
+        }
+
+        private static bool IsBalconyRoom(RoomAnalysisDto roomAnalysis)
+        {
+            return roomAnalysis.RoomType?.Equals("Balcony", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private static string MapPlacementTokenToPhrase(string token)

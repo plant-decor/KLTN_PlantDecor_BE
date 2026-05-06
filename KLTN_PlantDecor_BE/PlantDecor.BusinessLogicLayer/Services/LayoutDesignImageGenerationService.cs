@@ -611,39 +611,43 @@ Hard constraints: keep all required plants in the same final image and never dup
                 ? "a visually appropriate position in the room"
                 : candidate.PlacementPosition;
 
-            return $@"You are given one room image and one plant reference image.
+            return $@"You are given one room image (image 1) and one plant reference image (image 2).
 
 Task:
-Add the referenced plant into the room as a single realistic composition and freely restyle the room to match the user's requested design direction.
+Insert exactly one new plant from the reference into the room image, while allowing non-structural restyling of the room.
 
 Room design context:
 {roomDesignContext}
 
-Style direction rules:
-- You may redesign the room style, decor, surface finishes, colors, and removable furniture to better match the request.
-- You may add extra decorative objects if they fit the requested style and do not break realism.
-- You must keep the structural layout of the room unchanged.
+What you may change (non-structural):
+- Repaint walls and ceilings, update materials and surface finishes, and adjust colors.
+- Replace or reposition movable furniture.
+- Add decor items and artwork that fit the requested style (plant-themed art is allowed).
+- Adjust textiles, lighting fixtures, and accessories.
+
+Hard structural constraints:
+- Keep the room layout and geometry unchanged.
 - Do not move, resize, remove, or redraw doors or windows.
-- Doors and windows must remain exactly where they are in the input room image, with the same count, shape, and placement.
+- Do not warp or bend walls, floor, or ceiling planes.
 
 Plant instructions:
 - Reference image: input_image_2
 - Description: plant from {candidate.SourceType} #{candidate.SourceEntityId}
 - Placement: {placement}
 
-Requirements:
-- Add exactly one plant in the final image
-- Maintain realistic lighting, shadows, and perspective
-- Match scale correctly for the plant
-- Do NOT modify existing furniture, walls, or layout
-- Ensure the plant does not overlap unnaturally with room objects
-- Blend the plant seamlessly into the environment
-- The plant must sit on a real surface (floor, table, or furniture)
-- The base of the plant must touch a surface
-- Respect perspective and depth
+Plant requirements:
+- Add exactly one new plant in the final image.
+- If the original room already contains plants, keep them unchanged; do not remove or duplicate them.
+- Do not add any other new plants, potted plants, flower arrangements, or greenery beyond the single required plant.
+- Do not introduce extra planters or plant stands unless they belong to the required plant.
+- The inserted plant must not be duplicated, mirrored, or fused with existing plants or objects.
+- Match the plant identity, silhouette, and dominant color appearance to the reference.
+- Maintain realistic lighting, shadows, scale, and perspective.
+- The plant must sit on a real support surface and the base must touch the surface.
+- Avoid unnatural overlap with room objects.
 
 Important:
-- This is a SINGLE plant composition task, not a multi-plant composition
+- This is a SINGLE plant composition task (exactly one new plant).
 - The room may be restyled, but the architecture and openings must stay fixed";
         }
 
