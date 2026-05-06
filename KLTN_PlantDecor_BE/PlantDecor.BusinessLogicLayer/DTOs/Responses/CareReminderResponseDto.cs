@@ -11,6 +11,7 @@
         public string? Content { get; set; }
         public DateOnly? ReminderDate { get; set; }
         public DateOnly? ScheduledDate { get; set; }
+        public bool IsCompleted { get; set; }
         public DateTime? CreatedAt { get; set; }
     }
 }

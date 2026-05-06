@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlantDecor.API.Responses;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.Security.Claims;
@@ -55,22 +56,27 @@ namespace PlantDecor.API.Controllers
         /// [Customer] Lay danh sach thong bao nhac cham soc cay
         /// </summary>
         [HttpGet("my-care-reminders")]
-        public async Task<IActionResult> GetMyCareReminders()
+        public async Task<IActionResult> GetMyCareReminders([FromQuery] int? careType, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var userId = GetUserId();
-            var reminders = await _userPlantService.GetMyCareRemindersAsync(userId);
-            if (reminders == null || reminders.Count == 0)
+            var pagination = new Pagination(pageNumber, pageSize);
+            var reminders = await _userPlantService.GetMyCareRemindersAsync(userId, careType, pagination);
+            if (reminders.Items == null || !reminders.Items.Any())
             {
-                return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+                return Ok(new ApiResponse<PaginatedResult<CareReminderNotificationResponseDto>>
                 {
                     Success = true,
                     StatusCode = StatusCodes.Status200OK,
                     Message = "You don't have any care reminders yet",
-                    Payload = new List<CareReminderNotificationResponseDto>()
+                    Payload = new PaginatedResult<CareReminderNotificationResponseDto>(
+                        new List<CareReminderNotificationResponseDto>(),
+                        0,
+                        pagination.PageNumber,
+                        pagination.PageSize)
                 });
             }
 
-            return Ok(new ApiResponse<List<CareReminderNotificationResponseDto>>
+            return Ok(new ApiResponse<PaginatedResult<CareReminderNotificationResponseDto>>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
@@ -137,6 +143,23 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Update care reminder successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Customer] Đánh dấu care reminder của tôi đã hoàn thành
+        /// </summary>
+        [HttpPatch("my-care-reminders/{id:int}/complete")]
+        public async Task<IActionResult> CompleteMyCareReminder(int id)
+        {
+            var userId = GetUserId();
+            var result = await _careReminderService.CompleteForUserAsync(userId, id);
+            return Ok(new ApiResponse<CareReminderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Complete care reminder successfully",
                 Payload = result
             });
         }

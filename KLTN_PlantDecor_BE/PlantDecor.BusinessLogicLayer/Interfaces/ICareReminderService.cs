@@ -7,6 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         Task<CareReminderResponseDto> CreateForUserAsync(int userId, CreateCareReminderRequestDto request);
         Task<CareReminderResponseDto> UpdateForUserAsync(int userId, int id, UpdateCareReminderRequestDto request);
+        Task<CareReminderResponseDto> CompleteForUserAsync(int userId, int id);
         Task DeleteForUserAsync(int userId, int id);
     }
 }

@@ -22,6 +22,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Content = reminder.Content,
                 ReminderDate = reminder.ReminderDate,
                 ScheduledDate = reminder.ScheduledDate,
+                IsCompleted = reminder.IsCompleted,
                 CreatedAt = reminder.CreatedAt
             };
         }
@@ -30,6 +31,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
         {
             var plant = reminder.UserPlant?.PlantInstance?.Plant ?? reminder.UserPlant?.Plant;
             var plantName = plant?.Name;
+            var plantImageUrl = SelectPrimaryImageUrl(reminder);
             var title = "Plant care reminder";
             var message = string.IsNullOrWhiteSpace(reminder.Content)
                 ? BuildGenericMessage(plantName, reminder.ReminderDate)
@@ -42,12 +44,42 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 CareType = reminder.CareType,
                 CareTypeName = ResolveCareTypeName(reminder.CareType),
                 PlantName = plantName,
+                PlantImageUrl = plantImageUrl,
                 Title = title,
                 Message = message,
                 ReminderDate = reminder.ReminderDate,
                 ScheduledDate = reminder.ScheduledDate,
+                IsCompleted = reminder.IsCompleted,
                 CreatedAt = reminder.CreatedAt
             };
+        }
+
+        private static string? SelectPrimaryImageUrl(CareReminder reminder)
+        {
+            var userPlant = reminder.UserPlant;
+            if (userPlant == null)
+            {
+                return null;
+            }
+
+            var plantInstanceImage = userPlant.PlantInstance?.PlantImages
+                .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.IsPrimary == true)
+                .ThenByDescending(image => image.Id)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(plantInstanceImage))
+            {
+                return plantInstanceImage;
+            }
+
+            return userPlant.Plant?.PlantImages
+                .Where(image => !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.IsPrimary == true)
+                .ThenByDescending(image => image.Id)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault();
         }
 
         private static string BuildGenericMessage(string? plantName, DateOnly? reminderDate)

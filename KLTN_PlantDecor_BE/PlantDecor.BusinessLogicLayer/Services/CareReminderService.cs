@@ -4,6 +4,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -104,6 +105,70 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.CareReminderRepository.PrepareRemove(reminder);
             await _unitOfWork.SaveAsync();
+        }
+
+        public async Task<CareReminderResponseDto> CompleteForUserAsync(int userId, int id)
+        {
+            var reminder = await _unitOfWork.CareReminderRepository.GetByIdAsync(id);
+            if (reminder == null)
+            {
+                throw new NotFoundException($"CareReminder {id} not found");
+            }
+
+            if (!reminder.UserPlantId.HasValue)
+            {
+                throw new ForbiddenException("You do not have access to this care reminder");
+            }
+
+            await EnsureUserPlantOwnedByUserAsync(userId, reminder.UserPlantId.Value);
+
+            reminder.IsCompleted = true;
+            await ApplyCompletedCareDateAsync(reminder);
+
+            _unitOfWork.CareReminderRepository.PrepareUpdate(reminder);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.CareReminderRepository.GetByIdWithDetailsAsync(id);
+            return updated?.ToResponse() ?? reminder.ToResponse();
+        }
+
+        private async Task ApplyCompletedCareDateAsync(CareReminder reminder)
+        {
+            if (!reminder.UserPlantId.HasValue)
+            {
+                return;
+            }
+
+            var userPlant = await _unitOfWork.UserPlantRepository.GetByIdAsync(reminder.UserPlantId.Value);
+            if (userPlant == null)
+            {
+                throw new NotFoundException($"UserPlant {reminder.UserPlantId.Value} not found");
+            }
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var changed = false;
+
+            switch (reminder.CareType)
+            {
+                case (int)CareReminderTypeEnum.Watering:
+                    userPlant.LastWateredDate = today;
+                    changed = true;
+                    break;
+                case (int)CareReminderTypeEnum.Fertilizing:
+                    userPlant.LastFertilizedDate = today;
+                    changed = true;
+                    break;
+                case (int)CareReminderTypeEnum.Pruning:
+                    userPlant.LastPrunedDate = today;
+                    changed = true;
+                    break;
+            }
+
+            if (changed)
+            {
+                userPlant.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.UserPlantRepository.PrepareUpdate(userPlant);
+            }
         }
 
         public async Task DeleteForUserAsync(int userId, int id)

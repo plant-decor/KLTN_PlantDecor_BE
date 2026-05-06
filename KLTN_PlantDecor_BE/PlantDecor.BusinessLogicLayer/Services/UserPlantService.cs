@@ -1,7 +1,10 @@
 ﻿using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -21,10 +24,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return userPlants.ToResponseList();
         }
 
-        public async Task<List<CareReminderNotificationResponseDto>> GetMyCareRemindersAsync(int userId)
+        public async Task<PaginatedResult<CareReminderNotificationResponseDto>> GetMyCareRemindersAsync(int userId, int? careType, Pagination pagination)
         {
-            var reminders = await _unitOfWork.CareReminderRepository.GetByUserIdWithDetailsAsync(userId);
-            return reminders.Select(reminder => reminder.ToNotificationResponse()).ToList();
+            if (careType.HasValue && !Enum.IsDefined(typeof(CareReminderTypeEnum), careType.Value))
+            {
+                throw new BadRequestException("Invalid CareType");
+            }
+
+            var result = await _unitOfWork.CareReminderRepository.GetByUserIdWithFiltersAsync(userId, careType, pagination);
+            var items = result.Items.Select(reminder => reminder.ToNotificationResponse()).ToList();
+            return new PaginatedResult<CareReminderNotificationResponseDto>(items, result.TotalCount, result.PageNumber, result.PageSize);
         }
 
         public async Task<List<CareReminderNotificationResponseDto>> GetMyCareRemindersTodayAsync(int userId)

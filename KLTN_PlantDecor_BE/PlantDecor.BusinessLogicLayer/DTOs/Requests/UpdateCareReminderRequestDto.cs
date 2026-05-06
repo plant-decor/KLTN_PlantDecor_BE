@@ -6,6 +6,5 @@
         public int? CareType { get; set; }
         public string? Content { get; set; }
         public DateOnly? ReminderDate { get; set; }
-        public DateOnly? ScheduledDate { get; set; }
     }
 }
