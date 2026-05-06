@@ -3,6 +3,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
 namespace PlantDecor.BusinessLogicLayer.Services
@@ -12,8 +13,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
 
-        private const string CACHE_KEY_PREFIX = "design_tpl_tier";
-        private const string CACHE_KEY_BY_TEMPLATE_PREFIX = "design_tpl_tier_tpl";
+        private const string CACHE_KEY_PREFIX = "design_tpl_tier_v2";
+        private const string CACHE_KEY_BY_TEMPLATE_PREFIX = "design_tpl_tier_tpl_v2";
         private const string DESIGN_TEMPLATE_CACHE_PREFIX = "design_tpl";
 
         public DesignTemplateTierService(IUnitOfWork unitOfWork, ICacheService cacheService)
@@ -384,6 +385,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         MaterialId = i.MaterialId,
                         PlantId = i.PlantId,
                         ItemType = i.ItemType,
+                        ItemTypeName = Enum.IsDefined(typeof(ItemTypeEnum), i.ItemType)
+                            ? ((ItemTypeEnum)i.ItemType).ToString()
+                            : string.Empty,
+                        Name = i.Material?.Name ?? i.Plant?.Name ?? string.Empty,
                         Quantity = i.Quantity,
                         CreatedAt = i.CreatedAt
                     })

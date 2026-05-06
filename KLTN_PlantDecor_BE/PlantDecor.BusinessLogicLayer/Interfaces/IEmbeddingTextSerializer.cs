@@ -25,6 +25,11 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         string SerializeNurseryMaterial(NurseryMaterialEmbeddingDto dto);
 
         /// <summary>
+        /// Serialize CareServicePackage entity to rich text for embedding
+        /// </summary>
+        string SerializeCareServicePackage(CareServicePackageEmbeddingDto dto);
+
+        /// <summary>
         /// Extract metadata from embedding DTO for filtering purposes
         /// </summary>
         Dictionary<string, object> ExtractMetadata(int nurseryId, decimal? price, string status, int originalEntityId);

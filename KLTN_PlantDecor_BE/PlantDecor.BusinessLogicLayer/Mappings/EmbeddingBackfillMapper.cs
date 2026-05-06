@@ -168,6 +168,48 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             };
         }
 
+        public static CareServicePackageEmbeddingDto ToEmbeddingBackfillDto(this CareServicePackage entity)
+        {
+            var rules = entity.PackagePlantSuitabilities ?? new List<PackagePlantSuitability>();
+
+            var categoryNames = rules
+                .Where(r => r.IsActive && r.CategoryId.HasValue && r.Category != null)
+                .Select(r => r.Category!.Name)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct()
+                .ToList();
+
+            var careLevels = rules
+                .Where(r => r.IsActive && r.CareDifficultyLevel.HasValue)
+                .Select(r => r.CareDifficultyLevel!.Value)
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+
+            var careLevelNames = careLevels
+                .Select(level => Enum.IsDefined(typeof(CareLevelTypeEnum), level)
+                    ? ((CareLevelTypeEnum)level).ToString()
+                    : level.ToString())
+                .ToList();
+
+            return new CareServicePackageEmbeddingDto
+            {
+                CareServicePackageId = entity.Id,
+                IsActive = entity.IsActive == true,
+                Name = entity.Name ?? string.Empty,
+                Description = entity.Description,
+                Features = entity.Features,
+                ServiceType = entity.ServiceType,
+                VisitPerWeek = entity.VisitPerWeek,
+                DurationDays = entity.DurationDays,
+                AreaLimit = entity.AreaLimit,
+                UnitPrice = entity.UnitPrice,
+                SuitabilityCategoryNames = categoryNames,
+                SuitabilityCareLevels = careLevels,
+                SuitabilityCareLevelNames = careLevelNames
+            };
+        }
+
         private static string? GetLightRequirementName(int? lightRequirement)
         {
             if (!lightRequirement.HasValue)

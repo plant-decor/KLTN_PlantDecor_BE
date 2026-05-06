@@ -16,6 +16,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return await _context.DesignTemplateTiers
                 .AsNoTracking()
                 .Include(t => t.DesignTemplateTierItems)
+                    .ThenInclude(i => i.Material)
+                .Include(t => t.DesignTemplateTierItems)
+                    .ThenInclude(i => i.Plant)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }
 
@@ -24,6 +27,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var query = _context.DesignTemplateTiers
                 .AsNoTracking()
                 .Include(t => t.DesignTemplateTierItems)
+                    .ThenInclude(i => i.Material)
+                .Include(t => t.DesignTemplateTierItems)
+                    .ThenInclude(i => i.Plant)
                 .Where(t => t.DesignTemplateId == designTemplateId);
 
             if (activeOnly)

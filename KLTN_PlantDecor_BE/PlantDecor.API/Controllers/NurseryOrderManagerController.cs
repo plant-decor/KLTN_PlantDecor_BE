@@ -61,6 +61,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Hủy nursery order
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/cancel")]
+        public async Task<IActionResult> CancelNurseryOrder([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.CancelNurseryOrderForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Cancelled nursery order successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Xác nhận nursery order hoàn tất
         /// </summary>
         [HttpPut("{nurseryOrderId:int}/mark-completed")]
@@ -164,6 +182,24 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Updated nursery order shipper successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Cập nhật trạng thái nursery order thành Assigned
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/mark-assigned")]
+        public async Task<IActionResult> MarkNurseryOrderAssigned([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.MarkNurseryOrderAssignedForManagerAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Marked nursery order as assigned successfully",
                 Payload = result
             });
         }

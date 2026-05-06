@@ -195,6 +195,12 @@ namespace PlantDecor.API.Extensions
                 "auto-complete-pending-confirmation-orders",
                 service => service.AutoCompletePendingConfirmationOrdersAsync(),
                 "0 0 * * *");
+
+            // Update user plant care dates from today's reminders (run daily)
+            recurringJobManager.AddOrUpdate<ICareReminderBackgroundJobService>(
+                "process-today-care-reminders",
+                service => service.ProcessTodayCareRemindersAsync(),
+                "0 0 * * *");
         }
     }
 }

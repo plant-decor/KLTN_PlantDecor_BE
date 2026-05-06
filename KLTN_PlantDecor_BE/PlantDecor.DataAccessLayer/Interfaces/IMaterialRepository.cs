@@ -5,8 +5,8 @@ namespace PlantDecor.DataAccessLayer.Interfaces
 {
     public interface IMaterialRepository : IGenericRepository<Material>
     {
-        Task<PaginatedResult<Material>> GetAllWithDetailsAsync(Pagination pagination);
-        Task<PaginatedResult<Material>> GetActiveWithDetailsAsync(Pagination pagination);
+        Task<PaginatedResult<Material>> GetAllWithDetailsAsync(Pagination pagination, string? keyword = null);
+        Task<PaginatedResult<Material>> GetActiveWithDetailsAsync(Pagination pagination, string? keyword = null);
         Task<Material?> GetByIdWithDetailsAsync(int id);
         Task<Material?> GetByIdWithOrdersAsync(int id);
         Task<bool> ExistsByCodeAsync(string materialCode, int? excludeId = null);

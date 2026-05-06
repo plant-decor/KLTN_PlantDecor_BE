@@ -18,5 +18,9 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task ReplaceSpecializationsAsync(int packageId, List<int> specializationIds);
         Task AddSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules);
         Task ReplaceSuitabilityRulesAsync(int packageId, IEnumerable<PackagePlantSuitability> rules);
+
+        // Embedding backfill support
+        Task<int> CountForEmbeddingBackfillAsync();
+        Task<List<CareServicePackage>> GetEmbeddingBackfillBatchAsync(int skip, int take);
     }
 }

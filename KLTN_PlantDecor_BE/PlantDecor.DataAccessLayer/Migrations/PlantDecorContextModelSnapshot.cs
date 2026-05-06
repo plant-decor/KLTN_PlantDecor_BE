@@ -240,6 +240,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
+                    b.Property<bool>("IsCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateOnly?>("ReminderDate")
                         .HasColumnType("date");
 

@@ -88,11 +88,21 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string Reply { get; set; } = string.Empty;
         public string? RoomEnvironmentSummary { get; set; }
         public List<PlantSuggestionResponseDto> SuggestedPlants { get; set; } = new();
+        public List<CareServicePackageSuggestionDto> SuggestedCareServicePackages { get; set; } = new();
         public List<string> CareTips { get; set; } = new();
         public List<string> FollowUpQuestions { get; set; } = new();
         public List<PolicyGroundingSourceDto> PolicySources { get; set; } = new();
         public string? Disclaimer { get; set; }
         public bool UsedFallback { get; set; }
+    }
+
+    public class CareServicePackageSuggestionDto
+    {
+        public int PackageId { get; set; }
+        public string PackageName { get; set; } = string.Empty;
+        public decimal? UnitPrice { get; set; }
+        public int MatchScore { get; set; }
+        public List<string> MatchReasons { get; set; } = new();
     }
 
     public class PolicyGroundingSourceDto
