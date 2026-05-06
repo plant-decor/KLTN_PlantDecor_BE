@@ -1,7 +1,10 @@
+using Hangfire;
+using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
+using PlantDecor.BusinessLogicLayer.Mappings;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
@@ -12,15 +15,20 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         private const string CACHE_KEY_ACTIVE = "care_pkg_active";
         private const string CACHE_KEY_ALL = "care_pkg_all";
         private const string CACHE_KEY_PREFIX = "care_pkg";
 
-        public CareServicePackageService(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public CareServicePackageService(
+            IUnitOfWork unitOfWork,
+            ICacheService cacheService,
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<List<CareServicePackageResponseDto>> GetAllActiveAsync()
@@ -126,6 +134,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await InvalidateCacheAsync();
 
             var created = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(pkg.Id);
+            QueueEmbeddingAsync(created!);
             return MapToDto(created!);
         }
 
@@ -156,6 +165,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await InvalidateCacheAsync();
 
             var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(id);
+            QueueEmbeddingAsync(updated!);
             return MapToDto(updated!);
         }
 
@@ -170,7 +180,34 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork.CareServicePackageRepository.PrepareUpdate(pkg);
             await _unitOfWork.SaveAsync();
             await InvalidateCacheAsync();
+
+            var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(id);
+            if (updated != null)
+            {
+                QueueEmbeddingAsync(updated);
+            }
         }
+
+        private void QueueEmbeddingAsync(CareServicePackage entity)
+        {
+            try
+            {
+                var embeddingDto = entity.ToEmbeddingBackfillDto();
+                var entityId = ConvertToGuid(entity.Id);
+                _backgroundJobClient.Enqueue<IEmbeddingBackgroundJobService>(
+                    service => service.ProcessCareServicePackageEmbeddingAsync(
+                        embeddingDto,
+                        entityId,
+                        EmbeddingEntityTypes.CareServicePackage));
+            }
+            catch
+            {
+                // Do not fail the main operation if embedding enqueue fails.
+            }
+        }
+
+        private static Guid ConvertToGuid(int id)
+            => new Guid(id.ToString().PadLeft(32, '0'));
 
         public async Task<List<CareServicePackageWithNurseriesResponseDto>> GetPackagesWithNurseriesAsync()
         {
@@ -400,6 +437,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await InvalidateCacheAsync();
 
             var updated = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId);
+            QueueEmbeddingAsync(updated!);
             return MapToDto(updated!);
         }
 
