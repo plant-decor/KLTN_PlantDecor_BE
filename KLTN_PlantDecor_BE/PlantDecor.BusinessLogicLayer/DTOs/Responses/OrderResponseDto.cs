@@ -14,7 +14,9 @@
         public int? Status { get; set; }
         public string? StatusName { get; set; }
         public int? PaymentStrategy { get; set; }
+        public string? PaymentStrategyName { get; set; }
         public int? OrderType { get; set; }
+        public string? OrderTypeName { get; set; }
         public string? Note { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

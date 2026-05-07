@@ -20,7 +20,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
         public async Task<List<Order>> GetByUserIdWithDetailsAsync(int userId, int? orderStatus = null)
         {
             var query = BuildDetailedQuery()
-                .Where(o => o.UserId == userId);
+                .Where(o => o.UserId == userId
+                && o.OrderType != (int)OrderTypeEnum.Service
+                && o.OrderType != (int)OrderTypeEnum.Design);
 
             if (orderStatus.HasValue)
                 query = query.Where(o => o.Status == orderStatus.Value);
