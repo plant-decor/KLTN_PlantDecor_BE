@@ -153,6 +153,7 @@ Return only the JSON array with no additional text.
                 throw new BadRequestException("At least one roomImageId is required");
             }
 
+            // Số lượng ảnh gửi lớn hơn Max thì trả lỗi
             if (normalizedRoomImageIds.Count > MAX_UPLOAD_ROOM_IMAGES)
             {
                 throw new BadRequestException($"Maximum {MAX_UPLOAD_ROOM_IMAGES} room images are allowed");
@@ -170,6 +171,8 @@ Return only the JSON array with no additional text.
                 .ToList();
 
             var roomImageAnalyses = new List<RoomImageAnalysisInputDto>();
+            // Duyệt qua lần lượt từng ảnh theo thứ tự người dùng gửi lên, nếu ảnh nào thiếu URL hoặc không tải được thì trả lỗi luôn, không phân tích ảnh còn lại để tránh tình trạng một số ảnh bị lỗi nhưng vẫn trả về kết quả phân tích
+            // Nếu không lỗi thì thêm vào list phân tích để gửi lên AI cùng với thông tin góc chụp, AI sẽ tổng hợp thông tin từ tất cả ảnh để đưa ra phân tích và gợi ý phù hợp nhất cho toàn bộ căn phòng thay vì từng góc riêng lẻ
             foreach (var roomImage in orderedRoomImages)
             {
                 if (string.IsNullOrWhiteSpace(roomImage.ImageUrl))
