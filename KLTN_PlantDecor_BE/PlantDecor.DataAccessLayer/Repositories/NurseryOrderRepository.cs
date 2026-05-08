@@ -304,35 +304,9 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (nurseryId.HasValue)
                 completedOrders = completedOrders.Where(no => no.NurseryId == nurseryId.Value);
 
-            var refundedItems = _context.ReturnTicketItems
-                .Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
-                .GroupBy(i => i.NurseryOrderDetailId)
-                .Select(g => new
-                {
-                    NurseryOrderDetailId = g.Key,
-                    RefundedQuantity = (int?)g.Sum(x => x.ApprovedQuantity ?? 0),
-                    RefundedAmount = (decimal?)g.Sum(x => x.RefundedAmount ?? 0m)
-                });
+            var completedDetails = completedOrders.SelectMany(no => no.NurseryOrderDetails);
 
-            var netOrderDetails =
-                from detail in completedOrders.SelectMany(no => no.NurseryOrderDetails)
-                join refund in refundedItems
-                    on detail.Id equals refund.NurseryOrderDetailId into refundGroup
-                from refund in refundGroup.DefaultIfEmpty()
-                select new
-                {
-                    detail.CommonPlantId,
-                    detail.PlantInstanceId,
-                    detail.NurseryPlantComboId,
-                    detail.NurseryMaterialId,
-                    detail.ItemName,
-                    Quantity = detail.Quantity ?? 0,
-                    Amount = detail.Amount ?? 0m,
-                    RefundedQuantity = refund == null ? 0 : refund.RefundedQuantity,
-                    RefundedAmount = refund == null ? 0m : refund.RefundedAmount
-                };
-
-            return await netOrderDetails
+            var soldItems = completedDetails
                 .Select(d => new
                 {
                     d.CommonPlantId,
@@ -340,10 +314,27 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     d.NurseryPlantComboId,
                     d.NurseryMaterialId,
                     d.ItemName,
-                    NetQuantity = d.Quantity - (d.RefundedQuantity ?? 0),
-                    NetRevenue = d.Amount - (d.RefundedAmount ?? 0m)
-                })
-                .Where(d => d.NetQuantity > 0 || d.NetRevenue > 0)
+                    Quantity = d.Quantity ?? 0,
+                    Revenue = d.Amount ?? 0m
+                });
+
+            var refundedItems =
+                from detail in completedDetails
+                join refund in _context.ReturnTicketItems.Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
+                    on detail.Id equals refund.NurseryOrderDetailId
+                select new
+                {
+                    detail.CommonPlantId,
+                    detail.PlantInstanceId,
+                    detail.NurseryPlantComboId,
+                    detail.NurseryMaterialId,
+                    detail.ItemName,
+                    Quantity = -(refund.ApprovedQuantity ?? 0),
+                    Revenue = -(refund.RefundedAmount ?? 0m)
+                };
+
+            return await soldItems
+                .Concat(refundedItems)
                 .GroupBy(d => new
                 {
                     ProductType = d.CommonPlantId.HasValue
@@ -365,9 +356,10 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     ProductType = g.Key.ProductType,
                     ProductId = g.Key.ProductId,
                     ProductName = g.Key.ProductName ?? string.Empty,
-                    TotalQuantity = g.Sum(x => x.NetQuantity),
-                    TotalRevenue = g.Sum(x => x.NetRevenue)
+                    TotalQuantity = g.Sum(x => x.Quantity),
+                    TotalRevenue = g.Sum(x => x.Revenue)
                 })
+                .Where(x => x.TotalQuantity > 0 || x.TotalRevenue > 0)
                 .OrderByDescending(x => x.TotalRevenue)
                 .ThenByDescending(x => x.TotalQuantity)
                 .Take(limit)
