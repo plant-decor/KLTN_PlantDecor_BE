@@ -310,8 +310,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Select(g => new
                 {
                     NurseryOrderDetailId = g.Key,
-                    RefundedQuantity = g.Sum(x => x.ApprovedQuantity ?? 0),
-                    RefundedAmount = g.Sum(x => x.RefundedAmount ?? 0m)
+                    RefundedQuantity = (int?)g.Sum(x => x.ApprovedQuantity ?? 0),
+                    RefundedAmount = (decimal?)g.Sum(x => x.RefundedAmount ?? 0m)
                 });
 
             var netOrderDetails =
@@ -340,8 +340,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     d.NurseryPlantComboId,
                     d.NurseryMaterialId,
                     d.ItemName,
-                    NetQuantity = d.Quantity - d.RefundedQuantity,
-                    NetRevenue = d.Amount - d.RefundedAmount
+                    NetQuantity = d.Quantity - (d.RefundedQuantity ?? 0),
+                    NetRevenue = d.Amount - (d.RefundedAmount ?? 0m)
                 })
                 .Where(d => d.NetQuantity > 0 || d.NetRevenue > 0)
                 .GroupBy(d => new
