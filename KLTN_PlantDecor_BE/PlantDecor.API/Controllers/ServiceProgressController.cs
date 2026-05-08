@@ -203,6 +203,26 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Manager/Staff] Lịch toàn vựa theo ngày, gồm cả ServiceProgress và DesignTask
+        /// GET /api/service-progress/nursery-schedule/all-services?date=yyyy-MM-dd
+        /// </summary>
+        [HttpGet("nursery-schedule/all-services")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetNurseryCombinedSchedule([FromQuery] DateOnly? date)
+        {
+            var managerId = GetUserId();
+            var queryDate = date ?? DateOnly.FromDateTime(DateTime.Today);
+            var result = await _serviceProgressService.GetNurseryCombinedScheduleAsync(managerId, queryDate);
+            return Ok(new ApiResponse<NurseryDailyScheduleResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get nursery combined schedule successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Manager/Staff] Lịch của một caretaker theo khoảng ngày
         /// GET /api/service-progress/nursery-schedule/caretaker/{caretakerId}?from=&amp;to=
         /// </summary>

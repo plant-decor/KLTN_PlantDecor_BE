@@ -27,6 +27,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string StatusName { get; set; } = string.Empty;
         public string? Address { get; set; }
         public string? Phone { get; set; }
+        public UserSummaryDto? Customer { get; set; }
+        public string? DesignTemplateName { get; set; }
     }
 
     public class TaskMaterialUsageResponseDto
