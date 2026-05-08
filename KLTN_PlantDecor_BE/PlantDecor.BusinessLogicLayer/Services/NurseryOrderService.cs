@@ -72,17 +72,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var currentUser = await GetValidatedManagerAsync(currentUserId);
             var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
 
-            var totalRevenue = await _unitOfWork.NurseryOrderRepository
-                .GetCompletedRevenueByNurseryAsync(currentUser.NurseryId!.Value, fromInclusive, toExclusive);
-            var totalOrders = await _unitOfWork.NurseryOrderRepository
-                .CountCompletedOrdersByNurseryAsync(currentUser.NurseryId.Value, fromInclusive, toExclusive);
+            var items = await _unitOfWork.NurseryOrderRepository
+                .GetNetPaidRevenueByNurseryListAsync(fromInclusive, toExclusive);
+            var myNurseryRevenue = items.FirstOrDefault(x => x.NurseryId == currentUser.NurseryId!.Value);
 
             return new RevenueSummaryResponseDto
             {
                 From = fromInclusive,
                 To = toExclusive.AddTicks(-1),
-                TotalRevenue = totalRevenue,
-                TotalOrders = totalOrders
+                TotalRevenue = myNurseryRevenue?.Revenue ?? 0m,
+                TotalOrders = myNurseryRevenue?.TotalOrders ?? 0
             };
         }
 
