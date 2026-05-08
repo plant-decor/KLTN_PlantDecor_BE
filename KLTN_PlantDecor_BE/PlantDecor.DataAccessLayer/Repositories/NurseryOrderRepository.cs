@@ -142,6 +142,132 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<decimal> GetNetPaidSystemRevenueAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            var paidAmount = await BuildPaidPaymentDateRangeQuery(fromInclusive, toExclusive)
+                .SumAsync(p => p.Amount ?? 0m);
+
+            var refundedAmount = await BuildRefundedReturnItemDateRangeQuery(fromInclusive, toExclusive)
+                .SumAsync(i => i.RefundedAmount ?? 0m);
+
+            return paidAmount - refundedAmount;
+        }
+
+        public async Task<int> CountPaidSystemOrdersAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return await BuildPaidPaymentDateRangeQuery(fromInclusive, toExclusive)
+                .Where(p => p.OrderId.HasValue)
+                .Select(p => p.OrderId!.Value)
+                .Distinct()
+                .CountAsync();
+        }
+
+        public async Task<List<NurseryRevenueAggregate>> GetNetPaidRevenueByNurseryListAsync(DateTime fromInclusive, DateTime toExclusive)
+        {
+            var productRevenue = await BuildPaidPaymentDateRangeQuery(fromInclusive, toExclusive)
+                .Where(p => p.Order != null
+                    && p.Order.TotalAmount.HasValue
+                    && p.Order.TotalAmount.Value > 0
+                    && (p.Order.OrderType == (int)OrderTypeEnum.OtherProduct
+                        || p.Order.OrderType == (int)OrderTypeEnum.OtherProductBuyNow
+                        || p.Order.OrderType == (int)OrderTypeEnum.PlantInstance))
+                .SelectMany(p => p.Order!.NurseryOrders.Select(no => new
+                {
+                    no.NurseryId,
+                    NurseryName = no.Nursery.Name,
+                    Revenue = (p.Amount ?? 0m) * (no.SubTotalAmount ?? 0m) / p.Order.TotalAmount!.Value,
+                    OrderId = p.OrderId ?? 0
+                }))
+                .GroupBy(x => new { x.NurseryId, x.NurseryName })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = g.Sum(x => x.Revenue),
+                    TotalOrders = g.Select(x => x.OrderId).Distinct().Count()
+                })
+                .ToListAsync();
+
+            var serviceRevenue = await BuildPaidPaymentDateRangeQuery(fromInclusive, toExclusive)
+                .Where(p => p.Order != null && p.Order.OrderType == (int)OrderTypeEnum.Service)
+                .Join(_context.ServiceRegistrations,
+                    payment => payment.OrderId,
+                    registration => registration.OrderId,
+                    (payment, registration) => new
+                    {
+                        payment,
+                        registration
+                    })
+                .Where(x => x.registration.NurseryCareService != null)
+                .GroupBy(x => new
+                {
+                    NurseryId = x.registration.NurseryCareService!.NurseryId,
+                    NurseryName = x.registration.NurseryCareService.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = g.Sum(x => x.payment.Amount ?? 0m),
+                    TotalOrders = g.Select(x => x.payment.OrderId ?? 0).Distinct().Count()
+                })
+                .ToListAsync();
+
+            var designRevenue = await BuildPaidPaymentDateRangeQuery(fromInclusive, toExclusive)
+                .Where(p => p.Order != null && p.Order.OrderType == (int)OrderTypeEnum.Design)
+                .Join(_context.DesignRegistrations,
+                    payment => payment.OrderId,
+                    registration => registration.OrderId,
+                    (payment, registration) => new
+                    {
+                        payment,
+                        registration
+                    })
+                .GroupBy(x => new
+                {
+                    x.registration.NurseryId,
+                    NurseryName = x.registration.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = g.Sum(x => x.payment.Amount ?? 0m),
+                    TotalOrders = g.Select(x => x.payment.OrderId ?? 0).Distinct().Count()
+                })
+                .ToListAsync();
+
+            var refundDeductions = await BuildRefundedReturnItemDateRangeQuery(fromInclusive, toExclusive)
+                .GroupBy(i => new
+                {
+                    i.NurseryOrderDetail.NurseryOrder.NurseryId,
+                    NurseryName = i.NurseryOrderDetail.NurseryOrder.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = -g.Sum(x => x.RefundedAmount ?? 0m),
+                    TotalOrders = 0
+                })
+                .ToListAsync();
+
+            return productRevenue
+                .Concat(serviceRevenue)
+                .Concat(designRevenue)
+                .Concat(refundDeductions)
+                .GroupBy(x => new { x.NurseryId, x.NurseryName })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName,
+                    Revenue = g.Sum(x => x.Revenue),
+                    TotalOrders = g.Sum(x => x.TotalOrders)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToList();
+        }
+
         public async Task<List<OrderStatusAggregate>> GetOrderStatusSummaryAsync(DateTime fromInclusive, DateTime toExclusive, int? nurseryId = null)
         {
             var query = BuildOrderDateRangeQuery(fromInclusive, toExclusive);
@@ -216,6 +342,20 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Where(no => no.Status == (int)OrderStatusEnum.Completed)
                 .Where(no => (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) >= fromInclusive
                     && (no.Order!.CompletedAt ?? no.UpdatedAt ?? no.CreatedAt) < toExclusive);
+        }
+
+        private IQueryable<Payment> BuildPaidPaymentDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.Payments
+                .Where(p => p.Status == (int)PaymentStatusEnum.Paid)
+                .Where(p => p.PaidAt.HasValue && p.PaidAt.Value >= fromInclusive && p.PaidAt.Value < toExclusive);
+        }
+
+        private IQueryable<ReturnTicketItem> BuildRefundedReturnItemDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.ReturnTicketItems
+                .Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
+                .Where(i => i.RefundedAt.HasValue && i.RefundedAt.Value >= fromInclusive && i.RefundedAt.Value < toExclusive);
         }
 
         private IQueryable<NurseryOrder> BuildOrderDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)
