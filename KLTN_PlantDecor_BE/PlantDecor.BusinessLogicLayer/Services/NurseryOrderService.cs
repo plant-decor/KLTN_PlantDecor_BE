@@ -17,12 +17,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ICacheService _cacheService;
 
-        public NurseryOrderService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService, IBackgroundJobClient backgroundJobClient)
+        public NurseryOrderService(
+            IUnitOfWork unitOfWork,
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
+            ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _backgroundJobClient = backgroundJobClient;
+            _cacheService = cacheService;
         }
 
         public async Task<PaginatedResult<NurseryOrderResponseDto>> GetMyNurseryOrdersAsync(int currentUserId, int? status, Pagination pagination)
@@ -287,6 +293,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
+            await InvalidateManagerItemCachesAsync(nurseryOrder);
 
             return MapToDto(nurseryOrder);
         }
@@ -382,6 +389,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
             await _unitOfWork.SaveAsync();
+            await InvalidateManagerItemCachesAsync(nurseryOrder);
 
             _backgroundJobClient.Enqueue<IOrderBackgroundJobService>(
                 service => service.CompleteOrderIfAllNurseryOrdersCompletedAsync(nurseryOrder.OrderId, now));
@@ -824,6 +832,45 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
                 }
             }
+        }
+
+        private async Task InvalidateManagerItemCachesAsync(NurseryOrder nurseryOrder)
+        {
+            var nurseryId = nurseryOrder.NurseryId;
+            var details = nurseryOrder.NurseryOrderDetails;
+
+            if (details.Any(d => d.CommonPlantId.HasValue))
+            {
+                await _cacheService.RemoveByPrefixAsync("common_plants_all");
+                await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
+                await _cacheService.RemoveByPrefixAsync($"nursery_common_plants_{nurseryId}");
+                await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            }
+
+            if (details.Any(d => d.PlantInstanceId.HasValue))
+            {
+                await _cacheService.RemoveByPrefixAsync("plant_nurseries");
+                await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+                await _cacheService.RemoveByPrefixAsync($"nursery_instances_{nurseryId}");
+            }
+
+            if (details.Any(d => d.NurseryMaterialId.HasValue))
+            {
+                await _cacheService.RemoveByPrefixAsync("nursery_materials_all");
+                await _cacheService.RemoveByPrefixAsync("materials_shop");
+            }
+
+            if (details.Any(d => d.NurseryPlantComboId.HasValue))
+            {
+                await _cacheService.RemoveByPrefixAsync("combos_all");
+                await _cacheService.RemoveByPrefixAsync("combos_active");
+                await _cacheService.RemoveByPrefixAsync("combos_shop");
+                await _cacheService.RemoveByPrefixAsync("selling_combos_");
+            }
+
+            await _cacheService.RemoveByPrefixAsync($"nurseries_all_{nurseryId}_inventory_summary");
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task EnsureRemainingBalanceInvoiceForDepositAsync(Order order, DateTime issuedDate)
