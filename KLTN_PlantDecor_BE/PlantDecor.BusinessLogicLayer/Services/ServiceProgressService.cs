@@ -331,6 +331,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return progresses.Select(MapToDto).ToList();
         }
 
+        public async Task<NurseryDailyScheduleResponseDto> GetNurseryCombinedScheduleAsync(int managerId, DateOnly date)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var serviceProgresses = await _unitOfWork.ServiceProgressRepository.GetByNurseryAndDateAsync(nursery.Id, date);
+            var designTasks = await _unitOfWork.DesignTaskRepository.GetByNurseryAndDateAsync(nursery.Id, date);
+
+            return new NurseryDailyScheduleResponseDto
+            {
+                Date = date,
+                ServiceProgresses = serviceProgresses.Select(MapToDto).ToList(),
+                DesignTasks = designTasks.Select(x => x.ToResponse()).ToList()
+            };
+        }
+
         public async Task<List<ServiceProgressResponseDto>> GetCaretakerScheduleAsync(int managerId, int caretakerId, DateOnly from, DateOnly to)
         {
             var nursery = await ResolveOperatorNurseryAsync(managerId);

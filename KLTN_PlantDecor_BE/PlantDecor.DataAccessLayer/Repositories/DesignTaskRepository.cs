@@ -27,6 +27,16 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<DesignTask>> GetByNurseryAndDateAsync(int nurseryId, DateOnly date)
+        {
+            return await BuildDetailedQuery()
+                .Where(x => x.ScheduledDate == date
+                    && x.DesignRegistration.NurseryId == nurseryId)
+                .OrderBy(x => x.AssignedStaff != null ? x.AssignedStaff.Username : string.Empty)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+        }
+
         public async Task<List<DesignTask>> GetByAssignedStaffIdAndDateRangeAsync(int assignedStaffId, DateOnly from, DateOnly to)
         {
             return await BuildDetailedQuery()
