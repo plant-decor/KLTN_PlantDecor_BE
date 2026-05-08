@@ -53,6 +53,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Customer] Cap nhat thong tin cay cua user hien tai
+        /// </summary>
+        [HttpPut("my/{id:int}")]
+        public async Task<IActionResult> UpdateMyPlant(int id, [FromBody] UpdateUserPlantRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _userPlantService.UpdateMyPlantAsync(userId, id, request);
+
+            return Ok(new ApiResponse<UserPlantResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Update my plant successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Customer] Lay danh sach thong bao nhac cham soc cay
         /// </summary>
         [HttpGet("my-care-reminders")]

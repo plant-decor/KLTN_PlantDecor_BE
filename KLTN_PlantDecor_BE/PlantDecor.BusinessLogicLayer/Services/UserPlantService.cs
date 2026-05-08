@@ -1,4 +1,5 @@
-﻿using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.DTOs.Requests;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
@@ -22,6 +23,48 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             var userPlants = await _unitOfWork.UserPlantRepository.GetByUserIdWithDetailsAsync(userId);
             return userPlants.ToResponseList();
+        }
+
+        public async Task<UserPlantResponseDto> UpdateMyPlantAsync(int userId, int userPlantId, UpdateUserPlantRequestDto request)
+        {
+            var userPlant = await _unitOfWork.UserPlantRepository.GetByIdAndUserIdWithDetailsAsync(userPlantId, userId)
+                ?? throw new NotFoundException($"UserPlant {userPlantId} not found");
+
+            ValidateUpdateRequest(request);
+
+            if (request.PurchaseDate.HasValue)
+                userPlant.PurchaseDate = request.PurchaseDate;
+
+            if (request.LastWateredDate.HasValue)
+                userPlant.LastWateredDate = request.LastWateredDate;
+
+            if (request.LastFertilizedDate.HasValue)
+                userPlant.LastFertilizedDate = request.LastFertilizedDate;
+
+            if (request.LastPrunedDate.HasValue)
+                userPlant.LastPrunedDate = request.LastPrunedDate;
+
+            if (request.Location != null)
+                userPlant.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
+
+            if (request.CurrentTrunkDiameter.HasValue)
+                userPlant.CurrentTrunkDiameter = request.CurrentTrunkDiameter;
+
+            if (request.CurrentHeight.HasValue)
+                userPlant.CurrentHeight = request.CurrentHeight;
+
+            if (request.HealthStatus != null)
+                userPlant.HealthStatus = string.IsNullOrWhiteSpace(request.HealthStatus) ? null : request.HealthStatus.Trim();
+
+            if (request.Age.HasValue)
+                userPlant.Age = request.Age;
+
+            userPlant.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.UserPlantRepository.PrepareUpdate(userPlant);
+            await _unitOfWork.SaveAsync();
+
+            return userPlant.ToResponse();
         }
 
         public async Task<PaginatedResult<CareReminderNotificationResponseDto>> GetMyCareRemindersAsync(int userId, int? careType, Pagination pagination)
@@ -120,6 +163,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             await _unitOfWork.SaveAsync();
+        }
+
+        private static void ValidateUpdateRequest(UpdateUserPlantRequestDto request)
+        {
+            if (request.Location != null && request.Location.Trim().Length > 100)
+                throw new BadRequestException("Location is too long");
+
+            if (request.HealthStatus != null && request.HealthStatus.Trim().Length > 50)
+                throw new BadRequestException("HealthStatus is too long");
+
+            if (request.CurrentTrunkDiameter.HasValue && request.CurrentTrunkDiameter.Value < 0)
+                throw new BadRequestException("CurrentTrunkDiameter cannot be negative");
+
+            if (request.CurrentHeight.HasValue && request.CurrentHeight.Value < 0)
+                throw new BadRequestException("CurrentHeight cannot be negative");
+
+            if (request.Age.HasValue && request.Age.Value < 0)
+                throw new BadRequestException("Age cannot be negative");
         }
     }
 }
