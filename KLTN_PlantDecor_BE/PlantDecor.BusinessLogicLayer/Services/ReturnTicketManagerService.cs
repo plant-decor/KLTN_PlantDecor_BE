@@ -11,10 +11,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class ReturnTicketManagerService : IReturnTicketManagerService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICacheService _cacheService;
 
-        public ReturnTicketManagerService(IUnitOfWork unitOfWork)
+        public ReturnTicketManagerService(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
+            _cacheService = cacheService;
         }
 
         public async Task<List<ManagerReturnTicketAssignmentResponseDto>> GetMyAssignmentsAsync(int managerId, int? status)
@@ -90,6 +92,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
             await _unitOfWork.SaveAsync();
+            await InvalidateManagerItemCachesAsync(item);
 
             return MapItemToResponse(item);
         }
@@ -138,6 +141,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
             await _unitOfWork.SaveAsync();
+            await InvalidateManagerItemCachesAsync(item);
 
             return MapItemToResponse(item);
         }
@@ -369,6 +373,61 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 order.UpdatedAt = now;
                 order.CompletedAt ??= now;
             }
+        }
+
+        private async Task InvalidateManagerItemCachesAsync(ReturnTicketItem item)
+        {
+            var detail = item.NurseryOrderDetail;
+            var nurseryId = detail?.NurseryOrder?.NurseryId;
+
+            if (detail == null)
+            {
+                return;
+            }
+
+            if (detail.CommonPlantId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync("common_plants_all");
+                await _cacheService.RemoveByPrefixAsync("plant_nurseries_common");
+                await _cacheService.RemoveByPrefixAsync("nursery_common_plants");
+                await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+            }
+
+            if (detail.PlantInstanceId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync("plant_nurseries");
+                await _cacheService.RemoveByPrefixAsync("plants_shop_search");
+                if (nurseryId.HasValue)
+                {
+                    await _cacheService.RemoveByPrefixAsync($"nursery_instances_{nurseryId.Value}");
+                }
+                else
+                {
+                    await _cacheService.RemoveByPrefixAsync("nursery_instances");
+                }
+            }
+
+            if (detail.NurseryMaterialId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync("nursery_materials_all");
+                await _cacheService.RemoveByPrefixAsync("materials_shop");
+            }
+
+            if (detail.NurseryPlantComboId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync("combos_all");
+                await _cacheService.RemoveByPrefixAsync("combos_active");
+                await _cacheService.RemoveByPrefixAsync("combos_shop");
+                await _cacheService.RemoveByPrefixAsync("selling_combos_");
+            }
+
+            if (nurseryId.HasValue)
+            {
+                await _cacheService.RemoveByPrefixAsync($"nurseries_all_{nurseryId.Value}_inventory_summary");
+            }
+
+            await _cacheService.RemoveByPrefixAsync("nurseries_all_");
+            await _cacheService.RemoveByPrefixAsync("shop_unified_search");
         }
 
         private async Task<User> GetValidatedManagerAsync(int managerId)
