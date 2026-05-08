@@ -326,11 +326,23 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     detail.NurseryPlantComboId,
                     detail.NurseryMaterialId,
                     detail.ItemName,
-                    NetQuantity = (detail.Quantity ?? 0) - (refund == null ? 0 : refund.RefundedQuantity),
-                    NetRevenue = (detail.Amount ?? 0m) - (refund == null ? 0m : refund.RefundedAmount)
+                    Quantity = detail.Quantity ?? 0,
+                    Amount = detail.Amount ?? 0m,
+                    RefundedQuantity = refund == null ? 0 : refund.RefundedQuantity,
+                    RefundedAmount = refund == null ? 0m : refund.RefundedAmount
                 };
 
             return await netOrderDetails
+                .Select(d => new
+                {
+                    d.CommonPlantId,
+                    d.PlantInstanceId,
+                    d.NurseryPlantComboId,
+                    d.NurseryMaterialId,
+                    d.ItemName,
+                    NetQuantity = d.Quantity - d.RefundedQuantity,
+                    NetRevenue = d.Amount - d.RefundedAmount
+                })
                 .Where(d => d.NetQuantity > 0 || d.NetRevenue > 0)
                 .GroupBy(d => new
                 {
