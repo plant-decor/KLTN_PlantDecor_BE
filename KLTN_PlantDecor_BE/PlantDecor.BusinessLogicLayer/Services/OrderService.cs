@@ -243,7 +243,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException($"User with email '{email}' not found");
 
             var orders = await _unitOfWork.OrderRepository.GetByUserIdWithDetailsAsync(user.Id);
-            return orders.ToResponseList();
+            var filteredOrders = orders
+                .Where(o => o.OrderType != (int)OrderTypeEnum.Design && o.OrderType != (int)OrderTypeEnum.Service)
+                .ToList();
+
+            return filteredOrders.ToResponseList();
         }
 
         public async Task<PaginatedResult<OrderResponseDto>> GetOrdersForConsultantAsync(
