@@ -131,8 +131,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Refunded;
             }
 
+            await UpdateInventoryAfterRefundAsync(item, approvedQuantity);
+
             FinalizeAssignmentAndTicketStatus(assignment, now);
-            UpdateOrderStatusesAfterRefund(assignment.ReturnTicket, now);
+            UpdateOrderStatusesAfterManagerDecision(assignment.ReturnTicket, now);
 
             _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
             await _unitOfWork.SaveAsync();
@@ -161,7 +163,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Rejected;
             }
 
+            await UpdateInventoryAfterRejectAsync(item);
+
             FinalizeAssignmentAndTicketStatus(assignment, now);
+            UpdateOrderStatusesAfterManagerDecision(assignment.ReturnTicket, now);
 
             _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
             await _unitOfWork.SaveAsync();
@@ -251,29 +256,118 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ticket.UpdatedAt = now;
         }
 
-        private static void UpdateOrderStatusesAfterRefund(ReturnTicket ticket, DateTime now)
+        private async Task UpdateInventoryAfterRefundAsync(ReturnTicketItem item, int returnedQuantity)
+        {
+            var detail = item.NurseryOrderDetail;
+            var purchasedQuantity = detail?.Quantity ?? 0;
+            if (detail == null || purchasedQuantity <= 0)
+                return;
+
+            if (detail.CommonPlantId.HasValue)
+            {
+                var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(detail.CommonPlantId.Value);
+                if (commonPlant != null)
+                {
+                    commonPlant.ReservedQuantity = Math.Max(0, commonPlant.ReservedQuantity - purchasedQuantity);
+                    commonPlant.Quantity += returnedQuantity;
+                    _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                }
+            }
+            else if (detail.NurseryMaterialId.HasValue)
+            {
+                var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(detail.NurseryMaterialId.Value);
+                if (nurseryMaterial != null)
+                {
+                    nurseryMaterial.ReservedQuantity = Math.Max(0, nurseryMaterial.ReservedQuantity - purchasedQuantity);
+                    nurseryMaterial.Quantity += returnedQuantity;
+                    _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                }
+            }
+            else if (detail.NurseryPlantComboId.HasValue)
+            {
+                var nurseryPlantCombo = await _unitOfWork.NurseryPlantComboRepository.GetByIdAsync(detail.NurseryPlantComboId.Value);
+                if (nurseryPlantCombo != null)
+                {
+                    nurseryPlantCombo.Quantity += returnedQuantity;
+                    _unitOfWork.NurseryPlantComboRepository.PrepareUpdate(nurseryPlantCombo);
+                }
+            }
+
+            if (detail.PlantInstanceId.HasValue)
+            {
+                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
+                if (plantInstance != null && (plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved
+                                              || plantInstance.Status == (int)PlantInstanceStatusEnum.Sold))
+                {
+                    plantInstance.Status = (int)PlantInstanceStatusEnum.Available;
+                    _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                }
+            }
+        }
+
+        private async Task UpdateInventoryAfterRejectAsync(ReturnTicketItem item)
+        {
+            var detail = item.NurseryOrderDetail;
+            var purchasedQuantity = detail?.Quantity ?? 0;
+            if (detail == null || purchasedQuantity <= 0)
+                return;
+
+            if (detail.CommonPlantId.HasValue)
+            {
+                var commonPlant = await _unitOfWork.CommonPlantRepository.GetByIdAsync(detail.CommonPlantId.Value);
+                if (commonPlant != null)
+                {
+                    commonPlant.ReservedQuantity = Math.Max(0, commonPlant.ReservedQuantity - purchasedQuantity);
+                    _unitOfWork.CommonPlantRepository.PrepareUpdate(commonPlant);
+                }
+            }
+            else if (detail.NurseryMaterialId.HasValue)
+            {
+                var nurseryMaterial = await _unitOfWork.NurseryMaterialRepository.GetByIdAsync(detail.NurseryMaterialId.Value);
+                if (nurseryMaterial != null)
+                {
+                    nurseryMaterial.ReservedQuantity = Math.Max(0, nurseryMaterial.ReservedQuantity - purchasedQuantity);
+                    _unitOfWork.NurseryMaterialRepository.PrepareUpdate(nurseryMaterial);
+                }
+            }
+
+            if (detail.PlantInstanceId.HasValue)
+            {
+                var plantInstance = await _unitOfWork.PlantInstanceRepository.GetByIdAsync(detail.PlantInstanceId.Value);
+                if (plantInstance != null && plantInstance.Status == (int)PlantInstanceStatusEnum.Reserved)
+                {
+                    plantInstance.Status = (int)PlantInstanceStatusEnum.Sold;
+                    _unitOfWork.PlantInstanceRepository.PrepareUpdate(plantInstance);
+                }
+            }
+        }
+
+        private static void UpdateOrderStatusesAfterManagerDecision(ReturnTicket ticket, DateTime now)
         {
             if (ticket.Order == null)
                 return;
 
             var order = ticket.Order;
-            var allOrderDetails = order.NurseryOrders.SelectMany(no => no.NurseryOrderDetails).ToList();
-            if (!allOrderDetails.Any())
-                return;
+            var returnTicketNurseryOrderIds = ticket.ReturnTicketItems
+                .Select(i => i.NurseryOrderDetail?.NurseryOrderId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToHashSet();
 
             foreach (var nurseryOrder in order.NurseryOrders)
             {
-                if (nurseryOrder.NurseryOrderDetails.Any() && nurseryOrder.NurseryOrderDetails.All(d => d.Status == (int)OrderStatusEnum.Refunded))
+                if (returnTicketNurseryOrderIds.Contains(nurseryOrder.Id))
                 {
-                    nurseryOrder.Status = (int)OrderStatusEnum.Refunded;
+                    nurseryOrder.Status = (int)OrderStatusEnum.Completed;
                     nurseryOrder.UpdatedAt = now;
                 }
             }
 
-            if (allOrderDetails.All(d => d.Status == (int)OrderStatusEnum.Refunded))
+            if (order.NurseryOrders.Any() && order.NurseryOrders.All(no => no.Status == (int)OrderStatusEnum.Completed))
             {
-                order.Status = (int)OrderStatusEnum.Refunded;
+                order.Status = (int)OrderStatusEnum.Completed;
                 order.UpdatedAt = now;
+                order.CompletedAt ??= now;
             }
         }
 
@@ -296,7 +390,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var assignment = await _unitOfWork.ReturnTicketAssignmentRepository.GetByIdWithDetailsAsync(assignmentId)
                 ?? throw new NotFoundException($"ReturnTicketAssignment {assignmentId} not found");
 
-            if (assignment.NurseryId != manager.NurseryId.Value)
+            if (assignment.NurseryId != manager.NurseryId.GetValueOrDefault())
                 throw new ForbiddenException("You don't have permission to access this assignment");
 
             if (assignment.ManagerId.HasValue && assignment.ManagerId.Value != manager.Id)
