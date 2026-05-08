@@ -27,6 +27,19 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<UserPlant?> GetByIdAndUserIdWithDetailsAsync(int userPlantId, int userId)
+        {
+            return await _context.UserPlants
+                .Where(userPlant => userPlant.Id == userPlantId && userPlant.UserId == userId)
+                .Include(userPlant => userPlant.Plant)
+                    .ThenInclude(plant => plant!.PlantImages)
+                .Include(userPlant => userPlant.PlantInstance)
+                    .ThenInclude(instance => instance!.Plant)
+                .Include(userPlant => userPlant.PlantInstance)
+                    .ThenInclude(instance => instance!.PlantImages)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<bool> ExistsByUserIdAndPlantInstanceIdAsync(int userId, int plantInstanceId)
         {
             return await _context.UserPlants
