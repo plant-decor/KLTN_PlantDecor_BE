@@ -503,10 +503,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     parentOrder.UpdatedAt = now;
                 }
 
-                var areAllNurseryOrdersDeliveredOrAbove = parentOrder.NurseryOrders
-                    .All(no => no.Id == nurseryOrder.Id || (no.Status.HasValue && no.Status.Value >= (int)OrderStatusEnum.Delivered));
+                var areAllNurseryOrdersDelivered = parentOrder.NurseryOrders
+                    .All(no => no.Id == nurseryOrder.Id || no.Status == (int)OrderStatusEnum.Delivered);
 
-                if (areAllNurseryOrdersDeliveredOrAbove)
+                if (areAllNurseryOrdersDelivered)
                 {
                     if (parentOrder.PaymentStrategy == (int)PaymentStrategiesEnum.Deposit)
                     {
@@ -520,7 +520,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         parentOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
                         nurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
 
-                        foreach (var relatedNurseryOrder in parentOrder.NurseryOrders)
+                        foreach (var relatedNurseryOrder in parentOrder.NurseryOrders
+                                     .Where(no => no.Id == nurseryOrder.Id || no.Status == (int)OrderStatusEnum.Delivered))
                         {
                             relatedNurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
                             relatedNurseryOrder.UpdatedAt = now;
