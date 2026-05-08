@@ -36,7 +36,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                         ? ((DesignRegistrationStatus)task.DesignRegistration.Status).ToString()
                         : $"Unknown({task.DesignRegistration.Status})",
                     Address = task.DesignRegistration.Address,
-                    Phone = task.DesignRegistration.Phone
+                    Phone = task.DesignRegistration.Phone,
+                    Customer = task.DesignRegistration.User == null ? null : task.DesignRegistration.User.ToUserSummary(),
+                    DesignTemplateName = task.DesignRegistration.DesignTemplateTier?.DesignTemplate?.Name
                 },
                 TaskMaterialUsages = task.TaskMaterialUsages
                     .Select(u => new TaskMaterialUsageResponseDto
