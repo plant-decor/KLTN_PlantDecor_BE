@@ -92,9 +92,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
 
             var totalRevenue = await _unitOfWork.NurseryOrderRepository
-                .GetCompletedSystemRevenueAsync(fromInclusive, toExclusive);
+                .GetNetPaidSystemRevenueAsync(fromInclusive, toExclusive);
             var totalOrders = await _unitOfWork.NurseryOrderRepository
-                .CountCompletedSystemOrdersAsync(fromInclusive, toExclusive);
+                .CountPaidSystemOrdersAsync(fromInclusive, toExclusive);
 
             return new RevenueSummaryResponseDto
             {
@@ -111,7 +111,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var (fromInclusive, toExclusive) = NormalizeRevenueDateRange(from, to);
 
             var items = await _unitOfWork.NurseryOrderRepository
-                .GetCompletedRevenueByNurseryListAsync(fromInclusive, toExclusive);
+                .GetNetPaidRevenueByNurseryListAsync(fromInclusive, toExclusive);
 
             return items.Select(x => new NurseryRevenueItemResponseDto
             {
