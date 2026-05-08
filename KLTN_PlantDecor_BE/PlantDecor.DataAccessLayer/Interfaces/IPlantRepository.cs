@@ -11,6 +11,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<Plant?> GetByIdWithDetailsAsync(int id);
         Task<Plant?> GetByIdWithInstancesAsync(int id);
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
+        Task<bool> ExistsByIdAsync(int id);
         Task<PaginatedResult<Plant>> GetPlantsForShopAsync(Pagination pagination);
         Task<PaginatedResult<Plant>> SearchAllWithDetailsAsync(PlantSearchFilter filter, Pagination pagination);
         Task<PaginatedResult<Plant>> SearchForShopAsync(PlantSearchFilter filter, Pagination pagination);

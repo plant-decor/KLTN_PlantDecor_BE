@@ -8,6 +8,10 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<Order?> GetByIdWithDetailsAsync(int orderId);
         Task<List<Order>> GetByUserIdWithDetailsAsync(int userId, int? orderStatus = null);
+        Task<PaginatedResult<Order>> SearchDesignForOperatorAsync(
+            int nurseryId,
+            Pagination pagination,
+            int? status = null);
         Task<PaginatedResult<Order>> SearchForConsultantAsync(
             Pagination pagination,
             int? status,

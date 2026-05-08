@@ -215,6 +215,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return orders.ToResponseList();
         }
 
+        public async Task<PaginatedResult<OrderResponseDto>> GetDesignOrdersForOperatorAsync(
+            int operatorId,
+            Pagination pagination,
+            OrderStatusEnum? status = null)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(operatorId);
+            var result = await _unitOfWork.OrderRepository.SearchDesignForOperatorAsync(
+                nursery.Id,
+                pagination,
+                status.HasValue ? (int)status.Value : null);
+
+            return new PaginatedResult<OrderResponseDto>(
+                result.Items.ToResponseList(),
+                result.TotalCount,
+                result.PageNumber,
+                result.PageSize);
+        }
+
         public async Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -225,7 +243,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException($"User with email '{email}' not found");
 
             var orders = await _unitOfWork.OrderRepository.GetByUserIdWithDetailsAsync(user.Id);
-            return orders.ToResponseList();
+            var filteredOrders = orders
+                .Where(o => o.OrderType != (int)OrderTypeEnum.Design && o.OrderType != (int)OrderTypeEnum.Service)
+                .ToList();
+
+            return filteredOrders.ToResponseList();
         }
 
         public async Task<PaginatedResult<OrderResponseDto>> GetOrdersForConsultantAsync(
@@ -416,6 +438,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return cartItem.NurseryMaterial.Material?.BasePrice ?? 0;
 
             return 0;
+        }
+
+        private async Task<Nursery> ResolveOperatorNurseryAsync(int operatorId)
+        {
+            var nursery = await _unitOfWork.NurseryRepository.GetByManagerIdAsync(operatorId);
+            if (nursery != null)
+                return nursery;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(operatorId);
+            if (user?.RoleId == (int)RoleEnum.Staff && user.NurseryId.HasValue)
+            {
+                var staffNursery = await _unitOfWork.NurseryRepository.GetByIdAsync(user.NurseryId.Value);
+                if (staffNursery != null)
+                    return staffNursery;
+            }
+
+            throw new ForbiddenException("You are not a manager/staff of any nursery");
         }
 
         private static void ValidateCreateOrderRequest(OrderTypeEnum orderType, CreateOrderRequestDto request)

@@ -360,6 +360,10 @@ namespace PlantDecor.API
                });
             builder.Services.AddHttpClient();
             builder.Services.AddOptions();
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxRequestBodySize = 50 * 1024 * 1024;
+            });
 
             // Cấu hình để lấy đúng IP của client khi có reverse proxy (nginx, load balancer) ở phía trước,
             builder.Services.Configure<ForwardedHeadersOptions>(options =>

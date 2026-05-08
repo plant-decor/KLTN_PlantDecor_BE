@@ -296,11 +296,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (packageId.HasValue)
             {
                 var pkg = await _unitOfWork.CareServicePackageRepository.GetByIdWithDetailsAsync(packageId.Value);
-                if (pkg != null && pkg.CareServiceSpecializations.Count > 0)
+                if (pkg != null)
                 {
                     var requiredSpecIds = pkg.CareServiceSpecializations.Select(cs => cs.SpecializationId).ToHashSet();
-                    eligible = eligible
-                        .Where(u => requiredSpecIds.All(reqId => u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+                    if (requiredSpecIds.Count > 0)
+                    {
+                        eligible = eligible
+                            .Where(u => requiredSpecIds.All(reqId => u.StaffSpecializations.Any(ss => ss.SpecializationId == reqId)));
+                    }
                 }
             }
 

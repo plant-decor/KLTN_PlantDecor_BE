@@ -41,7 +41,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var detailed = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(template.Id);
                 if (detailed != null)
                 {
-                    result.Add(MapToDto(detailed));
+                    result.Add(MapToDtoAdmin(detailed));
                 }
             }
 
@@ -71,7 +71,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var detailed = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(templateId);
                 if (detailed != null)
                 {
-                    result.Add(MapToDto(detailed));
+                    result.Add(MapToDtoPublic(detailed));
                 }
             }
 
@@ -96,7 +96,24 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var template = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignTemplate {id} not found");
 
-            var result = MapToDto(template);
+            var result = MapToDtoPublic(template);
+            await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
+            return result;
+        }
+
+        public async Task<DesignTemplateResponseDto> GetByIdAdminAsync(int id)
+        {
+            var cacheKey = $"{CACHE_KEY_PREFIX}_admin_{id}";
+            var cached = await _cacheService.GetDataAsync<DesignTemplateResponseDto>(cacheKey);
+            if (cached != null)
+            {
+                return cached;
+            }
+
+            var template = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(id)
+                ?? throw new NotFoundException($"DesignTemplate {id} not found");
+
+            var result = MapToDtoAdmin(template);
             await _cacheService.SetDataAsync(cacheKey, result, DateTimeOffset.Now.AddMinutes(30));
             return result;
         }
@@ -154,7 +171,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ?? throw new NotFoundException($"DesignTemplate {entity.Id} not found");
 
             await InvalidateCacheAsync();
-            return MapToDto(created);
+            return MapToDtoAdmin(created);
         }
 
         public async Task<DesignTemplateResponseDto> UpdateAsync(int id, UpdateDesignTemplateRequestDto request)
@@ -197,7 +214,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignTemplate {id} not found");
 
-            return MapToDto(updated);
+            return MapToDtoAdmin(updated);
         }
 
         public async Task<DesignTemplateResponseDto> UpdateSpecializationsAsync(int templateId, List<int> specializationIds)
@@ -224,7 +241,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var updated = await _unitOfWork.DesignTemplateRepository.GetByIdWithDetailsAsync(templateId)
                 ?? throw new NotFoundException($"DesignTemplate {templateId} not found");
 
-            return MapToDto(updated);
+            return MapToDtoAdmin(updated);
         }
 
         public async Task DeleteAsync(int id)
@@ -317,7 +334,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
         }
 
-        public static DesignTemplateResponseDto MapToDto(DesignTemplate template)
+        public static DesignTemplateResponseDto MapToDtoPublic(DesignTemplate template)
         {
             return new DesignTemplateResponseDto
             {
@@ -347,6 +364,47 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     .ToList(),
                 NurseryOfferings = template.NurseryDesignTemplates
                     .Where(n => n.IsActive)
+                    .Select(n => new DesignTemplateNurserySummaryDto
+                    {
+                        NurseryDesignTemplateId = n.Id,
+                        NurseryId = n.NurseryId,
+                        NurseryName = n.Nursery?.Name,
+                        IsActive = n.IsActive
+                    })
+                    .OrderBy(n => n.NurseryName)
+                    .ThenBy(n => n.NurseryId)
+                    .ToList()
+            };
+        }
+
+        public static DesignTemplateResponseDto MapToDtoAdmin(DesignTemplate template)
+        {
+            return new DesignTemplateResponseDto
+            {
+                Id = template.Id,
+                Name = template.Name,
+                Description = template.Description,
+                Style = template.Style,
+                RoomTypes = template.RoomTypes,
+                ImageUrl = template.ImageUrl,
+                CreatedAt = template.CreatedAt,
+                UpdatedAt = template.UpdatedAt,
+                Specializations = template.DesignTemplateSpecializations
+                    .Where(x => x.Specialization != null)
+                    .Select(x => new SpecializationSummaryDto
+                    {
+                        Id = x.Specialization.Id,
+                        Name = x.Specialization.Name,
+                        Description = x.Specialization.Description
+                    })
+                    .OrderBy(x => x.Name)
+                    .ToList(),
+                Tiers = template.DesignTemplateTiers
+                    .OrderBy(t => t.MinArea)
+                    .ThenBy(t => t.Id)
+                    .Select(DesignTemplateTierService.MapToDto)
+                    .ToList(),
+                NurseryOfferings = template.NurseryDesignTemplates
                     .Select(n => new DesignTemplateNurserySummaryDto
                     {
                         NurseryDesignTemplateId = n.Id,

@@ -30,6 +30,34 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<PaginatedResult<Order>> SearchDesignForOperatorAsync(
+            int nurseryId,
+            Pagination pagination,
+            int? status = null)
+        {
+            var query = BuildDetailedQuery()
+                .Where(o => (o.OrderType == (int)OrderTypeEnum.Design && 
+                            o.DesignRegistration != null && 
+                            o.DesignRegistration.NurseryId == nurseryId)
+                        || (o.OrderType == (int)OrderTypeEnum.Service && 
+                            o.ServiceRegistration != null && 
+                            o.ServiceRegistration.NurseryCareService != null &&
+                            o.ServiceRegistration.NurseryCareService.Nursery.Id == nurseryId));
+
+            if (status.HasValue)
+                query = query.Where(o => o.Status == status.Value);
+
+            query = query.OrderByDescending(o => o.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip(pagination.Skip)
+                .Take(pagination.Take)
+                .ToListAsync();
+
+            return new PaginatedResult<Order>(items, totalCount, pagination.PageNumber, pagination.PageSize);
+        }
+
         public async Task<PaginatedResult<Order>> SearchForConsultantAsync(
             Pagination pagination,
             int? status,
@@ -162,6 +190,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     .ThenInclude(no => no.Nursery)
                 .Include(o => o.NurseryOrders)
                     .ThenInclude(no => no.Shipper)
+                .Include(o => o.DesignRegistration)
+                    .ThenInclude(dr => dr!.Nursery)
+                .Include(o => o.ServiceRegistration)
+                    .ThenInclude(sr => sr!.NurseryCareService)
+                        .ThenInclude(ncs => ncs!.Nursery)
                 .Include(o => o.Invoices)
                     .ThenInclude(i => i.InvoiceDetails)
                 .Include(o => o.Payments)

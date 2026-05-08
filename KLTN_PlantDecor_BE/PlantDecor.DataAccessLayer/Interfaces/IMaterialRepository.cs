@@ -11,6 +11,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<Material?> GetByIdWithOrdersAsync(int id);
         Task<bool> ExistsByCodeAsync(string materialCode, int? excludeId = null);
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
+        Task<bool> ExistsByIdAsync(int id);
         Task<PaginatedResult<Material>> GetMaterialsForShopAsync(Pagination pagination);
     }
 }

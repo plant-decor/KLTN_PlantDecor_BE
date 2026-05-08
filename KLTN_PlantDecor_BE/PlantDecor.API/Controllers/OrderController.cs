@@ -6,6 +6,7 @@ using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Enums;
+using PlantDecor.DataAccessLayer.Helpers;
 using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
@@ -92,6 +93,24 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Get orders by email successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// [Manager/Staff] Lấy danh sách Order của dịch vụ Design, CareService theo status có phân trang
+        /// </summary>
+        [HttpGet("service-orders")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> GetDesignOrders([FromQuery] Pagination pagination, [FromQuery] OrderStatusEnum? status = null)
+        {
+            var userId = GetUserId();
+            var result = await _orderService.GetDesignOrdersForOperatorAsync(userId, pagination, status);
+            return Ok(new ApiResponse<PaginatedResult<OrderResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get design orders successfully",
                 Payload = result
             });
         }

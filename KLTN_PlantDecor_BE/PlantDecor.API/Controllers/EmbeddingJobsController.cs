@@ -48,6 +48,7 @@ namespace PlantDecor.API.Controllers
         [HttpPost("backfill/{entityType}")]
         public IActionResult BackfillByEntityType(string entityType, [FromQuery] int? batchSize = null)
         {
+            // clearAllPools is necessary to prevent "remaining connection slots are reserved for non-replication superuser connections" error when backfill jobs are running and holding connections for a long time
             NpgsqlConnection.ClearAllPools();
             if (!TryResolveEntityType(entityType, out var resolvedEntityType))
             {

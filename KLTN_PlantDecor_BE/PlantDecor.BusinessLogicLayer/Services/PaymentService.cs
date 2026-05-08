@@ -316,12 +316,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     order.Status = newOrderStatus;
                     order.UpdatedAt = DateTime.Now;
                     
-                    // Clear remaining amount if payment type is RemainingBalance
-                    if (paymentType == PaymentTypeEnum.RemainingBalance)
-                    {
-                        order.RemainingAmount = 0;
-                    }
-                    
                     _unitOfWork.OrderRepository.PrepareUpdate(order);
 
                     // Update all NurseryOrder status to match parent Order status
