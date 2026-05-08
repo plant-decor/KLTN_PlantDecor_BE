@@ -304,8 +304,34 @@ namespace PlantDecor.DataAccessLayer.Repositories
             if (nurseryId.HasValue)
                 completedOrders = completedOrders.Where(no => no.NurseryId == nurseryId.Value);
 
-            return await completedOrders
-                .SelectMany(no => no.NurseryOrderDetails)
+            var refundedItems = _context.ReturnTicketItems
+                .Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
+                .GroupBy(i => i.NurseryOrderDetailId)
+                .Select(g => new
+                {
+                    NurseryOrderDetailId = g.Key,
+                    RefundedQuantity = g.Sum(x => x.ApprovedQuantity ?? 0),
+                    RefundedAmount = g.Sum(x => x.RefundedAmount ?? 0m)
+                });
+
+            var netOrderDetails =
+                from detail in completedOrders.SelectMany(no => no.NurseryOrderDetails)
+                join refund in refundedItems
+                    on detail.Id equals refund.NurseryOrderDetailId into refundGroup
+                from refund in refundGroup.DefaultIfEmpty()
+                select new
+                {
+                    detail.CommonPlantId,
+                    detail.PlantInstanceId,
+                    detail.NurseryPlantComboId,
+                    detail.NurseryMaterialId,
+                    detail.ItemName,
+                    NetQuantity = (detail.Quantity ?? 0) - (refund == null ? 0 : refund.RefundedQuantity),
+                    NetRevenue = (detail.Amount ?? 0m) - (refund == null ? 0m : refund.RefundedAmount)
+                };
+
+            return await netOrderDetails
+                .Where(d => d.NetQuantity > 0 || d.NetRevenue > 0)
                 .GroupBy(d => new
                 {
                     ProductType = d.CommonPlantId.HasValue
@@ -327,8 +353,8 @@ namespace PlantDecor.DataAccessLayer.Repositories
                     ProductType = g.Key.ProductType,
                     ProductId = g.Key.ProductId,
                     ProductName = g.Key.ProductName ?? string.Empty,
-                    TotalQuantity = g.Sum(x => x.Quantity ?? 0),
-                    TotalRevenue = g.Sum(x => x.Amount ?? 0m)
+                    TotalQuantity = g.Sum(x => x.NetQuantity),
+                    TotalRevenue = g.Sum(x => x.NetRevenue)
                 })
                 .OrderByDescending(x => x.TotalRevenue)
                 .ThenByDescending(x => x.TotalQuantity)
