@@ -180,6 +180,7 @@ Return only the JSON array with no additional text.
                     throw new BadRequestException($"RoomImage {roomImage.Id} has no image URL");
                 }
 
+                // ảnh 64
                 var base64 = await DownloadRoomImageAsBase64Async(roomImage.ImageUrl);
                 roomImageAnalyses.Add(new RoomImageAnalysisInputDto
                 {
