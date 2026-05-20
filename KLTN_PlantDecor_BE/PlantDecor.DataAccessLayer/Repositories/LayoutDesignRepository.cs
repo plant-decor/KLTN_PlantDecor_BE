@@ -40,6 +40,11 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(layout => layout.LayoutDesignRoomImages)
                     .ThenInclude(layoutRoomImage => layoutRoomImage.RoomImage)
                 .Include(layout => layout.LayoutDesignPlants)
+                    .ThenInclude(plant => plant.CommonPlant)
+                        .ThenInclude(commonPlant => commonPlant.Plant)
+                .Include(layout => layout.LayoutDesignPlants)
+                    .ThenInclude(plant => plant.PlantInstance)
+                        .ThenInclude(instance => instance.Plant)
                 .FirstOrDefaultAsync(layout => layout.Id == layoutDesignId);
         }
 

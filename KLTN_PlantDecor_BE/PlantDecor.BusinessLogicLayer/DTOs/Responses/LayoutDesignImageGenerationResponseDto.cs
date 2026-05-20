@@ -1,3 +1,5 @@
+using PlantDecor.DataAccessLayer.Enums;
+
 namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
 {
     public class LayoutDesignImageGenerationResultDto
@@ -34,6 +36,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public decimal? Price { get; set; }
         public string? ImageUrl { get; set; }
         public string? FluxPromptUsed { get; set; }
+        public LayoutDesignImageSourceTypeEnum? SourceType { get; set; }
+        public int? ReplacesImageId { get; set; }
         public DateTime? CreatedAt { get; set; }
     }
 }

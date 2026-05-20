@@ -123,6 +123,33 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<CommonPlant>> GetAllActiveWithDetailsAsync()
+        {
+            return await _context.CommonPlants
+                .AsNoTracking()
+                .Where(cp => cp.IsActive && cp.Quantity > 0 && cp.Nursery.IsActive == true)
+                .Include(cp => cp.Plant)
+                    .ThenInclude(p => p.PlantImages)
+                .Include(cp => cp.Nursery)
+                .OrderByDescending(cp => cp.Id)
+                .ToListAsync();
+        }
+
+        public async Task<List<CommonPlant>> GetByIdsAsync(List<int> ids)
+        {
+            if (ids == null || ids.Count == 0)
+            {
+                return new List<CommonPlant>();
+            }
+
+            var normalizedIds = ids.Distinct().ToList();
+            return await _context.CommonPlants
+                .AsNoTracking()
+                .Where(cp => normalizedIds.Contains(cp.Id))
+                .Include(cp => cp.Plant)
+                .ToListAsync();
+        }
+
         public async Task<CommonPlant?> GetByPlantAndNurseryAsync(int plantId, int nurseryId)
         {
             return await _context.CommonPlants

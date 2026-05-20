@@ -16,6 +16,16 @@ public partial class LayoutDesignAiResponseImage
 
     public string? FluxPromptUsed { get; set; }
 
+    public int? SourceType { get; set; }
+
+    public string? ManualLayerJson { get; set; }
+
+    public int? ManualEditedBy { get; set; }
+
+    public DateTime? ManualEditedAt { get; set; }
+
+    public int? ReplacesImageId { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public virtual LayoutDesign LayoutDesign { get; set; } = null!;

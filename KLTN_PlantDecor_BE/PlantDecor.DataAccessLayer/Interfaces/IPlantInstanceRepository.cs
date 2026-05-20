@@ -31,6 +31,7 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         /// Lấy danh sách Nursery có PlantInstance available cho một Plant cụ thể
         /// </summary>
         Task<List<PlantInstance>> GetAvailableByPlantIdAsync(int plantId);
+        Task<List<PlantInstance>> GetAllAvailableWithDetailsAsync();
 
         /// <summary>
         /// Batch add nhiều PlantInstance
