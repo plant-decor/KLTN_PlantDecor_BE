@@ -623,16 +623,10 @@ Hard constraints: keep all required plants in the same final image and never dup
             return $@"You are given one room image (image 1) and one plant reference image (image 2).
 
 Task:
-Insert exactly one new plant from the reference into the room image, while allowing non-structural restyling of the room.
+Insert exactly one new plant from the reference into the room image and the inserted plant will have the theme like the following image: https://res.cloudinary.com/dliirxsmo/image/upload/v1779127811/LayoutDesignBeautify/LayoutDesignBeautify/a655a07d-5852-455a-9724-c5f59e401ed4_layout_7_beautify_20260518181008187.jpg
 
 Room design context:
 {roomDesignContext}
-
-What you may change (non-structural):
-- Repaint walls and ceilings, update materials and surface finishes, and adjust colors.
-- Replace or reposition movable furniture.
-- Add decor items and artwork that fit the requested style (plant-themed art is allowed).
-- Adjust textiles, lighting fixtures, and accessories.
 
 Hard structural constraints:
 - Keep the room layout and geometry unchanged.
@@ -657,7 +651,7 @@ Plant requirements:
 
 Important:
 - This is a SINGLE plant composition task (exactly one new plant).
-- The room may be restyled, but the architecture and openings must stay fixed";
+- The room and the architecture and openings must stay fixed";
         }
 
         private async Task<string> BuildRoomDesignContextAsync(LayoutDesign layout)
@@ -689,11 +683,6 @@ Requested room style: {roomStyle}
 Room area: {roomArea} m2
 Light direction: {lightDirection}
 Natural light level: {naturalLight}
-
-Allowed changes:
-- Restyle the room freely to match the requested style.
-- Add decorative objects, textiles, accents, and furniture that fit the request.
-- Adjust colors, materials, and surface finishes to improve the design.
 
 Hard constraints:
 - Do not alter the room structure.
