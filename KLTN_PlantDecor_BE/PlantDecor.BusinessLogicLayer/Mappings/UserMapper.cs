@@ -30,7 +30,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
 
                 FullName = user.UserProfile?.FullName,
                 Address = user.UserProfile?.Address,
-                BirthYear = user.UserProfile?.BirthYear,
+                BirthDate = user.UserProfile?.BirthDate,
+                FengShuiElement = user.UserProfile?.FengShuiElement.HasValue == true ? (FengShuiElementTypeEnum?)user.UserProfile.FengShuiElement.Value : null,
+                //CustomerTier = user.UserProfile?.CustomerTier,
                 Gender = user.UserProfile?.Gender,
                 Latitude = user.UserProfile?.Latitude,
                 Longitude = user.UserProfile?.Longitude,
@@ -93,8 +95,15 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             if (!string.IsNullOrWhiteSpace(request.Address))
                 user.UserProfile.Address = request.Address.Trim();
 
-            if (request.BirthYear.HasValue)
-                user.UserProfile.BirthYear = request.BirthYear;
+            if (request.BirthDate.HasValue)
+            {
+                user.UserProfile.BirthDate = request.BirthDate;
+                // Compute feng shui element immediately
+                var feng = PlantDecor.DataAccessLayer.Helpers.UserInfoHelper.GetFengShuiElementFromYear(request.BirthDate.Value.Year);
+                user.UserProfile.FengShuiElement = feng;
+                // Ensure customer rank is set (default Bronze = 0) if not present
+                //user.UserProfile.CustomerTier ??= 0;
+            }
 
             if (request.Gender.HasValue)
                 user.UserProfile.Gender = (int)request.Gender;

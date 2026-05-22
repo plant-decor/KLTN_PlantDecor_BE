@@ -43,11 +43,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public DirectionEnum? LightDirection { get; set; }
 
         /// <summary>
-        /// Dominant direction of the room
-        /// </summary>
-        public DirectionEnum? DominantDirection { get; set; }
-
-        /// <summary>
         /// Optional minimum budget filter
         /// </summary>
         public decimal? MinBudget { get; set; }
@@ -61,11 +56,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         /// Optional care level value aligned with RoomDesignPreferences
         /// </summary>
         public CareLevelTypeEnum? CareLevelType { get; set; }
-
-        /// <summary>
-        /// Optional flag aligned with RoomDesignPreferences
-        /// </summary>
-        public bool? IsOftenAway { get; set; }
 
         /// <summary>
         /// Optional natural light level value aligned with RoomDesignPreferences

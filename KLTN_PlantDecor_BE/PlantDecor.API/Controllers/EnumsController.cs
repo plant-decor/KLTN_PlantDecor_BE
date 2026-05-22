@@ -378,7 +378,6 @@ namespace PlantDecor.API.Controllers
                     CreateEnumGroup("RoomStyle", typeof(RoomStyleEnum)),
                     CreateEnumGroup("LightRequirement", typeof(LightRequirementEnum)),
                     CreateEnumGroup("LightDirection", typeof(DirectionEnum)),
-                    CreateEnumGroup("DominantDirection", typeof(DirectionEnum)),
                     CreateEnumGroup("RoomViewAngle", typeof(RoomViewAngleEnum)),
                     CreateEnumGroup("LayoutDesignStatus", typeof(LayoutDesignStatusEnum)),
                     CreateEnumGroup("RoomUploadModerationStatus", typeof(RoomUploadModerationStatusEnum)),

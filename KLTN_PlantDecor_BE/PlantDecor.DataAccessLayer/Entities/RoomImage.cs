@@ -8,7 +8,8 @@ public partial class RoomImage
 
     public string? ImageUrl { get; set; }
 
-    public int? ViewAngle { get; set; }
+    // Order priority for this image (1 = primary/front). Replaces previous ViewAngle semantics.
+    public int? OrderIndex { get; set; }
 
     public DateTime? UploadedAt { get; set; }
 

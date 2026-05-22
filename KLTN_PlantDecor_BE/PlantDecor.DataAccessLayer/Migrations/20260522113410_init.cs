@@ -1003,6 +1003,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     PublicId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
+                    SourceType = table.Column<int>(type: "integer", nullable: true),
+                    ManualLayerJson = table.Column<string>(type: "text", nullable: true),
+                    ManualEditedBy = table.Column<int>(type: "integer", nullable: true),
+                    ManualEditedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ReplacesImageId = table.Column<int>(type: "integer", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -1052,7 +1057,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     LayoutDesignId = table.Column<int>(type: "integer", nullable: false),
                     RoomImageId = table.Column<int>(type: "integer", nullable: false),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true),
                     OrderIndex = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -1358,7 +1362,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true),
+                    OrderIndex = table.Column<int>(type: "integer", nullable: true),
                     UploadedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -1504,7 +1508,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     Address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    BirthYear = table.Column<int>(type: "integer", nullable: true),
+                    BirthDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    FengShuiElement = table.Column<int>(type: "integer", nullable: true),
                     FullName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Gender = table.Column<int>(type: "integer", nullable: true),
                     Latitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
@@ -1754,11 +1759,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     RoomStyle = table.Column<int>(type: "integer", nullable: true),
                     RoomArea = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
                     LightDirection = table.Column<int>(type: "integer", nullable: true),
-                    DominantDirection = table.Column<int>(type: "integer", nullable: true),
                     MinBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     MaxBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     CareLevel = table.Column<int>(type: "integer", nullable: true),
-                    IsOftenAway = table.Column<bool>(type: "boolean", nullable: true),
                     NaturalLightLevel = table.Column<int>(type: "integer", nullable: true),
                     HasAllergy = table.Column<bool>(type: "boolean", nullable: true),
                     AllergyNote = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)

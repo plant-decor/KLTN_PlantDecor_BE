@@ -51,16 +51,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException(message);
             }
 
-            if (request.ViewAngles == null || request.ViewAngles.Count != request.Images.Count)
+            if (request.OrderIndexes == null || request.OrderIndexes.Count != request.Images.Count)
             {
-                const string message = "ViewAngles must be provided and match the number of uploaded images";
+                const string message = "OrderIndexes must be provided and match the number of uploaded images";
                 await SaveRoomUploadModerationAsync(null, RoomUploadModerationStatusEnum.Rejected, message);
                 throw new BadRequestException(message);
             }
 
-            if (request.ViewAngles.Distinct().Count() != request.ViewAngles.Count)
+            // Order indexes should be unique within one upload
+            if (request.OrderIndexes.Distinct().Count() != request.OrderIndexes.Count)
             {
-                const string message = "ViewAngles must be unique within one upload";
+                const string message = "OrderIndexes must be unique within one upload";
                 await SaveRoomUploadModerationAsync(null, RoomUploadModerationStatusEnum.Rejected, message);
                 throw new BadRequestException(message);
             }
@@ -98,7 +99,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         UserId = userId,
                         ImageUrl = uploadedImage.SecureUrl,
-                        ViewAngle = (int)request.ViewAngles[i],
+                        OrderIndex = request.OrderIndexes[i],
                         UploadedAt = DateTime.UtcNow
                     };
 
@@ -163,19 +164,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
         }
 
-        public async Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAndViewAngleAsync(int userId, RoomViewAngleEnum viewAngle)
+        public async Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAndOrderIndexAsync(int userId, int orderIndex)
         {
             if (userId <= 0)
             {
                 throw new UnauthorizedException("Unable to identify user from token");
             }
 
-            if (!Enum.IsDefined(typeof(RoomViewAngleEnum), viewAngle))
+            if (orderIndex <= 0)
             {
-                throw new BadRequestException("ViewAngle is invalid");
+                throw new BadRequestException("OrderIndex is invalid");
             }
 
-            var roomImages = await _unitOfWork.RoomImageRepository.GetAllByUserIdAndViewAngleAsync(userId, (int)viewAngle);
+            var roomImages = await _unitOfWork.RoomImageRepository.GetAllByUserIdAndOrderIndexAsync(userId, orderIndex);
 
             return new UploadRoomImagesResponseDto
             {
