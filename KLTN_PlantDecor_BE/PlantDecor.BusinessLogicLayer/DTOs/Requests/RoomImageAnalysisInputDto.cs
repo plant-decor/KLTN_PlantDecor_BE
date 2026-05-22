@@ -7,6 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public int? RoomImageId { get; set; }
         public string ImageBase64 { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
-        public RoomViewAngleEnum? ViewAngle { get; set; }
+        // Order index (priority) when the image was captured
+        public int? OrderIndex { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.DataAccessLayer.Entities;
+using PlantDecor.DataAccessLayer.Enums;
 
 namespace PlantDecor.BusinessLogicLayer.Mappings
 {
@@ -23,6 +24,10 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Price = plantInstance?.SpecificPrice ?? commonPlant?.Plant?.BasePrice,
                 ImageUrl = image.ImageUrl,
                 FluxPromptUsed = image.FluxPromptUsed,
+                SourceType = image.SourceType.HasValue
+                    ? (LayoutDesignImageSourceTypeEnum)image.SourceType.Value
+                    : null,
+                ReplacesImageId = image.ReplacesImageId,
                 CreatedAt = image.CreatedAt
             };
         }

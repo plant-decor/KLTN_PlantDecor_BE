@@ -14,15 +14,11 @@ public partial class RoomDesignPreferences
 
     public int? LightDirection { get; set; }
 
-    public int? DominantDirection { get; set; }
-
     public decimal? MinBudget { get; set; }
 
     public decimal? MaxBudget { get; set; }
 
     public int? CareLevel { get; set; }
-
-    public bool? IsOftenAway { get; set; }
 
     public int? NaturalLightLevel { get; set; }
 

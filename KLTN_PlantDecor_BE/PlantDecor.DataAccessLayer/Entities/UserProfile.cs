@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PlantDecor.DataAccessLayer.Entities;
+﻿namespace PlantDecor.DataAccessLayer.Entities;
 
 public partial class UserProfile
 {
@@ -11,7 +8,16 @@ public partial class UserProfile
 
     public string? Address { get; set; }
 
-    public int? BirthYear { get; set; }
+    // Full birth date (replaces BirthYear). Backfill from BirthYear as DateOnly Jan 1 when migrating.
+    public DateOnly? BirthDate { get; set; }
+
+    // NOTE: Legacy `BirthYear` removed — use `BirthDate` instead.
+
+    // Derived feng shui element computed from birth date/year
+    public int? FengShuiElement { get; set; }
+
+    // Stored customer tier (0=Bronze,1=Silver,2=Gold)
+    //public int? CustomerTier { get; set; }
 
     public string? FullName { get; set; }
 

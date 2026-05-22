@@ -190,6 +190,19 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<PlantInstance>> GetAllAvailableWithDetailsAsync()
+        {
+            return await _context.PlantInstances
+                .AsNoTracking()
+                .Where(pi => pi.Status == (int)PlantInstanceStatusEnum.Available)
+                .Include(pi => pi.Plant!)
+                    .ThenInclude(p => p.PlantImages)
+                .Include(pi => pi.PlantImages)
+                .Include(pi => pi.CurrentNursery)
+                .OrderByDescending(pi => pi.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task AddRangeAsync(IEnumerable<PlantInstance> instances)
         {
             await _context.PlantInstances.AddRangeAsync(instances);

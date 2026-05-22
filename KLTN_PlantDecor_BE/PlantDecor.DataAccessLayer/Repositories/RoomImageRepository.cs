@@ -44,12 +44,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<RoomImage>> GetAllByUserIdAndViewAngleAsync(int userId, int viewAngle)
+        public async Task<List<RoomImage>> GetAllByUserIdAndOrderIndexAsync(int userId, int orderIndex)
         {
             return await _context.RoomImages
                 .AsNoTracking()
                 .Include(roomImage => roomImage.RoomUploadModerations)
-                .Where(roomImage => roomImage.UserId == userId && roomImage.ViewAngle == viewAngle)
+                .Where(roomImage => roomImage.UserId == userId && roomImage.OrderIndex == orderIndex)
                 .OrderByDescending(roomImage => roomImage.UploadedAt)
                 .ThenByDescending(roomImage => roomImage.Id)
                 .ToListAsync();
