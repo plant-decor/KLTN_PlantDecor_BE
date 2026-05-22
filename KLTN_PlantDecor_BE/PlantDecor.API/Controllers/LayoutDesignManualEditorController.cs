@@ -9,6 +9,9 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API về ManualEdit
+    /// </summary>
     [Route("api/layout-designs")]
     [ApiController]
     [Authorize(Roles = "Customer")]
