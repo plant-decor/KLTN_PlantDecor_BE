@@ -18,6 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly HttpClient _httpClient;
+        //private readonly IAiQuotaService _aiQuotaService;
         private readonly ILogger<LayoutDesignImageGenerationService> _logger;
         private readonly string _fluxEndpoint;
         private readonly string _fluxApiVersion;
@@ -32,11 +33,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ICloudinaryService cloudinaryService,
             HttpClient httpClient,
             IConfiguration configuration,
+            //IAiQuotaService aiQuotaService,
             ILogger<LayoutDesignImageGenerationService> logger)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _httpClient = httpClient;
+            //_aiQuotaService = aiQuotaService;
             _logger = logger;
 
             _fluxEndpoint = configuration["FluxImage:Endpoint"] ?? string.Empty;
@@ -69,6 +72,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 EnsureLayoutOwnership(layout, userId);
                 // chỉ cho phép khi status là ImageGenerationCompleted hoặc PlantRecommendationCompleted
                 EnsureLayoutStatusAllowed(layout.Status);
+
+                // Consume AI quota for image generation
+                //await _aiQuotaService.EnsureQuotaAndConsumeAsync(userId, "LayoutImageGeneration");
 
                 var roomImageUrl = ResolveRoomImageUrl(layout);
                 if (string.IsNullOrWhiteSpace(roomImageUrl))
@@ -123,7 +129,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
 
                     var existingImages = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-                    foreach (var existingImage in existingImages)
+                    foreach (var existingImage in existingImages.Where(IsAiImage))
                     {
                         var deleted = false;
 
@@ -231,13 +237,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             EnsureLayoutOwnership(layout, userId);
 
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-            return images.ToLayoutDesignGeneratedImageDtoList();
+            var filtered = FilterImagesForCustomer(images);
+            return filtered.ToLayoutDesignGeneratedImageDtoList();
         }
 
         public async Task<List<LayoutDesignGeneratedImageDto>> GetAllGeneratedImagesByUserIdAsync(int userId)
         {
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetAllGeneratedImagesByUserIdAsync(userId);
-            return images.ToLayoutDesignGeneratedImageDtoList();
+            var filtered = FilterImagesForCustomer(images);
+            return filtered.ToLayoutDesignGeneratedImageDtoList();
         }
 
         private async Task ProcessCandidateAsync(
@@ -275,6 +283,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ImageUrl = uploadResult.SecureUrl,
                     PublicId = uploadResult.PublicId,
                     FluxPromptUsed = prompt,
+                    SourceType = (int)LayoutDesignImageSourceTypeEnum.Ai,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -670,7 +679,6 @@ Important:
             var roomType = MapNullableEnum(preferences.RoomType, typeof(RoomTypeEnum), "unspecified");
             var roomStyle = MapNullableEnum(preferences.RoomStyle, typeof(RoomStyleEnum), "unspecified");
             var lightDirection = MapNullableEnum(preferences.LightDirection, typeof(DirectionEnum), "unspecified");
-            var dominantDirection = MapNullableEnum(preferences.DominantDirection, typeof(DirectionEnum), "unspecified");
             var naturalLight = MapNullableEnum(preferences.NaturalLightLevel, typeof(LightRequirementEnum), "unspecified");
             var roomArea = preferences.RoomArea.HasValue
                 ? preferences.RoomArea.Value.ToString("0.##")
@@ -680,7 +688,6 @@ Important:
 Requested room style: {roomStyle}
 Room area: {roomArea} m2
 Light direction: {lightDirection}
-Dominant direction: {dominantDirection}
 Natural light level: {naturalLight}
 
 Allowed changes:
@@ -698,7 +705,7 @@ Hard constraints:
         private static int? ResolvePrimaryRoomImageId(LayoutDesign layout)
         {
             return layout.LayoutDesignRoomImages
-                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .OrderBy(link => link.OrderIndex == 1 ? 0 : 1)
                 .ThenBy(link => link.OrderIndex ?? int.MaxValue)
                 .ThenBy(link => link.RoomImageId)
                 .Select(link => (int?)link.RoomImageId)
@@ -729,7 +736,7 @@ Hard constraints:
         private static string? ResolveRoomImageUrl(LayoutDesign layout)
         {
             var roomImageUrl = layout.LayoutDesignRoomImages
-                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .OrderBy(link => link.OrderIndex == 1 ? 0 : 1)
                 .ThenBy(link => link.OrderIndex ?? int.MaxValue)
                 .ThenBy(link => link.RoomImageId)
                 .Select(link => link.RoomImage.ImageUrl)
@@ -770,6 +777,76 @@ Hard constraints:
             }
 
             throw new BadRequestException("LayoutDesign is not ready for image generation");
+        }
+
+        private static List<LayoutDesignAiResponseImage> FilterImagesForCustomer(IEnumerable<LayoutDesignAiResponseImage> images)
+        {
+            var materialized = images?.ToList() ?? new List<LayoutDesignAiResponseImage>();
+            if (materialized.Count == 0)
+            {
+                return materialized;
+            }
+
+            var manualByPlant = materialized
+                .Where(image => IsManualImage(image)
+                    && image.LayoutDesignPlantId.HasValue
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .GroupBy(image => image.LayoutDesignPlantId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                        .ThenByDescending(image => image.Id)
+                        .First());
+
+            var aiByPlant = materialized
+                .Where(image => IsAiImage(image) && image.LayoutDesignPlantId.HasValue)
+                .GroupBy(image => image.LayoutDesignPlantId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                        .ThenByDescending(image => image.Id)
+                        .First());
+
+            var selected = new List<LayoutDesignAiResponseImage>();
+            foreach (var plantId in manualByPlant.Keys.Union(aiByPlant.Keys))
+            {
+                if (manualByPlant.TryGetValue(plantId, out var manual))
+                {
+                    selected.Add(manual);
+                    continue;
+                }
+
+                if (aiByPlant.TryGetValue(plantId, out var ai))
+                {
+                    selected.Add(ai);
+                }
+            }
+
+            var manualComposite = materialized
+                .Where(image => IsManualImage(image)
+                    && !image.LayoutDesignPlantId.HasValue
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(image => image.Id)
+                .FirstOrDefault();
+
+            if (manualComposite != null)
+            {
+                selected.Add(manualComposite);
+            }
+
+            return selected;
+        }
+
+        private static bool IsManualImage(LayoutDesignAiResponseImage image)
+        {
+            return image.SourceType.HasValue &&
+                   image.SourceType.Value == (int)LayoutDesignImageSourceTypeEnum.Manual;
+        }
+
+        private static bool IsAiImage(LayoutDesignAiResponseImage image)
+        {
+            return !IsManualImage(image);
         }
 
         private void EnsureFluxConfigured()

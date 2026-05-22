@@ -8,6 +8,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     {
         Task<UploadRoomImagesResponseDto> UploadRoomImagesAsync(UploadRoomImagesRequest request, int userId);
         Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAsync(int userId);
-        Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAndViewAngleAsync(int userId, RoomViewAngleEnum viewAngle);
+        Task<UploadRoomImagesResponseDto> GetAllRoomImagesByUserIdAndOrderIndexAsync(int userId, int orderIndex);
     }
 }

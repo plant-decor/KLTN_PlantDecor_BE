@@ -6,7 +6,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
     {
         public int RoomImageId { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
-        public RoomViewAngleEnum ViewAngle { get; set; }
+        // Order priority index for the image (1 = primary)
+        public int? OrderIndex { get; set; }
         public RoomUploadModerationStatusEnum ModerationStatus { get; set; }
         public string? ModerationReason { get; set; }
         public DateTime UploadedAt { get; set; }

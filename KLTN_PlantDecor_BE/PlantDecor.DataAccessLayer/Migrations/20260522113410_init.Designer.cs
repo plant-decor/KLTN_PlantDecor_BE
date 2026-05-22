@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260506042551_init")]
+    [Migration("20260522113410_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -1133,9 +1133,24 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("LayoutDesignPlantId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ManualEditedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("ManualEditedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ManualLayerJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("PublicId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ReplacesImageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SourceType")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id")
                         .HasName("LayoutDesignAIResponseImage_pkey");
@@ -1202,9 +1217,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("LayoutDesignId", "RoomImageId");
@@ -2582,13 +2594,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("CareLevel")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("DominantDirection")
-                        .HasColumnType("integer");
-
                     b.Property<bool?>("HasAllergy")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsOftenAway")
                         .HasColumnType("boolean");
 
                     b.Property<int?>("LightDirection")
@@ -2638,15 +2644,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<int?>("OrderIndex")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UploadedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -3288,13 +3294,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int?>("BirthYear")
-                        .HasColumnType("integer");
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int?>("FengShuiElement")
+                        .HasColumnType("integer");
 
                     b.Property<string>("FullName")
                         .HasMaxLength(100)

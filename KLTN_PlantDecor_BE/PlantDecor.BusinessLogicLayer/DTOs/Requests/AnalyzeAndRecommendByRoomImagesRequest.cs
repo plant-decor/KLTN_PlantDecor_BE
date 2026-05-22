@@ -16,7 +16,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public decimal? RoomArea { get; set; }
         public DirectionEnum? LightDirection { get; set; }
-        public DirectionEnum? DominantDirection { get; set; }
         public LightRequirementEnum? NaturalLightLevel { get; set; }
         public decimal? MinBudget { get; set; }
         public decimal? MaxBudget { get; set; }

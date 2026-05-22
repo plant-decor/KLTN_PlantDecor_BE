@@ -64,21 +64,21 @@ namespace PlantDecor.API.Controllers
             });
         }
 
-        [HttpGet("GetALLRoomImagesByUserIdAndViewAngle/{viewAngle}")]
+        [HttpGet("GetALLRoomImagesByUserIdAndOrderIndex/{orderIndex}")]
         [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(UploadRoomImagesResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> GetALLRoomImagesByUserIdAndViewAngle([FromRoute] RoomViewAngleEnum viewAngle)
+        public async Task<IActionResult> GetALLRoomImagesByUserIdAndOrderIndex([FromRoute] int orderIndex)
         {
             var userId = GetRequiredUserId();
-            var result = await _roomImageService.GetAllRoomImagesByUserIdAndViewAngleAsync(userId, viewAngle);
+            var result = await _roomImageService.GetAllRoomImagesByUserIdAndOrderIndexAsync(userId, orderIndex);
 
             return Ok(new ApiResponse<UploadRoomImagesResponseDto>
             {
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Retrieved room images by view angle successfully",
+                Message = "Retrieved room images by order index successfully",
                 Payload = result
             });
         }
