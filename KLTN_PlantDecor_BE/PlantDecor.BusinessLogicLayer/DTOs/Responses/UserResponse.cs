@@ -31,7 +31,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Address { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? BirthYear { get; set; }
+        public DateOnly? BirthDate { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public FengShuiElementTypeEnum? FengShuiElement { get; set; }
+        //[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        //public int? CustomerTier { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Gender { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
