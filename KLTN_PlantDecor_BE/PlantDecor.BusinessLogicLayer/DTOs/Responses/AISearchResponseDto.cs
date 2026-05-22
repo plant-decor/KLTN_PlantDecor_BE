@@ -101,8 +101,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int PackageId { get; set; }
         public string PackageName { get; set; } = string.Empty;
         public decimal? UnitPrice { get; set; }
-        public int MatchScore { get; set; }
-        public List<string> MatchReasons { get; set; } = new();
+        public int EcosystemMatchPercentage { get; set; }
+        public string? MatchReason { get; set; }
     }
 
     public class PolicyGroundingSourceDto

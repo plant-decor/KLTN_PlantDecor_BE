@@ -5,18 +5,11 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int PackageId { get; set; }
         public string PackageName { get; set; } = string.Empty;
         public decimal? UnitPrice { get; set; }
-        public int MatchScore { get; set; }
-        public int MatchedCategoryCount { get; set; }
-        public int MatchedCareLevelCount { get; set; }
-        public int TotalPurchasedPlantItems { get; set; }
-        public List<string> MatchReasons { get; set; } = new();
-        public List<RecommendedPlantDto> Plants { get; set; } = new();
-    }
-
-    public class RecommendedPlantDto
-    {
-        public int PlantId { get; set; }
-        public string PlantName { get; set; } = string.Empty;
-        public int Quantity { get; set; }
+        public List<string> DominantCategories { get; set; } = new();
+        public string? DominantCareLevel { get; set; }
+        public bool CareLevelMatched { get; set; }
+        public decimal CoveragePercentage { get; set; }
+        public int EcosystemMatchPercentage { get; set; }
+        public string? MatchReason { get; set; }
     }
 }

@@ -477,17 +477,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<PlantResponseDto> AssignCategoriesToPlantAsync(AssignCategoriesDto request)
         {
+            if (request.CategoryIds == null || request.CategoryIds.Count == 0)
+                throw new BadRequestException("CategoryIds is required");
+
+            if (request.CategoryIds.Count != 1)
+                throw new BadRequestException("Exactly one category must be selected for each plant");
+
+            var distinctCategoryIds = request.CategoryIds.Distinct().ToList();
+            if (distinctCategoryIds.Count != 1)
+                throw new BadRequestException("Exactly one category must be selected for each plant");
+
             var plant = await _unitOfWork.PlantRepository.GetByIdWithDetailsAsync(request.PlantId);
             if (plant == null)
                 throw new NotFoundException($"Plant with ID {request.PlantId} not found");
 
             // Get valid categories
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
-            var validCategories = categories.Where(c => request.CategoryIds.Contains(c.Id)).ToList();
+            var validCategories = categories.Where(c => distinctCategoryIds.Contains(c.Id)).ToList();
 
-            if (validCategories.Count != request.CategoryIds.Count)
+            if (validCategories.Count != distinctCategoryIds.Count)
             {
-                var invalidIds = request.CategoryIds.Except(validCategories.Select(c => c.Id));
+                var invalidIds = distinctCategoryIds.Except(validCategories.Select(c => c.Id));
                 throw new NotFoundException($"Categories with IDs {string.Join(", ", invalidIds)} not found");
             }
 
