@@ -44,4 +44,13 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public int PageSize { get; set; }
         public int TotalPages { get; set; }
     }
+
+    public class ConversationSummaryResponseDto
+    {
+        public int ConversationId { get; set; }
+        public string Summary { get; set; } = string.Empty;
+        public List<string> KeyPoints { get; set; } = new();
+        public List<string> NextActions { get; set; } = new();
+        public DateTime GeneratedAt { get; set; }
+    }
 }

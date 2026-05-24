@@ -5,6 +5,9 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
 using PlantDecor.DataAccessLayer.Enums;
 using PlantDecor.DataAccessLayer.UnitOfWork;
+using System.Text.Json;
+using System.Text;
+using System.Linq;
 
 namespace PlantDecor.BusinessLogicLayer.Services
 {
@@ -12,10 +15,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeZoneInfo _vnTimeZone;
+        private readonly IAzureOpenAIService _azureOpenAIService;
 
-        public ChatService(IUnitOfWork unitOfWork, IConfiguration configuration)
+        public ChatService(IUnitOfWork unitOfWork, IConfiguration configuration, IAzureOpenAIService azureOpenAIService)
         {
             _unitOfWork = unitOfWork;
+            _azureOpenAIService = azureOpenAIService;
             var timeZoneId = configuration["TimeZoneId"] ?? "SE Asia Standard Time";
             _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
@@ -170,6 +175,190 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
+        }
+
+        public async Task<ConversationSummaryResponseDto> GetConversationSummaryAsync(int userId, int conversationId)
+        {
+            // Check participant
+            var isParticipant = await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
+            if (!isParticipant)
+                throw new ForbiddenException("You are not a participant of this conversation");
+
+            var conversation = await _unitOfWork.ChatSessionRepository.GetConversationWithParticipantsAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException("Conversation not found");
+
+            // Load a reasonably large window of messages, then select by time-window (3d -> 1w -> 1m)
+            var allMessages = await _unitOfWork.ChatMessageRepository.GetConversationMessagesAsync(conversationId, 1, 1000) ?? new List<ChatMessage>();
+            var totalMessages = allMessages.Count;
+
+            // Candidate windows in days (3 days, 1 week, 1 month)
+            var windowDays = new[] { 3, 7, 30 };
+            List<ChatMessage> selectedWindowMessages = new List<ChatMessage>();
+
+            foreach (var days in windowDays)
+            {
+                var start = VnNow.AddDays(-days);
+                var window = allMessages
+                    .Where(m => m.CreatedAt.HasValue && m.CreatedAt.Value >= start && !string.IsNullOrWhiteSpace(m.Content))
+                    .OrderBy(m => m.CreatedAt)
+                    .ToList();
+
+                if (window.Count > 0)
+                {
+                    selectedWindowMessages = window;
+                    break;
+                }
+            }
+
+            // If no messages in the windows, fall back to the most recent non-empty messages
+            if (selectedWindowMessages.Count == 0)
+            {
+                selectedWindowMessages = allMessages
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                    .OrderBy(m => m.CreatedAt)
+                    .ToList();
+            }
+
+            // Build participant summaries (use 0 for unknown sender keys)
+            var counts = allMessages?
+                .GroupBy(m => m.Sender ?? 0)
+                .ToDictionary(g => g.Key, g => g.Count())
+                ?? new Dictionary<int, int>();
+
+            var participantSummaries = conversation.ChatParticipants.Select(p => new
+            {
+                UserId = p.UserId,
+                Name = p.User?.UserProfile?.FullName ?? p.User?.Email ?? p.UserId.ToString(),
+                MessageCount = counts.ContainsKey(p.UserId) ? counts[p.UserId] : 0
+            }).ToList();
+
+            var lastMessage = allMessages != null && allMessages.Count > 0 ? allMessages.Last() : null;
+            var lastExcerpt = string.Empty;
+            if (lastMessage != null && !string.IsNullOrWhiteSpace(lastMessage.Content))
+            {
+                lastExcerpt = lastMessage.Content.Length > 240 ? lastMessage.Content.Substring(0, 240).Trim() + "..." : lastMessage.Content.Trim();
+            }
+
+            // Key points: pick up to 5 longest non-empty messages as representative highlights
+            var keyPoints = selectedWindowMessages == null
+                ? new List<string>()
+                : selectedWindowMessages
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                    .OrderByDescending(m => m.Content!.Length)
+                    .Take(5)
+                    .Select(m =>
+                    {
+                        var senderName = conversation.ChatParticipants.FirstOrDefault(p => p.UserId == (m.Sender ?? 0))?.User?.UserProfile?.FullName
+                                         ?? (m.Sender?.ToString() ?? "Unknown");
+                        var text = m.Content!.Length > 200 ? m.Content!.Substring(0, 200).Trim() + "..." : m.Content!.Trim();
+                        return $"{senderName}: {text}";
+                    })
+                    .ToList();
+
+            // Build a compacted transcript for the AI prompt using token-aware trimming
+            var compact = new StringBuilder();
+
+            // Token budget defaults (align with AISearchService defaults)
+            const int maxInputTokens = 1200;
+            const int reservedOutputTokens = 400;
+            var effectiveInputBudget = Math.Max(120, maxInputTokens - Math.Max(0, reservedOutputTokens));
+
+            // Prepare turns (Role + Content) ordered chronologically
+            var turns = selectedWindowMessages
+                .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                .Select(m => new
+                {
+                    Role = conversation.ChatParticipants.FirstOrDefault(p => p.UserId == (m.Sender ?? 0))?.User?.UserProfile?.FullName
+                               ?? (m.Sender?.ToString() ?? "Unknown"),
+                    Content = m.Content!.Trim(),
+                    CreatedAt = m.CreatedAt
+                })
+                .ToList();
+
+            // Select as many recent turns as fit into the token budget (iterate from newest backwards)
+            var selectedTurns = new List<(string Role, string Content, DateTime? CreatedAt)>();
+            var usedTokens = 0;
+
+            for (var i = turns.Count - 1; i >= 0; i--)
+            {
+                var t = turns[i];
+                if (string.IsNullOrWhiteSpace(t.Content)) continue;
+
+                var available = effectiveInputBudget - usedTokens;
+                if (available <= 8) break;
+
+                var normalized = t.Content.Trim();
+                var turnTokens = EstimateTokenCount(normalized) + 4;
+
+                if (turnTokens > available)
+                {
+                    var truncBudget = Math.Max(8, available - 4);
+                    normalized = TruncateByApproxTokens(normalized, truncBudget);
+                    turnTokens = EstimateTokenCount(normalized) + 4;
+                }
+
+                if (string.IsNullOrWhiteSpace(normalized) || turnTokens > available) continue;
+
+                selectedTurns.Add((t.Role, normalized, t.CreatedAt));
+                usedTokens += turnTokens;
+            }
+
+            selectedTurns.Reverse();
+
+            foreach (var t in selectedTurns)
+            {
+                var ts = t.CreatedAt?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty;
+                var content = t.Content.Length > 800 ? t.Content.Substring(0, 800).Trim() + "..." : t.Content;
+                compact.AppendLine($"[{ts}] {t.Role}: {content}");
+            }
+
+            var systemPrompt = "You are a concise support summary assistant for consultants. Return valid JSON only with keys: summary (string), keyPoints (array of strings), nextActions (array of strings). Prefer Vietnamese when the conversation is Vietnamese. Do not include any extra text outside the JSON.";
+
+            var userMessage = new StringBuilder();
+            userMessage.AppendLine($"ConversationId: {conversationId}");
+            userMessage.AppendLine($"Participants: {string.Join(", ", participantSummaries.Select(s => $"{s.Name}({s.MessageCount})"))}");
+            userMessage.AppendLine($"LastMessage: {lastExcerpt}");
+            userMessage.AppendLine("Transcript:");
+            userMessage.AppendLine(compact.ToString());
+
+            // Try AI summarization, fallback to deterministic summary on any failure
+            try
+            {
+                var aiResp = await _azureOpenAIService.GenerateJsonResponseAsync(systemPrompt, userMessage.ToString());
+                if (!string.IsNullOrWhiteSpace(aiResp))
+                {
+                    var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var aiDto = JsonSerializer.Deserialize<AiSummaryDto>(aiResp, opts);
+                    if (aiDto != null && !string.IsNullOrWhiteSpace(aiDto.Summary))
+                    {
+                        return new ConversationSummaryResponseDto
+                        {
+                            ConversationId = conversationId,
+                            Summary = aiDto.Summary.Trim(),
+                            KeyPoints = aiDto.KeyPoints ?? keyPoints,
+                            NextActions = aiDto.NextActions ?? new List<string>(),
+                            GeneratedAt = DateTime.UtcNow
+                        };
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // swallow and fallback
+            }
+
+            // Deterministic fallback
+            var summaryText = $"Conversation {conversationId}: {totalMessages} messages. Participants: {string.Join(", ", participantSummaries.Select(s => $"{s.Name}({s.MessageCount})"))}. Last message: {lastExcerpt}";
+
+            return new ConversationSummaryResponseDto
+            {
+                ConversationId = conversationId,
+                Summary = summaryText,
+                KeyPoints = keyPoints,
+                NextActions = new List<string>(),
+                GeneratedAt = DateTime.UtcNow
             };
         }
 
@@ -421,6 +610,33 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _unitOfWork.ChatSessionRepository.UpdateAsync(conversation);
             await _unitOfWork.SaveAsync();
+        }
+
+        private static int EstimateTokenCount(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return 0;
+
+            return Math.Max(1, (int)Math.Ceiling(text.Length / 4.0));
+        }
+
+        private static string TruncateByApproxTokens(string text, int tokenBudget)
+        {
+            if (string.IsNullOrWhiteSpace(text) || tokenBudget <= 0)
+                return string.Empty;
+
+            var maxChars = Math.Max(1, tokenBudget * 4);
+            if (text.Length <= maxChars)
+                return text;
+
+            return text[..maxChars].Trim();
+        }
+
+        private class AiSummaryDto
+        {
+            public string? Summary { get; set; }
+            public List<string>? KeyPoints { get; set; }
+            public List<string>? NextActions { get; set; }
         }
     }
 }
