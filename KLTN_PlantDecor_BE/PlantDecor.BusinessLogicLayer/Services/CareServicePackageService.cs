@@ -2,6 +2,8 @@ using Hangfire;
 using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using System.Linq;
+using System.Text.Json;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
@@ -16,6 +18,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IChatService _chatService;
+        private readonly IAzureOpenAIService _azureOpenAIService;
 
         private const string CACHE_KEY_ACTIVE = "care_pkg_active";
         private const string CACHE_KEY_ALL = "care_pkg_all";
@@ -24,11 +28,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public CareServicePackageService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IChatService chatService,
+            IAzureOpenAIService azureOpenAIService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
+            _chatService = chatService;
+            _azureOpenAIService = azureOpenAIService;
         }
 
         public async Task<List<CareServicePackageResponseDto>> GetAllActiveAsync()
@@ -245,6 +253,123 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new NotFoundException($"User {userId} not found");
 
             return await RecommendByUserInternalAsync(userId);
+        }
+
+        public async Task<List<RankedCarePackageDto>> RecommendByConversationAsync(int consultantId, int conversationId, int maxCandidates = 8)
+        {
+            await EnsureConsultantPermissionAsync(consultantId);
+
+            var conversation = await _unitOfWork.ChatSessionRepository.GetConversationWithParticipantsAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException($"Conversation {conversationId} not found");
+
+            // Try to find the customer participant (role Customer), otherwise any participant that's not the consultant
+            var customerParticipant = conversation.ChatParticipants
+                .FirstOrDefault(cp => cp.User != null && cp.User.RoleId == (int)RoleEnum.Customer && cp.UserId != consultantId)
+                ?? conversation.ChatParticipants.FirstOrDefault(cp => cp.UserId != consultantId);
+
+            int? customerId = customerParticipant?.UserId;
+            if (!customerId.HasValue)
+                throw new BadRequestException("Unable to identify customer participant in the conversation");
+
+            // Get candidate packages using existing recommendation logic
+            var candidates = await RecommendByUserAsync(consultantId, customerId.Value);
+            if (candidates == null || candidates.Count == 0)
+                return new List<RankedCarePackageDto>();
+
+            // Limit candidates
+            var topCandidates = candidates
+                .OrderByDescending(p => p.EcosystemMatchPercentage)
+                .ThenBy(p => p.UnitPrice ?? decimal.MaxValue)
+                .Take(Math.Max(1, Math.Min(maxCandidates, 12)))
+                .ToList();
+
+            // Get conversation summary (use consultant's context)
+            var summaryDto = await _chatService.GetConversationSummaryAsync(consultantId, conversationId);
+
+            // Build AI payload
+            var payload = JsonSerializer.Serialize(new
+            {
+                conversation = new
+                {
+                    id = conversationId,
+                    summary = summaryDto.Summary,
+                    keyPoints = summaryDto.KeyPoints
+                },
+                candidates = topCandidates.Select(p => new
+                {
+                    p.PackageId,
+                    p.PackageName,
+                    p.UnitPrice,
+                    p.DominantCategories,
+                    p.CoveragePercentage,
+                    p.EcosystemMatchPercentage,
+                    p.MatchReason
+                }).ToList()
+            });
+
+            var systemPrompt = "You are a concise ranking assistant for care service packages. Return ONLY a JSON array named 'rankings' where each entry has: packageId (int), score (0-100 int), reason (short string 1-2 sentences). Prefer Vietnamese when the conversation is Vietnamese. Do not include any extra text.";
+
+            try
+            {
+                var aiResp = await _azureOpenAIService.GenerateJsonResponseAsync(systemPrompt, payload);
+                if (!string.IsNullOrWhiteSpace(aiResp))
+                {
+                    // Extract JSON array substring (simple heuristic)
+                    var start = aiResp.IndexOf('[');
+                    var end = aiResp.LastIndexOf(']');
+                    string jsonArray = (start >= 0 && end > start) ? aiResp.Substring(start, end - start + 1) : aiResp;
+
+                    var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var aiRanks = JsonSerializer.Deserialize<List<AiRankDto>>(jsonArray, opts);
+                    if (aiRanks != null && aiRanks.Count > 0)
+                    {
+                        var ranked = aiRanks
+                            .Where(r => topCandidates.Any(c => c.PackageId == r.PackageId))
+                            .Select(r =>
+                            {
+                                var cand = topCandidates.First(c => c.PackageId == r.PackageId);
+                                return new RankedCarePackageDto
+                                {
+                                    PackageId = r.PackageId,
+                                    PackageName = cand.PackageName ?? string.Empty,
+                                    UnitPrice = cand.UnitPrice,
+                                    Score = Math.Clamp(r.Score, 0, 100),
+                                    Reason = r.Reason?.Trim(),
+                                    EcosystemMatchPercentage = cand.EcosystemMatchPercentage,
+                                    CoveragePercentage = cand.CoveragePercentage
+                                };
+                            })
+                            .OrderByDescending(r => r.Score)
+                            .ToList();
+
+                        return ranked;
+                    }
+                }
+            }
+            catch
+            {
+                // swallow and fallback
+            }
+
+            // Fallback: map deterministic candidates to Ranked DTO using existing scores
+            return topCandidates.Select(c => new RankedCarePackageDto
+            {
+                PackageId = c.PackageId,
+                PackageName = c.PackageName ?? string.Empty,
+                UnitPrice = c.UnitPrice,
+                Score = Math.Clamp(c.EcosystemMatchPercentage, 0, 100),
+                Reason = c.MatchReason,
+                EcosystemMatchPercentage = c.EcosystemMatchPercentage,
+                CoveragePercentage = c.CoveragePercentage
+            }).OrderByDescending(r => r.Score).ToList();
+        }
+
+        private sealed class AiRankDto
+        {
+            public int PackageId { get; set; }
+            public int Score { get; set; }
+            public string? Reason { get; set; }
         }
 
         public async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderForCustomerAsync(int userId, int orderId)

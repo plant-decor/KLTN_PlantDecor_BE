@@ -148,6 +148,25 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Consultant] Gợi ý và xếp hạng gói dịch vụ dựa trên nội dung của một conversation (AI-ranked)
+        /// </summary>
+        [HttpGet("recommendations/conversations/{conversationId}")]
+        [Authorize(Roles = "Consultant")]
+        public async Task<IActionResult> RecommendByConversation(int conversationId)
+        {
+            var consultantId = GetUserId();
+            var result = await _careServicePackageService.RecommendByConversationAsync(consultantId, conversationId);
+
+            return Ok(new ApiResponse<List<RankedCarePackageDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get AI-ranked care service package recommendations successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Admin] Tạo gói dịch vụ mới
         /// </summary>
         [HttpPost]

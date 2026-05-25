@@ -16,4 +16,5 @@ public partial class ChatSession
     public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 
     public virtual ICollection<ChatParticipant> ChatParticipants { get; set; } = new List<ChatParticipant>();
+    public virtual ICollection<ConversationSummarySnapshot> ConversationSummarySnapshots { get; set; } = new List<ConversationSummarySnapshot>();
 }

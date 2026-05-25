@@ -20,6 +20,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderAsync(int consultantId, int orderId);
         /// <summary>Consultant: gợi ý gói dịch vụ theo lịch sử mua cây của user</summary>
         Task<List<CareServicePackageRecommendationResponseDto>> RecommendByUserAsync(int consultantId, int userId);
+        Task<List<RankedCarePackageDto>> RecommendByConversationAsync(int consultantId, int conversationId, int maxCandidates = 8);
         /// <summary>Customer: gợi ý gói dịch vụ theo dữ liệu cây trong đơn hàng của chính mình</summary>
         Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderForCustomerAsync(int userId, int orderId);
         /// <summary>Admin: thay thế toàn bộ chuyên môn của gói dịch vụ</summary>

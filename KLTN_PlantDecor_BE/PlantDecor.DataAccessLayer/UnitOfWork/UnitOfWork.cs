@@ -67,6 +67,7 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IDepositPolicyRepository? _depositPolicyRepository;
         private IReturnTicketRepository? _returnTicketRepository;
         private IReturnTicketAssignmentRepository? _returnTicketAssignmentRepository;
+        private IConversationSummaryRepository? _conversationSummaryRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -346,6 +347,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IReturnTicketAssignmentRepository ReturnTicketAssignmentRepository
         {
             get { return _returnTicketAssignmentRepository ??= new ReturnTicketAssignmentRepository(_context); }
+        }
+
+        public IConversationSummaryRepository ConversationSummaryRepository
+        {
+            get { return _conversationSummaryRepository ??= new ConversationSummaryRepository(_context); }
         }
 
         // Transaction Management

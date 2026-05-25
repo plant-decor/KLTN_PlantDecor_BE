@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260522113410_init")]
+    [Migration("20260525045537_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -553,6 +553,51 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex("PlantId");
 
                     b.ToTable("CommonPlant", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ConversationSummarySnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ConversationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("GeneratedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<string>("KeyPointsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NextActionsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceWindow")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StructuredFeaturesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranscriptHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id")
+                        .HasName("ConversationSummarySnapshot_pkey");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("IX_ConversationSummarySnapshot_ConversationId");
+
+                    b.ToTable("ConversationSummarySnapshot", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
@@ -3640,6 +3685,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Plant");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ConversationSummarySnapshot", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.ChatSession", "ChatSession")
+                        .WithMany("ConversationSummarySnapshots")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("ConversationSummarySnapshot_ConversationId_fkey");
+
+                    b.Navigation("ChatSession");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
@@ -4651,6 +4707,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ChatMessages");
 
                     b.Navigation("ChatParticipants");
+
+                    b.Navigation("ConversationSummarySnapshots");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CommonPlant", b =>

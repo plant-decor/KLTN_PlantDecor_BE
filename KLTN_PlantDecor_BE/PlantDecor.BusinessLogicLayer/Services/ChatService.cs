@@ -333,7 +333,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     var aiDto = JsonSerializer.Deserialize<AiSummaryDto>(aiResp, opts);
                     if (aiDto != null && !string.IsNullOrWhiteSpace(aiDto.Summary))
                     {
-                        return new ConversationSummaryResponseDto
+                        var respDto = new ConversationSummaryResponseDto
                         {
                             ConversationId = conversationId,
                             Summary = aiDto.Summary.Trim(),
@@ -341,6 +341,49 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             NextActions = aiDto.NextActions ?? new List<string>(),
                             GeneratedAt = DateTime.UtcNow
                         };
+
+                        // Persist a compact snapshot for ranking/reason if repository available
+                        try
+                        {
+                            var latestCreated = selectedWindowMessages.LastOrDefault()?.CreatedAt;
+                            var sourceWindow = "all";
+                            if (latestCreated.HasValue)
+                            {
+                                if (latestCreated.Value >= VnNow.AddDays(-3)) sourceWindow = "3d";
+                                else if (latestCreated.Value >= VnNow.AddDays(-7)) sourceWindow = "7d";
+                                else sourceWindow = "30d";
+                            }
+
+                            // compute transcript hash
+                            string transcriptText = compact.ToString();
+                            string transcriptHash;
+                            using (var sha = System.Security.Cryptography.SHA256.Create())
+                            {
+                                var bytes = System.Text.Encoding.UTF8.GetBytes(transcriptText);
+                                var hash = sha.ComputeHash(bytes);
+                                transcriptHash = string.Concat(hash.Select(b => b.ToString("x2")));
+                            }
+
+                            var snapshot = new PlantDecor.DataAccessLayer.Entities.ConversationSummarySnapshot
+                            {
+                                ConversationId = conversationId,
+                                Summary = respDto.Summary,
+                                KeyPointsJson = JsonSerializer.Serialize(respDto.KeyPoints ?? new List<string>()),
+                                NextActionsJson = JsonSerializer.Serialize(respDto.NextActions ?? new List<string>()),
+                                StructuredFeaturesJson = null,
+                                SourceWindow = sourceWindow,
+                                TranscriptHash = transcriptHash,
+                                GeneratedAt = DateTime.UtcNow
+                            };
+
+                            await _unitOfWork.ConversationSummaryRepository.UpsertAsync(snapshot);
+                        }
+                        catch
+                        {
+                            // swallow persistence errors — do not break API response
+                        }
+
+                        return respDto;
                     }
                 }
             }

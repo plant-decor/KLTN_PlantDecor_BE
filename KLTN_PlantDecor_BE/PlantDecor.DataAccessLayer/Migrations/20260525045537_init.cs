@@ -354,6 +354,32 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ConversationSummarySnapshot",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ConversationId = table.Column<int>(type: "integer", nullable: true),
+                    Summary = table.Column<string>(type: "text", nullable: true),
+                    KeyPointsJson = table.Column<string>(type: "text", nullable: true),
+                    NextActionsJson = table.Column<string>(type: "text", nullable: true),
+                    StructuredFeaturesJson = table.Column<string>(type: "text", nullable: true),
+                    SourceWindow = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    TranscriptHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    GeneratedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ConversationSummarySnapshot_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ConversationSummarySnapshot_ConversationId_fkey",
+                        column: x => x.ConversationId,
+                        principalTable: "ChatSession",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DesignTemplateTier",
                 columns: table => new
                 {
@@ -2163,6 +2189,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "PlantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ConversationSummarySnapshot_ConversationId",
+                table: "ConversationSummarySnapshot",
+                column: "ConversationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomerSurvey_UserId",
                 table: "CustomerSurvey",
                 column: "UserId",
@@ -2958,6 +2989,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "ComboTag");
+
+            migrationBuilder.DropTable(
+                name: "ConversationSummarySnapshot");
 
             migrationBuilder.DropTable(
                 name: "CustomerSurvey");

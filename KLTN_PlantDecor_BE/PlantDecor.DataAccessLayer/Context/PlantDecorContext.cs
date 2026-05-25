@@ -165,6 +165,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Wishlist> Wishlists { get; set; }
 
+    public virtual DbSet<ConversationSummarySnapshot> ConversationSummarySnapshots { get; set; }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
@@ -207,6 +209,26 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.UserPlant).WithMany(p => p.CareReminders)
                 .HasForeignKey(d => d.UserPlantId)
                 .HasConstraintName("CareReminder_UserPlantId_fkey");
+        });
+
+        modelBuilder.Entity<ConversationSummarySnapshot>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ConversationSummarySnapshot_pkey");
+            entity.ToTable("ConversationSummarySnapshot");
+            entity.Property(e => e.Summary).HasColumnType("text");
+            entity.Property(e => e.KeyPointsJson).HasColumnType("text");
+            entity.Property(e => e.NextActionsJson).HasColumnType("text");
+            entity.Property(e => e.StructuredFeaturesJson).HasColumnType("text");
+            entity.Property(e => e.SourceWindow).HasMaxLength(50);
+            entity.Property(e => e.TranscriptHash).HasMaxLength(128);
+            entity.Property(e => e.GeneratedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.HasIndex(e => e.ConversationId).HasDatabaseName("IX_ConversationSummarySnapshot_ConversationId");
+
+            entity.HasOne(d => d.ChatSession)
+                .WithMany(p => p.ConversationSummarySnapshots)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("ConversationSummarySnapshot_ConversationId_fkey")
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CareServicePackage>(entity =>
