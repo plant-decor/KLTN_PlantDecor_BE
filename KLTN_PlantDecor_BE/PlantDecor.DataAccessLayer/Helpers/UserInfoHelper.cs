@@ -58,10 +58,10 @@ namespace PlantDecor.DataAccessLayer.Helpers
                 return result switch
                 {
                     1 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Metal,
-                    2 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Wood,
-                    3 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Water,
-                    4 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Fire,
-                    5 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Earth,
+                    2 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Water,
+                    3 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Fire,
+                    4 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Earth,
+                    5 => (int)PlantDecor.DataAccessLayer.Enums.FengShuiElementTypeEnum.Wood,
                     _ => null
                 };
             }
