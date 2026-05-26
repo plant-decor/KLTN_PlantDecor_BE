@@ -326,7 +326,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var createdUser = await _unitOfWork.UserRepository.GetByEmailAsync(request.Email);
                 if (createdUser == null)
                 {
-                    // Trường hợp lẽ ra không xảy ra nhưng vẫn kiểm tra để chắc chắn
                     // Nếu không lấy được user vừa tạo thì rollback transaction và trả về lỗi
                     throw new Exception("Failed to retrieve created user");
                 }
