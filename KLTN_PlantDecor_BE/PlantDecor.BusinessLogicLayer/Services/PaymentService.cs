@@ -283,6 +283,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var shouldEnqueueOrderSuccessEmail = false;
             var orderIdForSuccessEmail = 0;
             var updatedPlantInstanceIds = new List<int>();
+            UserSubscription? newSubscription = null;
+            int? completedOrderUserId = null;
             try
             {
                 if (responseCode == "00")
@@ -377,6 +379,35 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     invoice.Status = (int)InvoiceStatusEnum.Paid;
                     _unitOfWork.InvoiceRepository.PrepareUpdate(invoice);
 
+                    // Create UserSubscription when a TierPackage order is paid
+                    if (order.OrderType == (int)OrderTypeEnum.TierPackage && order.TierPackageId.HasValue)
+                    {
+                        var tierPackage = await _unitOfWork.TierPackageRepository.GetByIdAsync(order.TierPackageId.Value);
+                        if (tierPackage != null)
+                        {
+                            var subStart = DateTime.Now;
+                            var subEnd = subStart.AddMonths(tierPackage.DurationMonths ?? 1);
+                            newSubscription = new UserSubscription
+                            {
+                                UserId = order.UserId,
+                                TierPackageId = tierPackage.Id,
+                                InvoiceId = invoice.Id,
+                                StartDate = subStart,
+                                EndDate = subEnd,
+                                IsActive = true,
+                                PaidAt = DateTime.Now,
+                                CreatedAt = DateTime.Now
+                            };
+                            _unitOfWork.UserSubscriptionRepository.PrepareCreate(newSubscription);
+                        }
+                    }
+
+                    // Track for post-commit tier recalculation
+                    if (newOrderStatus == (int)OrderStatusEnum.Completed)
+                    {
+                        completedOrderUserId = order.UserId;
+                    }
+
                     shouldInvalidateInventoryCaches = true;
                     shouldEnqueueOrderSuccessEmail = true;
                 }
@@ -429,6 +460,39 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ex,
                         "Failed to enqueue order success email job for OrderId={OrderId}",
                         orderIdForSuccessEmail);
+                }
+            }
+
+            // Schedule subscription expiry job after commit (ID is now available)
+            if (newSubscription?.Id > 0 && newSubscription.EndDate.HasValue)
+            {
+                try
+                {
+                    var delay = newSubscription.EndDate.Value - DateTime.Now;
+                    if (delay > TimeSpan.Zero)
+                    {
+                        _backgroundJobClient.Schedule<ISubscriptionExpiryService>(
+                            s => s.DeactivateSubscriptionAsync(newSubscription.Id),
+                            delay);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to schedule subscription expiry job for SubId={SubId}", newSubscription.Id);
+                }
+            }
+
+            // Enqueue tier recalculation after commit
+            if (completedOrderUserId.HasValue)
+            {
+                try
+                {
+                    _backgroundJobClient.Enqueue<ITierService>(
+                        s => s.RecalculateTierAsync(completedOrderUserId.Value));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to enqueue tier recalculation for UserId={UserId}", completedOrderUserId.Value);
                 }
             }
 
@@ -940,6 +1004,81 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Payment was already committed successfully; avoid failing IPN response due to cache-layer issues.
                 _logger.LogError(ex, "Failed to invalidate inventory/shop caches after payment commit");
             }
+        }
+
+        public async Task<CreatePaymentUrlResponseDto> CreateTierPackagePaymentAsync(
+            int userId,
+            CreateTierPackagePaymentRequestDto request,
+            HttpContext httpContext)
+        {
+            var tierPackage = await _unitOfWork.TierPackageRepository.GetByIdAsync(request.TierPackageId);
+            if (tierPackage == null || !tierPackage.IsActive)
+                throw new NotFoundException($"TierPackage {request.TierPackageId} not found or inactive");
+
+            var amount = tierPackage.Price;
+            if (amount <= 0)
+                throw new BadRequestException("Package price must be greater than 0");
+
+            // Create Order
+            var order = new Order
+            {
+                UserId = userId,
+                TotalAmount = amount,
+                Status = (int)OrderStatusEnum.Pending,
+                OrderType = (int)OrderTypeEnum.TierPackage,
+                TierPackageId = tierPackage.Id,
+                CreatedAt = DateTime.Now
+            };
+            _unitOfWork.OrderRepository.PrepareCreate(order);
+            await _unitOfWork.SaveAsync();
+
+            // Create Invoice
+            var invoice = new Invoice
+            {
+                OrderId = order.Id,
+                TotalAmount = amount,
+                Type = (int)InvoiceTypeEnum.FullPayment,
+                Status = (int)InvoiceStatusEnum.Pending,
+                IssuedDate = DateTime.Now
+            };
+            _unitOfWork.InvoiceRepository.PrepareCreate(invoice);
+            await _unitOfWork.SaveAsync();
+
+            // Create Payment
+            var payment = new Payment
+            {
+                OrderId = order.Id,
+                InvoiceId = invoice.Id,
+                PaymentType = (int)PaymentTypeEnum.FullPayment,
+                Amount = amount,
+                Status = (int)PaymentStatusEnum.Pending,
+                CreatedAt = DateTime.Now
+            };
+            _unitOfWork.PaymentRepository.PrepareCreate(payment);
+            await _unitOfWork.SaveAsync();
+
+            // Create Transaction
+            var txnRef = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var transaction = new Transaction
+            {
+                PaymentId = payment.Id,
+                Amount = amount,
+                Status = (int)TransactionStatusEnum.Pending,
+                TransactionId = txnRef.ToString(),
+                OrderInfo = $"Thanh toan goi AI {tierPackage.Name}",
+                CreatedAt = DateTime.Now,
+                ExpiredAt = DateTime.Now.AddMinutes(PaymentTimeoutMinutes)
+            };
+            _unitOfWork.TransactionRepository.PrepareCreate(transaction);
+            await _unitOfWork.SaveAsync();
+
+            var paymentUrl = GenerateVnPayUrl(txnRef, amount, order.Id, httpContext);
+
+            return new CreatePaymentUrlResponseDto
+            {
+                PaymentId = payment.Id,
+                PaymentUrl = paymentUrl
+            };
         }
 
         #endregion

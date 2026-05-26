@@ -117,6 +117,24 @@ namespace PlantDecor.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Tạo URL thanh toán VNPay cho gói AI quota (TierPackage)
+        /// </summary>
+        [HttpPost("create-tier-package")]
+        [Authorize]
+        public async Task<IActionResult> CreateTierPackagePayment([FromBody] CreateTierPackagePaymentRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _paymentService.CreateTierPackagePaymentAsync(userId, request, HttpContext);
+            return Ok(new ApiResponse<CreatePaymentUrlResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tier package payment URL created successfully",
+                Payload = result
+            });
+        }
+
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

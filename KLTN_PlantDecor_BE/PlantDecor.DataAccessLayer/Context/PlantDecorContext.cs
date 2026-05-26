@@ -61,9 +61,9 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Invoice> Invoices { get; set; }
 
-    //public virtual DbSet<TierPackage> TierPackages { get; set; }
-    //public virtual DbSet<TierPackagePurchase> TierPackagePurchases { get; set; }
-    //public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
+    public virtual DbSet<TierPackage> TierPackages { get; set; }
+    public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
+    public virtual DbSet<TierThreshold> TierThresholds { get; set; }
 
     public virtual DbSet<InvoiceDetail> InvoiceDetails { get; set; }
 
@@ -75,9 +75,7 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<LayoutDesignRoomImage> LayoutDesignRoomImages { get; set; }
 
-    //public virtual DbSet<AiUsageLog> AiUsageLogs { get; set; }
-
-    //public virtual DbSet<UserAiMonthlyUsage> UserAiMonthlyUsages { get; set; }
+    public virtual DbSet<UserAIUsage> UserAIUsages { get; set; }
 
     public virtual DbSet<Nursery> Nurseries { get; set; }
 
@@ -283,68 +281,69 @@ public partial class PlantDecorContext : DbContext
                 .HasConstraintName("CartItem_NurseryMaterialId_fkey");
         });
 
-        //modelBuilder.Entity<TierPackagePurchase>(entity =>
-        //{
-        //    entity.HasKey(e => e.Id).HasName("TierPackagePurchase_pkey");
-        //    entity.ToTable("TierPackagePurchase");
+        modelBuilder.Entity<TierThreshold>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("TierThreshold_pkey");
+            entity.ToTable("TierThreshold");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.MinTotalSpent).HasPrecision(18, 2);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.MonthlyFreeQuota).HasDefaultValue(0);
+        });
 
-        //    entity.Property(e => e.Amount).HasPrecision(18, 2);
-        //    entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+        modelBuilder.Entity<TierPackage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("TierPackage_pkey");
+            entity.ToTable("TierPackage");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Price).HasPrecision(18, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
 
-        //    entity.HasOne(d => d.TierPackage).WithMany()
-        //        .HasForeignKey(d => d.TierPackageId)
-        //        .HasConstraintName("TierPackagePurchase_TierPackageId_fkey");
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("UserSubscription_pkey");
+            entity.ToTable("UserSubscription");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsMonthlyFree).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
-        //    entity.HasOne(d => d.Invoice).WithMany()
-        //        .HasForeignKey(d => d.InvoiceId)
-        //        .HasConstraintName("TierPackagePurchase_InvoiceId_fkey");
-        //});
+            entity.HasOne(d => d.User).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("UserSubscription_UserId_fkey");
 
-        //modelBuilder.Entity<UserSubscription>(entity =>
-        //{
-        //    entity.HasKey(e => e.Id).HasName("UserSubscription_pkey");
-        //    entity.ToTable("UserSubscription");
-        //    entity.Property(e => e.IsActive).HasDefaultValue(true);
-        //    entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.HasOne(d => d.TierPackage).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.TierPackageId)
+                .HasConstraintName("UserSubscription_TierPackageId_fkey");
 
-        //    entity.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId)
-        //        .HasConstraintName("UserSubscription_UserId_fkey");
+            entity.HasOne(d => d.Invoice).WithMany()
+                .HasForeignKey(d => d.InvoiceId)
+                .HasConstraintName("UserSubscription_InvoiceId_fkey");
 
-        //    entity.HasOne(d => d.TierPackage).WithMany().HasForeignKey(d => d.TierPackageId)
-        //        .HasConstraintName("UserSubscription_TierPackageId_fkey");
+            entity.HasIndex(e => new { e.UserId, e.EndDate, e.IsActive })
+                .HasDatabaseName("IX_UserSubscription_UserId_EndDate_IsActive");
+        });
 
-        //    entity.HasOne(d => d.Invoice).WithMany().HasForeignKey(d => d.InvoiceId)
-        //        .HasConstraintName("UserSubscription_InvoiceId_fkey");
+        modelBuilder.Entity<UserAIUsage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("UserAIUsage_pkey");
+            entity.ToTable("UserAIUsage");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.RequestCount).HasDefaultValue(1);
+            entity.Property(e => e.ReferenceId).HasMaxLength(255);
 
-        //    entity.HasIndex(e => new { e.UserId, e.StartDate, e.EndDate }).HasDatabaseName("IX_UserSubscription_UserId_Start_End");
-        //});
+            entity.HasOne(d => d.User).WithMany(p => p.UserAIUsages)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("UserAIUsage_UserId_fkey");
 
-        //modelBuilder.Entity<AiUsageLog>(entity =>
-        //{
-        //    entity.HasKey(e => e.Id).HasName("AiUsageLog_pkey");
-        //    entity.ToTable("AiUsageLog");
-        //    entity.Property(e => e.OccurredAt).HasDefaultValueSql("LOCALTIMESTAMP");
-        //    entity.Property(e => e.Endpoint).HasMaxLength(200);
+            entity.HasOne(d => d.UserSubscription).WithMany(p => p.UserAIUsages)
+                .HasForeignKey(d => d.UserSubscriptionId)
+                .HasConstraintName("UserAIUsage_UserSubscriptionId_fkey");
 
-        //    entity.HasOne(d => d.User).WithMany(p => p.AiUsageLogs)
-        //        .HasForeignKey(d => d.UserId)
-        //        .HasConstraintName("AiUsageLog_UserId_fkey");
-        //});
-
-        //modelBuilder.Entity<UserAiMonthlyUsage>(entity =>
-        //{
-        //    entity.HasKey(e => e.Id).HasName("UserAiMonthlyUsage_pkey");
-        //    entity.ToTable("UserAiMonthlyUsage");
-        //    entity.Property(e => e.Year);
-        //    entity.Property(e => e.Month);
-        //    entity.Property(e => e.Rank);
-        //    entity.Property(e => e.Quota);
-        //    entity.Property(e => e.Used).HasDefaultValue(0);
-
-        //    entity.HasOne(d => d.User).WithMany(p => p.UserAiMonthlyUsages)
-        //        .HasForeignKey(d => d.UserId)
-        //        .HasConstraintName("UserAiMonthlyUsage_UserId_fkey");
-        //});
+            entity.HasIndex(e => new { e.UserId, e.UserSubscriptionId })
+                .HasDatabaseName("IX_UserAIUsage_UserId_SubId");
+        });
 
         modelBuilder.Entity<Category>(entity =>
         {
@@ -968,6 +967,11 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.TierPackage).WithMany()
+                .HasForeignKey(d => d.TierPackageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("Order_TierPackageId_fkey");
         });
 
         modelBuilder.Entity<ReturnTicket>(entity =>
@@ -1654,6 +1658,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.SecurityStamp).HasMaxLength(255);
             entity.Property(e => e.Status).HasDefaultValue(1);
+            entity.Property(e => e.TierLevel).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Username).HasMaxLength(100);
 

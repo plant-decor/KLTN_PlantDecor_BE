@@ -200,5 +200,12 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .Include(o => o.Payments)
                 .Include(o => o.Customer);
         }
+
+        public async Task<decimal> SumCompletedOrderAmountByUserIdAsync(int userId)
+        {
+            return await _context.Orders
+                .Where(o => o.UserId == userId && o.Status == (int)OrderStatusEnum.Completed)
+                .SumAsync(o => o.TotalAmount ?? 0m);
+        }
     }
 }

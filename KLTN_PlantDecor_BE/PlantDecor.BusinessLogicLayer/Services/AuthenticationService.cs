@@ -33,6 +33,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly ISecurityStampCacheService _stampCacheService;
         private readonly IEmailService _emailService;
         private readonly IOtpCacheService _otpCacheService;
+        private readonly IMonthlyQuotaResetService _monthlyQuotaResetService;
 
 
         public AuthenticationService(
@@ -41,7 +42,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IConfiguration configuration,
             IEmailService emailService,
             ISecurityStampCacheService stampCacheService,
-            IOtpCacheService otpCacheService)
+            IOtpCacheService otpCacheService,
+            IMonthlyQuotaResetService monthlyQuotaResetService)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
@@ -49,6 +51,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _stampCacheService = stampCacheService;
             _emailService = emailService;
             _otpCacheService = otpCacheService;
+            _monthlyQuotaResetService = monthlyQuotaResetService;
             _secretKey = configuration["JwtSettings:Key"] ?? throw new ArgumentNullException("JWT Key not configured");
             _issuer = configuration["JwtSettings:Issuer"] ?? throw new ArgumentNullException("JWT Issuer not configured");
             _audience = configuration["JwtSettings:Audience"] ?? throw new ArgumentNullException("JWT Audience not configured");
@@ -311,6 +314,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // Tạo SecurityStamp mới cho user
                 newUser.UpdateSecurityStamp();
 
+                // All customers start at Bronze tier
+                newUser.TierLevel = 1;
+
                 // PrepareCreate để tránh gọi SaveChanges nhiều lần
                 // PrepareCreate chỉ thêm entity vào context chứ không lưu vào db ngay lập tức như CreateAsync
                 _unitOfWork.UserRepository.PrepareCreate(newUser);
@@ -326,6 +332,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
+
+                // Grant first month's free quota AFTER commit to avoid transaction conflict
+                await _monthlyQuotaResetService.GrantMonthlyFreeQuotaAsync(createdUser.Id);
 
                 return new AuthenticationResponse
                 {

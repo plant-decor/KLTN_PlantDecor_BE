@@ -305,6 +305,43 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TierPackage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    QuotaRequests = table.Column<int>(type: "integer", nullable: false),
+                    DurationMonths = table.Column<int>(type: "integer", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("TierPackage_pkey", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TierThreshold",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    TierLevel = table.Column<int>(type: "integer", nullable: false),
+                    MinTotalSpent = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    BenefitDescription = table.Column<string>(type: "text", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    MonthlyFreeQuota = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("TierThreshold_pkey", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PackagePlantSuitability",
                 columns: table => new
                 {
@@ -1278,7 +1315,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     IsVerified = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
-                    SecurityStamp = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
+                    SecurityStamp = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    TierLevel = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -1344,7 +1382,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CompletedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
-                    OrderType = table.Column<int>(type: "integer", nullable: true)
+                    OrderType = table.Column<int>(type: "integer", nullable: true),
+                    TierPackageId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1355,6 +1394,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         principalTable: "User",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "Order_TierPackageId_fkey",
+                        column: x => x.TierPackageId,
+                        principalTable: "TierPackage",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1551,6 +1596,43 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     table.PrimaryKey("UserProfile_pkey", x => x.Id);
                     table.ForeignKey(
                         name: "UserProfile_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserSubscription",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    TierPackageId = table.Column<int>(type: "integer", nullable: true),
+                    InvoiceId = table.Column<int>(type: "integer", nullable: true),
+                    StartDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    EndDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsMonthlyFree = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    QuotaOverride = table.Column<int>(type: "integer", nullable: true),
+                    PaidAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("UserSubscription_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "UserSubscription_InvoiceId_fkey",
+                        column: x => x.InvoiceId,
+                        principalTable: "Invoice",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "UserSubscription_TierPackageId_fkey",
+                        column: x => x.TierPackageId,
+                        principalTable: "TierPackage",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "UserSubscription_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id");
@@ -1822,6 +1904,39 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         column: x => x.RoomImageId,
                         principalTable: "RoomImage",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserAIUsage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    UserSubscriptionId = table.Column<int>(type: "integer", nullable: false),
+                    EndpointType = table.Column<int>(type: "integer", nullable: false),
+                    RequestCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    OrderId = table.Column<int>(type: "integer", nullable: true),
+                    ReferenceId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    IsSuccess = table.Column<bool>(type: "boolean", nullable: false),
+                    IsRefunded = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("UserAIUsage_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "UserAIUsage_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "UserAIUsage_UserSubscriptionId_fkey",
+                        column: x => x.UserSubscriptionId,
+                        principalTable: "UserSubscription",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2429,6 +2544,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Order_TierPackageId",
+                table: "Order",
+                column: "TierPackageId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Order_UserId",
                 table: "Order",
                 column: "UserId");
@@ -2721,6 +2841,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserAIUsage_UserId_SubId",
+                table: "UserAIUsage",
+                columns: new[] { "UserId", "UserSubscriptionId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserAIUsage_UserSubscriptionId",
+                table: "UserAIUsage",
+                column: "UserSubscriptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserBehaviorLog_PlantComboId",
                 table: "UserBehaviorLog",
                 column: "PlantComboId");
@@ -2766,6 +2896,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 table: "UserProfile",
                 column: "UserId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_InvoiceId",
+                table: "UserSubscription",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_TierPackageId",
+                table: "UserSubscription",
+                column: "TierPackageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_UserId_EndDate_IsActive",
+                table: "UserSubscription",
+                columns: new[] { "UserId", "EndDate", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Wishlist_MaterialId",
@@ -3084,7 +3229,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "TaskMaterialUsage");
 
             migrationBuilder.DropTable(
+                name: "TierThreshold");
+
+            migrationBuilder.DropTable(
                 name: "Transaction");
+
+            migrationBuilder.DropTable(
+                name: "UserAIUsage");
 
             migrationBuilder.DropTable(
                 name: "UserBehaviorLog");
@@ -3136,6 +3287,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Payment");
+
+            migrationBuilder.DropTable(
+                name: "UserSubscription");
 
             migrationBuilder.DropTable(
                 name: "LayoutDesign");
@@ -3193,6 +3347,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "DesignTemplate");
+
+            migrationBuilder.DropTable(
+                name: "TierPackage");
 
             migrationBuilder.DropTable(
                 name: "User");

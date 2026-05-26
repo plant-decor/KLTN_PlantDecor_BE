@@ -19,10 +19,14 @@ namespace PlantDecor.API.Controllers
     public class AdminUsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IAIQuotaService _aiQuotaService;
+        private readonly IUserSubscriptionService _userSubscriptionService;
 
-        public AdminUsersController(IUserService userService)
+        public AdminUsersController(IUserService userService, IAIQuotaService aiQuotaService, IUserSubscriptionService userSubscriptionService)
         {
             _userService = userService;
+            _aiQuotaService = aiQuotaService;
+            _userSubscriptionService = userSubscriptionService;
         }
 
         /// <summary>
@@ -90,6 +94,32 @@ namespace PlantDecor.API.Controllers
                     ? "User has been activated"
                     : "User has been deactivated",
                 Payload = updatedUser
+            });
+        }
+
+        [HttpGet("{id}/ai-quota")]
+        public async Task<IActionResult> GetUserAIQuota(int id)
+        {
+            var result = await _aiQuotaService.GetUserQuotaStatusAsync(id);
+            return Ok(new ApiResponse<UserQuotaStatusDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "User AI quota retrieved successfully",
+                Payload = result
+            });
+        }
+
+        [HttpGet("{id}/subscriptions")]
+        public async Task<IActionResult> GetUserSubscriptions(int id)
+        {
+            var result = await _userSubscriptionService.GetByUserIdAsync(id);
+            return Ok(new ApiResponse<List<UserSubscriptionResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "User subscriptions retrieved successfully",
+                Payload = result
             });
         }
     }

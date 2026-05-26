@@ -291,5 +291,13 @@ namespace PlantDecor.DataAccessLayer.Repositories
                                        && u.NurseryId == nurseryId
                                        && (u.RoleId == (int)RoleEnum.Staff || u.RoleId == (int)RoleEnum.Caretaker));
         }
+
+        public async Task<List<int>> GetAllActiveCustomerIdsAsync()
+        {
+            return await _context.Users
+                .Where(u => u.RoleId == (int)RoleEnum.Customer && u.Status == (int)UserStatusEnum.Active)
+                .Select(u => u.Id)
+                .ToListAsync();
+        }
     }
 }

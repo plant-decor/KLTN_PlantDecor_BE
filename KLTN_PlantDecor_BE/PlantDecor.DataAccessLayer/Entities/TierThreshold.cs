@@ -8,4 +8,5 @@ public class TierThreshold
     public decimal MinTotalSpent { get; set; }
     public string? BenefitDescription { get; set; }
     public bool IsActive { get; set; }
+    public int MonthlyFreeQuota { get; set; } = 0;
 }

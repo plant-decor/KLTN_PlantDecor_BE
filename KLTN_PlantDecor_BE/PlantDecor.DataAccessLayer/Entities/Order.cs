@@ -34,6 +34,8 @@ public partial class Order
 
     public int? OrderType { get; set; }
 
+    public int? TierPackageId { get; set; }
+
     public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 
     public virtual ICollection<NurseryOrder> NurseryOrders { get; set; } = new List<NurseryOrder>();
@@ -44,4 +46,5 @@ public partial class Order
     public virtual DesignRegistration? DesignRegistration { get; set; }
 
     public virtual User Customer { get; set; } = null!;
+    public virtual TierPackage? TierPackage { get; set; }
 }

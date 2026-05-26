@@ -68,6 +68,10 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         private IReturnTicketRepository? _returnTicketRepository;
         private IReturnTicketAssignmentRepository? _returnTicketAssignmentRepository;
         private IConversationSummaryRepository? _conversationSummaryRepository;
+        private ITierThresholdRepository? _tierThresholdRepository;
+        private ITierPackageRepository? _tierPackageRepository;
+        private IUserSubscriptionRepository? _userSubscriptionRepository;
+        private IUserAIUsageRepository? _userAIUsageRepository;
 
         public UnitOfWork(PlantDecorContext context)
         {
@@ -352,6 +356,26 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         public IConversationSummaryRepository ConversationSummaryRepository
         {
             get { return _conversationSummaryRepository ??= new ConversationSummaryRepository(_context); }
+        }
+
+        public ITierThresholdRepository TierThresholdRepository
+        {
+            get { return _tierThresholdRepository ??= new TierThresholdRepository(_context); }
+        }
+
+        public ITierPackageRepository TierPackageRepository
+        {
+            get { return _tierPackageRepository ??= new TierPackageRepository(_context); }
+        }
+
+        public IUserSubscriptionRepository UserSubscriptionRepository
+        {
+            get { return _userSubscriptionRepository ??= new UserSubscriptionRepository(_context); }
+        }
+
+        public IUserAIUsageRepository UserAIUsageRepository
+        {
+            get { return _userAIUsageRepository ??= new UserAIUsageRepository(_context); }
         }
 
         // Transaction Management

@@ -28,11 +28,12 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 NurseryId = user.NurseryId,
                 NurseryName = user.WorkingNursery?.Name,
 
+                TierLevel = user.TierLevel,
+
                 FullName = user.UserProfile?.FullName,
                 Address = user.UserProfile?.Address,
                 BirthDate = user.UserProfile?.BirthDate,
                 FengShuiElement = user.UserProfile?.FengShuiElement.HasValue == true ? (FengShuiElementTypeEnum?)user.UserProfile.FengShuiElement.Value : null,
-                //CustomerTier = user.UserProfile?.CustomerTier,
                 Gender = user.UserProfile?.Gender,
                 Latitude = user.UserProfile?.Latitude,
                 Longitude = user.UserProfile?.Longitude,

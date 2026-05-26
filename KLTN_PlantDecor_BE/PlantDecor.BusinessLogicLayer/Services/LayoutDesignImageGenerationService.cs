@@ -18,7 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly HttpClient _httpClient;
-        //private readonly IAiQuotaService _aiQuotaService;
+        private readonly IAIQuotaService _aiQuotaService;
         private readonly ILogger<LayoutDesignImageGenerationService> _logger;
         private readonly string _fluxEndpoint;
         private readonly string _fluxApiVersion;
@@ -33,13 +33,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ICloudinaryService cloudinaryService,
             HttpClient httpClient,
             IConfiguration configuration,
-            //IAiQuotaService aiQuotaService,
+            IAIQuotaService aiQuotaService,
             ILogger<LayoutDesignImageGenerationService> logger)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _httpClient = httpClient;
-            //_aiQuotaService = aiQuotaService;
+            _aiQuotaService = aiQuotaService;
             _logger = logger;
 
             _fluxEndpoint = configuration["FluxImage:Endpoint"] ?? string.Empty;
@@ -56,6 +56,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var itemResults = new List<LayoutDesignImageGenerationItemResultDto>();
             var transactionStarted = false;
             var transactionCommitted = false;
+            int? quotaUsageId = null;
 
             try
             {
@@ -73,8 +74,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // chỉ cho phép khi status là ImageGenerationCompleted hoặc PlantRecommendationCompleted
                 EnsureLayoutStatusAllowed(layout.Status);
 
-                // Consume AI quota for image generation
-                //await _aiQuotaService.EnsureQuotaAndConsumeAsync(userId, "LayoutImageGeneration");
+                // Consume AI quota — must succeed before any expensive Flux call
+                var quotaUsage = await _aiQuotaService.ConsumeAsync(
+                    userId,
+                    AIEndpointTypeEnum.GenerateImage,
+                    referenceId: layoutDesignId.ToString());
+                quotaUsageId = quotaUsage.Id;
 
                 var roomImageUrl = ResolveRoomImageUrl(layout);
                 if (string.IsNullOrWhiteSpace(roomImageUrl))
@@ -190,6 +195,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     QueueAiLayoutItemModerations(layoutDesignId, itemResults);
                     await _unitOfWork.CommitTransactionAsync();
                     transactionCommitted = true;
+                    quotaUsageId = null; // commit succeeded — do not refund
 
                     var successCount = itemResults.Count(item => item.IsSuccess);
                     return new LayoutDesignImageGenerationResultDto
@@ -216,6 +222,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
             catch (Exception ex)
             {
+                // Hoàn quota nếu đã consume nhưng generation thất bại
+                if (quotaUsageId.HasValue)
+                {
+                    try { await _aiQuotaService.RefundAsync(quotaUsageId.Value); }
+                    catch (Exception refundEx)
+                    {
+                        _logger.LogError(refundEx, "Failed to refund AI quota for usage {UsageId}", quotaUsageId.Value);
+                    }
+                }
+
                 // fallback moderation chỉ thực hiện cho lỗi sớm trước transaction để tránh lưu nhầm pending changes sau rollback
                 if (!transactionStarted)
                 {

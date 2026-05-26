@@ -19,6 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IAIQuotaService _aiQuotaService;
         private readonly ILogger<LayoutDesignManualEditorService> _logger;
         private readonly string _fluxEndpoint;
         private readonly string _fluxApiVersion;
@@ -32,12 +33,14 @@ namespace PlantDecor.BusinessLogicLayer.Services
             IUnitOfWork unitOfWork,
             ICloudinaryService cloudinaryService,
             IHttpClientFactory httpClientFactory,
+            IAIQuotaService aiQuotaService,
             IConfiguration configuration,
             ILogger<LayoutDesignManualEditorService> logger)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _httpClientFactory = httpClientFactory;
+            _aiQuotaService = aiQuotaService;
             _logger = logger;
 
             _fluxEndpoint = configuration["FluxImage:Endpoint"] ?? string.Empty;
@@ -200,33 +203,52 @@ namespace PlantDecor.BusinessLogicLayer.Services
             EnsureFluxConfigured();
 
             var layout = await EnsureLayoutAsync(layoutDesignId, userId);
-            var inputBytes = await ResolveInputImageBytesAsync(imageFile, imageUrl, layoutDesignId);
-            var inputBase64 = Convert.ToBase64String(inputBytes);
-            var prompt =
-    "Enhance the realism of the existing plants already placed in the room.\r\n\r\nDo NOT add, remove, reposition, resize, or replace any plants or furniture.\r\nKeep the exact original room layout, camera angle, composition, and object placement.\r\n\r\nMake all existing plants blend naturally into the environment by matching:\r\n- indoor lighting\r\n- shadow direction and softness\r\n- floor contact shadows\r\n- reflections and occlusion\r\n- color temperature\r\n- contrast and saturation\r\n- camera blur/noise level\r\n- perspective and depth\r\n\r\nThe plants should not look overly sharp, overly saturated, or visually detached from the room.\r\nThey should feel subtly integrated into the scene as if they were naturally photographed there.\r\n\r\nDo NOT generate additional plants or decorations.\r\nPhotorealistic indoor smartphone photo. For example, focus on the plant in the theme like the following image: https://res.cloudinary.com/dliirxsmo/image/upload/v1779127811/LayoutDesignBeautify/LayoutDesignBeautify/a655a07d-5852-455a-9724-c5f59e401ed4_layout_7_beautify_20260518181008187.jpg.";
 
-            var generatedBytes = await GenerateBeautifyImageAsync(prompt, inputBase64);
-            var fileName = $"layout_{layout.Id}_beautify_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png";
-            var uploadResult = await _cloudinaryService.UploadImageBytesAsync(generatedBytes, fileName, "LayoutDesignBeautify");
+            // Consume quota before the expensive Flux call
+            var quotaUsage = await _aiQuotaService.ConsumeAsync(
+                userId,
+                AIEndpointTypeEnum.BeautifyWithAI,
+                referenceId: layoutDesignId.ToString());
 
-            var manualImage = new LayoutDesignAiResponseImage
+            try
             {
-                LayoutDesignId = layout.Id,
-                LayoutDesignPlantId = null,
-                ImageUrl = uploadResult.SecureUrl,
-                PublicId = uploadResult.PublicId,
-                FluxPromptUsed = prompt,
-                SourceType = (int)LayoutDesignImageSourceTypeEnum.Manual,
-                ManualLayerJson = TrimAndLimit(layerJson, 4000),
-                ManualEditedBy = userId,
-                ManualEditedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
-            };
+                var inputBytes = await ResolveInputImageBytesAsync(imageFile, imageUrl, layoutDesignId);
+                var inputBase64 = Convert.ToBase64String(inputBytes);
+                var prompt =
+        "Enhance the realism of the existing plants already placed in the room.\r\n\r\nDo NOT add, remove, reposition, resize, or replace any plants or furniture.\r\nKeep the exact original room layout, camera angle, composition, and object placement.\r\n\r\nMake all existing plants blend naturally into the environment by matching:\r\n- indoor lighting\r\n- shadow direction and softness\r\n- floor contact shadows\r\n- reflections and occlusion\r\n- color temperature\r\n- contrast and saturation\r\n- camera blur/noise level\r\n- perspective and depth\r\n\r\nThe plants should not look overly sharp, overly saturated, or visually detached from the room.\r\nThey should feel subtly integrated into the scene as if they were naturally photographed there.\r\n\r\nDo NOT generate additional plants or decorations.\r\nPhotorealistic indoor smartphone photo. For example, focus on the plant in the theme like the following image: https://res.cloudinary.com/dliirxsmo/image/upload/v1779127811/LayoutDesignBeautify/LayoutDesignBeautify/a655a07d-5852-455a-9724-c5f59e401ed4_layout_7_beautify_20260518181008187.jpg.";
 
-            _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareCreate(manualImage);
-            await _unitOfWork.SaveAsync();
+                var generatedBytes = await GenerateBeautifyImageAsync(prompt, inputBase64);
+                var fileName = $"layout_{layout.Id}_beautify_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png";
+                var uploadResult = await _cloudinaryService.UploadImageBytesAsync(generatedBytes, fileName, "LayoutDesignBeautify");
 
-            return MapEditorImage(manualImage);
+                var manualImage = new LayoutDesignAiResponseImage
+                {
+                    LayoutDesignId = layout.Id,
+                    LayoutDesignPlantId = null,
+                    ImageUrl = uploadResult.SecureUrl,
+                    PublicId = uploadResult.PublicId,
+                    FluxPromptUsed = prompt,
+                    SourceType = (int)LayoutDesignImageSourceTypeEnum.Manual,
+                    ManualLayerJson = TrimAndLimit(layerJson, 4000),
+                    ManualEditedBy = userId,
+                    ManualEditedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareCreate(manualImage);
+                await _unitOfWork.SaveAsync();
+
+                return MapEditorImage(manualImage);
+            }
+            catch
+            {
+                try { await _aiQuotaService.RefundAsync(quotaUsage.Id); }
+                catch (Exception refundEx)
+                {
+                    _logger.LogError(refundEx, "Failed to refund AI quota for usage {UsageId}", quotaUsage.Id);
+                }
+                throw;
+            }
         }
 
         public async Task<LayoutDesignManualCalculateResponseDto> CalculateManualTotalAsync(

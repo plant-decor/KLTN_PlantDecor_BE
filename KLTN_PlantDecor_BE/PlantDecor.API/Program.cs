@@ -151,6 +151,15 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICartService, CartService>();
             builder.Services.AddScoped<IWishlistService, WishlistService>();
 
+            // AI Quota & Tier
+            builder.Services.AddScoped<IAIQuotaService, AIQuotaService>();
+            builder.Services.AddScoped<ITierService, TierService>();
+            builder.Services.AddScoped<ISubscriptionExpiryService, SubscriptionExpiryService>();
+            builder.Services.AddScoped<ITierPackageService, TierPackageService>();
+            builder.Services.AddScoped<ITierThresholdService, TierThresholdService>();
+            builder.Services.AddScoped<IMonthlyQuotaResetService, MonthlyQuotaResetService>();
+            builder.Services.AddScoped<IUserSubscriptionService, UserSubscriptionService>();
+
             // Order & Invoice & Payment
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();

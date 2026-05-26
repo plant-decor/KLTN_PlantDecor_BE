@@ -17,5 +17,13 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<TierPackage?> GetDefaultFreePackageAsync()
+        {
+            return await _context.TierPackages
+                .Where(p => p.IsActive && p.Price == 0)
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

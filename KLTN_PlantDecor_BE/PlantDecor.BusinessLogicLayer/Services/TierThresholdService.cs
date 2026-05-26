@@ -37,7 +37,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 TierLevel = dto.TierLevel,
                 MinTotalSpent = dto.MinTotalSpent,
                 BenefitDescription = dto.BenefitDescription,
-                IsActive = true
+                IsActive = true,
+                MonthlyFreeQuota = dto.MonthlyFreeQuota
             };
             await _unitOfWork.TierThresholdRepository.CreateAsync(entity);
             return ToDto(entity);
@@ -54,6 +55,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             if (dto.MinTotalSpent.HasValue) entity.MinTotalSpent = dto.MinTotalSpent.Value;
             if (dto.BenefitDescription != null) entity.BenefitDescription = dto.BenefitDescription;
             if (dto.IsActive.HasValue) entity.IsActive = dto.IsActive.Value;
+            if (dto.MonthlyFreeQuota.HasValue) entity.MonthlyFreeQuota = dto.MonthlyFreeQuota.Value;
 
             await _unitOfWork.TierThresholdRepository.UpdateAsync(entity);
             return ToDto(entity);
@@ -76,7 +78,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
             TierLevel = t.TierLevel,
             MinTotalSpent = t.MinTotalSpent,
             BenefitDescription = t.BenefitDescription,
-            IsActive = t.IsActive
+            IsActive = t.IsActive,
+            MonthlyFreeQuota = t.MonthlyFreeQuota
         };
     }
 }

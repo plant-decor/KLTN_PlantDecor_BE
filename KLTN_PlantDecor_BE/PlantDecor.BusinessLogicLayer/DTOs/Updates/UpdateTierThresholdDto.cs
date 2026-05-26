@@ -7,5 +7,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Updates
         public decimal? MinTotalSpent { get; set; }
         public string? BenefitDescription { get; set; }
         public bool? IsActive { get; set; }
+        public int? MonthlyFreeQuota { get; set; }
     }
 }
