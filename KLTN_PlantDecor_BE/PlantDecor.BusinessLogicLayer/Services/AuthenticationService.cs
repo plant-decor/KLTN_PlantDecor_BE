@@ -317,7 +317,6 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 // All customers start at Bronze tier
                 newUser.TierLevel = 1;
 
-                // PrepareCreate để tránh gọi SaveChanges nhiều lần
                 // PrepareCreate chỉ thêm entity vào context chứ không lưu vào db ngay lập tức như CreateAsync
                 _unitOfWork.UserRepository.PrepareCreate(newUser);
                 await _unitOfWork.SaveAsync();
