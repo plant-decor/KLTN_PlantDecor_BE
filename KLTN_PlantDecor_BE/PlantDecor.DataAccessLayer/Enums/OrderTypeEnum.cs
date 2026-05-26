@@ -6,6 +6,7 @@
         PlantInstance = 2,
         OtherProductBuyNow = 3,
         Service = 4,
-        Design = 5
+        Design = 5,
+        TierPackage = 6
     }
 }

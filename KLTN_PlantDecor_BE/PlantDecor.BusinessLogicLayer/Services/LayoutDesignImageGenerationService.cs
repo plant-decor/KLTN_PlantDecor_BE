@@ -18,6 +18,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly HttpClient _httpClient;
+        private readonly IAIQuotaService _aiQuotaService;
         private readonly ILogger<LayoutDesignImageGenerationService> _logger;
         private readonly string _fluxEndpoint;
         private readonly string _fluxApiVersion;
@@ -32,11 +33,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ICloudinaryService cloudinaryService,
             HttpClient httpClient,
             IConfiguration configuration,
+            IAIQuotaService aiQuotaService,
             ILogger<LayoutDesignImageGenerationService> logger)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _httpClient = httpClient;
+            _aiQuotaService = aiQuotaService;
             _logger = logger;
 
             _fluxEndpoint = configuration["FluxImage:Endpoint"] ?? string.Empty;
@@ -53,6 +56,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var itemResults = new List<LayoutDesignImageGenerationItemResultDto>();
             var transactionStarted = false;
             var transactionCommitted = false;
+            int? quotaUsageId = null;
 
             try
             {
@@ -69,6 +73,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 EnsureLayoutOwnership(layout, userId);
                 // chỉ cho phép khi status là ImageGenerationCompleted hoặc PlantRecommendationCompleted
                 EnsureLayoutStatusAllowed(layout.Status);
+
+                // Consume AI quota — must succeed before any expensive Flux call
+                var quotaUsage = await _aiQuotaService.ConsumeAsync(
+                    userId,
+                    AIEndpointTypeEnum.GenerateImage,
+                    referenceId: layoutDesignId.ToString());
+                quotaUsageId = quotaUsage.Id;
 
                 var roomImageUrl = ResolveRoomImageUrl(layout);
                 if (string.IsNullOrWhiteSpace(roomImageUrl))
@@ -123,7 +134,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     }
 
                     var existingImages = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-                    foreach (var existingImage in existingImages)
+                    foreach (var existingImage in existingImages.Where(IsAiImage))
                     {
                         var deleted = false;
 
@@ -184,6 +195,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     QueueAiLayoutItemModerations(layoutDesignId, itemResults);
                     await _unitOfWork.CommitTransactionAsync();
                     transactionCommitted = true;
+                    quotaUsageId = null; // commit succeeded — do not refund
 
                     var successCount = itemResults.Count(item => item.IsSuccess);
                     return new LayoutDesignImageGenerationResultDto
@@ -210,6 +222,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
             catch (Exception ex)
             {
+                // Hoàn quota nếu đã consume nhưng generation thất bại
+                if (quotaUsageId.HasValue)
+                {
+                    try { await _aiQuotaService.RefundAsync(quotaUsageId.Value); }
+                    catch (Exception refundEx)
+                    {
+                        _logger.LogError(refundEx, "Failed to refund AI quota for usage {UsageId}", quotaUsageId.Value);
+                    }
+                }
+
                 // fallback moderation chỉ thực hiện cho lỗi sớm trước transaction để tránh lưu nhầm pending changes sau rollback
                 if (!transactionStarted)
                 {
@@ -231,13 +253,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             EnsureLayoutOwnership(layout, userId);
 
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetByLayoutDesignIdAsync(layoutDesignId);
-            return images.ToLayoutDesignGeneratedImageDtoList();
+            var filtered = FilterImagesForCustomer(images);
+            return filtered.ToLayoutDesignGeneratedImageDtoList();
         }
 
         public async Task<List<LayoutDesignGeneratedImageDto>> GetAllGeneratedImagesByUserIdAsync(int userId)
         {
             var images = await _unitOfWork.LayoutDesignAiResponseImageRepository.GetAllGeneratedImagesByUserIdAsync(userId);
-            return images.ToLayoutDesignGeneratedImageDtoList();
+            var filtered = FilterImagesForCustomer(images);
+            return filtered.ToLayoutDesignGeneratedImageDtoList();
         }
 
         private async Task ProcessCandidateAsync(
@@ -275,6 +299,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     ImageUrl = uploadResult.SecureUrl,
                     PublicId = uploadResult.PublicId,
                     FluxPromptUsed = prompt,
+                    SourceType = (int)LayoutDesignImageSourceTypeEnum.Ai,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -614,16 +639,10 @@ Hard constraints: keep all required plants in the same final image and never dup
             return $@"You are given one room image (image 1) and one plant reference image (image 2).
 
 Task:
-Insert exactly one new plant from the reference into the room image, while allowing non-structural restyling of the room.
+Insert exactly one new plant from the reference into the room image and the inserted plant will have the theme like the following image: https://res.cloudinary.com/dliirxsmo/image/upload/v1779127811/LayoutDesignBeautify/LayoutDesignBeautify/a655a07d-5852-455a-9724-c5f59e401ed4_layout_7_beautify_20260518181008187.jpg
 
 Room design context:
 {roomDesignContext}
-
-What you may change (non-structural):
-- Repaint walls and ceilings, update materials and surface finishes, and adjust colors.
-- Replace or reposition movable furniture.
-- Add decor items and artwork that fit the requested style (plant-themed art is allowed).
-- Adjust textiles, lighting fixtures, and accessories.
 
 Hard structural constraints:
 - Keep the room layout and geometry unchanged.
@@ -648,7 +667,7 @@ Plant requirements:
 
 Important:
 - This is a SINGLE plant composition task (exactly one new plant).
-- The room may be restyled, but the architecture and openings must stay fixed";
+- The room and the architecture and openings must stay fixed";
         }
 
         private async Task<string> BuildRoomDesignContextAsync(LayoutDesign layout)
@@ -670,7 +689,6 @@ Important:
             var roomType = MapNullableEnum(preferences.RoomType, typeof(RoomTypeEnum), "unspecified");
             var roomStyle = MapNullableEnum(preferences.RoomStyle, typeof(RoomStyleEnum), "unspecified");
             var lightDirection = MapNullableEnum(preferences.LightDirection, typeof(DirectionEnum), "unspecified");
-            var dominantDirection = MapNullableEnum(preferences.DominantDirection, typeof(DirectionEnum), "unspecified");
             var naturalLight = MapNullableEnum(preferences.NaturalLightLevel, typeof(LightRequirementEnum), "unspecified");
             var roomArea = preferences.RoomArea.HasValue
                 ? preferences.RoomArea.Value.ToString("0.##")
@@ -680,13 +698,7 @@ Important:
 Requested room style: {roomStyle}
 Room area: {roomArea} m2
 Light direction: {lightDirection}
-Dominant direction: {dominantDirection}
 Natural light level: {naturalLight}
-
-Allowed changes:
-- Restyle the room freely to match the requested style.
-- Add decorative objects, textiles, accents, and furniture that fit the request.
-- Adjust colors, materials, and surface finishes to improve the design.
 
 Hard constraints:
 - Do not alter the room structure.
@@ -698,7 +710,7 @@ Hard constraints:
         private static int? ResolvePrimaryRoomImageId(LayoutDesign layout)
         {
             return layout.LayoutDesignRoomImages
-                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .OrderBy(link => link.OrderIndex == 1 ? 0 : 1)
                 .ThenBy(link => link.OrderIndex ?? int.MaxValue)
                 .ThenBy(link => link.RoomImageId)
                 .Select(link => (int?)link.RoomImageId)
@@ -729,7 +741,7 @@ Hard constraints:
         private static string? ResolveRoomImageUrl(LayoutDesign layout)
         {
             var roomImageUrl = layout.LayoutDesignRoomImages
-                .OrderBy(link => link.ViewAngle == (int)RoomViewAngleEnum.Front ? 0 : 1)
+                .OrderBy(link => link.OrderIndex == 1 ? 0 : 1)
                 .ThenBy(link => link.OrderIndex ?? int.MaxValue)
                 .ThenBy(link => link.RoomImageId)
                 .Select(link => link.RoomImage.ImageUrl)
@@ -770,6 +782,76 @@ Hard constraints:
             }
 
             throw new BadRequestException("LayoutDesign is not ready for image generation");
+        }
+
+        private static List<LayoutDesignAiResponseImage> FilterImagesForCustomer(IEnumerable<LayoutDesignAiResponseImage> images)
+        {
+            var materialized = images?.ToList() ?? new List<LayoutDesignAiResponseImage>();
+            if (materialized.Count == 0)
+            {
+                return materialized;
+            }
+
+            var manualByPlant = materialized
+                .Where(image => IsManualImage(image)
+                    && image.LayoutDesignPlantId.HasValue
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .GroupBy(image => image.LayoutDesignPlantId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                        .ThenByDescending(image => image.Id)
+                        .First());
+
+            var aiByPlant = materialized
+                .Where(image => IsAiImage(image) && image.LayoutDesignPlantId.HasValue)
+                .GroupBy(image => image.LayoutDesignPlantId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                        .ThenByDescending(image => image.Id)
+                        .First());
+
+            var selected = new List<LayoutDesignAiResponseImage>();
+            foreach (var plantId in manualByPlant.Keys.Union(aiByPlant.Keys))
+            {
+                if (manualByPlant.TryGetValue(plantId, out var manual))
+                {
+                    selected.Add(manual);
+                    continue;
+                }
+
+                if (aiByPlant.TryGetValue(plantId, out var ai))
+                {
+                    selected.Add(ai);
+                }
+            }
+
+            var manualComposite = materialized
+                .Where(image => IsManualImage(image)
+                    && !image.LayoutDesignPlantId.HasValue
+                    && !string.IsNullOrWhiteSpace(image.ImageUrl))
+                .OrderByDescending(image => image.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(image => image.Id)
+                .FirstOrDefault();
+
+            if (manualComposite != null)
+            {
+                selected.Add(manualComposite);
+            }
+
+            return selected;
+        }
+
+        private static bool IsManualImage(LayoutDesignAiResponseImage image)
+        {
+            return image.SourceType.HasValue &&
+                   image.SourceType.Value == (int)LayoutDesignImageSourceTypeEnum.Manual;
+        }
+
+        private static bool IsAiImage(LayoutDesignAiResponseImage image)
+        {
+            return !IsManualImage(image);
         }
 
         private void EnsureFluxConfigured()

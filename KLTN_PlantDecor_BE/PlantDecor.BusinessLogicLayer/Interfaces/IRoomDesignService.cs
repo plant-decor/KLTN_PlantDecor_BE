@@ -41,6 +41,20 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<RoomAnalysisDto> AnalyzeRoomAsync(string imageBase64);
 
         /// <summary>
+        /// Analyze room image and return only the detected room type.
+        /// </summary>
+        /// <param name="imageBase64">Base64 encoded image</param>
+        /// <returns>Normalized room type</returns>
+        Task<string> AnalyzeRoomTypeAsync(string imageBase64);
+
+        /// <summary>
+        /// Analyze multiple room images and return only the detected room type.
+        /// </summary>
+        /// <param name="imageBase64List">Base64 encoded images</param>
+        /// <returns>Normalized room type</returns>
+        Task<string> AnalyzeRoomTypeAsync(IReadOnlyCollection<string> imageBase64List);
+
+        /// <summary>
         /// Get active Plant options for allergy selection
         /// </summary>
         /// <param name="keyword">Optional keyword to filter by plant name</param>

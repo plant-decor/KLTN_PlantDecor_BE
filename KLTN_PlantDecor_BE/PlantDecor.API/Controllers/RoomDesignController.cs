@@ -257,38 +257,56 @@ namespace PlantDecor.API.Controllers
         /// Quick analysis of room characteristics without searching for plants.
         /// Useful for previewing the analysis before getting recommendations.
         /// </remarks>
-        /// <param name="request">Multipart request containing image file</param>
+        /// <param name="request">Multipart request containing 1 to 4 image files</param>
         /// <returns>Room analysis result</returns>
         [HttpPost("analyze-room-only-upload")]
         [Consumes("multipart/form-data")]
-        [ProducesResponseType(typeof(RoomAnalysisDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AnalyzeRoomOnlyResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> AnalyzeRoomOnlyUpload([FromForm] AnalyzeRoomOnlyUploadRequest request)
         {
-            if (request.Image == null || request.Image.Length == 0)
+            if (request.Images == null || request.Images.Count == 0)
             {
-                throw new BadRequestException("Room image file is required");
+                throw new BadRequestException("At least one room image file is required");
             }
 
-            if (request.Image.Length > 10 * 1024 * 1024) // 10MB limit
+            if (request.Images.Count > 4)
             {
-                throw new BadRequestException("Image size exceeds 10MB limit");
+                throw new BadRequestException("A maximum of 4 room image files is allowed");
             }
 
             try
             {
-                await using var stream = request.Image.OpenReadStream();
-                using var memoryStream = new MemoryStream();
-                await stream.CopyToAsync(memoryStream);
-                var imageBase64 = Convert.ToBase64String(memoryStream.ToArray());
+                var imageBase64List = new List<string>(request.Images.Count);
 
-                var result = await _roomDesignService.AnalyzeRoomAsync(imageBase64);
-                return Ok(new ApiResponse<RoomAnalysisDto>
+                foreach (var image in request.Images)
+                {
+                    if (image == null || image.Length == 0)
+                    {
+                        throw new BadRequestException("Each room image file must be provided and non-empty");
+                    }
+
+                    if (image.Length > 10 * 1024 * 1024) // 10MB limit per file
+                    {
+                        throw new BadRequestException("Each image size must not exceed 10MB");
+                    }
+
+                    await using var stream = image.OpenReadStream();
+                    using var memoryStream = new MemoryStream();
+                    await stream.CopyToAsync(memoryStream);
+                    imageBase64List.Add(Convert.ToBase64String(memoryStream.ToArray()));
+                }
+
+                var roomType = await _roomDesignService.AnalyzeRoomTypeAsync(imageBase64List);
+                return Ok(new ApiResponse<AnalyzeRoomOnlyResponseDto>
                 {
                     Success = true,
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "Room analysis successful",
-                    Payload = result
+                    Message = "Room Type analysis successful",
+                    Payload = new AnalyzeRoomOnlyResponseDto
+                    {
+                        RoomType = roomType
+                    }
                 });
             }
             catch (Exception ex)

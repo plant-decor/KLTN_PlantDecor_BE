@@ -61,6 +61,10 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Invoice> Invoices { get; set; }
 
+    public virtual DbSet<TierPackage> TierPackages { get; set; }
+    public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
+    public virtual DbSet<TierThreshold> TierThresholds { get; set; }
+
     public virtual DbSet<InvoiceDetail> InvoiceDetails { get; set; }
 
     public virtual DbSet<LayoutDesign> LayoutDesigns { get; set; }
@@ -70,6 +74,8 @@ public partial class PlantDecorContext : DbContext
     public virtual DbSet<LayoutDesignPlant> LayoutDesignPlants { get; set; }
 
     public virtual DbSet<LayoutDesignRoomImage> LayoutDesignRoomImages { get; set; }
+
+    public virtual DbSet<UserAIUsage> UserAIUsages { get; set; }
 
     public virtual DbSet<Nursery> Nurseries { get; set; }
 
@@ -157,6 +163,8 @@ public partial class PlantDecorContext : DbContext
 
     public virtual DbSet<Wishlist> Wishlists { get; set; }
 
+    public virtual DbSet<ConversationSummarySnapshot> ConversationSummarySnapshots { get; set; }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
@@ -199,6 +207,26 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.UserPlant).WithMany(p => p.CareReminders)
                 .HasForeignKey(d => d.UserPlantId)
                 .HasConstraintName("CareReminder_UserPlantId_fkey");
+        });
+
+        modelBuilder.Entity<ConversationSummarySnapshot>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ConversationSummarySnapshot_pkey");
+            entity.ToTable("ConversationSummarySnapshot");
+            entity.Property(e => e.Summary).HasColumnType("text");
+            entity.Property(e => e.KeyPointsJson).HasColumnType("text");
+            entity.Property(e => e.NextActionsJson).HasColumnType("text");
+            entity.Property(e => e.StructuredFeaturesJson).HasColumnType("text");
+            entity.Property(e => e.SourceWindow).HasMaxLength(50);
+            entity.Property(e => e.TranscriptHash).HasMaxLength(128);
+            entity.Property(e => e.GeneratedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.HasIndex(e => e.ConversationId).HasDatabaseName("IX_ConversationSummarySnapshot_ConversationId");
+
+            entity.HasOne(d => d.ChatSession)
+                .WithMany(p => p.ConversationSummarySnapshots)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("ConversationSummarySnapshot_ConversationId_fkey")
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CareServicePackage>(entity =>
@@ -251,6 +279,70 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.NurseryMaterial).WithMany(p => p.CartItems)
                 .HasForeignKey(d => d.NurseryMaterialId)
                 .HasConstraintName("CartItem_NurseryMaterialId_fkey");
+        });
+
+        modelBuilder.Entity<TierThreshold>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("TierThreshold_pkey");
+            entity.ToTable("TierThreshold");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.MinTotalSpent).HasPrecision(18, 2);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.MonthlyFreeQuota).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<TierPackage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("TierPackage_pkey");
+            entity.ToTable("TierPackage");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Price).HasPrecision(18, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("UserSubscription_pkey");
+            entity.ToTable("UserSubscription");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsMonthlyFree).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("UserSubscription_UserId_fkey");
+
+            entity.HasOne(d => d.TierPackage).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.TierPackageId)
+                .HasConstraintName("UserSubscription_TierPackageId_fkey");
+
+            entity.HasOne(d => d.Invoice).WithMany()
+                .HasForeignKey(d => d.InvoiceId)
+                .HasConstraintName("UserSubscription_InvoiceId_fkey");
+
+            entity.HasIndex(e => new { e.UserId, e.EndDate, e.IsActive })
+                .HasDatabaseName("IX_UserSubscription_UserId_EndDate_IsActive");
+        });
+
+        modelBuilder.Entity<UserAIUsage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("UserAIUsage_pkey");
+            entity.ToTable("UserAIUsage");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
+            entity.Property(e => e.RequestCount).HasDefaultValue(1);
+            entity.Property(e => e.ReferenceId).HasMaxLength(255);
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserAIUsages)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("UserAIUsage_UserId_fkey");
+
+            entity.HasOne(d => d.UserSubscription).WithMany(p => p.UserAIUsages)
+                .HasForeignKey(d => d.UserSubscriptionId)
+                .HasConstraintName("UserAIUsage_UserSubscriptionId_fkey");
+
+            entity.HasIndex(e => new { e.UserId, e.UserSubscriptionId })
+                .HasDatabaseName("IX_UserAIUsage_UserId_SubId");
         });
 
         modelBuilder.Entity<Category>(entity =>
@@ -791,6 +883,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
             entity.Property(e => e.PublicId).HasMaxLength(255);
+            entity.Property(e => e.ManualLayerJson).HasColumnType("text");
 
             entity.HasOne(d => d.LayoutDesign).WithMany(p => p.LayoutDesignAiResponseImages)
                 .HasForeignKey(d => d.LayoutDesignId)
@@ -874,6 +967,11 @@ public partial class PlantDecorContext : DbContext
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.TierPackage).WithMany()
+                .HasForeignKey(d => d.TierPackageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("Order_TierPackageId_fkey");
         });
 
         modelBuilder.Entity<ReturnTicket>(entity =>
@@ -1560,6 +1658,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.SecurityStamp).HasMaxLength(255);
             entity.Property(e => e.Status).HasDefaultValue(1);
+            entity.Property(e => e.TierLevel).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
             entity.Property(e => e.Username).HasMaxLength(100);
 

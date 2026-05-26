@@ -151,6 +151,15 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICartService, CartService>();
             builder.Services.AddScoped<IWishlistService, WishlistService>();
 
+            // AI Quota & Tier
+            builder.Services.AddScoped<IAIQuotaService, AIQuotaService>();
+            builder.Services.AddScoped<ITierService, TierService>();
+            builder.Services.AddScoped<ISubscriptionExpiryService, SubscriptionExpiryService>();
+            builder.Services.AddScoped<ITierPackageService, TierPackageService>();
+            builder.Services.AddScoped<ITierThresholdService, TierThresholdService>();
+            builder.Services.AddScoped<IMonthlyQuotaResetService, MonthlyQuotaResetService>();
+            builder.Services.AddScoped<IUserSubscriptionService, UserSubscriptionService>();
+
             // Order & Invoice & Payment
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<IInvoiceService, InvoiceService>();
@@ -191,6 +200,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<IRoomDesignService, RoomDesignService>();
             builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddHttpClient<ILayoutDesignImageGenerationService, LayoutDesignImageGenerationService>();
+            builder.Services.AddScoped<ILayoutDesignManualEditorService, LayoutDesignManualEditorService>();
             builder.Services.AddScoped<IEmbeddingBackgroundJobService, EmbeddingBackgroundJobService>();
             builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
             builder.Services.AddScoped<IPolicyKnowledgeService, PolicyKnowledgeService>();

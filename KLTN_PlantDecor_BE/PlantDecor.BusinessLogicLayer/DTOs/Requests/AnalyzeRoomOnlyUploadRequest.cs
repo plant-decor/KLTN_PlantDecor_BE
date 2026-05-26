@@ -4,6 +4,6 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class AnalyzeRoomOnlyUploadRequest
     {
-        public IFormFile Image { get; set; } = null!;
+        public List<IFormFile> Images { get; set; } = new();
     }
 }

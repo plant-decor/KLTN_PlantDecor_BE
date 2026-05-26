@@ -25,5 +25,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
             OrderSortByEnum? sortBy,
             SortDirectionEnum? sortDirection);
         Task<List<Order>> GetPendingConfirmationOrdersOlderThanAsync(DateTime threshold);
+        Task<decimal> SumCompletedOrderAmountByUserIdAsync(int userId);
     }
 }

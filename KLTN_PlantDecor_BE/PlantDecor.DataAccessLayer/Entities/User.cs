@@ -27,6 +27,8 @@ public partial class User
 
     public string? SecurityStamp { get; set; }
 
+    public int TierLevel { get; set; } = 0;
+
     public virtual ICollection<AIChatSession> AIChatSessions { get; set; } = new List<AIChatSession>();
 
     public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
@@ -78,4 +80,6 @@ public partial class User
 
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
     public virtual ICollection<StaffSpecialization> StaffSpecializations { get; set; } = new List<StaffSpecialization>();
+    public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
+    public virtual ICollection<UserAIUsage> UserAIUsages { get; set; } = new List<UserAIUsage>();
 }

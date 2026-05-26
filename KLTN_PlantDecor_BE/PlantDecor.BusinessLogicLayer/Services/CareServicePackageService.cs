@@ -2,6 +2,8 @@ using Hangfire;
 using PlantDecor.BusinessLogicLayer.Constants;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using System.Linq;
+using System.Text.Json;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.BusinessLogicLayer.Mappings;
@@ -16,6 +18,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IChatService _chatService;
+        private readonly IAzureOpenAIService _azureOpenAIService;
 
         private const string CACHE_KEY_ACTIVE = "care_pkg_active";
         private const string CACHE_KEY_ALL = "care_pkg_all";
@@ -24,11 +28,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public CareServicePackageService(
             IUnitOfWork unitOfWork,
             ICacheService cacheService,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IChatService chatService,
+            IAzureOpenAIService azureOpenAIService)
         {
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
             _backgroundJobClient = backgroundJobClient;
+            _chatService = chatService;
+            _azureOpenAIService = azureOpenAIService;
         }
 
         public async Task<List<CareServicePackageResponseDto>> GetAllActiveAsync()
@@ -236,6 +244,134 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return await RecommendByOrderInternalAsync(order);
         }
 
+        public async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByUserAsync(int consultantId, int userId)
+        {
+            await EnsureConsultantPermissionAsync(consultantId);
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new NotFoundException($"User {userId} not found");
+
+            return await RecommendByUserInternalAsync(userId);
+        }
+
+        public async Task<List<RankedCarePackageDto>> RecommendByConversationAsync(int consultantId, int conversationId, int maxCandidates = 8)
+        {
+            await EnsureConsultantPermissionAsync(consultantId);
+
+            var conversation = await _unitOfWork.ChatSessionRepository.GetConversationWithParticipantsAsync(conversationId);
+            if (conversation == null)
+                throw new NotFoundException($"Conversation {conversationId} not found");
+
+            // Try to find the customer participant (role Customer), otherwise any participant that's not the consultant
+            var customerParticipant = conversation.ChatParticipants
+                .FirstOrDefault(cp => cp.User != null && cp.User.RoleId == (int)RoleEnum.Customer && cp.UserId != consultantId)
+                ?? conversation.ChatParticipants.FirstOrDefault(cp => cp.UserId != consultantId);
+
+            int? customerId = customerParticipant?.UserId;
+            if (!customerId.HasValue)
+                throw new BadRequestException("Unable to identify customer participant in the conversation");
+
+            // Get candidate packages using existing recommendation logic
+            var candidates = await RecommendByUserAsync(consultantId, customerId.Value);
+            if (candidates == null || candidates.Count == 0)
+                return new List<RankedCarePackageDto>();
+
+            // Limit candidates
+            var topCandidates = candidates
+                .OrderByDescending(p => p.EcosystemMatchPercentage)
+                .ThenBy(p => p.UnitPrice ?? decimal.MaxValue)
+                .Take(Math.Max(1, Math.Min(maxCandidates, 12)))
+                .ToList();
+
+            // Get conversation summary (use consultant's context)
+            var summaryDto = await _chatService.GetConversationSummaryAsync(consultantId, conversationId);
+
+            // Build AI payload
+            var payload = JsonSerializer.Serialize(new
+            {
+                conversation = new
+                {
+                    id = conversationId,
+                    summary = summaryDto.Summary,
+                    keyPoints = summaryDto.KeyPoints
+                },
+                candidates = topCandidates.Select(p => new
+                {
+                    p.PackageId,
+                    p.PackageName,
+                    p.UnitPrice,
+                    p.DominantCategories,
+                    p.CoveragePercentage,
+                    p.EcosystemMatchPercentage,
+                    p.MatchReason
+                }).ToList()
+            });
+
+            var systemPrompt = "You are a concise ranking assistant for care service packages. Return ONLY a JSON array named 'rankings' where each entry has: packageId (int), score (0-100 int), reason (short string 1-2 sentences). Prefer Vietnamese when the conversation is Vietnamese. Do not include any extra text.";
+
+            try
+            {
+                var aiResp = await _azureOpenAIService.GenerateJsonResponseAsync(systemPrompt, payload);
+                if (!string.IsNullOrWhiteSpace(aiResp))
+                {
+                    // Extract JSON array substring (simple heuristic)
+                    var start = aiResp.IndexOf('[');
+                    var end = aiResp.LastIndexOf(']');
+                    string jsonArray = (start >= 0 && end > start) ? aiResp.Substring(start, end - start + 1) : aiResp;
+
+                    var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var aiRanks = JsonSerializer.Deserialize<List<AiRankDto>>(jsonArray, opts);
+                    if (aiRanks != null && aiRanks.Count > 0)
+                    {
+                        var ranked = aiRanks
+                            .Where(r => topCandidates.Any(c => c.PackageId == r.PackageId))
+                            .Select(r =>
+                            {
+                                var cand = topCandidates.First(c => c.PackageId == r.PackageId);
+                                return new RankedCarePackageDto
+                                {
+                                    PackageId = r.PackageId,
+                                    PackageName = cand.PackageName ?? string.Empty,
+                                    UnitPrice = cand.UnitPrice,
+                                    Score = Math.Clamp(r.Score, 0, 100),
+                                    Reason = r.Reason?.Trim(),
+                                    EcosystemMatchPercentage = cand.EcosystemMatchPercentage,
+                                    CoveragePercentage = cand.CoveragePercentage
+                                };
+                            })
+                            .OrderByDescending(r => r.Score)
+                            .ToList();
+
+                        return ranked;
+                    }
+                }
+            }
+            catch
+            {
+                // swallow and fallback
+            }
+
+            // Fallback: map deterministic candidates to Ranked DTO using existing scores
+            return topCandidates.Select(c => new RankedCarePackageDto
+            {
+                PackageId = c.PackageId,
+                PackageName = c.PackageName ?? string.Empty,
+                UnitPrice = c.UnitPrice,
+                Score = Math.Clamp(c.EcosystemMatchPercentage, 0, 100),
+                Reason = c.MatchReason,
+                EcosystemMatchPercentage = c.EcosystemMatchPercentage,
+                CoveragePercentage = c.CoveragePercentage
+            }).OrderByDescending(r => r.Score).ToList();
+        }
+
+        private sealed class AiRankDto
+        {
+            public int PackageId { get; set; }
+            public int Score { get; set; }
+            public string? Reason { get; set; }
+        }
+
         public async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderForCustomerAsync(int userId, int orderId)
         {
             if (userId <= 0)
@@ -253,11 +389,36 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         private async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByOrderInternalAsync(Order order)
         {
+            return await RecommendByUserInternalAsync(order.UserId);
+        }
+
+        private async Task<List<CareServicePackageRecommendationResponseDto>> RecommendByUserInternalAsync(int userId)
+        {
             var offeredPackages = await _unitOfWork.CareServicePackageRepository.GetPackagesWithNurseriesAsync();
             if (offeredPackages.Count == 0)
                 return new List<CareServicePackageRecommendationResponseDto>();
 
-            var profile = BuildOrderPlantProfile(order);
+            var allOrders = await _unitOfWork.OrderRepository.GetByUserIdWithDetailsAsync(userId);
+            var validStatuses = new[]
+            {
+                (int)OrderStatusEnum.DepositPaid,
+                (int)OrderStatusEnum.Paid,
+                (int)OrderStatusEnum.Assigned,
+                (int)OrderStatusEnum.Shipping,
+                (int)OrderStatusEnum.Delivered,
+                (int)OrderStatusEnum.RemainingPaymentPending,
+                (int)OrderStatusEnum.PendingConfirmation,
+                (int)OrderStatusEnum.Completed
+            };
+
+            var plantOrders = allOrders
+                .Where(o => o.OrderType != (int)OrderTypeEnum.Service
+                        && o.OrderType != (int)OrderTypeEnum.Design)
+                .Where(o => o.Status.HasValue
+                        && validStatuses.Contains(o.Status.Value))
+                .ToList();
+
+            var profile = BuildCustomerPlantProfile(plantOrders);
             if (profile.TotalPlantItems == 0)
                 return new List<CareServicePackageRecommendationResponseDto>();
 
@@ -275,22 +436,46 @@ namespace PlantDecor.BusinessLogicLayer.Services
             List<CareServicePackage> offeredPackages,
             Dictionary<int, List<PackagePlantSuitability>> rulesByPackageId)
         {
+            if (profile.TopCategoryIds.Count == 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
+
+            var topCategoryTotal = profile.TopCategoryIds
+                .Select(id => profile.CategoryPurchaseCounts.TryGetValue(id, out var count) ? count : 0)
+                .Sum();
+
+            if (topCategoryTotal == 0)
+                return new List<CareServicePackageRecommendationResponseDto>();
+
+            var dominantCareLevel = profile.CareLevelPurchaseCounts
+                .OrderByDescending(kv => kv.Value)
+                .ThenBy(kv => kv.Key)
+                .Select(kv => (int?)kv.Key)
+                .FirstOrDefault();
+
+            var dominantCareLevelName = dominantCareLevel.HasValue
+                ? MapCareLevelName(dominantCareLevel.Value)
+                : null;
+
             var recommendationsByPackageId = new Dictionary<int, CareServicePackageRecommendationResponseDto>();
-            var packageMatchedCategories = new Dictionary<int, Dictionary<string, int>>();
-            var packageMatchedCareLevels = new Dictionary<int, Dictionary<int, int>>();
+            var packageMatchedCategoryIds = new Dictionary<int, HashSet<int>>();
+            var packageSupportedPlantIds = new Dictionary<int, HashSet<int>>();
+            var packageSupportedQuantities = new Dictionary<int, int>();
 
             foreach (var plant in profile.PurchasedPlants)
             {
-                var matchedAnyPackage = false;
+                if (!plant.CategoryIds.Any(id => profile.TopCategoryIds.Contains(id)))
+                    continue;
 
                 foreach (var package in offeredPackages)
                 {
                     if (!rulesByPackageId.TryGetValue(package.Id, out var packageRules) || packageRules.Count == 0)
                         continue;
 
-                    var currentMatchedCategoryNames = packageRules
-                        .Where(r => r.CategoryId.HasValue && plant.CategoryIds.Contains(r.CategoryId.Value))
-                        .Select(r => string.IsNullOrWhiteSpace(r.Category?.Name) ? $"Category {r.CategoryId!.Value}" : r.Category!.Name!)
+                    var currentMatchedCategoryIds = packageRules
+                        .Where(r => r.CategoryId.HasValue
+                            && profile.TopCategoryIds.Contains(r.CategoryId.Value)
+                            && plant.CategoryIds.Contains(r.CategoryId.Value))
+                        .Select(r => r.CategoryId!.Value)
                         .Distinct()
                         .ToList();
 
@@ -300,13 +485,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         .Distinct()
                         .ToList();
 
-                    var categoryMatch = currentMatchedCategoryNames.Count;
+                    var categoryMatch = currentMatchedCategoryIds.Count;
                     var careMatch = currentMatchedCareLevels.Count;
 
                     if (categoryMatch == 0)
                         continue;
-
-                    matchedAnyPackage = true;
 
                     if (!recommendationsByPackageId.TryGetValue(package.Id, out var recDto))
                     {
@@ -315,72 +498,104 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             PackageId = package.Id,
                             PackageName = package.Name ?? string.Empty,
                             UnitPrice = package.UnitPrice,
-                            MatchScore = 0,
-                            TotalPurchasedPlantItems = profile.TotalPlantItems,
-                            MatchReasons = new List<string>(),
-                            Plants = new List<RecommendedPlantDto>()
+                            DominantCategories = profile.DominantCategoryNames.ToList(),
+                            DominantCareLevel = dominantCareLevelName,
+                            CareLevelMatched = false,
+                            CoveragePercentage = 0m,
+                            EcosystemMatchPercentage = 0,
+                            MatchReason = null
                         };
 
                         recommendationsByPackageId[package.Id] = recDto;
-                        packageMatchedCategories[package.Id] = new Dictionary<string, int>();
-                        packageMatchedCareLevels[package.Id] = new Dictionary<int, int>();
+                        packageMatchedCategoryIds[package.Id] = new HashSet<int>();
+                        packageSupportedPlantIds[package.Id] = new HashSet<int>();
+                        packageSupportedQuantities[package.Id] = 0;
                     }
 
-                    recDto.Plants.Add(new RecommendedPlantDto
-                    {
-                        PlantId = plant.PlantId,
-                        PlantName = plant.PlantName,
-                        Quantity = plant.Quantity
-                    });
+                    if (packageSupportedPlantIds[package.Id].Add(plant.PlantId))
+                        packageSupportedQuantities[package.Id] += plant.Quantity;
 
-                    recDto.MatchScore += ((categoryMatch * 2) + careMatch) * plant.Quantity;
-
-                    foreach (var categoryName in currentMatchedCategoryNames)
+                    foreach (var categoryId in currentMatchedCategoryIds)
                     {
-                        if (packageMatchedCategories[package.Id].ContainsKey(categoryName))
-                            packageMatchedCategories[package.Id][categoryName] += plant.Quantity;
-                        else
-                            packageMatchedCategories[package.Id][categoryName] = plant.Quantity;
-                    }
-
-                    foreach (var careLevel in currentMatchedCareLevels)
-                    {
-                        if (packageMatchedCareLevels[package.Id].ContainsKey(careLevel))
-                            packageMatchedCareLevels[package.Id][careLevel] += plant.Quantity;
-                        else
-                            packageMatchedCareLevels[package.Id][careLevel] = plant.Quantity;
+                        packageMatchedCategoryIds[package.Id].Add(categoryId);
                     }
                 }
-
-                if (!matchedAnyPackage)
-                    throw new NotFoundException($"No suitable package found for plant '{plant.PlantName}' (PlantId: {plant.PlantId}). Please verify package suitability mapping data.");
             }
 
-            var recommendations = recommendationsByPackageId.Values
-                .OrderByDescending(r => r.MatchScore)
-                .ThenBy(r => r.UnitPrice ?? decimal.MaxValue)
-                .ToList();
+            var recommendations = recommendationsByPackageId.Values.ToList();
 
             foreach (var recDto in recommendations)
             {
-                var categories = packageMatchedCategories[recDto.PackageId];
-                if (categories.Count > 0)
-                {
-                    var catReason = string.Join(", ", categories.OrderByDescending(c => c.Value).Select(c => $"{c.Key} ({c.Value})"));
-                    recDto.MatchReasons.Add($"Matched categories: {catReason}");
-                    recDto.MatchedCategoryCount = categories.Count;
-                }
+                // calculate supported quantity (unique plants counted once, by quantity owned)
+                var supportedQty = packageSupportedQuantities.TryGetValue(recDto.PackageId, out var qty) ? qty : 0;
 
-                var careLevels = packageMatchedCareLevels[recDto.PackageId];
-                if (careLevels.Count > 0)
-                {
-                    var lvlReason = string.Join(", ", careLevels.OrderByDescending(c => c.Value).Select(c => $"{MapCareLevelName(c.Key)} ({c.Value})"));
-                    recDto.MatchReasons.Add($"Matched care levels: {lvlReason}");
-                    recDto.MatchedCareLevelCount = careLevels.Count;
-                }
+                // category score: based on supported ecosystem coverage in top categories
+                var pkgRules = rulesByPackageId.TryGetValue(recDto.PackageId, out var pkgRulesList)
+                    ? pkgRulesList
+                    : new List<PackagePlantSuitability>();
+                var supportedTopCategoryQty = pkgRules
+                    .Where(r => r.CategoryId.HasValue && profile.TopCategoryIds.Contains(r.CategoryId.Value))
+                    .Select(r => r.CategoryId!.Value)
+                    .Distinct()
+                    .Sum(id => profile.CategoryPurchaseCounts.TryGetValue(id, out var count) ? count : 0);
+
+                var categoryScore = topCategoryTotal > 0
+                    ? 70m * supportedTopCategoryQty / topCategoryTotal
+                    : 0m;
+
+                // care level score: weighted by the user's dominant care level share
+                var careLevelMatched = dominantCareLevel.HasValue
+                    && pkgRules.Any(r => r.CareDifficultyLevel.HasValue && r.CareDifficultyLevel.Value == dominantCareLevel.Value);
+                var dominantCareLevelQty = dominantCareLevel.HasValue
+                    && profile.CareLevelPurchaseCounts.TryGetValue(dominantCareLevel.Value, out var domQty)
+                    ? domQty
+                    : 0;
+                var careLevelScore = careLevelMatched && profile.TotalPlantItems > 0
+                    ? 20m * dominantCareLevelQty / profile.TotalPlantItems
+                    : 0m;
+
+                // quantity score and coverage use total quantity owned
+                var quantityScore = profile.TotalPlantItems > 0
+                    ? 10m * supportedQty / profile.TotalPlantItems
+                    : 0m;
+                var coveragePercentage = profile.TotalPlantItems > 0
+                    ? Math.Round(100m * supportedQty / profile.TotalPlantItems, 2, MidpointRounding.AwayFromZero)
+                    : 0m;
+
+                // Build match reason using user's dominant categories (from profile) and package-supported categories
+                var supportedCategoryNames = packageMatchedCategoryIds.TryGetValue(recDto.PackageId, out var pkgCatIds)
+                    ? pkgCatIds
+                        .OrderByDescending(id => profile.CategoryPurchaseCounts.TryGetValue(id, out var count) ? count : 0)
+                        .ThenBy(id => id)
+                        .Select(id => profile.CategoryNamesById.TryGetValue(id, out var name) ? name : $"Category {id}")
+                        .ToList()
+                    : new List<string>();
+
+                var userDominantText = profile.DominantCategoryNames != null && profile.DominantCategoryNames.Count > 0
+                    ? string.Join(", ", profile.DominantCategoryNames)
+                    : "your top categories";
+
+                var packageSupportsText = supportedCategoryNames.Count > 0
+                    ? string.Join(", ", supportedCategoryNames)
+                    : "no specific top categories";
+
+                var careLevelText = dominantCareLevelName ?? "unknown";
+                var careLevelPhrase = careLevelMatched
+                    ? $"Supports your dominant care level ({careLevelText})."
+                    : $"Does not match your dominant care level ({careLevelText}).";
+
+                recDto.CareLevelMatched = careLevelMatched;
+                recDto.CoveragePercentage = coveragePercentage;
+                recDto.EcosystemMatchPercentage = (int)Math.Round(categoryScore + careLevelScore + quantityScore, MidpointRounding.AwayFromZero);
+                recDto.MatchReason = $"Your dominant categories: {userDominantText}. Package supports: {packageSupportsText}. Covers {coveragePercentage:0.##}% of your purchased plants. {careLevelPhrase}";
             }
 
-            return recommendations;
+            return recommendations
+                .OrderByDescending(r => r.EcosystemMatchPercentage)
+                .ThenByDescending(r => r.CoveragePercentage)
+                .ThenBy(r => r.UnitPrice ?? decimal.MaxValue)
+                .Take(3)
+                .ToList();
         }
 
         public async Task<CareServicePackageResponseDto> UpdateSpecializationsAsync(int packageId, List<int> specializationIds)
@@ -565,8 +780,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private static CustomerPlantProfile BuildCustomerPlantProfile(List<Order> orders)
         {
             var categoryPurchaseCounts = new Dictionary<int, int>();
+            var categoryNamesById = new Dictionary<int, string>();
             var careLevelPurchaseCounts = new Dictionary<int, int>();
-            var purchasedPlants = new List<PurchasedPlant>();
+            var purchasedPlantsById = new Dictionary<int, PurchasedPlant>();
             var totalPlantItems = 0;
 
             foreach (var order in orders)
@@ -578,10 +794,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         var lineQuantity = Math.Max(1, detail.Quantity ?? 1);
 
                         if (detail.CommonPlant?.Plant != null)
-                            AddPlantToProfile(detail.CommonPlant.Plant, lineQuantity, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+                            AddPlantToProfile(detail.CommonPlant.Plant, lineQuantity, categoryPurchaseCounts, categoryNamesById, careLevelPurchaseCounts, purchasedPlantsById, ref totalPlantItems);
 
                         if (detail.PlantInstance?.Plant != null)
-                            AddPlantToProfile(detail.PlantInstance.Plant, lineQuantity, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+                            AddPlantToProfile(detail.PlantInstance.Plant, lineQuantity, categoryPurchaseCounts, categoryNamesById, careLevelPurchaseCounts, purchasedPlantsById, ref totalPlantItems);
 
                         var comboItems = detail.NurseryPlantCombo?.PlantCombo?.PlantComboItems;
                         if (comboItems == null)
@@ -593,21 +809,43 @@ namespace PlantDecor.BusinessLogicLayer.Services
                                 continue;
 
                             var comboPlantQty = Math.Max(1, comboItem.Quantity ?? 1) * lineQuantity;
-                            AddPlantToProfile(comboItem.Plant, comboPlantQty, categoryPurchaseCounts, careLevelPurchaseCounts, purchasedPlants, ref totalPlantItems);
+                            AddPlantToProfile(comboItem.Plant, comboPlantQty, categoryPurchaseCounts, categoryNamesById, careLevelPurchaseCounts, purchasedPlantsById, ref totalPlantItems);
                         }
                     }
                 }
             }
 
-            return new CustomerPlantProfile(categoryPurchaseCounts, careLevelPurchaseCounts, totalPlantItems, purchasedPlants);
+            var topCategoryIds = categoryPurchaseCounts
+                .OrderByDescending(x => x.Value)
+                .ThenBy(x => x.Key)
+                .Take(3)
+                .Select(x => x.Key)
+                .ToHashSet();
+
+            var dominantCategoryNames = categoryPurchaseCounts
+                .OrderByDescending(x => x.Value)
+                .ThenBy(x => x.Key)
+                .Take(3)
+                .Select(x => categoryNamesById.TryGetValue(x.Key, out var name) ? name : $"Category {x.Key}")
+                .ToList();
+
+            return new CustomerPlantProfile(
+                categoryPurchaseCounts,
+                categoryNamesById,
+                careLevelPurchaseCounts,
+                totalPlantItems,
+                purchasedPlantsById.Values.ToList(),
+                topCategoryIds,
+                dominantCategoryNames);
         }
 
         private static void AddPlantToProfile(
             Plant plant,
             int quantity,
             Dictionary<int, int> categoryPurchaseCounts,
+            Dictionary<int, string> categoryNamesById,
             Dictionary<int, int> careLevelPurchaseCounts,
-            List<PurchasedPlant> purchasedPlants,
+            Dictionary<int, PurchasedPlant> purchasedPlantsById,
             ref int totalPlantItems)
         {
             if (quantity <= 0)
@@ -615,21 +853,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             totalPlantItems += quantity;
 
-            var existingPlant = purchasedPlants.FirstOrDefault(p => p.PlantId == plant.Id);
-            if (existingPlant != null)
+            if (purchasedPlantsById.TryGetValue(plant.Id, out var existingPlant))
             {
                 existingPlant.Quantity += quantity;
             }
             else
             {
-                purchasedPlants.Add(new PurchasedPlant
+                existingPlant = new PurchasedPlant
                 {
                     PlantId = plant.Id,
                     PlantName = plant.Name ?? $"Plant #{plant.Id}",
                     Quantity = quantity,
                     CareLevelType = plant.CareLevelType,
-                    CategoryIds = plant.Categories.Select(c => c.Id).ToList()
-                });
+                    CategoryIds = new List<int>()
+                };
+                purchasedPlantsById[plant.Id] = existingPlant;
             }
 
             if (plant.CareLevelType.HasValue)
@@ -640,13 +878,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     careLevelPurchaseCounts[plant.CareLevelType.Value] = quantity;
             }
 
-            foreach (var category in plant.Categories)
-            {
-                if (categoryPurchaseCounts.ContainsKey(category.Id))
-                    categoryPurchaseCounts[category.Id] += quantity;
-                else
-                    categoryPurchaseCounts[category.Id] = quantity;
-            }
+            var primaryCategory = plant.Categories.FirstOrDefault();
+
+            if (primaryCategory == null)
+                return;
+
+            if (!categoryNamesById.ContainsKey(primaryCategory.Id))
+                categoryNamesById[primaryCategory.Id] = string.IsNullOrWhiteSpace(primaryCategory.Name)
+                    ? $"Category {primaryCategory.Id}"
+                    : primaryCategory.Name!;
+
+            existingPlant.CategoryIds.Clear();
+            existingPlant.CategoryIds.Add(primaryCategory.Id);
+
+            if (categoryPurchaseCounts.ContainsKey(primaryCategory.Id))
+                categoryPurchaseCounts[primaryCategory.Id] += quantity;
+            else
+                categoryPurchaseCounts[primaryCategory.Id] = quantity;
         }
 
         private static string MapCareLevelName(int level)
@@ -665,20 +913,29 @@ namespace PlantDecor.BusinessLogicLayer.Services
         {
             public CustomerPlantProfile(
                 Dictionary<int, int> categoryPurchaseCounts,
+                Dictionary<int, string> categoryNamesById,
                 Dictionary<int, int> careLevelPurchaseCounts,
                 int totalPlantItems,
-                List<PurchasedPlant> purchasedPlants)
+                List<PurchasedPlant> purchasedPlants,
+                HashSet<int> topCategoryIds,
+                List<string> dominantCategoryNames)
             {
                 CategoryPurchaseCounts = categoryPurchaseCounts;
+                CategoryNamesById = categoryNamesById;
                 CareLevelPurchaseCounts = careLevelPurchaseCounts;
                 TotalPlantItems = totalPlantItems;
                 PurchasedPlants = purchasedPlants;
+                TopCategoryIds = topCategoryIds;
+                DominantCategoryNames = dominantCategoryNames;
             }
 
             public Dictionary<int, int> CategoryPurchaseCounts { get; }
+            public Dictionary<int, string> CategoryNamesById { get; }
             public Dictionary<int, int> CareLevelPurchaseCounts { get; }
             public int TotalPlantItems { get; }
             public List<PurchasedPlant> PurchasedPlants { get; }
+            public HashSet<int> TopCategoryIds { get; }
+            public List<string> DominantCategoryNames { get; }
         }
 
         private sealed class PurchasedPlant

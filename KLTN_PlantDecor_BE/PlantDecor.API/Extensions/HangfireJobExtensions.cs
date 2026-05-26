@@ -201,6 +201,12 @@ namespace PlantDecor.API.Extensions
                 "process-today-care-reminders",
                 service => service.ProcessTodayCareRemindersAsync(),
                 "0 0 * * *");
+
+            // Reset monthly free AI quota and recalculate tiers on 1st of each month at 00:05
+            recurringJobManager.AddOrUpdate<IMonthlyQuotaResetService>(
+                "monthly-quota-reset",
+                service => service.ResetMonthlyQuotaAsync(),
+                "5 0 1 * *");
         }
     }
 }

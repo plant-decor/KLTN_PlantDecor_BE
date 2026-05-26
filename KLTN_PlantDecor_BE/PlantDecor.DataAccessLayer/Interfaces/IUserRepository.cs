@@ -26,5 +26,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
         Task<User?> GetCaretakerByIdWithSpecializationsAsync(int userId, int nurseryId);
         Task<List<User>> GetStaffAndCaretakersByNurseryIdAsync(int nurseryId);
         Task<User?> GetStaffOrCaretakerByIdWithSpecializationsAsync(int userId, int nurseryId);
+        Task<List<int>> GetAllActiveCustomerIdsAsync();
     }
 }

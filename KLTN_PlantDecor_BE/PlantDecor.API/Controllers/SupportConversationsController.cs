@@ -82,6 +82,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Get a summarized view of a support conversation for consultant (on-demand, not persisted)
+        /// </summary>
+        [HttpGet("{conversationId:int}/summary")]
+        [Authorize(Roles = "Consultant")]
+        public async Task<IActionResult> GetConversationSummary(int conversationId)
+        {
+            var userId = GetUserId();
+            var summary = await _chatService.GetConversationSummaryAsync(userId, conversationId);
+            return Ok(new ApiResponse<ConversationSummaryResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Get conversation summary successfully",
+                Payload = summary
+            });
+        }
+
+        /// <summary>
         /// Tạo conversation mới với một user khác
         /// </summary>
         [HttpPost]

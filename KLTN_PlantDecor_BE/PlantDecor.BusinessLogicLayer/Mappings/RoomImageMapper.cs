@@ -24,9 +24,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
             {
                 RoomImageId = image.Id,
                 ImageUrl = image.ImageUrl ?? string.Empty,
-                ViewAngle = Enum.IsDefined(typeof(RoomViewAngleEnum), image.ViewAngle ?? 0)
-                    ? (RoomViewAngleEnum)image.ViewAngle!.Value
-                    : RoomViewAngleEnum.Front,
+                OrderIndex = image.OrderIndex,
                 ModerationStatus = moderationStatus,
                 ModerationReason = latestModeration?.Reason,
                 UploadedAt = image.UploadedAt ?? DateTime.UtcNow

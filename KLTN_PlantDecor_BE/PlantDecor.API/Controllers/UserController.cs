@@ -7,6 +7,7 @@ using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.Security.Claims;
 
+
 namespace PlantDecor.API.Controllers
 {
     /// <summary>
@@ -20,12 +21,16 @@ namespace PlantDecor.API.Controllers
         private readonly IUserService _userService;
         private readonly IAuthenticationService _authenticationService;
         private readonly IInvoiceService _invoiceService;
+        private readonly IAIQuotaService _aiQuotaService;
+        private readonly IUserSubscriptionService _userSubscriptionService;
 
-        public UserController(IUserService userService, IAuthenticationService authenticationService, IInvoiceService invoiceService)
+        public UserController(IUserService userService, IAuthenticationService authenticationService, IInvoiceService invoiceService, IAIQuotaService aiQuotaService, IUserSubscriptionService userSubscriptionService)
         {
             _userService = userService;
             _authenticationService = authenticationService;
+            _userSubscriptionService = userSubscriptionService;
             _invoiceService = invoiceService;
+            _aiQuotaService = aiQuotaService;
         }
 
         /// <summary>
@@ -190,6 +195,40 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Password changed successfully"
+            });
+        }
+
+        [HttpGet("ai-quota")]
+        public async Task<IActionResult> GetAIQuotaStatus()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                throw new UnauthorizedException("Unable to identify user from token");
+
+            var result = await _aiQuotaService.GetUserQuotaStatusAsync(userId);
+            return Ok(new ApiResponse<UserQuotaStatusDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "AI quota status retrieved successfully",
+                Payload = result
+            });
+        }
+
+        [HttpGet("subscriptions")]
+        public async Task<IActionResult> GetMySubscriptions()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                throw new UnauthorizedException("Unable to identify user from token");
+
+            var result = await _userSubscriptionService.GetByUserIdAsync(userId);
+            return Ok(new ApiResponse<List<UserSubscriptionResponseDto>>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Subscriptions retrieved successfully",
+                Payload = result
             });
         }
     }

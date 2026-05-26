@@ -60,6 +60,11 @@ namespace PlantDecor.DataAccessLayer.UnitOfWork
         IDepositPolicyRepository DepositPolicyRepository { get; }
         IReturnTicketRepository ReturnTicketRepository { get; }
         IReturnTicketAssignmentRepository ReturnTicketAssignmentRepository { get; }
+        IConversationSummaryRepository ConversationSummaryRepository { get; }
+        ITierThresholdRepository TierThresholdRepository { get; }
+        ITierPackageRepository TierPackageRepository { get; }
+        IUserSubscriptionRepository UserSubscriptionRepository { get; }
+        IUserAIUsageRepository UserAIUsageRepository { get; }
 
         // Transaction management
         Task BeginTransactionAsync();

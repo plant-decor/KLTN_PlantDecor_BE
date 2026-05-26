@@ -108,7 +108,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
         public async Task<UserResponse> GetByIdAsync(int id)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(id);
-            return user == null ? null! : user.ToResponse();
+            if (user == null) return null!;
+            var response = user.ToResponse();
+            var threshold = await _unitOfWork.TierThresholdRepository.GetByTierLevelAsync(user.TierLevel);
+            response.TierName = threshold?.Name;
+            return response;
         }
 
         public Task<bool> GetUserByPhoneAsync(string phone)

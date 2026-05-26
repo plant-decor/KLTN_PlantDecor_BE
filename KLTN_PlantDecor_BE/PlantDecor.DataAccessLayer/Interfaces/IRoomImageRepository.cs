@@ -6,6 +6,6 @@ namespace PlantDecor.DataAccessLayer.Interfaces
     {
         Task<List<RoomImage>> GetByUserAndIdsAsync(int userId, IReadOnlyCollection<int> roomImageIds);
         Task<List<RoomImage>> GetAllByUserIdAsync(int userId);
-        Task<List<RoomImage>> GetAllByUserIdAndViewAngleAsync(int userId, int viewAngle);
+        Task<List<RoomImage>> GetAllByUserIdAndOrderIndexAsync(int userId, int orderIndex);
     }
 }

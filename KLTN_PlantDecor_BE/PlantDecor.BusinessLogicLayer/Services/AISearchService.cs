@@ -645,7 +645,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var items = recommendations ?? new List<CareServicePackageRecommendationResponseDto>();
 
             return items
-                .OrderByDescending(r => r.MatchScore)
+                .OrderByDescending(r => r.EcosystemMatchPercentage)
                 .ThenBy(r => r.UnitPrice ?? decimal.MaxValue)
                 .Take(normalizedLimit)
                 .Select(r => new CareServicePackageSuggestionDto
@@ -653,8 +653,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     PackageId = r.PackageId,
                     PackageName = r.PackageName,
                     UnitPrice = r.UnitPrice,
-                    MatchScore = r.MatchScore,
-                    MatchReasons = r.MatchReasons?.ToList() ?? new List<string>()
+                    EcosystemMatchPercentage = r.EcosystemMatchPercentage,
+                    MatchReason = r.MatchReason
                 })
                 .ToList();
         }
@@ -1058,7 +1058,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     authoritativeCareTips,
                     careServicePackageHeaderText = string.IsNullOrWhiteSpace(careServicePackageHeaderText) ? null : careServicePackageHeaderText,
                     recommendedCareServicePackages = (recommendedCareServicePackages ?? new List<CareServicePackageRecommendationResponseDto>())
-                        .OrderByDescending(p => p.MatchScore)
+                        .OrderByDescending(p => p.EcosystemMatchPercentage)
                         .ThenBy(p => p.UnitPrice ?? decimal.MaxValue)
                         .Take(5)
                         .Select(p => new
@@ -1066,12 +1066,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
                             p.PackageId,
                             p.PackageName,
                             p.UnitPrice,
-                            p.MatchScore,
-                            p.MatchedCategoryCount,
-                            p.MatchedCareLevelCount,
-                            p.TotalPurchasedPlantItems,
-                            p.MatchReasons,
-                            Plants = p.Plants.Select(pl => new { pl.PlantId, pl.PlantName, pl.Quantity }).ToList()
+                            p.DominantCategories,
+                            p.DominantCareLevel,
+                            p.CareLevelMatched,
+                            p.CoveragePercentage,
+                            p.EcosystemMatchPercentage,
+                            p.MatchReason
                         })
                         .ToList(),
                     history = BuildHistoryContext(conversationHistory)

@@ -123,11 +123,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             foreach (var user in users)
             {
                 int? userElement = null;
-                if (user.UserProfile?.BirthYear != null)
+                if (user.UserProfile?.BirthDate.HasValue == true)
                 {
                     try
                     {
-                        userElement = GetFengShuiElement(user.UserProfile.BirthYear.Value);
+                        userElement = GetFengShuiElement(user.UserProfile.BirthDate.Value.Year);
                     }
                     catch
                     {

@@ -11,5 +11,6 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<CreatePaymentUrlResponseDto> RetryPaymentAsync(int userId, int paymentId, HttpContext httpContext);
         Task<PaymentResponse> ProcessVnpayCallbackAsync(IQueryCollection queryParams);
         Task<VnpayIpnResponseDto> ProcessVnpayIpnAsync(IQueryCollection queryParams);
+        Task<CreatePaymentUrlResponseDto> CreateTierPackagePaymentAsync(int userId, CreateTierPackagePaymentRequestDto request, HttpContext httpContext);
     }
 }

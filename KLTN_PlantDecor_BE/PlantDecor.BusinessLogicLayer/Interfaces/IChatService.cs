@@ -15,6 +15,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
 
         Task<ConversationResponseDto> CreateConversationAsync(int userId, int otherUserId);
 
+        Task<ConversationSummaryResponseDto> GetConversationSummaryAsync(int userId, int conversationId);
+
         Task<ConversationResponseDto> StartSupportConversationAsync(int customerId, string firstMessage);
         Task<List<ConversationResponseDto>> GetWaitingSupportConversationsAsync();
         Task<List<ConversationResponseDto>> GetMyClaimedSupportConversationsAsync(int consultantId);

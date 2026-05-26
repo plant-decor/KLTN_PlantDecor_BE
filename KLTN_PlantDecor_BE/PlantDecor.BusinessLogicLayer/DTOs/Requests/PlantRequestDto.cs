@@ -4,8 +4,8 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 {
     public class PlantRequestDto
     {
-        [Required(ErrorMessage = "Tên cây là bắt buộc")]
-        [StringLength(200, ErrorMessage = "Tên cây không được vượt quá 200 ký tự")]
+        [Required(ErrorMessage = "Plant name is required")]
+        [StringLength(200, ErrorMessage = "Plant name cannot exceed 200 characters")]
         public string Name { get; set; } = null!;
 
         public string? SpecificName { get; set; }
@@ -14,7 +14,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
         public string? Description { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Giá phải lớn hơn hoặc bằng 0")]
+        [Range(0, double.MaxValue, ErrorMessage = "Price must be a non-negative value")]
         public decimal? BasePrice { get; set; }
 
         public int PlacementType { get; set; }
@@ -56,19 +56,21 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
 
     public class AssignCategoriesDto
     {
-        [Required(ErrorMessage = "PlantId là bắt buộc")]
+        [Required(ErrorMessage = "PlantId is required")]
         public int PlantId { get; set; }
 
-        [Required(ErrorMessage = "Danh sách CategoryIds là bắt buộc")]
+        [Required(ErrorMessage = "CategoryIds list is required")]
+        [MinLength(1, ErrorMessage = "Exactly one category is required for each plant")]
+        [MaxLength(1, ErrorMessage = "Exactly one category is allowed for each plant")]
         public List<int> CategoryIds { get; set; } = new List<int>();
     }
 
     public class AssignTagsDto
     {
-        [Required(ErrorMessage = "PlantId là bắt buộc")]
+        [Required(ErrorMessage = "PlantId is required")]
         public int PlantId { get; set; }
 
-        [Required(ErrorMessage = "Danh sách TagIds là bắt buộc")]
+        [Required(ErrorMessage = "TagIds list is required")]
         public List<int> TagIds { get; set; } = new List<int>();
     }
 }

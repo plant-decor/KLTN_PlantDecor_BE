@@ -14,7 +14,7 @@ using PlantDecor.DataAccessLayer.Context;
 namespace PlantDecor.DataAccessLayer.Migrations
 {
     [DbContext(typeof(PlantDecorContext))]
-    [Migration("20260506042551_init")]
+    [Migration("20260526104119_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -553,6 +553,51 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.HasIndex("PlantId");
 
                     b.ToTable("CommonPlant", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ConversationSummarySnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ConversationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("GeneratedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<string>("KeyPointsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NextActionsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceWindow")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StructuredFeaturesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranscriptHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id")
+                        .HasName("ConversationSummarySnapshot_pkey");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("IX_ConversationSummarySnapshot_ConversationId");
+
+                    b.ToTable("ConversationSummarySnapshot", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
@@ -1133,9 +1178,24 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("LayoutDesignPlantId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ManualEditedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("ManualEditedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ManualLayerJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("PublicId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ReplacesImageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SourceType")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id")
                         .HasName("LayoutDesignAIResponseImage_pkey");
@@ -1202,9 +1262,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("LayoutDesignId", "RoomImageId");
@@ -1702,6 +1759,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TierPackageId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal?>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -1716,6 +1776,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.HasKey("Id")
                         .HasName("Order_pkey");
+
+                    b.HasIndex("TierPackageId");
 
                     b.HasIndex("UserId");
 
@@ -2582,13 +2644,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("CareLevel")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("DominantDirection")
-                        .HasColumnType("integer");
-
                     b.Property<bool?>("HasAllergy")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsOftenAway")
                         .HasColumnType("boolean");
 
                     b.Property<int?>("LightDirection")
@@ -2638,15 +2694,15 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<int?>("OrderIndex")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UploadedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
                     b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ViewAngle")
                         .HasColumnType("integer");
 
                     b.HasKey("Id")
@@ -3005,6 +3061,87 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.ToTable("TaskMaterialUsage", (string)null);
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.TierPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("DurationMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("QuotaRequests")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("TierPackage_pkey");
+
+                    b.ToTable("TierPackage", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.TierThreshold", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BenefitDescription")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("MinTotalSpent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("MonthlyFreeQuota")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TierLevel")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("TierThreshold_pkey");
+
+                    b.ToTable("TierThreshold", (string)null);
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -3100,6 +3237,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<int>("TierLevel")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -3120,6 +3262,57 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserAIUsage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int>("EndpointType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("RequestCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserSubscriptionId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("UserAIUsage_pkey");
+
+                    b.HasIndex("UserSubscriptionId");
+
+                    b.HasIndex("UserId", "UserSubscriptionId")
+                        .HasDatabaseName("IX_UserAIUsage_UserId_SubId");
+
+                    b.ToTable("UserAIUsage", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserBehaviorLog", b =>
@@ -3288,13 +3481,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int?>("BirthYear")
-                        .HasColumnType("integer");
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<int?>("FengShuiElement")
+                        .HasColumnType("integer");
 
                     b.Property<string>("FullName")
                         .HasMaxLength(100)
@@ -3337,6 +3533,63 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("UserProfile", (string)null);
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserSubscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("LOCALTIMESTAMP");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsMonthlyFree")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("QuotaOverride")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("TierPackageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id")
+                        .HasName("UserSubscription_pkey");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TierPackageId");
+
+                    b.HasIndex("UserId", "EndDate", "IsActive")
+                        .HasDatabaseName("IX_UserSubscription_UserId_EndDate_IsActive");
+
+                    b.ToTable("UserSubscription", (string)null);
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Wishlist", b =>
@@ -3629,6 +3882,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("Nursery");
 
                     b.Navigation("Plant");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.ConversationSummarySnapshot", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.ChatSession", "ChatSession")
+                        .WithMany("ConversationSummarySnapshots")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("ConversationSummarySnapshot_ConversationId_fkey");
+
+                    b.Navigation("ChatSession");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CustomerSurvey", b =>
@@ -4035,6 +4299,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.TierPackage", "TierPackage")
+                        .WithMany()
+                        .HasForeignKey("TierPackageId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("Order_TierPackageId_fkey");
+
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "Customer")
                         .WithMany("CustomerOrders")
                         .HasForeignKey("UserId")
@@ -4042,6 +4312,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+
+                    b.Navigation("TierPackage");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.PackagePlantSuitability", b =>
@@ -4477,6 +4749,27 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("WorkingNursery");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserAIUsage", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
+                        .WithMany("UserAIUsages")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("UserAIUsage_UserId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.UserSubscription", "UserSubscription")
+                        .WithMany("UserAIUsages")
+                        .HasForeignKey("UserSubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("UserAIUsage_UserSubscriptionId_fkey");
+
+                    b.Navigation("User");
+
+                    b.Navigation("UserSubscription");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserBehaviorLog", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.PlantCombo", "PlantCombo")
@@ -4548,6 +4841,30 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .WithOne("UserProfile")
                         .HasForeignKey("PlantDecor.DataAccessLayer.Entities.UserProfile", "UserId")
                         .HasConstraintName("UserProfile_UserId_fkey");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserSubscription", b =>
+                {
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .HasConstraintName("UserSubscription_InvoiceId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.TierPackage", "TierPackage")
+                        .WithMany("UserSubscriptions")
+                        .HasForeignKey("TierPackageId")
+                        .HasConstraintName("UserSubscription_TierPackageId_fkey");
+
+                    b.HasOne("PlantDecor.DataAccessLayer.Entities.User", "User")
+                        .WithMany("UserSubscriptions")
+                        .HasForeignKey("UserId")
+                        .HasConstraintName("UserSubscription_UserId_fkey");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("TierPackage");
 
                     b.Navigation("User");
                 });
@@ -4642,6 +4959,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("ChatMessages");
 
                     b.Navigation("ChatParticipants");
+
+                    b.Navigation("ConversationSummarySnapshots");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.CommonPlant", b =>
@@ -4885,6 +5204,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("StaffSpecializations");
                 });
 
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.TierPackage", b =>
+                {
+                    b.Navigation("UserSubscriptions");
+                });
+
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.User", b =>
                 {
                     b.Navigation("AIChatSessions");
@@ -4927,6 +5251,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("StaffSpecializations");
 
+                    b.Navigation("UserAIUsages");
+
                     b.Navigation("UserBehaviorLogs");
 
                     b.Navigation("UserPlants");
@@ -4935,12 +5261,19 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Navigation("UserProfile");
 
+                    b.Navigation("UserSubscriptions");
+
                     b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserPlant", b =>
                 {
                     b.Navigation("CareReminders");
+                });
+
+            modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserSubscription", b =>
+                {
+                    b.Navigation("UserAIUsages");
                 });
 #pragma warning restore 612, 618
         }

@@ -305,6 +305,43 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TierPackage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    QuotaRequests = table.Column<int>(type: "integer", nullable: false),
+                    DurationMonths = table.Column<int>(type: "integer", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("TierPackage_pkey", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TierThreshold",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    TierLevel = table.Column<int>(type: "integer", nullable: false),
+                    MinTotalSpent = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    BenefitDescription = table.Column<string>(type: "text", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    MonthlyFreeQuota = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("TierThreshold_pkey", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PackagePlantSuitability",
                 columns: table => new
                 {
@@ -351,6 +388,32 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         column: x => x.ChatSessionId,
                         principalTable: "ChatSession",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ConversationSummarySnapshot",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ConversationId = table.Column<int>(type: "integer", nullable: true),
+                    Summary = table.Column<string>(type: "text", nullable: true),
+                    KeyPointsJson = table.Column<string>(type: "text", nullable: true),
+                    NextActionsJson = table.Column<string>(type: "text", nullable: true),
+                    StructuredFeaturesJson = table.Column<string>(type: "text", nullable: true),
+                    SourceWindow = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    TranscriptHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    GeneratedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ConversationSummarySnapshot_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "ConversationSummarySnapshot_ConversationId_fkey",
+                        column: x => x.ConversationId,
+                        principalTable: "ChatSession",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1003,6 +1066,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     PublicId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     FluxPromptUsed = table.Column<string>(type: "text", nullable: true),
+                    SourceType = table.Column<int>(type: "integer", nullable: true),
+                    ManualLayerJson = table.Column<string>(type: "text", nullable: true),
+                    ManualEditedBy = table.Column<int>(type: "integer", nullable: true),
+                    ManualEditedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ReplacesImageId = table.Column<int>(type: "integer", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -1052,7 +1120,6 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 {
                     LayoutDesignId = table.Column<int>(type: "integer", nullable: false),
                     RoomImageId = table.Column<int>(type: "integer", nullable: false),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true),
                     OrderIndex = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -1248,7 +1315,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     IsVerified = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
-                    SecurityStamp = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
+                    SecurityStamp = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    TierLevel = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -1314,7 +1382,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     CompletedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
-                    OrderType = table.Column<int>(type: "integer", nullable: true)
+                    OrderType = table.Column<int>(type: "integer", nullable: true),
+                    TierPackageId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1325,6 +1394,12 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         principalTable: "User",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "Order_TierPackageId_fkey",
+                        column: x => x.TierPackageId,
+                        principalTable: "TierPackage",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1358,7 +1433,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    ViewAngle = table.Column<int>(type: "integer", nullable: true),
+                    OrderIndex = table.Column<int>(type: "integer", nullable: true),
                     UploadedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
                 constraints: table =>
@@ -1504,7 +1579,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: true),
                     Address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    BirthYear = table.Column<int>(type: "integer", nullable: true),
+                    BirthDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    FengShuiElement = table.Column<int>(type: "integer", nullable: true),
                     FullName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Gender = table.Column<int>(type: "integer", nullable: true),
                     Latitude = table.Column<decimal>(type: "numeric(10,7)", precision: 10, scale: 7, nullable: true),
@@ -1520,6 +1596,43 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     table.PrimaryKey("UserProfile_pkey", x => x.Id);
                     table.ForeignKey(
                         name: "UserProfile_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserSubscription",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    TierPackageId = table.Column<int>(type: "integer", nullable: true),
+                    InvoiceId = table.Column<int>(type: "integer", nullable: true),
+                    StartDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    EndDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsMonthlyFree = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    QuotaOverride = table.Column<int>(type: "integer", nullable: true),
+                    PaidAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("UserSubscription_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "UserSubscription_InvoiceId_fkey",
+                        column: x => x.InvoiceId,
+                        principalTable: "Invoice",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "UserSubscription_TierPackageId_fkey",
+                        column: x => x.TierPackageId,
+                        principalTable: "TierPackage",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "UserSubscription_UserId_fkey",
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id");
@@ -1754,11 +1867,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     RoomStyle = table.Column<int>(type: "integer", nullable: true),
                     RoomArea = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
                     LightDirection = table.Column<int>(type: "integer", nullable: true),
-                    DominantDirection = table.Column<int>(type: "integer", nullable: true),
                     MinBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     MaxBudget = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
                     CareLevel = table.Column<int>(type: "integer", nullable: true),
-                    IsOftenAway = table.Column<bool>(type: "boolean", nullable: true),
                     NaturalLightLevel = table.Column<int>(type: "integer", nullable: true),
                     HasAllergy = table.Column<bool>(type: "boolean", nullable: true),
                     AllergyNote = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
@@ -1793,6 +1904,39 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         column: x => x.RoomImageId,
                         principalTable: "RoomImage",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserAIUsage",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    UserSubscriptionId = table.Column<int>(type: "integer", nullable: false),
+                    EndpointType = table.Column<int>(type: "integer", nullable: false),
+                    RequestCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    OrderId = table.Column<int>(type: "integer", nullable: true),
+                    ReferenceId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    IsSuccess = table.Column<bool>(type: "boolean", nullable: false),
+                    IsRefunded = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "LOCALTIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("UserAIUsage_pkey", x => x.Id);
+                    table.ForeignKey(
+                        name: "UserAIUsage_UserId_fkey",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "UserAIUsage_UserSubscriptionId_fkey",
+                        column: x => x.UserSubscriptionId,
+                        principalTable: "UserSubscription",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2160,6 +2304,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 column: "PlantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ConversationSummarySnapshot_ConversationId",
+                table: "ConversationSummarySnapshot",
+                column: "ConversationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomerSurvey_UserId",
                 table: "CustomerSurvey",
                 column: "UserId",
@@ -2393,6 +2542,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "IX_Order_Status",
                 table: "Order",
                 column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Order_TierPackageId",
+                table: "Order",
+                column: "TierPackageId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_UserId",
@@ -2687,6 +2841,16 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserAIUsage_UserId_SubId",
+                table: "UserAIUsage",
+                columns: new[] { "UserId", "UserSubscriptionId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserAIUsage_UserSubscriptionId",
+                table: "UserAIUsage",
+                column: "UserSubscriptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserBehaviorLog_PlantComboId",
                 table: "UserBehaviorLog",
                 column: "PlantComboId");
@@ -2732,6 +2896,21 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 table: "UserProfile",
                 column: "UserId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_InvoiceId",
+                table: "UserSubscription",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_TierPackageId",
+                table: "UserSubscription",
+                column: "TierPackageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSubscription_UserId_EndDate_IsActive",
+                table: "UserSubscription",
+                columns: new[] { "UserId", "EndDate", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Wishlist_MaterialId",
@@ -2957,6 +3136,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "ComboTag");
 
             migrationBuilder.DropTable(
+                name: "ConversationSummarySnapshot");
+
+            migrationBuilder.DropTable(
                 name: "CustomerSurvey");
 
             migrationBuilder.DropTable(
@@ -3047,7 +3229,13 @@ namespace PlantDecor.DataAccessLayer.Migrations
                 name: "TaskMaterialUsage");
 
             migrationBuilder.DropTable(
+                name: "TierThreshold");
+
+            migrationBuilder.DropTable(
                 name: "Transaction");
+
+            migrationBuilder.DropTable(
+                name: "UserAIUsage");
 
             migrationBuilder.DropTable(
                 name: "UserBehaviorLog");
@@ -3099,6 +3287,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Payment");
+
+            migrationBuilder.DropTable(
+                name: "UserSubscription");
 
             migrationBuilder.DropTable(
                 name: "LayoutDesign");
@@ -3156,6 +3347,9 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "DesignTemplate");
+
+            migrationBuilder.DropTable(
+                name: "TierPackage");
 
             migrationBuilder.DropTable(
                 name: "User");
