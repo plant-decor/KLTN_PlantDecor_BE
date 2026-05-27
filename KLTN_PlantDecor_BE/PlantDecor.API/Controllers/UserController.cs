@@ -23,14 +23,16 @@ namespace PlantDecor.API.Controllers
         private readonly IInvoiceService _invoiceService;
         private readonly IAIQuotaService _aiQuotaService;
         private readonly IUserSubscriptionService _userSubscriptionService;
+        private readonly ITierService _tierService;
 
-        public UserController(IUserService userService, IAuthenticationService authenticationService, IInvoiceService invoiceService, IAIQuotaService aiQuotaService, IUserSubscriptionService userSubscriptionService)
+        public UserController(IUserService userService, IAuthenticationService authenticationService, IInvoiceService invoiceService, IAIQuotaService aiQuotaService, IUserSubscriptionService userSubscriptionService, ITierService tierService)
         {
             _userService = userService;
             _authenticationService = authenticationService;
             _userSubscriptionService = userSubscriptionService;
             _invoiceService = invoiceService;
             _aiQuotaService = aiQuotaService;
+            _tierService = tierService;
         }
 
         /// <summary>
@@ -228,6 +230,26 @@ namespace PlantDecor.API.Controllers
                 Success = true,
                 StatusCode = StatusCodes.Status200OK,
                 Message = "Subscriptions retrieved successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
+        /// Lấy tiến độ chi tiêu để lên tier tiếp theo.
+        /// </summary>
+        [HttpGet("tier-progress")]
+        public async Task<IActionResult> GetTierProgress()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                throw new UnauthorizedException("Unable to identify user from token");
+
+            var result = await _tierService.GetTierProgressAsync(userId);
+            return Ok(new ApiResponse<TierProgressDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Tier progress retrieved successfully",
                 Payload = result
             });
         }
