@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -16,10 +17,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string RejectRouteMetaPrefix = "__route_meta__:";
 
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public ServiceRegistrationService(IUnitOfWork unitOfWork)
+        public ServiceRegistrationService(IUnitOfWork unitOfWork, IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<ServiceRegistrationResponseDto> CreateAsync(int userId, CreateServiceRegistrationRequestDto request)
@@ -145,6 +148,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
+            }
+
+            // Gửi email xác nhận tạo đơn cho khách
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendServiceRegistrationCreatedEmailAsync(registration.Id));
+            }
+            catch (Exception ex)
+            {
+                // Không fail request nếu enqueue email thất bại
+                _ = ex;
             }
 
             var created = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(registration.Id);
@@ -391,6 +406,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw;
             }
 
+            // Gửi email thông báo phê duyệt + nhắc thanh toán
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendServiceRegistrationApprovedEmailAsync(id));
+            }
+            catch (Exception ex)
+            {
+                _ = ex;
+            }
+
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             return updated!.ToResponse();
         }
@@ -486,6 +512,17 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 normalizedRejectReason);
             _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
             await _unitOfWork.SaveAsync();
+
+            // Gửi email thông báo từ chối cho khách (chỉ khi đơn bị từ chối hoàn toàn)
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendServiceRegistrationRejectedEmailAsync(id, normalizedRejectReason));
+            }
+            catch (Exception ex)
+            {
+                _ = ex;
+            }
 
             var updated = await _unitOfWork.ServiceRegistrationRepository.GetByIdWithDetailsAsync(id);
             return updated!.ToResponse();
