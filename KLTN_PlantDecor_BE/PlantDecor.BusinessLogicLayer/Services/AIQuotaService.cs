@@ -26,13 +26,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             string? referenceId = null)
         {
             // FIFO: earliest-expiring subscription first
+            // Lấy danh sách gói đang active Sắp xếp theo EndDate tăng dần → gói sắp hết hạn lên đầu (FIFO)
             var activeSubs = await _unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
 
             UserSubscription? targetSub = null;
+            // Tìm gói còn quota để sử dụng (đếm số đã dùng so với quota của gói)
             foreach (var sub in activeSubs)
             {
-                var used = await _unitOfWork.UserSubscriptionRepository.CountUsedQuotaAsync(sub.Id);
-                var capacity = sub.QuotaOverride ?? sub.TierPackage?.QuotaRequests ?? 0;
+                var used = await _unitOfWork.UserSubscriptionRepository.CountUsedQuotaAsync(sub.Id); // đã dùng bao nhiêu
+                var capacity = sub.QuotaOverride ?? sub.TierPackage?.QuotaRequests ?? 0; // Tổng được phép dùng của gói
                 if (used < capacity)
                 {
                     targetSub = sub;
