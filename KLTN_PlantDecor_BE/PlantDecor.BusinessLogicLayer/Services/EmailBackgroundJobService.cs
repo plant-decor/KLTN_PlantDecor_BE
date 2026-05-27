@@ -194,17 +194,21 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 var nurseryName = registration.NurseryCareService?.Nursery?.Name ?? "PlantDecor Nursery";
                 var amount = (registration.NurseryCareService?.CareServicePackage?.UnitPrice ?? 0m)
                     .ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) + " VND";
-                
-                var paymentUrl = registration.OrderId.HasValue 
-                    ? $"https://www.plantdecor.io.vn/user/order-history/{registration.OrderId}" 
-                    : "https://www.plantdecor.io.vn/user/order-history";
+
+                if (!registration.UserId.HasValue)
+                {
+                    _logger.LogWarning("SendServiceRegistrationApprovedEmail: No user id for registration {Id}", registrationId);
+                    return;
+                }
+
+                var orderHistoryUrl = $"https://www.plantdecor.io.vn/orders/{registration.UserId.Value}";
 
                 await _emailService.SendEmailAsync(new EmailRequest
                 {
                     To = toEmail,
                     Subject = $"[PlantDecor] Service Registration #{registrationId} Approved",
                     Body = EmailServiceRegistrationTemplate.RegistrationApprovedTemplate(
-                        userName, registrationId.ToString(), packageName, serviceDate, amount, nurseryName, paymentUrl)
+                        userName, registrationId.ToString(), packageName, serviceDate, amount, nurseryName, orderHistoryUrl)
                 }, CancellationToken.None);
 
                 _logger.LogInformation("Sent registration-approved email for RegistrationId={Id} to {Email}", registrationId, toEmail);

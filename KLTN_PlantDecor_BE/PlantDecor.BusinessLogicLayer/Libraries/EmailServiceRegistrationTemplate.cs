@@ -86,7 +86,7 @@ namespace PlantDecor.BusinessLogicLayer.Libraries
             string serviceDate,
             string amount,
             string nurseryName,
-            string paymentUrl)
+            string orderHistoryUrl)
         {
             return $@"
 <html>
@@ -103,7 +103,7 @@ namespace PlantDecor.BusinessLogicLayer.Libraries
 
     <p>Hello <b>{userName}</b>,</p>
     <p>Great news! Your plant care service registration has been approved by <b>{nurseryName}</b>.
-       Please proceed with the payment to activate the service.</p>
+       Please open your order history and pay the pending service invoice to activate the service.</p>
 
     <table style='width:100%; border-collapse:collapse; margin-top:15px;'>
       <tr style='background:#f9f9f9;'>
@@ -129,10 +129,10 @@ namespace PlantDecor.BusinessLogicLayer.Libraries
     </table>
 
     <div style='text-align:center; margin-top:25px;'>
-      <a href='{paymentUrl}' 
+      <a href='{orderHistoryUrl}'
          style='background:#2e7d32; color:white; padding:12px 30px; border-radius:8px;
                 text-decoration:none; font-weight:bold; font-size:15px;'>
-        Pay Now
+        View Order and Pay
       </a>
     </div>
 
