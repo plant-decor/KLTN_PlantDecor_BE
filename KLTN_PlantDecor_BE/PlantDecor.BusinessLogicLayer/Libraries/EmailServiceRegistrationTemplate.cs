@@ -85,7 +85,8 @@ namespace PlantDecor.BusinessLogicLayer.Libraries
             string packageName,
             string serviceDate,
             string amount,
-            string nurseryName)
+            string nurseryName,
+            string paymentUrl)
         {
             return $@"
 <html>
@@ -128,7 +129,7 @@ namespace PlantDecor.BusinessLogicLayer.Libraries
     </table>
 
     <div style='text-align:center; margin-top:25px;'>
-      <a href='https://www.plantdecor.io.vn/' 
+      <a href='{paymentUrl}' 
          style='background:#2e7d32; color:white; padding:12px 30px; border-radius:8px;
                 text-decoration:none; font-weight:bold; font-size:15px;'>
         Pay Now
