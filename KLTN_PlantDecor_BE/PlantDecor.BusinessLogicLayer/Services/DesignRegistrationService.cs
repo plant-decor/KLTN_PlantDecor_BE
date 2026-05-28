@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Hangfire;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -17,11 +18,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private const string RejectRouteMetaPrefix = "__route_meta__:";
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public DesignRegistrationService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService)
+        public DesignRegistrationService(
+            IUnitOfWork unitOfWork,
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         public async Task<DesignRegistrationResponseDto> CreateAsync(int userId, CreateDesignRegistrationRequestDto request)
@@ -123,6 +129,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.DesignRegistrationRepository.PrepareCreate(registration);
             await _unitOfWork.SaveAsync();
+
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignRegistrationCreatedEmailAsync(registration.Id));
+            }
+            catch
+            {
+            }
 
             var created = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(registration.Id)
                 ?? throw new NotFoundException($"DesignRegistration {registration.Id} not found after create");
@@ -277,6 +292,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw;
             }
 
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignRegistrationApprovedEmailAsync(id));
+            }
+            catch
+            {
+            }
+
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after approve");
 
@@ -360,6 +384,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(registration);
             await _unitOfWork.SaveAsync();
+
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignRegistrationRejectedEmailAsync(id, normalizedRejectReason));
+            }
+            catch
+            {
+            }
 
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after reject");
@@ -648,6 +681,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             await _unitOfWork.SaveAsync();
 
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignCaretakerAssignedEmailAsync(id));
+            }
+            catch
+            {
+            }
+
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after assign caretaker");
 
@@ -743,6 +785,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork.DesignRegistrationRepository.PrepareUpdate(tracked);
             await _unitOfWork.SaveAsync();
 
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignRegistrationCancelledEmailAsync(id, tracked.CancelReason));
+            }
+            catch
+            {
+            }
+
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after cancel");
 
@@ -786,6 +837,15 @@ namespace PlantDecor.BusinessLogicLayer.Services
             }
 
             await _unitOfWork.SaveAsync();
+
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendDesignRegistrationCancelledEmailAsync(id, registration.CancelReason));
+            }
+            catch
+            {
+            }
 
             var updated = await _unitOfWork.DesignRegistrationRepository.GetByIdWithDetailsAsync(id)
                 ?? throw new NotFoundException($"DesignRegistration {id} not found after manager cancel");
