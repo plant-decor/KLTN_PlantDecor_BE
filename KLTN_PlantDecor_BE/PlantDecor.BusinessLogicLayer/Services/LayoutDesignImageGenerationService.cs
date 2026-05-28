@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
@@ -53,6 +54,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
         public async Task<LayoutDesignImageGenerationResultDto> GenerateImagesAsync(int layoutDesignId, int userId)
         {
+            var sw = Stopwatch.StartNew();
+            _logger.LogInformation("Starting image generation for layout {LayoutDesignId}", layoutDesignId);
+
             var itemResults = new List<LayoutDesignImageGenerationItemResultDto>();
             var transactionStarted = false;
             var transactionCommitted = false;
@@ -198,6 +202,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     quotaUsageId = null; // commit succeeded — do not refund
 
                     var successCount = itemResults.Count(item => item.IsSuccess);
+                    _logger.LogInformation(
+                        "Image generation completed for layout {LayoutDesignId} in {Elapsed}ms — {SuccessCount}/{TotalItems} succeeded",
+                        layoutDesignId, sw.ElapsedMilliseconds, successCount, itemResults.Count);
                     return new LayoutDesignImageGenerationResultDto
                     {
                         LayoutDesignId = layoutDesignId,
@@ -238,6 +245,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     await SaveAiLayoutModerationAsync(layoutDesignId, AilayoutResponseModerationStatus.Rejected, ex.Message);
                 }
 
+                _logger.LogWarning(
+                    "Image generation failed for layout {LayoutDesignId} after {Elapsed}ms",
+                    layoutDesignId, sw.ElapsedMilliseconds);
                 throw;
             }
         }
@@ -279,6 +289,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 PlacementPosition = candidate.PlacementPosition
             };
 
+            var sw = Stopwatch.StartNew();
+            _logger.LogInformation(
+                "Starting image generation for layout {LayoutDesignId} - layoutPlant {LayoutDesignPlantId}",
+                layout.Id, candidate.LayoutDesignPlantId);
+
             try
             {
                 var plantImageBase64 = await DownloadAsBase64Async(
@@ -305,6 +320,9 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
                 _unitOfWork.LayoutDesignAiResponseImageRepository.PrepareCreate(entity);
 
+                _logger.LogInformation(
+                    "Image generation succeeded for layout {LayoutDesignId} - layoutPlant {LayoutDesignPlantId} in {Elapsed}ms",
+                    layout.Id, candidate.LayoutDesignPlantId, sw.ElapsedMilliseconds);
                 result.IsSuccess = true;
                 result.ImageUrl = uploadResult.SecureUrl;
                 result.FluxPromptUsed = prompt;
@@ -313,9 +331,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 _logger.LogError(
                     ex,
-                    "Failed to generate image for layout {LayoutDesignId} - layoutPlant {LayoutDesignPlantId}",
+                    "Failed to generate image for layout {LayoutDesignId} - layoutPlant {LayoutDesignPlantId} after {Elapsed}ms",
                     layout.Id,
-                    candidate.LayoutDesignPlantId);
+                    candidate.LayoutDesignPlantId,
+                    sw.ElapsedMilliseconds);
 
                 result.IsSuccess = false;
                 result.ErrorCode = "GENERATION_FAILED";
@@ -456,7 +475,11 @@ namespace PlantDecor.BusinessLogicLayer.Services
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _fluxApiKey);
 
+            var fluxSw = Stopwatch.StartNew();
             var response = await _httpClient.SendAsync(request);
+            _logger.LogInformation(
+                "Flux API responded in {Elapsed}ms with status {StatusCode}",
+                fluxSw.ElapsedMilliseconds, (int)response.StatusCode);
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
