@@ -25,4 +25,6 @@ public partial class Invoice
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual Order? Order { get; set; }
+
+    public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
 }
