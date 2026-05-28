@@ -69,11 +69,12 @@ If multiple photos are provided, combine them into one judgment of the room.
 Do not ask for additional images.
 Return JSON only in this exact structure:
 {
-    ""roomType"": ""LivingRoom|Bedroom|Kitchen|Bathroom|HomeOffice|Balcony|Corridor|DiningRoom""
+    ""roomType"": ""LivingRoom|Bedroom|Kitchen|Bathroom|HomeOffice|Balcony|Corridor|DiningRoom|Not Related""
 }
 
 Important rules:
 - Return only the JSON object, with no explanation or extra text.
+- If the room is not related to rooms, for example: Sea, Car, Tree,etc then return value Not Related.
 - If the room type is unclear, choose the best matching value from the allowed list.
 - Do not include room size, lighting, interior style, summary, or any other fields.
 ";
