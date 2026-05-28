@@ -317,7 +317,7 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.TierPackageId)
                 .HasConstraintName("UserSubscription_TierPackageId_fkey");
 
-            entity.HasOne(d => d.Invoice).WithMany()
+            entity.HasOne(d => d.Invoice).WithMany(p => p.UserSubscriptions)
                 .HasForeignKey(d => d.InvoiceId)
                 .HasConstraintName("UserSubscription_InvoiceId_fkey");
 
@@ -968,7 +968,7 @@ public partial class PlantDecorContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(d => d.TierPackage).WithMany()
+            entity.HasOne(d => d.TierPackage).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.TierPackageId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("Order_TierPackageId_fkey");
