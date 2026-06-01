@@ -1,4 +1,6 @@
+using Hangfire;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.DTOs.Requests;
 using PlantDecor.BusinessLogicLayer.DTOs.Responses;
 using PlantDecor.BusinessLogicLayer.Exceptions;
@@ -14,11 +16,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILogger<ServiceProgressService> _logger;
 
-        public ServiceProgressService(IUnitOfWork unitOfWork, ICloudinaryService cloudinaryService)
+        public ServiceProgressService(
+            IUnitOfWork unitOfWork, 
+            ICloudinaryService cloudinaryService,
+            IBackgroundJobClient backgroundJobClient,
+            ILogger<ServiceProgressService> logger)
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
+            _backgroundJobClient = backgroundJobClient;
+            _logger = logger;
         }
 
         public async Task<ServiceProgressResponseDto> GetByIdAsync(int progressId, int userId)
@@ -266,6 +276,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             if (progress.ServiceRegistrationId.HasValue)
                 await SyncCurrentCaretakerForRegistrationAsync(progress.ServiceRegistrationId.Value);
+
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendCaretakerReassignedEmailAsync(progressId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enqueue caretaker reassigned email for ProgressId={Id}", progressId);
+            }
 
             var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
             return MapToDto(updated!);

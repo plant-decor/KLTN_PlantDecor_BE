@@ -1,4 +1,4 @@
-﻿using Hangfire;
+using Hangfire;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -282,6 +282,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             var shouldInvalidateInventoryCaches = false;
             var shouldEnqueueOrderSuccessEmail = false;
             var orderIdForSuccessEmail = 0;
+            var serviceRegistrationIdForEmail = 0;
             var updatedPlantInstanceIds = new List<int>();
             UserSubscription? newSubscription = null;
             int? completedOrderUserId = null;
@@ -352,6 +353,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         var serviceRegistration = await _unitOfWork.ServiceRegistrationRepository.GetByOrderIdAsync(order.Id);
                         if (serviceRegistration != null)
                         {
+                            serviceRegistrationIdForEmail = serviceRegistration.Id;
                             _backgroundJobClient.Enqueue<IServiceCareBackgroundJobService>(
                                 service => service.GenerateServiceScheduleAsync(serviceRegistration.Id));
                         }
@@ -460,6 +462,23 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         ex,
                         "Failed to enqueue order success email job for OrderId={OrderId}",
                         orderIdForSuccessEmail);
+                }
+            }
+
+            // Gửi email thanh toán thành công cho đơn dịch vụ chăm sóc cây
+            if (serviceRegistrationIdForEmail > 0)
+            {
+                try
+                {
+                    _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                        service => service.SendServicePaymentSuccessEmailAsync(serviceRegistrationIdForEmail));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to enqueue service payment success email for RegistrationId={Id}",
+                        serviceRegistrationIdForEmail);
                 }
             }
 

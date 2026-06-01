@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Hangfire;
 using Microsoft.Extensions.Logging;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.Entities;
@@ -11,11 +12,16 @@ namespace PlantDecor.BusinessLogicLayer.Services
     public class ServiceCareBackgroundJobService : IServiceCareBackgroundJobService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly ILogger<ServiceCareBackgroundJobService> _logger;
 
-        public ServiceCareBackgroundJobService(IUnitOfWork unitOfWork, ILogger<ServiceCareBackgroundJobService> logger)
+        public ServiceCareBackgroundJobService(
+            IUnitOfWork unitOfWork,
+            IBackgroundJobClient backgroundJobClient,
+            ILogger<ServiceCareBackgroundJobService> logger)
         {
             _unitOfWork = unitOfWork;
+            _backgroundJobClient = backgroundJobClient;
             _logger = logger;
         }
 
@@ -119,6 +125,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _unitOfWork.ServiceRegistrationRepository.PrepareUpdate(registration);
 
             await _unitOfWork.SaveAsync();
+
+            // Gửi email thông báo lịch chăm sóc đã được thiết lập
+            try
+            {
+                _backgroundJobClient.Enqueue<IEmailBackgroundJobService>(
+                    svc => svc.SendServiceScheduleCreatedEmailAsync(serviceRegistrationId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "GenerateServiceSchedule: Failed to enqueue schedule-created email for RegistrationId={Id}",
+                    serviceRegistrationId);
+            }
 
             if (selectedCaretakerId.HasValue)
             {

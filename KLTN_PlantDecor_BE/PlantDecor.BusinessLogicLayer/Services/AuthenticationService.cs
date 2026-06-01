@@ -1299,6 +1299,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                         Email = userInfo.Email,
                         Status = (int)UserStatusEnum.Active,
                         RoleId = (int)RoleEnum.Customer,
+                        TierLevel = 1,
                         CreatedAt = DateTime.UtcNow,
                         AvatarUrl = userInfo.Picture,
                         IsVerified = true,
@@ -1308,6 +1309,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     user.UpdateSecurityStamp();
                     _unitOfWork.UserRepository.PrepareCreate(user);
                     await _unitOfWork.SaveAsync();
+
+                    await _monthlyQuotaResetService.GrantMonthlyFreeQuotaAsync(user.Id);
                 }
                 else
                 {

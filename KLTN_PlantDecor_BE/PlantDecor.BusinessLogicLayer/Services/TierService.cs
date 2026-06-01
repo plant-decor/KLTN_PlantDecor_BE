@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using PlantDecor.BusinessLogicLayer.DTOs.Responses;
+using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using PlantDecor.DataAccessLayer.UnitOfWork;
 
@@ -46,6 +48,60 @@ namespace PlantDecor.BusinessLogicLayer.Services
             _logger.LogInformation(
                 "TierService: User {UserId} upgraded to tier {TierLevel} ({TierName}), totalSpent={TotalSpent}",
                 userId, matched.TierLevel, matched.Name, totalSpent);
+        }
+
+        public async Task<TierProgressDto> GetTierProgressAsync(int userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new NotFoundException("User not found");
+
+            var totalSpent = await _unitOfWork.OrderRepository.SumCompletedOrderAmountByUserIdAsync(userId);
+
+            var allThresholds = (await _unitOfWork.TierThresholdRepository.GetAllActiveAsync())
+                .OrderBy(t => t.TierLevel)
+                .ToList();
+
+            var currentThreshold = allThresholds.FirstOrDefault(t => t.TierLevel == user.TierLevel)
+                                   ?? allThresholds.FirstOrDefault();
+
+            var nextThreshold = allThresholds.FirstOrDefault(t => t.TierLevel > user.TierLevel);
+
+            bool isMax = nextThreshold == null;
+
+            double progress;
+            if (isMax)
+            {
+                progress = 100.0;
+            }
+            else
+            {
+                var currentMin = currentThreshold?.MinTotalSpent ?? 0m;
+                var range = nextThreshold!.MinTotalSpent - currentMin;
+                progress = range == 0 ? 100.0
+                    : Math.Clamp((double)((totalSpent - currentMin) / range) * 100.0, 0.0, 100.0);
+            }
+
+            return new TierProgressDto
+            {
+                CurrentTierLevel = user.TierLevel,
+                CurrentTierName = currentThreshold?.Name,
+                CurrentTierBenefitDescription = currentThreshold?.BenefitDescription,
+                CurrentTierMonthlyFreeQuota = currentThreshold?.MonthlyFreeQuota ?? 0,
+                CurrentTierMinSpent = currentThreshold?.MinTotalSpent ?? 0m,
+
+                TotalSpent = totalSpent,
+
+                NextTierLevel = nextThreshold?.TierLevel,
+                NextTierName = nextThreshold?.Name,
+                NextTierBenefitDescription = nextThreshold?.BenefitDescription,
+                NextTierMonthlyFreeQuota = nextThreshold?.MonthlyFreeQuota,
+                NextTierMinSpent = nextThreshold?.MinTotalSpent,
+                AmountToNextTier = isMax ? null : Math.Max(0m, nextThreshold!.MinTotalSpent - totalSpent),
+
+                ProgressPercent = Math.Round(progress, 1),
+                IsMaxTier = isMax
+            };
         }
     }
 }

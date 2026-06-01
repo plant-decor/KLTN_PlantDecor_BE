@@ -5,6 +5,9 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API quản lý quota AI cho toàn hệ thống (Admin)
+    /// </summary>
     [Route("api/admin/ai-quota")]
     [ApiController]
     [Authorize(Roles = "Admin")]

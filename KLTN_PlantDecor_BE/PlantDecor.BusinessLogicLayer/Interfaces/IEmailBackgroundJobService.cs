@@ -1,23 +1,22 @@
-﻿namespace PlantDecor.BusinessLogicLayer.Interfaces
+namespace PlantDecor.BusinessLogicLayer.Interfaces
 {
     public interface IEmailBackgroundJobService
     {
-        /// <summary>
-        /// Send order success email in background
-        /// </summary>
-        /// <param name="orderId">Order ID to send email for</param>
         Task SendOrderSuccessEmailAsync(int orderId);
-
-        /// <summary>
-        /// Send verification email in background after registration
-        /// </summary>
-        /// <param name="email">User email to send verification link to</param>
         Task SendVerificationEmailAsync(string email);
-
-        /// <summary>
-        /// Send OTP verification email in background after registration
-        /// </summary>
-        /// <param name="email">User email to send OTP verification to</param>
         Task SendOtpEmailVerificationAsync(string email);
+
+        Task SendServiceRegistrationCreatedEmailAsync(int registrationId);
+        Task SendServiceRegistrationApprovedEmailAsync(int registrationId);
+        Task SendServiceRegistrationRejectedEmailAsync(int registrationId, string? rejectReason);
+        Task SendServicePaymentSuccessEmailAsync(int registrationId);
+        Task SendServiceScheduleCreatedEmailAsync(int registrationId);
+        Task SendCaretakerReassignedEmailAsync(int progressId);
+
+        Task SendDesignRegistrationCreatedEmailAsync(int registrationId);
+        Task SendDesignRegistrationApprovedEmailAsync(int registrationId);
+        Task SendDesignRegistrationRejectedEmailAsync(int registrationId, string? rejectReason);
+        Task SendDesignCaretakerAssignedEmailAsync(int registrationId);
+        Task SendDesignRegistrationCancelledEmailAsync(int registrationId, string? cancelReason);
     }
 }
