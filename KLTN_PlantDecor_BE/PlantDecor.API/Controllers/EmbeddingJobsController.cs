@@ -8,7 +8,7 @@ using PlantDecor.BusinessLogicLayer.Constants;
 namespace PlantDecor.API.Controllers
 {
     /// <summary>
-    /// API về batch Embeddings
+    /// API về batch Embeddings cho toàn bộ hệ thống
     /// </summary>
     [Route("api/embedding-jobs")]
     [ApiController]
