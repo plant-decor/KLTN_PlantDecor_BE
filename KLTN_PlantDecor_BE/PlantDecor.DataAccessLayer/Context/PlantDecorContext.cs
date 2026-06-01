@@ -519,6 +519,7 @@ public partial class PlantDecorContext : DbContext
             entity.ToTable("DesignTask");
 
             entity.Property(e => e.CustomerFeedback).HasMaxLength(1000);
+            entity.Property(e => e.IsReviewed).HasDefaultValue(false);
             entity.Property(e => e.ReportImageUrl).HasMaxLength(512);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("LOCALTIMESTAMP");
 
@@ -1459,6 +1460,7 @@ public partial class PlantDecorContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.EvidenceImageUrl).HasMaxLength(512);
             entity.Property(e => e.CustomerFeedback).HasMaxLength(1000);
+            entity.Property(e => e.IsReviewed).HasDefaultValue(false);
             entity.Property(e => e.IncidentImageUrl).HasMaxLength(512);
             entity.Property(e => e.HasIncidents).HasDefaultValue(false);
 

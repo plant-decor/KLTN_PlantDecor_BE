@@ -12,6 +12,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? Description { get; set; }
         public string? EvidenceImageUrl { get; set; }
         public string? CustomerFeedback { get; set; }
+        public bool IsReviewed { get; set; }
         public int? CareServiceType { get; set; }
         public string? CareServiceTypeName { get; set; }
         public bool HasIncidents { get; set; }

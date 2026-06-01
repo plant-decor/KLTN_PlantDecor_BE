@@ -125,6 +125,21 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("{id}/mark-reviewed")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> MarkReviewed(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _serviceProgressService.MarkReviewedAsync(managerId, id);
+            return Ok(new ApiResponse<ServiceProgressResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Service progress marked as reviewed successfully",
+                Payload = result
+            });
+        }
+
         /// <summary>
         /// [Caretaker] Gửi báo cáo sự cố của ca làm việc
         /// </summary>

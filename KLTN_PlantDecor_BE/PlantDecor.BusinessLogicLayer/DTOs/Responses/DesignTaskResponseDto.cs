@@ -10,6 +10,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string TaskTypeName { get; set; } = string.Empty;
         public string? ReportImageUrl { get; set; }
         public string? CustomerFeedback { get; set; }
+        public bool IsReviewed { get; set; }
         public DateTime? CreatedAt { get; set; }
         public int Status { get; set; }
         public string StatusName { get; set; } = string.Empty;
