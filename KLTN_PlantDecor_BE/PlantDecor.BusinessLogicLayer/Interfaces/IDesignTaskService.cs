@@ -17,6 +17,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
             DateOnly? from = null,
             DateOnly? to = null);
         Task<DesignTaskResponseDto> AssignTaskAsync(int managerId, int taskId, AssignDesignTaskRequestDto request);
+        Task<DesignTaskResponseDto> SubmitCustomerCommentAsync(int customerId, int taskId, CreateDesignTaskCommentRequestDto request);
         Task<DesignTaskResponseDto> ReportMaterialUsageAsync(int userId, int taskId, ReportDesignTaskMaterialUsageRequestDto request);
         Task<DesignTaskResponseDto> UpdateStatusAsync(int userId, int taskId, UpdateDesignTaskStatusRequestDto request, IFormFile? reportImage = null);
         Task<List<StaffWithSpecializationsResponseDto>> GetEligibleCaretakersForTaskAsync(int managerId, int taskId);

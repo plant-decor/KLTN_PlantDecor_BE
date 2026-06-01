@@ -19,6 +19,7 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                     ? ((TaskTypeEnum)task.TaskType).ToString()
                     : $"Unknown({task.TaskType})",
                 ReportImageUrl = task.ReportImageUrl,
+                CustomerFeedback = task.CustomerFeedback,
                 CreatedAt = task.CreatedAt,
                 Status = task.Status,
                 StatusName = Enum.IsDefined(typeof(DesignTaskStatusEnum), task.Status)

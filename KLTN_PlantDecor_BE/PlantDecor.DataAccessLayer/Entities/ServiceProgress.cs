@@ -27,6 +27,8 @@ public partial class ServiceProgress
 
     public string? IncidentReason { get; set; }
 
+    public string? CustomerFeedback { get; set; }
+
     public int? Status { get; set; }
 
     public DateTime? ActualStartTime { get; set; }

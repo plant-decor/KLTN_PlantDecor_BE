@@ -283,6 +283,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updated.ToResponse();
         }
 
+        public async Task<DesignTaskResponseDto> SubmitCustomerCommentAsync(int customerId, int taskId, CreateDesignTaskCommentRequestDto request)
+        {
+            if (request == null)
+                throw new BadRequestException("Request body is required");
+
+            var taskDetail = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            if (taskDetail.DesignRegistration.UserId != customerId)
+                throw new ForbiddenException("You can only comment on your own design task");
+
+            if (taskDetail.Status != (int)DesignTaskStatusEnum.Completed)
+                throw new BadRequestException("You can only comment after the design task is completed");
+
+            if (string.IsNullOrWhiteSpace(request.Comment))
+                throw new BadRequestException("Comment is required");
+
+            var task = await _unitOfWork.DesignTaskRepository.GetByIdAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            task.CustomerFeedback = request.Comment.Trim();
+
+            _unitOfWork.DesignTaskRepository.PrepareUpdate(task);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found after commenting");
+
+            return updated.ToResponse();
+        }
+
         public async Task<DesignTaskResponseDto> UpdateStatusAsync(int userId, int taskId, UpdateDesignTaskStatusRequestDto request, IFormFile? reportImage = null)
         {
             if (request == null)

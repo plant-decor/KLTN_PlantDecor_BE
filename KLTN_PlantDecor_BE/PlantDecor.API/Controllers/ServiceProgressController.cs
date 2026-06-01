@@ -108,6 +108,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Customer] Gửi nhận xét cho một buổi chăm sóc đã hoàn thành
+        /// </summary>
+        [HttpPost("{id}/customer-comment")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> SubmitCustomerComment(int id, [FromBody] CreateServiceProgressCommentRequestDto request)
+        {
+            var customerId = GetUserId();
+            var result = await _serviceProgressService.SubmitCustomerCommentAsync(customerId, id, request);
+            return Ok(new ApiResponse<ServiceProgressResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Submit customer comment successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Caretaker] Gửi báo cáo sự cố của ca làm việc
         /// </summary>
         [HttpPost("{id}/incident-report")]
