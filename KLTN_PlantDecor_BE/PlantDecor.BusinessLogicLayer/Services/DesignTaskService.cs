@@ -304,12 +304,37 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ?? throw new NotFoundException($"DesignTask {taskId} not found");
 
             task.CustomerFeedback = request.Comment.Trim();
+            task.IsReviewed = false;
 
             _unitOfWork.DesignTaskRepository.PrepareUpdate(task);
             await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
                 ?? throw new NotFoundException($"DesignTask {taskId} not found after commenting");
+
+            return updated.ToResponse();
+        }
+
+        public async Task<DesignTaskResponseDto> MarkReviewedAsync(int managerId, int taskId)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var taskDetail = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            if (taskDetail.DesignRegistration.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            var task = await _unitOfWork.DesignTaskRepository.GetByIdAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found");
+
+            task.IsReviewed = true;
+
+            _unitOfWork.DesignTaskRepository.PrepareUpdate(task);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.DesignTaskRepository.GetByIdWithDetailsAsync(taskId)
+                ?? throw new NotFoundException($"DesignTask {taskId} not found after marking reviewed");
 
             return updated.ToResponse();
         }

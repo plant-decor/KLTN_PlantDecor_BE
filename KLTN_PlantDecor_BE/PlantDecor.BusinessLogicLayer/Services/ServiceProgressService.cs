@@ -136,6 +136,27 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new BadRequestException("Comment is required");
 
             progress.CustomerFeedback = request.Comment.Trim();
+            progress.IsReviewed = false;
+
+            _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            return MapToDto(updated!);
+        }
+
+        public async Task<ServiceProgressResponseDto> MarkReviewedAsync(int managerId, int progressId)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            if (progress == null)
+                throw new NotFoundException($"ServiceProgress {progressId} not found");
+
+            if (progress.ServiceRegistration?.NurseryCareService?.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            progress.IsReviewed = true;
 
             _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
             await _unitOfWork.SaveAsync();
@@ -513,6 +534,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Description = sp.Description,
                 EvidenceImageUrl = sp.EvidenceImageUrl,
                 CustomerFeedback = sp.CustomerFeedback,
+                IsReviewed = sp.IsReviewed,
                 CareServiceType = sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType,
                 CareServiceTypeName = ResolveCareServiceTypeName(sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType),
                 HasIncidents = sp.HasIncidents,

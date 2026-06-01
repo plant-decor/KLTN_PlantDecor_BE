@@ -154,6 +154,21 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("{id}/mark-reviewed")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> MarkReviewed(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _designTaskService.MarkReviewedAsync(managerId, id);
+            return Ok(new ApiResponse<DesignTaskResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Design task marked as reviewed successfully",
+                Payload = result
+            });
+        }
+
         /// <summary>
         /// [Staff/Caretaker] Hoàn thành task thiết kế
         /// </summary>
