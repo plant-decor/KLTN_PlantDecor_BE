@@ -15,6 +15,7 @@
         RefundRequested = 10, // khách hàng đã yêu cầu hoàn tiền, chờ xử lý yêu cầu hoàn tiền
         Refunded = 11, // đã hoàn tiền, đã xử lý yêu cầu hoàn tiền và hoàn tiền thành công
         Rejected = 12, // yêu cầu hoàn tiền đã bị từ chối, có thể do yêu cầu hoàn tiền không hợp lệ hoặc do vấn đề xử lý yêu cầu hoàn tiền
-        PendingConfirmation = 13 // đơn đã giao tới, hệ thống sẽ tự động xác nhận đã nhận được hàng sau một khoảng thời gian nếu không có khiếu nại từ khách hàng
+        PendingConfirmation = 13, // đơn đã giao tới, hệ thống sẽ tự động xác nhận đã nhận được hàng sau một khoảng thời gian nếu không có khiếu nại từ khách hàng
+        Confirmed = 14 // khách hàng đã xác nhận đã nhận được hàng cho nursery order
     }
 }

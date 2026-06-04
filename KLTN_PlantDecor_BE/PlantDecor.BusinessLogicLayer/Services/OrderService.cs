@@ -215,6 +215,60 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return orders.ToResponseList();
         }
 
+        public async Task<OrderResponseDto> ConfirmNurseryOrderReceivedAsync(int currentUserId, int nurseryOrderId)
+        {
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId)
+                ?? throw new NotFoundException($"Order {nurseryOrder.OrderId} not found");
+
+            if (order.UserId != currentUserId)
+                throw new ForbiddenException("You don't have access to this order");
+
+            var targetNurseryOrder = order.NurseryOrders.FirstOrDefault(no => no.Id == nurseryOrderId)
+                ?? throw new BadRequestException($"NurseryOrder {nurseryOrderId} does not belong to order {order.Id}");
+
+            if (targetNurseryOrder.Status == (int)OrderStatusEnum.RemainingPaymentPending)
+                throw new BadRequestException("Please complete the remaining payment before confirming receipt.");
+
+            if (targetNurseryOrder.Status == (int)OrderStatusEnum.PendingConfirmation)
+                return order.ToResponse();
+
+            if (targetNurseryOrder.Status != (int)OrderStatusEnum.Delivered)
+                throw new BadRequestException("Nursery order can only be confirmed after it has been delivered.");
+
+            var now = DateTime.Now;
+            targetNurseryOrder.Status = (int)OrderStatusEnum.Confirmed;
+            targetNurseryOrder.UpdatedAt = now;
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(targetNurseryOrder);
+
+            var areAllNurseryOrdersConfirmed = order.NurseryOrders
+                .All(no => no.Id == targetNurseryOrder.Id || no.Status == (int)OrderStatusEnum.Confirmed);
+
+            if (areAllNurseryOrdersConfirmed)
+            {
+                order.Status = (int)OrderStatusEnum.PendingConfirmation;
+                order.UpdatedAt = now;
+
+                foreach (var relatedNurseryOrder in order.NurseryOrders)
+                {
+                    relatedNurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                    relatedNurseryOrder.UpdatedAt = now;
+                    _unitOfWork.NurseryOrderRepository.PrepareUpdate(relatedNurseryOrder);
+                }
+
+                _unitOfWork.OrderRepository.PrepareUpdate(order);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            var updatedOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(order.Id)
+                ?? throw new NotFoundException($"Order {order.Id} not found");
+
+            return updatedOrder.ToResponse();
+        }
+
         public async Task<PaginatedResult<OrderResponseDto>> GetDesignOrdersForOperatorAsync(
             int operatorId,
             Pagination pagination,

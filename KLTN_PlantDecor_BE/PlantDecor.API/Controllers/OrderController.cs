@@ -166,6 +166,25 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Customer xác nhận đã nhận hàng cho một nursery order
+        /// </summary>
+        [HttpPatch("nursery-orders/{nurseryOrderId}/confirm-received")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> ConfirmNurseryOrderReceived(int nurseryOrderId)
+        {
+            var userId = GetUserId();
+            var result = await _orderService.ConfirmNurseryOrderReceivedAsync(userId, nurseryOrderId);
+
+            return Ok(new ApiResponse<OrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Nursery order receipt confirmed successfully",
+                Payload = result
+            });
+        }
+
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
