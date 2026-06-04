@@ -512,21 +512,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     {
                         await EnsureRemainingBalanceInvoiceForDepositAsync(parentOrder, now);
                         parentOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
-                        nurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
-                        nurseryOrder.UpdatedAt = now;
-                    }
-                    else
-                    {
-                        parentOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
-                        nurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
 
                         foreach (var relatedNurseryOrder in parentOrder.NurseryOrders
                                      .Where(no => no.Id == nurseryOrder.Id || no.Status == (int)OrderStatusEnum.Delivered))
                         {
-                            relatedNurseryOrder.Status = (int)OrderStatusEnum.PendingConfirmation;
+                            relatedNurseryOrder.Status = (int)OrderStatusEnum.RemainingPaymentPending;
                             relatedNurseryOrder.UpdatedAt = now;
                             _unitOfWork.NurseryOrderRepository.PrepareUpdate(relatedNurseryOrder);
                         }
+                    }
+                    else
+                    {
+                        parentOrder.Status = (int)OrderStatusEnum.Delivered;
                     }
 
                     parentOrder.UpdatedAt = now;
