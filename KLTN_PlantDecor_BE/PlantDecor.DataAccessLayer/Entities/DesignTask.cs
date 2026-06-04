@@ -14,6 +14,8 @@ namespace PlantDecor.DataAccessLayer.Entities
         public DateOnly? ScheduledDate { get; set; }
         public int TaskType { get; set; }
         public string? ReportImageUrl { get; set; }
+        public string? CustomerFeedback { get; set; }
+        public bool IsReviewed { get; set; }
         public DateTime? CreatedAt { get; set; }
         public int Status { get; set; }
         public virtual DesignRegistration DesignRegistration { get; set; } = null!;

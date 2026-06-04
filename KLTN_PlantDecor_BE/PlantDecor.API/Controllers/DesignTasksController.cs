@@ -137,6 +137,39 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// [Customer] Gửi nhận xét cho một task thiết kế đã hoàn thành
+        /// </summary>
+        [HttpPost("{id}/customer-comment")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> SubmitCustomerComment(int id, [FromBody] CreateDesignTaskCommentRequestDto request)
+        {
+            var customerId = GetUserId();
+            var result = await _designTaskService.SubmitCustomerCommentAsync(customerId, id, request);
+            return Ok(new ApiResponse<DesignTaskResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Submit customer comment successfully",
+                Payload = result
+            });
+        }
+
+        [HttpPost("{id}/mark-reviewed")]
+        [Authorize(Roles = "Manager,Staff")]
+        public async Task<IActionResult> MarkReviewed(int id)
+        {
+            var managerId = GetUserId();
+            var result = await _designTaskService.MarkReviewedAsync(managerId, id);
+            return Ok(new ApiResponse<DesignTaskResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Design task marked as reviewed successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// [Staff/Caretaker] Hoàn thành task thiết kế
         /// </summary>
         [HttpPost("{id}/complete")]

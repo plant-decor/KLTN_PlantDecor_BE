@@ -120,6 +120,51 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(updated!);
         }
 
+        public async Task<ServiceProgressResponseDto> SubmitCustomerCommentAsync(int customerId, int progressId, CreateServiceProgressCommentRequestDto request)
+        {
+            var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            if (progress == null)
+                throw new NotFoundException($"ServiceProgress {progressId} not found");
+
+            if (progress.ServiceRegistration?.UserId != customerId)
+                throw new ForbiddenException("You can only comment on your own service progress");
+
+            if (progress.Status != (int)ServiceProgressStatusEnum.Completed)
+                throw new BadRequestException("You can only comment after the service progress is completed");
+
+            if (string.IsNullOrWhiteSpace(request.Comment))
+                throw new BadRequestException("Comment is required");
+
+            progress.CustomerFeedback = request.Comment.Trim();
+            progress.IsReviewed = false;
+
+            _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            return MapToDto(updated!);
+        }
+
+        public async Task<ServiceProgressResponseDto> MarkReviewedAsync(int managerId, int progressId)
+        {
+            var nursery = await ResolveOperatorNurseryAsync(managerId);
+
+            var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            if (progress == null)
+                throw new NotFoundException($"ServiceProgress {progressId} not found");
+
+            if (progress.ServiceRegistration?.NurseryCareService?.NurseryId != nursery.Id)
+                throw new ForbiddenException("This task does not belong to your nursery");
+
+            progress.IsReviewed = true;
+
+            _unitOfWork.ServiceProgressRepository.PrepareUpdate(progress);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
+            return MapToDto(updated!);
+        }
+
         public async Task<ServiceProgressResponseDto> SubmitIncidentReportAsync(int caretakerId, int progressId, SubmitIncidentReportRequestDto request, IFormFile incidentImage)
         {
             var progress = await _unitOfWork.ServiceProgressRepository.GetByIdWithDetailsAsync(progressId);
@@ -488,6 +533,8 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 ActualEndTime = sp.ActualEndTime,
                 Description = sp.Description,
                 EvidenceImageUrl = sp.EvidenceImageUrl,
+                CustomerFeedback = sp.CustomerFeedback,
+                IsReviewed = sp.IsReviewed,
                 CareServiceType = sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType,
                 CareServiceTypeName = ResolveCareServiceTypeName(sp.ServiceRegistration?.NurseryCareService?.CareServicePackage?.ServiceType),
                 HasIncidents = sp.HasIncidents,
