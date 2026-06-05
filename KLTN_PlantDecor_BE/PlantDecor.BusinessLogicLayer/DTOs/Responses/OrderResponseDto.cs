@@ -49,6 +49,10 @@
         public string? ShipperNote { get; set; }
         public string? DeliveryNote { get; set; }
         public string? DeliveryImageUrl { get; set; }
+        public decimal? RefundedAmount { get; set; }
+        public string? RefundReference { get; set; }
+        public DateTime? RefundedAt { get; set; }
+        public string? ManagerRefundNote { get; set; }
         public string? Note { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
     }

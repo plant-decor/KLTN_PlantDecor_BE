@@ -178,6 +178,121 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapItemToResponse(item);
         }
 
+        public async Task<ManagerReturnTicketAssignmentResponseDto> ApproveAssignmentAsync(int managerId, int assignmentId, ApproveReturnTicketAssignmentRequestDto request)
+        {
+            var manager = await GetValidatedManagerAsync(managerId);
+            var assignment = await GetOwnedAssignmentAsync(manager, assignmentId);
+            var assignmentItems = GetAssignmentItems(assignment);
+
+            if (assignmentItems.Any(i => i.Status != (int)ReturnTicketItemStatusEnum.Pending))
+                throw new BadRequestException("All items must be in Pending status to approve the whole assignment");
+
+            var now = DateTime.Now;
+            foreach (var item in assignmentItems)
+            {
+                item.ApprovedQuantity = item.RequestedQuantity;
+                item.ManagerDecisionNote = request.Note;
+                item.Status = (int)ReturnTicketItemStatusEnum.Approved;
+                item.UpdatedAt = now;
+            }
+
+            FinalizeAssignmentAndTicketStatus(assignment, now);
+
+            _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
+            await _unitOfWork.SaveAsync();
+
+            foreach (var item in assignmentItems)
+            {
+                await InvalidateManagerItemCachesAsync(item);
+            }
+
+            return MapAssignmentToResponse(assignment);
+        }
+
+        public async Task<ManagerReturnTicketAssignmentResponseDto> RejectAssignmentAsync(int managerId, int assignmentId, RejectReturnTicketAssignmentRequestDto request)
+        {
+            var manager = await GetValidatedManagerAsync(managerId);
+            var assignment = await GetOwnedAssignmentAsync(manager, assignmentId);
+            var assignmentItems = GetAssignmentItems(assignment);
+
+            if (assignmentItems.Any(i => i.Status != (int)ReturnTicketItemStatusEnum.Pending))
+                throw new BadRequestException("All items must be in Pending status to reject the whole assignment");
+
+            var now = DateTime.Now;
+            foreach (var item in assignmentItems)
+            {
+                item.ApprovedQuantity = 0;
+                item.ManagerDecisionNote = request.Note;
+                item.Status = (int)ReturnTicketItemStatusEnum.Rejected;
+                item.UpdatedAt = now;
+
+                if (item.NurseryOrderDetail != null)
+                {
+                    item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Rejected;
+                }
+
+                await UpdateInventoryAfterRejectAsync(item);
+            }
+
+            FinalizeAssignmentAndTicketStatus(assignment, now);
+            UpdateOrderStatusesAfterManagerDecision(assignment.ReturnTicket, now);
+
+            _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
+            await _unitOfWork.SaveAsync();
+
+            return MapAssignmentToResponse(assignment);
+        }
+
+        public async Task<ManagerReturnTicketAssignmentResponseDto> RefundAssignmentAsync(int managerId, int assignmentId, RefundReturnTicketAssignmentRequestDto request)
+        {
+            var manager = await GetValidatedManagerAsync(managerId);
+            var assignment = await GetOwnedAssignmentAsync(manager, assignmentId);
+            var assignmentItems = GetAssignmentItems(assignment);
+
+            if (assignmentItems.Any(i => i.Status != (int)ReturnTicketItemStatusEnum.Approved))
+                throw new BadRequestException("All items must be in Approved status to refund the whole assignment");
+
+            var now = DateTime.Now;
+            foreach (var item in assignmentItems)
+            {
+                var approvedQuantity = item.ApprovedQuantity ?? 0;
+                if (approvedQuantity <= 0)
+                    throw new BadRequestException($"ApprovedQuantity is invalid for ReturnTicketItem {item.Id}");
+
+                var unitPrice = item.NurseryOrderDetail?.UnitPrice ?? 0;
+                var refundAmount = unitPrice * approvedQuantity;
+                if (refundAmount <= 0)
+                    throw new BadRequestException($"RefundedAmount is invalid for ReturnTicketItem {item.Id}");
+
+                item.Status = (int)ReturnTicketItemStatusEnum.Refunded;
+                item.RefundedAmount = refundAmount;
+                item.RefundReference = request.RefundReference;
+                item.RefundedAt = now;
+                item.ManagerDecisionNote = string.IsNullOrWhiteSpace(request.Note) ? item.ManagerDecisionNote : request.Note;
+                item.UpdatedAt = now;
+
+                if (item.NurseryOrderDetail != null)
+                {
+                    item.NurseryOrderDetail.Status = (int)OrderStatusEnum.Refunded;
+                }
+
+                await UpdateInventoryAfterRefundAsync(item, approvedQuantity);
+            }
+
+            FinalizeAssignmentAndTicketStatus(assignment, now);
+            UpdateOrderStatusesAfterManagerDecision(assignment.ReturnTicket, now);
+
+            _unitOfWork.ReturnTicketAssignmentRepository.PrepareUpdate(assignment);
+            await _unitOfWork.SaveAsync();
+
+            foreach (var item in assignmentItems)
+            {
+                await InvalidateManagerItemCachesAsync(item);
+            }
+
+            return MapAssignmentToResponse(assignment);
+        }
+
         private static ReturnTicketItem GetAssignmentItem(ReturnTicketAssignment assignment, int itemId)
         {
             var item = assignment.ReturnTicket.ReturnTicketItems.FirstOrDefault(i => i.Id == itemId)
@@ -187,6 +302,18 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 throw new ForbiddenException("This item does not belong to your nursery assignment");
 
             return item;
+        }
+
+        private static List<ReturnTicketItem> GetAssignmentItems(ReturnTicketAssignment assignment)
+        {
+            var items = assignment.ReturnTicket.ReturnTicketItems
+                .Where(i => i.NurseryOrderDetail?.NurseryOrder?.NurseryId == assignment.NurseryId)
+                .ToList();
+
+            if (!items.Any())
+                throw new NotFoundException($"No return ticket items found for assignment {assignment.Id}");
+
+            return items;
         }
 
         private static void FinalizeAssignmentAndTicketStatus(ReturnTicketAssignment assignment, DateTime now)

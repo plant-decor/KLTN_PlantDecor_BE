@@ -952,6 +952,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ScheduledDate = table.Column<DateOnly>(type: "date", nullable: true),
                     TaskType = table.Column<int>(type: "integer", nullable: false),
                     ReportImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    CustomerFeedback = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    IsReviewed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     Status = table.Column<int>(type: "integer", nullable: false)
                 },
@@ -1710,6 +1712,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     ShipperNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DeliveryNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DeliveryImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    RefundedAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),
+                    RefundReference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    RefundedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ManagerRefundNote = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "LOCALTIMESTAMP")
                 },
@@ -2064,6 +2070,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     HasIncidents = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     IncidentImageUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IncidentReason = table.Column<string>(type: "text", nullable: true),
+                    CustomerFeedback = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    IsReviewed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     Status = table.Column<int>(type: "integer", nullable: true),
                     ActualStartTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     ActualEndTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)

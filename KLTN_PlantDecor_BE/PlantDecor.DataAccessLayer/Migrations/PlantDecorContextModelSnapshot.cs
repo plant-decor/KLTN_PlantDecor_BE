@@ -800,8 +800,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("LOCALTIMESTAMP");
 
+                    b.Property<string>("CustomerFeedback")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<int>("DesignRegistrationId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsReviewed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("ReportImageUrl")
                         .HasMaxLength(512)
@@ -1551,6 +1560,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("ManagerRefundNote")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1563,6 +1576,17 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<int?>("PaymentStrategy")
                         .HasColumnType("integer");
+
+                    b.Property<string>("RefundReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("RefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<decimal?>("RemainingAmount")
                         .HasPrecision(18, 2)
@@ -2756,6 +2780,10 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Property<int?>("CaretakerId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CustomerFeedback")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("CustomerNote")
                         .HasColumnType("text");
 
@@ -2778,6 +2806,11 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
                     b.Property<string>("IncidentReason")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsReviewed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int?>("ServiceRegistrationId")
                         .HasColumnType("integer");
@@ -4297,7 +4330,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.Order", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.TierPackage", "TierPackage")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("TierPackageId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("Order_TierPackageId_fkey");
@@ -4845,7 +4878,7 @@ namespace PlantDecor.DataAccessLayer.Migrations
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.UserSubscription", b =>
                 {
                     b.HasOne("PlantDecor.DataAccessLayer.Entities.Invoice", "Invoice")
-                        .WithMany()
+                        .WithMany("UserSubscriptions")
                         .HasForeignKey("InvoiceId")
                         .HasConstraintName("UserSubscription_InvoiceId_fkey");
 
@@ -5000,6 +5033,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
                     b.Navigation("InvoiceDetails");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("UserSubscriptions");
                 });
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.LayoutDesign", b =>
@@ -5203,6 +5238,8 @@ namespace PlantDecor.DataAccessLayer.Migrations
 
             modelBuilder.Entity("PlantDecor.DataAccessLayer.Entities.TierPackage", b =>
                 {
+                    b.Navigation("Orders");
+
                     b.Navigation("UserSubscriptions");
                 });
 

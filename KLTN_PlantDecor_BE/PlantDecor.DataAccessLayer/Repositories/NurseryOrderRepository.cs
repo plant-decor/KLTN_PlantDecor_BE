@@ -150,7 +150,10 @@ namespace PlantDecor.DataAccessLayer.Repositories
             var refundedAmount = await BuildRefundedReturnItemDateRangeQuery(fromInclusive, toExclusive)
                 .SumAsync(i => i.RefundedAmount ?? 0m);
 
-            return paidAmount - refundedAmount;
+            var failedDeliveryRefundedAmount = await BuildFailedDeliveryRefundDateRangeQuery(fromInclusive, toExclusive)
+                .SumAsync(no => no.RefundedAmount ?? 0m);
+
+            return paidAmount - refundedAmount - failedDeliveryRefundedAmount;
         }
 
         public async Task<int> CountPaidSystemOrdersAsync(DateTime fromInclusive, DateTime toExclusive)
@@ -252,10 +255,26 @@ namespace PlantDecor.DataAccessLayer.Repositories
                 })
                 .ToListAsync();
 
+            var failedDeliveryRefundDeductions = await BuildFailedDeliveryRefundDateRangeQuery(fromInclusive, toExclusive)
+                .GroupBy(no => new
+                {
+                    no.NurseryId,
+                    NurseryName = no.Nursery.Name
+                })
+                .Select(g => new NurseryRevenueAggregate
+                {
+                    NurseryId = g.Key.NurseryId,
+                    NurseryName = g.Key.NurseryName ?? string.Empty,
+                    Revenue = -g.Sum(x => x.RefundedAmount ?? 0m),
+                    TotalOrders = 0
+                })
+                .ToListAsync();
+
             return productRevenue
                 .Concat(serviceRevenue)
                 .Concat(designRevenue)
                 .Concat(refundDeductions)
+                .Concat(failedDeliveryRefundDeductions)
                 .GroupBy(x => new { x.NurseryId, x.NurseryName })
                 .Select(g => new NurseryRevenueAggregate
                 {
@@ -386,6 +405,13 @@ namespace PlantDecor.DataAccessLayer.Repositories
             return _context.ReturnTicketItems
                 .Where(i => i.Status == (int)ReturnTicketItemStatusEnum.Refunded)
                 .Where(i => i.RefundedAt.HasValue && i.RefundedAt.Value >= fromInclusive && i.RefundedAt.Value < toExclusive);
+        }
+
+        private IQueryable<NurseryOrder> BuildFailedDeliveryRefundDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)
+        {
+            return _context.NurseryOrders
+                .Where(no => no.Status == (int)OrderStatusEnum.Refunded)
+                .Where(no => no.RefundedAt.HasValue && no.RefundedAt.Value >= fromInclusive && no.RefundedAt.Value < toExclusive);
         }
 
         private IQueryable<NurseryOrder> BuildOrderDateRangeQuery(DateTime fromInclusive, DateTime toExclusive)

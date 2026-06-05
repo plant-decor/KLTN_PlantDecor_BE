@@ -185,6 +185,27 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Customer xác nhận chưa nhận được hàng cho một nursery order
+        /// </summary>
+        [HttpPatch("nursery-orders/{nurseryOrderId}/confirm-not-received")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> ConfirmNurseryOrderNotReceived(
+            int nurseryOrderId,
+            [FromBody] ConfirmNotReceivedRequestDto request)
+        {
+            var userId = GetUserId();
+            var result = await _orderService.ConfirmNurseryOrderNotReceivedAsync(userId, nurseryOrderId, request);
+
+            return Ok(new ApiResponse<OrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Nursery order not received report submitted successfully",
+                Payload = result
+            });
+        }
+
         private int GetUserId()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

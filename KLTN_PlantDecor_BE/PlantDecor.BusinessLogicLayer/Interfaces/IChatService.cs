@@ -7,6 +7,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IChatService
     {
         Task<bool> IsParticipantAsync(int userId, int conversationId);
+        Task<List<int>> GetParticipantIdsAsync(int conversationId);
         Task<ChatMessage> SendMessageAsync(int userId, int conversationId, string content);
 
         Task<List<ConversationResponseDto>> GetUserConversationsAsync(int userId);
