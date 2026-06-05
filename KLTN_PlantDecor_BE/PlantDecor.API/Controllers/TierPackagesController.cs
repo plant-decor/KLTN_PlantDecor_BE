@@ -8,6 +8,9 @@ using PlantDecor.BusinessLogicLayer.Interfaces;
 
 namespace PlantDecor.API.Controllers
 {
+    /// <summary>
+    /// API quản lý Tier Package (Admin)
+    /// </summary>
     [Route("api")]
     [ApiController]
     public class TierPackagesController : ControllerBase
