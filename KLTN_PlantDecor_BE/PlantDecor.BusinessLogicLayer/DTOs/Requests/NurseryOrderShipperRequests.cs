@@ -26,6 +26,13 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Requests
         public IFormFile? DeliveryImage { get; set; }
     }
 
+    public class ConfirmNotReceivedRequestDto
+    {
+        [Required(ErrorMessage = "Please enter the reason why the order was not received")]
+        [StringLength(255)]
+        public string Reason { get; set; } = null!;
+    }
+
     public class UpdateNurseryOrderShipperRequestDto
     {
         [Required(ErrorMessage = "ShipperId is required")]

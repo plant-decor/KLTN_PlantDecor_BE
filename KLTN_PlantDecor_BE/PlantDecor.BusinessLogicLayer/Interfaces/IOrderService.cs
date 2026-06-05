@@ -15,6 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
             Pagination pagination,
             OrderStatusEnum? status = null);
         Task<OrderResponseDto> ConfirmNurseryOrderReceivedAsync(int currentUserId, int nurseryOrderId);
+        Task<OrderResponseDto> ConfirmNurseryOrderNotReceivedAsync(int currentUserId, int nurseryOrderId, ConfirmNotReceivedRequestDto request);
         Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId);
         Task<OrderResponseDto> MarkOrderAsDeliveredAsync(int orderId);
         Task<List<OrderResponseDto>> GetOrdersByEmailAsync(string email);
