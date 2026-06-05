@@ -159,5 +159,15 @@ namespace PlantDecor.DataAccessLayer.Repositories
         {
             await base.UpdateAsync(conversation);
         }
+
+        public async Task<List<int>> GetActiveConversationIdsForConsultantAsync(int consultantId)
+        {
+            return await _context.ChatSessions
+                .Where(cs => cs.Status == (int)ConversationStatus.Active
+                             && cs.ChatParticipants.Any(cp => cp.UserId == consultantId
+                                 && cp.User.RoleId == (int)RoleEnum.Consultant))
+                .Select(cs => cs.Id)
+                .ToListAsync();
+        }
     }
 }

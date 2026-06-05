@@ -23,6 +23,7 @@ namespace PlantDecor.BusinessLogicLayer.DTOs.Responses
         public string? PhoneNumber { get; set; }
         public string? AvatarUrl { get; set; }
         public DateTime? JoinedAt { get; set; }
+        public bool IsOnline { get; set; }
     }
 
     public class MessageResponseDto
