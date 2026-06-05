@@ -120,6 +120,182 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToResponse(returnTicket);
         }
 
+        public async Task<ReturnTicketResponseDto> CreateWholeOrderReturnTicketAsync(int customerId, CreateWholeOrderReturnTicketRequestDto request)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(request.OrderId)
+                ?? throw new NotFoundException($"Order {request.OrderId} not found");
+
+            if (order.UserId != customerId)
+                throw new ForbiddenException("You don't have access to this order");
+
+            if (order.Status != (int)OrderStatusEnum.PendingConfirmation)
+                throw new BadRequestException("Return ticket is only allowed when order is PendingConfirmation");
+
+            var allOrderDetails = order.NurseryOrders
+                .SelectMany(no => no.NurseryOrderDetails, (no, detail) => new { NurseryOrder = no, Detail = detail })
+                .ToList();
+
+            if (!allOrderDetails.Any())
+                throw new BadRequestException("Order does not contain any returnable items");
+
+            var alreadyInRefundFlowDetailIds = allOrderDetails
+                .Where(x => x.Detail.Status == (int)OrderStatusEnum.RefundRequested
+                    || x.Detail.Status == (int)OrderStatusEnum.Refunded)
+                .Select(x => x.Detail.Id)
+                .ToList();
+
+            if (alreadyInRefundFlowDetailIds.Any())
+                throw new ConflictException($"NurseryOrderDetail(s) already have a refund flow: {string.Join(", ", alreadyInRefundFlowDetailIds)}");
+
+            var now = DateTime.Now;
+            var returnTicket = new ReturnTicket
+            {
+                OrderId = order.Id,
+                CustomerId = customerId,
+                Reason = request.Reason,
+                Status = (int)ReturnTicketStatusEnum.Pending,
+                TotalRefundedAmount = 0,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            var nurseryIds = new HashSet<int>();
+
+            foreach (var detailPair in allOrderDetails)
+            {
+                var detail = detailPair.Detail;
+                var nurseryOrder = detailPair.NurseryOrder;
+                var purchasedQuantity = detail.Quantity ?? 0;
+
+                if (purchasedQuantity <= 0)
+                    continue;
+
+                returnTicket.ReturnTicketItems.Add(new ReturnTicketItem
+                {
+                    NurseryOrderDetailId = detail.Id,
+                    RequestedQuantity = purchasedQuantity,
+                    Reason = request.Reason,
+                    Status = (int)ReturnTicketItemStatusEnum.Pending,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+
+                detail.Status = (int)OrderStatusEnum.RefundRequested;
+                nurseryIds.Add(nurseryOrder.NurseryId);
+            }
+
+            if (!returnTicket.ReturnTicketItems.Any())
+                throw new BadRequestException("Order does not contain any returnable items");
+
+            var managers = (await _unitOfWork.UserRepository.GetAllAsync())
+                .Where(u => u.RoleId == (int)RoleEnum.Manager && u.NurseryId.HasValue && nurseryIds.Contains(u.NurseryId.Value))
+                .ToList();
+
+            foreach (var nurseryId in nurseryIds)
+            {
+                var manager = managers.FirstOrDefault(m => m.NurseryId == nurseryId);
+
+                returnTicket.ReturnTicketAssignments.Add(new ReturnTicketAssignment
+                {
+                    NurseryId = nurseryId,
+                    ManagerId = manager?.Id,
+                    Manager = manager,
+                    Status = (int)ReturnTicketAssignmentStatusEnum.Pending,
+                    AssignedAt = now,
+                    UpdatedAt = now
+                });
+            }
+
+            _unitOfWork.ReturnTicketRepository.PrepareCreate(returnTicket);
+            _unitOfWork.OrderRepository.PrepareUpdate(order);
+            await _unitOfWork.SaveAsync();
+
+            return MapToResponse(returnTicket);
+        }
+
+        public async Task<ReturnTicketResponseDto> CreateNurseryOrderReturnTicketAsync(int customerId, CreateNurseryOrderReturnTicketRequestDto request)
+        {
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(request.NurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {request.NurseryOrderId} not found");
+
+            var order = nurseryOrder.Order
+                ?? throw new NotFoundException($"Order {nurseryOrder.OrderId} not found");
+
+            if (order.UserId != customerId)
+                throw new ForbiddenException("You don't have access to this nursery order");
+
+            if (order.Status != (int)OrderStatusEnum.PendingConfirmation)
+                throw new BadRequestException("Return ticket is only allowed when order is PendingConfirmation");
+
+            if (!nurseryOrder.NurseryOrderDetails.Any())
+                throw new BadRequestException("Nursery order does not contain any returnable items");
+
+            var alreadyInRefundFlowDetailIds = nurseryOrder.NurseryOrderDetails
+                .Where(d => d.Status == (int)OrderStatusEnum.RefundRequested
+                    || d.Status == (int)OrderStatusEnum.Refunded)
+                .Select(d => d.Id)
+                .ToList();
+
+            if (alreadyInRefundFlowDetailIds.Any())
+                throw new ConflictException($"NurseryOrderDetail(s) already have a refund flow: {string.Join(", ", alreadyInRefundFlowDetailIds)}");
+
+            var now = DateTime.Now;
+            var returnTicket = new ReturnTicket
+            {
+                OrderId = order.Id,
+                CustomerId = customerId,
+                Reason = request.Reason,
+                Status = (int)ReturnTicketStatusEnum.Pending,
+                TotalRefundedAmount = 0,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            foreach (var detail in nurseryOrder.NurseryOrderDetails)
+            {
+                var purchasedQuantity = detail.Quantity ?? 0;
+
+                if (purchasedQuantity <= 0)
+                    continue;
+
+                returnTicket.ReturnTicketItems.Add(new ReturnTicketItem
+                {
+                    NurseryOrderDetailId = detail.Id,
+                    RequestedQuantity = purchasedQuantity,
+                    Reason = request.Reason,
+                    Status = (int)ReturnTicketItemStatusEnum.Pending,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+
+                detail.Status = (int)OrderStatusEnum.RefundRequested;
+            }
+
+            if (!returnTicket.ReturnTicketItems.Any())
+                throw new BadRequestException("Nursery order does not contain any returnable items");
+
+            var manager = (await _unitOfWork.UserRepository.GetAllAsync())
+                .FirstOrDefault(u => u.RoleId == (int)RoleEnum.Manager
+                    && u.NurseryId.HasValue
+                    && u.NurseryId.Value == nurseryOrder.NurseryId);
+
+            returnTicket.ReturnTicketAssignments.Add(new ReturnTicketAssignment
+            {
+                NurseryId = nurseryOrder.NurseryId,
+                ManagerId = manager?.Id,
+                Manager = manager,
+                Status = (int)ReturnTicketAssignmentStatusEnum.Pending,
+                AssignedAt = now,
+                UpdatedAt = now
+            });
+
+            _unitOfWork.ReturnTicketRepository.PrepareCreate(returnTicket);
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+
+            return MapToResponse(returnTicket);
+        }
+
         public async Task<List<ReturnTicketResponseDto>> GetMyReturnTicketsAsync(int customerId)
         {
             var tickets = await _unitOfWork.ReturnTicketRepository.GetByCustomerIdWithDetailsAsync(customerId);

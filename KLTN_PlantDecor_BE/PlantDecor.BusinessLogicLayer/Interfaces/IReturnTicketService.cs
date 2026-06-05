@@ -7,6 +7,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
     public interface IReturnTicketService
     {
         Task<ReturnTicketResponseDto> CreateReturnTicketAsync(int customerId, CreateReturnTicketRequestDto request);
+        Task<ReturnTicketResponseDto> CreateWholeOrderReturnTicketAsync(int customerId, CreateWholeOrderReturnTicketRequestDto request);
+        Task<ReturnTicketResponseDto> CreateNurseryOrderReturnTicketAsync(int customerId, CreateNurseryOrderReturnTicketRequestDto request);
         Task<List<ReturnTicketResponseDto>> GetMyReturnTicketsAsync(int customerId);
         Task<ReturnTicketItemResponseDto> UploadReturnTicketItemImagesAsync(int customerId, int returnTicketId, int returnTicketItemId, List<IFormFile> files);
     }
