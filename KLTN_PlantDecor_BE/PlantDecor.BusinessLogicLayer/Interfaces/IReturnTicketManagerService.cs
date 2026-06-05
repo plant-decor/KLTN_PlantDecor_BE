@@ -11,5 +11,8 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<ReturnTicketItemResponseDto> ApproveItemAsync(int managerId, int assignmentId, int itemId, ApproveReturnTicketItemRequestDto request);
         Task<ReturnTicketItemResponseDto> RejectItemAsync(int managerId, int assignmentId, int itemId, RejectReturnTicketItemRequestDto request);
         Task<ReturnTicketItemResponseDto> RefundItemAsync(int managerId, int assignmentId, int itemId, RefundReturnTicketItemRequestDto request);
+        Task<ManagerReturnTicketAssignmentResponseDto> ApproveAssignmentAsync(int managerId, int assignmentId, ApproveReturnTicketAssignmentRequestDto request);
+        Task<ManagerReturnTicketAssignmentResponseDto> RejectAssignmentAsync(int managerId, int assignmentId, RejectReturnTicketAssignmentRequestDto request);
+        Task<ManagerReturnTicketAssignmentResponseDto> RefundAssignmentAsync(int managerId, int assignmentId, RefundReturnTicketAssignmentRequestDto request);
     }
 }
