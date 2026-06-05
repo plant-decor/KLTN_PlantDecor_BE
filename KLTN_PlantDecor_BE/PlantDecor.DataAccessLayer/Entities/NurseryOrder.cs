@@ -37,6 +37,14 @@ public partial class NurseryOrder
 
     public string? DeliveryImageUrl { get; set; }
 
+    public decimal? RefundedAmount { get; set; }
+
+    public string? RefundReference { get; set; }
+
+    public DateTime? RefundedAt { get; set; }
+
+    public string? ManagerRefundNote { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
