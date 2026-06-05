@@ -16,11 +16,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeZoneInfo _vnTimeZone;
         private readonly IAzureOpenAIService _azureOpenAIService;
+        private readonly IOnlineTracker _onlineTracker;
 
-        public ChatService(IUnitOfWork unitOfWork, IConfiguration configuration, IAzureOpenAIService azureOpenAIService)
+        public ChatService(IUnitOfWork unitOfWork, IConfiguration configuration, IAzureOpenAIService azureOpenAIService, IOnlineTracker onlineTracker)
         {
             _unitOfWork = unitOfWork;
             _azureOpenAIService = azureOpenAIService;
+            _onlineTracker = onlineTracker;
             var timeZoneId = configuration["TimeZoneId"] ?? "SE Asia Standard Time";
             _vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
@@ -80,15 +82,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Status = conv.Status,
                     StartedAt = conv.StartedAt,
                     EndedAt = conv.EndedAt,
-                    Participants = conv.ChatParticipants.Select(p => new ParticipantResponseDto
-                    {
-                        UserId = p.UserId,
-                        FullName = p.User?.UserProfile?.FullName,
-                        Email = p.User?.Email,
-                        PhoneNumber = p.User?.PhoneNumber,
-                        AvatarUrl = p.User?.AvatarUrl,
-                        JoinedAt = p.JoinedAt
-                    }).ToList(),
+                    Participants = conv.ChatParticipants.Select(ToParticipantDto).ToList(),
                     LatestMessage = latestMessage != null ? new MessageResponseDto
                     {
                         Id = latestMessage.Id,
@@ -428,15 +422,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Status = existingConversation.Status,
                     StartedAt = existingConversation.StartedAt,
                     EndedAt = existingConversation.EndedAt,
-                    Participants = existingConversation.ChatParticipants.Select(p => new ParticipantResponseDto
-                    {
-                        UserId = p.UserId,
-                        FullName = p.User?.UserProfile?.FullName,
-                        Email = p.User?.Email,
-                        PhoneNumber = p.User?.PhoneNumber,
-                        AvatarUrl = p.User?.AvatarUrl,
-                        JoinedAt = p.JoinedAt
-                    }).ToList()
+                    Participants = existingConversation.ChatParticipants.Select(ToParticipantDto).ToList()
                 };
             }
 
@@ -520,15 +506,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Status = conv.Status,
                     StartedAt = conv.StartedAt,
                     EndedAt = conv.EndedAt,
-                    Participants = conv.ChatParticipants.Select(p => new ParticipantResponseDto
-                    {
-                        UserId = p.UserId,
-                        FullName = p.User?.UserProfile?.FullName,
-                        Email = p.User?.Email,
-                        PhoneNumber = p.User?.PhoneNumber,
-                        AvatarUrl = p.User?.AvatarUrl,
-                        JoinedAt = p.JoinedAt
-                    }).ToList(),
+                    Participants = conv.ChatParticipants.Select(ToParticipantDto).ToList(),
                     LatestMessage = latestMessage != null ? new MessageResponseDto
                     {
                         Id = latestMessage.Id,
@@ -559,15 +537,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                     Status = conv.Status,
                     StartedAt = conv.StartedAt,
                     EndedAt = conv.EndedAt,
-                    Participants = conv.ChatParticipants.Select(p => new ParticipantResponseDto
-                    {
-                        UserId = p.UserId,
-                        FullName = p.User?.UserProfile?.FullName,
-                        Email = p.User?.Email,
-                        PhoneNumber = p.User?.PhoneNumber,
-                        AvatarUrl = p.User?.AvatarUrl,
-                        JoinedAt = p.JoinedAt
-                    }).ToList(),
+                    Participants = conv.ChatParticipants.Select(ToParticipantDto).ToList(),
                     LatestMessage = latestMessage != null ? new MessageResponseDto
                     {
                         Id = latestMessage.Id,
@@ -660,6 +630,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
             await _unitOfWork.ChatSessionRepository.UpdateAsync(conversation);
             await _unitOfWork.SaveAsync();
         }
+
+        public async Task<bool> IsConsultantAsync(int userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            return user?.RoleId == (int)RoleEnum.Consultant;
+        }
+
+        public async Task<List<int>> GetActiveConversationIdsForConsultantAsync(int consultantId)
+        {
+            return await _unitOfWork.ChatSessionRepository.GetActiveConversationIdsForConsultantAsync(consultantId);
+        }
+
+        private ParticipantResponseDto ToParticipantDto(ChatParticipant p) => new()
+        {
+            UserId = p.UserId,
+            FullName = p.User?.UserProfile?.FullName,
+            Email = p.User?.Email,
+            PhoneNumber = p.User?.PhoneNumber,
+            AvatarUrl = p.User?.AvatarUrl,
+            JoinedAt = p.JoinedAt,
+            IsOnline = _onlineTracker.IsOnline(p.UserId)
+        };
 
         private static int EstimateTokenCount(string text)
         {

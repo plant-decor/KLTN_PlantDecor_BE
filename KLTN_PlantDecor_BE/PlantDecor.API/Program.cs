@@ -146,6 +146,7 @@ namespace PlantDecor.API
             builder.Services.AddScoped<ICareReminderService, CareReminderService>();
             builder.Services.AddScoped<ICareReminderBackgroundJobService, CareReminderBackgroundJobService>();
             builder.Services.AddScoped<IChatService, ChatService>();
+            builder.Services.AddSingleton<IOnlineTracker, OnlineTracker>();
 
             // Cart & Wishlist
             builder.Services.AddScoped<ICartService, CartService>();
