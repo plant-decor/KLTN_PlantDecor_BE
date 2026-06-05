@@ -269,6 +269,67 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return updatedOrder.ToResponse();
         }
 
+        public async Task<OrderResponseDto> ConfirmNurseryOrderNotReceivedAsync(
+            int currentUserId,
+            int nurseryOrderId,
+            ConfirmNotReceivedRequestDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Reason))
+                throw new BadRequestException("Reason is required");
+
+            if (request.Reason.Length > 255)
+                throw new BadRequestException("Reason is too long");
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            var order = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId)
+                ?? throw new NotFoundException($"Order {nurseryOrder.OrderId} not found");
+
+            if (order.UserId != currentUserId)
+                throw new ForbiddenException("You don't have access to this order");
+
+            var targetNurseryOrder = order.NurseryOrders.FirstOrDefault(no => no.Id == nurseryOrderId)
+                ?? throw new BadRequestException($"NurseryOrder {nurseryOrderId} does not belong to order {order.Id}");
+
+            var reportableStatuses = new[]
+            {
+                (int)OrderStatusEnum.Delivered,
+                (int)OrderStatusEnum.PendingConfirmation,
+                (int)OrderStatusEnum.RemainingPaymentPending
+            };
+
+            if (!reportableStatuses.Contains(targetNurseryOrder.Status ?? -1))
+                throw new BadRequestException("Nursery order can only be reported as not received after it has been delivered.");
+
+            var now = DateTime.Now;
+            targetNurseryOrder.Status = (int)OrderStatusEnum.Failed;
+            targetNurseryOrder.DeliveryNote = request.Reason.Trim();
+            targetNurseryOrder.UpdatedAt = now;
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(targetNurseryOrder);
+
+            foreach (var detail in targetNurseryOrder.NurseryOrderDetails)
+            {
+                detail.Status = (int)OrderStatusEnum.Failed;
+            }
+
+            if (order.Status == (int)OrderStatusEnum.Delivered
+                || order.Status == (int)OrderStatusEnum.PendingConfirmation
+                || order.Status == (int)OrderStatusEnum.RemainingPaymentPending)
+            {
+                order.Status = (int)OrderStatusEnum.Failed;
+                order.UpdatedAt = now;
+                _unitOfWork.OrderRepository.PrepareUpdate(order);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            var updatedOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(order.Id)
+                ?? throw new NotFoundException($"Order {order.Id} not found");
+
+            return updatedOrder.ToResponse();
+        }
+
         public async Task<PaginatedResult<OrderResponseDto>> GetDesignOrdersForOperatorAsync(
             int operatorId,
             Pagination pagination,

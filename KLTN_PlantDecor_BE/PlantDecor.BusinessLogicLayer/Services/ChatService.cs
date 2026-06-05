@@ -30,6 +30,12 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return await _unitOfWork.ChatParticipantRepository.IsParticipantAsync(userId, conversationId);
         }
 
+        public async Task<List<int>> GetParticipantIdsAsync(int conversationId)
+        {
+            var participants = await _unitOfWork.ChatParticipantRepository.GetConversationParticipantsAsync(conversationId);
+            return participants.Select(p => p.UserId).ToList();
+        }
+
         private DateTime VnNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _vnTimeZone);
 
         public async Task<ChatMessage> SendMessageAsync(int userId, int conversationId, string content)

@@ -51,6 +51,51 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPatch("{assignmentId:int}/approve")]
+        public async Task<IActionResult> ApproveAssignment(int assignmentId, [FromBody] ApproveReturnTicketAssignmentRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _returnTicketManagerService.ApproveAssignmentAsync(managerId, assignmentId, request);
+
+            return Ok(new ApiResponse<ManagerReturnTicketAssignmentResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Return ticket assignment approved successfully",
+                Payload = result
+            });
+        }
+
+        [HttpPatch("{assignmentId:int}/refund")]
+        public async Task<IActionResult> RefundAssignment(int assignmentId, [FromBody] RefundReturnTicketAssignmentRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _returnTicketManagerService.RefundAssignmentAsync(managerId, assignmentId, request);
+
+            return Ok(new ApiResponse<ManagerReturnTicketAssignmentResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Return ticket assignment refunded successfully",
+                Payload = result
+            });
+        }
+
+        [HttpPatch("{assignmentId:int}/reject")]
+        public async Task<IActionResult> RejectAssignment(int assignmentId, [FromBody] RejectReturnTicketAssignmentRequestDto request)
+        {
+            var managerId = GetUserId();
+            var result = await _returnTicketManagerService.RejectAssignmentAsync(managerId, assignmentId, request);
+
+            return Ok(new ApiResponse<ManagerReturnTicketAssignmentResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Return ticket assignment rejected successfully",
+                Payload = result
+            });
+        }
+
         [HttpGet("{assignmentId:int}")]
         public async Task<IActionResult> GetAssignmentDetail(int assignmentId)
         {

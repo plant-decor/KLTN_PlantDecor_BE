@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using PlantDecor.BusinessLogicLayer.Exceptions;
 using PlantDecor.BusinessLogicLayer.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
@@ -6,6 +7,7 @@ using System.Security.Claims;
 
 namespace PlantDecor.API.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly IChatService _chatService;
@@ -16,6 +18,14 @@ namespace PlantDecor.API.Hubs
         }
 
         private static string GroupName(int conversationId) => $"conversation:{conversationId}";
+        private static string UserGroupName(int userId) => $"user:{userId}";
+
+        public override async Task OnConnectedAsync()
+        {
+            var userId = GetUserId();
+            await Groups.AddToGroupAsync(Context.ConnectionId, UserGroupName(userId));
+            await base.OnConnectedAsync();
+        }
 
         public async Task SendMessage(int conversationId, string content)
         {
@@ -35,6 +45,24 @@ namespace PlantDecor.API.Hubs
                     content = message.Content,
                     sendAt = message.CreatedAt
                 });
+
+            var recipientIds = (await _chatService.GetParticipantIdsAsync(conversationId))
+                .Where(participantId => participantId != userId)
+                .Distinct()
+                .ToList();
+
+            foreach (var recipientId in recipientIds)
+            {
+                await Clients.Group(UserGroupName(recipientId))
+                    .SendAsync("newMessageNotification", new
+                    {
+                        messageId = message.Id,
+                        conversationId,
+                        senderId = userId,
+                        content = message.Content,
+                        sendAt = message.CreatedAt
+                    });
+            }
         }
 
         public async Task JoinConversation(int conversationId)
@@ -86,8 +114,8 @@ namespace PlantDecor.API.Hubs
         private int GetUserId()
         {
             var userIdClaim =
-        Context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-        ?? Context.User.FindFirstValue(JwtRegisteredClaimNames.Sub); ;
+        Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 throw new UnauthorizedException("Unable to identify user from token");
             return userId;

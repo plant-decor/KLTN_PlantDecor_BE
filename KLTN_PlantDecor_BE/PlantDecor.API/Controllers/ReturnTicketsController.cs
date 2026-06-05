@@ -37,6 +37,36 @@ namespace PlantDecor.API.Controllers
             });
         }
 
+        [HttpPost("whole-order")]
+        public async Task<IActionResult> CreateWholeOrder([FromBody] CreateWholeOrderReturnTicketRequestDto request)
+        {
+            var customerId = GetUserId();
+            var result = await _returnTicketService.CreateWholeOrderReturnTicketAsync(customerId, request);
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<ReturnTicketResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Whole order return ticket created successfully",
+                Payload = result
+            });
+        }
+
+        [HttpPost("nursery-order")]
+        public async Task<IActionResult> CreateNurseryOrder([FromBody] CreateNurseryOrderReturnTicketRequestDto request)
+        {
+            var customerId = GetUserId();
+            var result = await _returnTicketService.CreateNurseryOrderReturnTicketAsync(customerId, request);
+
+            return StatusCode(StatusCodes.Status201Created, new ApiResponse<ReturnTicketResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Nursery order return ticket created successfully",
+                Payload = result
+            });
+        }
+
         [HttpGet("my")]
         public async Task<IActionResult> GetMyTickets()
         {

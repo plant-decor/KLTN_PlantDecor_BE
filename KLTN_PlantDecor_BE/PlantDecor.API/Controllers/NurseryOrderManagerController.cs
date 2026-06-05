@@ -79,6 +79,24 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Hoàn tiền nursery order giao thất bại
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/refund")]
+        public async Task<IActionResult> RefundNurseryOrder([FromRoute] int nurseryOrderId, [FromBody] RefundNurseryOrderRequestDto request)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService.RefundNurseryOrderForManagerAsync(currentUserId, nurseryOrderId, request);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Refunded nursery order successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Xác nhận nursery order hoàn tất
         /// </summary>
         [HttpPut("{nurseryOrderId:int}/mark-completed")]

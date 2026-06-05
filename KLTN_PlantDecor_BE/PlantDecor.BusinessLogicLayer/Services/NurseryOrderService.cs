@@ -368,6 +368,96 @@ namespace PlantDecor.BusinessLogicLayer.Services
             return MapToDto(nurseryOrder);
         }
 
+        public async Task<NurseryOrderResponseDto> RefundNurseryOrderForManagerAsync(int currentUserId, int nurseryOrderId, RefundNurseryOrderRequestDto request)
+        {
+            var currentUser = await GetValidatedManagerAsync(currentUserId);
+
+            var nurseryOrder = await _unitOfWork.NurseryOrderRepository.GetByIdWithDetailsAsync(nurseryOrderId)
+                ?? throw new NotFoundException($"NurseryOrder {nurseryOrderId} not found");
+
+            if (nurseryOrder.NurseryId != currentUser.NurseryId.Value)
+                throw new ForbiddenException("You don't have permission to refund this nursery order");
+
+            if (nurseryOrder.Status != (int)OrderStatusEnum.Failed)
+                throw new BadRequestException("Only failed nursery orders can be refunded.");
+
+            if (request.RefundedAmount <= 0)
+                throw new BadRequestException("RefundedAmount must be greater than 0.");
+
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId)
+                ?? throw new NotFoundException($"Order {nurseryOrder.OrderId} not found");
+
+            var refundableAmount = CalculateRefundableAmount(parentOrder, nurseryOrder);
+            if (refundableAmount <= 0)
+                throw new BadRequestException("This nursery order has no paid amount available for refund.");
+
+            if (request.RefundedAmount > refundableAmount)
+                throw new BadRequestException($"RefundedAmount cannot exceed refundable amount {refundableAmount}.");
+
+            var now = GetCurrentVietnamTime();
+            nurseryOrder.Status = (int)OrderStatusEnum.Refunded;
+            nurseryOrder.RefundedAmount = request.RefundedAmount;
+            nurseryOrder.RefundReference = request.RefundReference;
+            nurseryOrder.RefundedAt = now;
+            nurseryOrder.ManagerRefundNote = request.ManagerRefundNote;
+            nurseryOrder.UpdatedAt = now;
+
+            foreach (var detail in nurseryOrder.NurseryOrderDetails)
+            {
+                detail.Status = (int)OrderStatusEnum.Refunded;
+            }
+
+            await RestoreInventoryForCancelledNurseryOrderAsync(nurseryOrder);
+
+            var matchingNurseryOrder = parentOrder.NurseryOrders.FirstOrDefault(no => no.Id == nurseryOrder.Id);
+            if (matchingNurseryOrder != null)
+            {
+                matchingNurseryOrder.Status = (int)OrderStatusEnum.Refunded;
+                matchingNurseryOrder.RefundedAmount = request.RefundedAmount;
+                matchingNurseryOrder.RefundReference = request.RefundReference;
+                matchingNurseryOrder.RefundedAt = now;
+                matchingNurseryOrder.ManagerRefundNote = request.ManagerRefundNote;
+                matchingNurseryOrder.UpdatedAt = now;
+
+                foreach (var detail in matchingNurseryOrder.NurseryOrderDetails)
+                {
+                    detail.Status = (int)OrderStatusEnum.Refunded;
+                }
+            }
+
+            var terminalStatuses = new[]
+            {
+                (int)OrderStatusEnum.Refunded,
+                (int)OrderStatusEnum.Cancelled
+            };
+
+            if (parentOrder.NurseryOrders.Any()
+                && parentOrder.NurseryOrders.All(no => terminalStatuses.Contains(no.Status ?? -1))
+                && parentOrder.NurseryOrders.Any(no => no.Status == (int)OrderStatusEnum.Refunded))
+            {
+                parentOrder.Status = (int)OrderStatusEnum.Refunded;
+                parentOrder.UpdatedAt = now;
+                _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
+            }
+
+            var refundPayment = new Payment
+            {
+                OrderId = parentOrder.Id,
+                PaymentType = (int)PaymentTypeEnum.Refund,
+                Amount = request.RefundedAmount,
+                Status = (int)PaymentStatusEnum.Refunded,
+                CreatedAt = now,
+                PaidAt = now
+            };
+
+            _unitOfWork.PaymentRepository.PrepareCreate(refundPayment);
+            _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            await _unitOfWork.SaveAsync();
+            await InvalidateManagerItemCachesAsync(nurseryOrder);
+
+            return MapToDto(nurseryOrder);
+        }
+
         public async Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId)
         {
             var currentUser = await GetValidatedManagerAsync(currentUserId);
@@ -689,6 +779,10 @@ namespace PlantDecor.BusinessLogicLayer.Services
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
             DeliveryImageUrl = order.DeliveryImageUrl,
+            RefundedAmount = order.RefundedAmount,
+            RefundReference = order.RefundReference,
+            RefundedAt = order.RefundedAt,
+            ManagerRefundNote = order.ManagerRefundNote,
             Note = order.Note,
             Items = order.NurseryOrderDetails
                 .Select(d => d.ToOrderItemResponse())
@@ -735,6 +829,28 @@ namespace PlantDecor.BusinessLogicLayer.Services
             {
                 return DateTime.UtcNow.AddHours(7);
             }
+        }
+
+        private static decimal CalculateRefundableAmount(Order parentOrder, NurseryOrder nurseryOrder)
+        {
+            var orderTotal = parentOrder.TotalAmount ?? 0m;
+            var nurserySubtotal = nurseryOrder.SubTotalAmount ?? 0m;
+            if (orderTotal <= 0 || nurserySubtotal <= 0)
+            {
+                return 0m;
+            }
+
+            var paidAmount = parentOrder.Payments
+                .Where(p => p.Status == (int)PaymentStatusEnum.Paid)
+                .Sum(p => p.Amount ?? 0m);
+
+            if (paidAmount <= 0)
+            {
+                return 0m;
+            }
+
+            var allocatedPaidAmount = paidAmount * nurserySubtotal / orderTotal;
+            return Math.Round(allocatedPaidAmount, 2, MidpointRounding.AwayFromZero);
         }
 
         private async Task UpdateInventoryForCompletedNurseryOrderAsync(NurseryOrder nurseryOrder)
