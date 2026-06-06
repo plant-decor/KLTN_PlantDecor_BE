@@ -118,15 +118,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Status = conversation.Status,
                 StartedAt = conversation.StartedAt,
                 EndedAt = conversation.EndedAt,
-                Participants = conversation.ChatParticipants.Select(p => new ParticipantResponseDto
-                {
-                    UserId = p.UserId,
-                    FullName = p.User?.UserProfile?.FullName,
-                    Email = p.User?.Email,
-                    PhoneNumber = p.User?.PhoneNumber,
-                    AvatarUrl = p.User?.AvatarUrl,
-                    JoinedAt = p.JoinedAt
-                }).ToList(),
+                Participants = conversation.ChatParticipants.Select(p => ToParticipantDto(p)).ToList(),
                 LatestMessage = latestMessage != null ? new MessageResponseDto
                 {
                     Id = latestMessage.Id,
@@ -594,15 +586,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 Status = conversation.Status,
                 StartedAt = conversation.StartedAt,
                 EndedAt = conversation.EndedAt,
-                Participants = conversation.ChatParticipants.Select(p => new ParticipantResponseDto
-                {
-                    UserId = p.UserId,
-                    FullName = p.User?.UserProfile?.FullName,
-                    Email = p.User?.Email,
-                    PhoneNumber = p.User?.PhoneNumber,
-                    AvatarUrl = p.User?.AvatarUrl,
-                    JoinedAt = p.JoinedAt
-                }).ToList(),
+                Participants = conversation.ChatParticipants.Select(p => ToParticipantDto(p)).ToList(),
                 LatestMessage = latestMessage != null ? new MessageResponseDto
                 {
                     Id = latestMessage.Id,
