@@ -11,10 +11,12 @@ namespace PlantDecor.API.Hubs
     public class ChatHub : Hub
     {
         private readonly IChatService _chatService;
+        private readonly IOnlineTracker _onlineTracker;
 
-        public ChatHub(IChatService chatService)
+        public ChatHub(IChatService chatService, IOnlineTracker onlineTracker)
         {
             _chatService = chatService;
+            _onlineTracker = onlineTracker;
         }
 
         private static string GroupName(int conversationId) => $"conversation:{conversationId}";
@@ -24,7 +26,39 @@ namespace PlantDecor.API.Hubs
         {
             var userId = GetUserId();
             await Groups.AddToGroupAsync(Context.ConnectionId, UserGroupName(userId));
+
+            bool isFirstConnection = !_onlineTracker.IsOnline(userId);
+            _onlineTracker.UserConnected(userId, Context.ConnectionId);
+
+            if (isFirstConnection && await _chatService.IsConsultantAsync(userId))
+            {
+                var conversationIds = await _chatService.GetActiveConversationIdsForConsultantAsync(userId);
+                foreach (var conversationId in conversationIds)
+                {
+                    await Clients.Group(GroupName(conversationId))
+                        .SendAsync("consultantStatusChanged", new { consultantId = userId, isOnline = true });
+                }
+            }
+
             await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var userId = GetUserId();
+            bool isNowOffline = _onlineTracker.UserDisconnected(userId, Context.ConnectionId);
+
+            if (isNowOffline && await _chatService.IsConsultantAsync(userId))
+            {
+                var conversationIds = await _chatService.GetActiveConversationIdsForConsultantAsync(userId);
+                foreach (var conversationId in conversationIds)
+                {
+                    await Clients.Group(GroupName(conversationId))
+                        .SendAsync("consultantStatusChanged", new { consultantId = userId, isOnline = false });
+                }
+            }
+
+            await base.OnDisconnectedAsync(exception);
         }
 
         public async Task SendMessage(int conversationId, string content)
@@ -68,11 +102,9 @@ namespace PlantDecor.API.Hubs
         public async Task JoinConversation(int conversationId)
         {
             var userId = GetUserId();
-            // Check if user is participant of the conversation
             var isParticipant = await _chatService.IsParticipantAsync(userId, conversationId);
             if (!isParticipant)
                 throw new HubException("Not a participant of this conversation");
-            // Add connection to the conversation group
             await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(conversationId));
         }
 
