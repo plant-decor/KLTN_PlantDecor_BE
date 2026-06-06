@@ -35,6 +35,8 @@ public partial class NurseryOrder
 
     public string? DeliveryNote { get; set; }
 
+    public string? CustomerNotReceivedReason { get; set; }
+
     public string? DeliveryImageUrl { get; set; }
 
     public decimal? RefundedAmount { get; set; }
