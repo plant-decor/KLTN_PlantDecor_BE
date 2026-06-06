@@ -106,6 +106,19 @@ namespace PlantDecor.API.Hubs
             if (!isParticipant)
                 throw new HubException("Not a participant of this conversation");
             await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(conversationId));
+
+            var participantIds = await _chatService.GetParticipantIdsAsync(conversationId);
+            foreach (var participantId in participantIds)
+            {
+                if (participantId == userId) continue;
+                if (!await _chatService.IsConsultantAsync(participantId)) continue;
+                await Clients.Caller.SendAsync("consultantStatusChanged", new
+                {
+                    consultantId = participantId,
+                    isOnline = _onlineTracker.IsOnline(participantId)
+                });
+                break;
+            }
         }
 
         public async Task LeaveConversation(int conversationId)
