@@ -304,7 +304,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
 
             var now = DateTime.Now;
             targetNurseryOrder.Status = (int)OrderStatusEnum.Failed;
-            targetNurseryOrder.DeliveryNote = request.Reason.Trim();
+            targetNurseryOrder.CustomerNotReceivedReason = request.Reason.Trim();
             targetNurseryOrder.UpdatedAt = now;
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(targetNurseryOrder);
 

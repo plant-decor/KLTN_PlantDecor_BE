@@ -52,6 +52,9 @@ namespace PlantDecor.BusinessLogicLayer.Mappings
                 Status = no.Status,
                 StatusName = no.Status.HasValue ? ((OrderStatusEnum)no.Status.Value).ToString() : null,
                 ShipperNote = no.ShipperNote,
+                DeliveryNote = no.DeliveryNote,
+                CustomerNotReceivedReason = no.CustomerNotReceivedReason,
+                DeliveryImageUrl = no.DeliveryImageUrl,
                 Items = no.NurseryOrderDetails
                     .Select(d => d.ToOrderItemResponse())
                     .ToList()

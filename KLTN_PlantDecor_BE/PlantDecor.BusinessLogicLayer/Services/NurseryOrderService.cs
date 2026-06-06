@@ -711,7 +711,19 @@ namespace PlantDecor.BusinessLogicLayer.Services
             nurseryOrder.DeliveryImageUrl = deliveryImageUrl;
             nurseryOrder.UpdatedAt = now;
 
+            foreach (var detail in nurseryOrder.NurseryOrderDetails)
+            {
+                detail.Status = (int)OrderStatusEnum.Failed;
+            }
+
+            var parentOrder = await _unitOfWork.OrderRepository.GetByIdWithDetailsAsync(nurseryOrder.OrderId)
+                ?? throw new NotFoundException($"Order {nurseryOrder.OrderId} not found");
+
+            parentOrder.Status = (int)OrderStatusEnum.Failed;
+            parentOrder.UpdatedAt = now;
+
             _unitOfWork.NurseryOrderRepository.PrepareUpdate(nurseryOrder);
+            _unitOfWork.OrderRepository.PrepareUpdate(parentOrder);
             await _unitOfWork.SaveAsync();
 
             return MapToDto(nurseryOrder);
@@ -826,6 +838,7 @@ namespace PlantDecor.BusinessLogicLayer.Services
             StatusName = order.Status.HasValue ? ((OrderStatusEnum)order.Status.Value).ToString() : null,
             ShipperNote = order.ShipperNote,
             DeliveryNote = order.DeliveryNote,
+            CustomerNotReceivedReason = order.CustomerNotReceivedReason,
             DeliveryImageUrl = order.DeliveryImageUrl,
             RefundedAmount = order.RefundedAmount,
             RefundReference = order.RefundReference,
