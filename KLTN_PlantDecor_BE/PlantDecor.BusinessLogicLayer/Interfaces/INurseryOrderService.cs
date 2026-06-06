@@ -15,6 +15,7 @@ namespace PlantDecor.BusinessLogicLayer.Interfaces
         Task<NurseryOrderResponseDto> MarkNurseryOrderAssignedForManagerAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> CancelNurseryOrderForManagerAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> RefundNurseryOrderForManagerAsync(int currentUserId, int nurseryOrderId, RefundNurseryOrderRequestDto request);
+        Task<NurseryOrderResponseDto> MoveFailedNurseryOrderToPendingConfirmationAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> MarkNurseryOrderCompletedForManagerAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> GetNurseryOrderDetailForShipperAsync(int currentUserId, int nurseryOrderId);
         Task<NurseryOrderResponseDto> StartShippingAsync(int currentUserId, int nurseryOrderId, StartShippingRequestDto request);
