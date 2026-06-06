@@ -97,6 +97,25 @@ namespace PlantDecor.API.Controllers
         }
 
         /// <summary>
+        /// Chuyển nursery order từ Failed sang PendingConfirmation
+        /// </summary>
+        [HttpPut("{nurseryOrderId:int}/pending-confirmation")]
+        public async Task<IActionResult> MoveFailedNurseryOrderToPendingConfirmation([FromRoute] int nurseryOrderId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var result = await _nurseryOrderService
+                .MoveFailedNurseryOrderToPendingConfirmationAsync(currentUserId, nurseryOrderId);
+
+            return Ok(new ApiResponse<NurseryOrderResponseDto>
+            {
+                Success = true,
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Moved nursery order to pending confirmation successfully",
+                Payload = result
+            });
+        }
+
+        /// <summary>
         /// Xác nhận nursery order hoàn tất
         /// </summary>
         [HttpPut("{nurseryOrderId:int}/mark-completed")]
