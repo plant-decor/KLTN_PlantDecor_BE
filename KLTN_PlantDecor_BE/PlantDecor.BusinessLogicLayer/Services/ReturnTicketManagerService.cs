@@ -479,25 +479,54 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 return;
 
             var order = ticket.Order;
-            var returnTicketNurseryOrderIds = ticket.ReturnTicketItems
-                .Select(i => i.NurseryOrderDetail?.NurseryOrderId)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value)
-                .ToHashSet();
+            var allItemsFinished = ticket.ReturnTicketItems.All(i =>
+                i.Status == (int)ReturnTicketItemStatusEnum.Rejected ||
+                i.Status == (int)ReturnTicketItemStatusEnum.Refunded);
+
+            if (!allItemsFinished)
+            {
+                order.Status = (int)OrderStatusEnum.RefundRequested;
+                order.UpdatedAt = now;
+
+                foreach (var nurseryOrder in order.NurseryOrders.Where(no =>
+                    ticket.ReturnTicketItems.Any(i => i.NurseryOrderDetail?.NurseryOrderId == no.Id)))
+                {
+                    nurseryOrder.Status = (int)OrderStatusEnum.RefundRequested;
+                    nurseryOrder.UpdatedAt = now;
+                }
+
+                return;
+            }
 
             foreach (var nurseryOrder in order.NurseryOrders)
             {
-                if (returnTicketNurseryOrderIds.Contains(nurseryOrder.Id))
-                {
-                    nurseryOrder.Status = (int)OrderStatusEnum.Completed;
-                    nurseryOrder.UpdatedAt = now;
-                }
+                var nurseryTicketItems = ticket.ReturnTicketItems
+                    .Where(i => i.NurseryOrderDetail?.NurseryOrderId == nurseryOrder.Id)
+                    .ToList();
+
+                var isFullyRefunded = nurseryOrder.NurseryOrderDetails.Any()
+                    && nurseryOrder.NurseryOrderDetails.All(detail =>
+                        nurseryTicketItems.Any(item =>
+                            item.NurseryOrderDetailId == detail.Id
+                            && item.Status == (int)ReturnTicketItemStatusEnum.Refunded
+                            && (item.ApprovedQuantity ?? 0) >= (detail.Quantity ?? 0)));
+
+                nurseryOrder.Status = isFullyRefunded
+                    ? (int)OrderStatusEnum.Refunded
+                    : (int)OrderStatusEnum.Completed;
+                nurseryOrder.UpdatedAt = now;
             }
 
-            if (order.NurseryOrders.Any() && order.NurseryOrders.All(no => no.Status == (int)OrderStatusEnum.Completed))
+            var isOrderFullyRefunded = order.NurseryOrders.Any()
+                && order.NurseryOrders.All(no => no.Status == (int)OrderStatusEnum.Refunded);
+
+            order.Status = isOrderFullyRefunded
+                ? (int)OrderStatusEnum.Refunded
+                : (int)OrderStatusEnum.Completed;
+            order.UpdatedAt = now;
+
+            if (!isOrderFullyRefunded)
             {
-                order.Status = (int)OrderStatusEnum.Completed;
-                order.UpdatedAt = now;
                 order.CompletedAt ??= now;
             }
         }
