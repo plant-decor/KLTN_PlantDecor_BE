@@ -91,8 +91,13 @@ namespace PlantDecor.BusinessLogicLayer.Services
                 });
 
                 detail.Status = (int)OrderStatusEnum.RefundRequested;
+                nurseryOrder.Status = (int)OrderStatusEnum.RefundRequested;
+                nurseryOrder.UpdatedAt = now;
                 nurseryIds.Add(nurseryOrder.NurseryId);
             }
+
+            order.Status = (int)OrderStatusEnum.RefundRequested;
+            order.UpdatedAt = now;
 
             var managers = (await _unitOfWork.UserRepository.GetAllAsync())
                 .Where(u => u.RoleId == (int)RoleEnum.Manager && u.NurseryId.HasValue && nurseryIds.Contains(u.NurseryId.Value))
