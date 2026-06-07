@@ -77,6 +77,7 @@ Important rules:
 - If the room is not related to rooms, for example: Sea, Car, Tree,etc then return value Not Related.
 - If the room type is unclear, choose the best matching value from the allowed list.
 - Do not include room size, lighting, interior style, summary, or any other fields.
+- For Home Office Type, if the room looks like classroom then return HomeOffice, if it looks like a typical work-from-home setup with a desk and computer then return HomeOffice, if it looks like a bedroom with a small desk corner then return Bedroom, if it looks like a living room with a workspace corner then return LivingRoom
 ";
 
         private const string RECOMMENDATION_PROMPT_TEMPLATE = @"
